@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form>
+	<fields name="filter">
+		<field name="search" type="text" label="JSEARCH_FILTER" hint="JSEARCH_FILTER" />
+		<field name="type" type="list" label="COM_VIGLINGSERVICES_FILTER_TYPE_LABEL" default="" class="js-select-submit-on-change">
+			<option value="">COM_VIGLINGSERVICES_FILTER_TYPE_ALL</option>
+			<option value="group">COM_VIGLINGSERVICES_TYPE_GROUP</option>
+			<option value="service">COM_VIGLINGSERVICES_TYPE_SERVICE</option>
+			<option value="variant">COM_VIGLINGSERVICES_TYPE_VARIANT</option>
+		</field>
+		<field name="is_active" type="list" label="COM_VIGLINGSERVICES_FILTER_ACTIVE_LABEL" default="" class="js-select-submit-on-change">
+			<option value="">COM_VIGLINGSERVICES_FILTER_ACTIVE_ALL</option>
+			<option value="1">JPUBLISHED</option>
+			<option value="0">JUNPUBLISHED</option>
+		</field>
+		<field name="show_legacy" type="list" label="COM_VIGLINGSERVICES_FILTER_LEGACY_LABEL" default="0" class="js-select-submit-on-change">
+			<option value="0">COM_VIGLINGSERVICES_FILTER_LEGACY_HIDE</option>
+			<option value="1">COM_VIGLINGSERVICES_FILTER_LEGACY_SHOW</option>
+		</field>
+	</fields>
+	<fields name="list">
+		<field name="fullordering" type="list" label="JGLOBAL_SORT_BY" default="a.path ASC" class="js-select-submit-on-change">
+			<option value="a.id ASC">JGRID_HEADING_ID_ASC</option>
+			<option value="a.id DESC">JGRID_HEADING_ID_DESC</option>
+			<option value="a.path ASC">COM_VIGLINGSERVICES_FIELD_PATH_ASC</option>
+			<option value="a.path DESC">COM_VIGLINGSERVICES_FIELD_PATH_DESC</option>
+			<option value="a.level ASC">COM_VIGLINGSERVICES_FIELD_LEVEL_ASC</option>
+			<option value="a.level DESC">COM_VIGLINGSERVICES_FIELD_LEVEL_DESC</option>
+			<option value="a.sort_order ASC">COM_VIGLINGSERVICES_FIELD_SORT_ORDER_ASC</option>
+			<option value="a.sort_order DESC">COM_VIGLINGSERVICES_FIELD_SORT_ORDER_DESC</option>
+			<option value="a.title ASC">COM_VIGLINGSERVICES_FIELD_TITLE_ASC</option>
+			<option value="a.title DESC">COM_VIGLINGSERVICES_FIELD_TITLE_DESC</option>
+			<option value="a.type ASC">COM_VIGLINGSERVICES_FIELD_TYPE_ASC</option>
+			<option value="a.type DESC">COM_VIGLINGSERVICES_FIELD_TYPE_DESC</option>
+		</field>
+		<field name="limit" type="limitbox" label="JGLOBAL_LIST_LIMIT" default="20" class="js-select-submit-on-change" />
+	</fields>
+</form>

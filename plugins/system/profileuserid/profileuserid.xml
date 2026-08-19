@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+	<name>PLG_SYSTEM_PROFILEUSERID</name>
+	<creationDate>2026-02</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_SYSTEM_PROFILEUSERID_XML_DESCRIPTION</description>
+	<namespace path="src">Joomla\Plugin\System\Profileuserid</namespace>
+	<files>
+		<folder>services</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="en-GB">language/en-GB/plg_system_profileuserid.ini</language>
+		<language tag="en-GB">language/en-GB/plg_system_profileuserid.sys.ini</language>
+	</languages>
+</extension>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" version="4.0" method="upgrade">
+	<name>COM_ORDERS</name>
+	<namespace path="src">Viglin\Component\Orders</namespace>
+	<version>1.0.0</version>
+	<creationDate>2026-02</creationDate>
+	<description>COM_ORDERS_DESCRIPTION</description>
+	<files folder="src">
+		<folder>Administrator</folder>
+		<folder>Controller</folder>
+		<folder>Model</folder>
+		<folder>View</folder>
+		<folder>Table</folder>
+	</files>
+	<administration>
+		<menu>COM_ORDERS</menu>
+	</administration>
+</extension>

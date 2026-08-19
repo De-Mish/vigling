@@ -1,0 +1,10 @@
+{
+    "name": "viglin/com_pushnotify",
+    "require": {
+        "php": ">=8.1",
+        "kreait/firebase-php": "^8.0"
+    },
+    "config": {
+        "vendor-dir": "vendor"
+    }
+}

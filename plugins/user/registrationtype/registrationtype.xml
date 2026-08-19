@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="user" method="upgrade">
+	<name>plg_user_registrationtype</name>
+	<author>Viglin</author>
+	<creationDate>2026-02</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_USER_REGISTRATIONTYPE_XML_DESCRIPTION</description>
+	<namespace path="src">Joomla\Plugin\User\Registrationtype</namespace>
+	<files>
+		<folder>forms</folder>
+		<folder plugin="registrationtype">services</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="ru-RU">language/ru-RU/plg_user_registrationtype.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_user_registrationtype.sys.ini</language>
+	</languages>
+</extension>

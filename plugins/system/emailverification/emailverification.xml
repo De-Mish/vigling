@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+    <name>PLG_SYSTEM_EMAILVERIFICATION</name>
+    <author>Vigling</author>
+    <creationDate>2026-03</creationDate>
+    <version>1.0.0</version>
+    <description>PLG_SYSTEM_EMAILVERIFICATION_DESCRIPTION</description>
+    <namespace path="src">Joomla\Plugin\System\Emailverification</namespace>
+    <files>
+        <folder plugin="emailverification">services</folder>
+        <folder>src</folder>
+    </files>
+    <languages>
+        <language tag="ru-RU">language/ru-RU/plg_system_emailverification.ini</language>
+        <language tag="ru-RU">language/ru-RU/plg_system_emailverification.sys.ini</language>
+    </languages>
+</extension>

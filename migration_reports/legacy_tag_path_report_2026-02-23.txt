@@ -1,0 +1,171 @@
+src	rows_cnt	users_cnt	nodes_cnt
+prices	168242	55134	36
+stock	1270	1267	28
+src	user_id	legacy_rows
+prices	133268	15
+prices	133269	15
+prices	133270	15
+prices	133271	15
+prices	133272	15
+prices	133273	15
+prices	133274	15
+prices	133275	15
+prices	133276	15
+prices	133277	15
+prices	133278	15
+prices	133279	15
+prices	133281	15
+prices	133282	15
+prices	133283	15
+prices	133284	15
+prices	133286	15
+prices	133287	15
+prices	133288	15
+prices	133289	15
+prices	133290	15
+prices	133291	15
+prices	133292	15
+prices	133293	15
+prices	133294	15
+prices	133295	15
+prices	133296	15
+prices	133297	15
+prices	133298	15
+prices	133299	15
+prices	133300	15
+prices	133301	15
+prices	133302	15
+prices	133303	15
+prices	133304	15
+prices	133305	15
+prices	133306	15
+prices	133307	15
+prices	133308	15
+prices	133309	15
+prices	133310	15
+prices	133311	15
+prices	133312	15
+prices	133313	15
+prices	133314	15
+prices	133315	15
+prices	133316	15
+prices	133317	15
+prices	133318	15
+prices	133319	15
+src	user_id	legacy_rows
+stock	85283	2
+stock	86054	2
+stock	144592	2
+stock	4460	1
+stock	4707	1
+stock	4866	1
+stock	6524	1
+stock	6614	1
+stock	6636	1
+stock	6659	1
+stock	7514	1
+stock	7566	1
+stock	7881	1
+stock	7941	1
+stock	8962	1
+stock	8984	1
+stock	9022	1
+stock	10459	1
+stock	10704	1
+stock	10797	1
+stock	10816	1
+stock	11021	1
+stock	11314	1
+stock	11494	1
+stock	11603	1
+stock	11689	1
+stock	11925	1
+stock	11981	1
+stock	12062	1
+stock	12087	1
+stock	12143	1
+stock	12271	1
+stock	12379	1
+stock	12403	1
+stock	12789	1
+stock	12870	1
+stock	12908	1
+stock	13022	1
+stock	13075	1
+stock	13195	1
+stock	13307	1
+stock	13322	1
+stock	13352	1
+stock	13412	1
+stock	13420	1
+stock	13472	1
+stock	13495	1
+stock	13562	1
+stock	13615	1
+stock	13810	1
+src	service_node_id	title	path	rows_cnt	users_cnt
+prices	475	с покрытием гель-лаком	legacy/tag/с-покрытием-гель-лаком-287	31038	31038
+prices	337	ионофорез	legacy/tag/ионофорез-148	27101	27101
+prices	320	жасминовое	legacy/tag/жасминовое-131	8752	8752
+prices	323	медовое	legacy/tag/медовое-134	8752	8752
+prices	322	масляное	legacy/tag/масляное-133	8355	8355
+prices	318	горячее	legacy/tag/горячее-129	8348	8348
+prices	304	гигиеническая	legacy/tag/гигиеническая-115	6908	6908
+prices	306	механическая	legacy/tag/механическая-117	6695	6695
+prices	307	ультрозвуковая	legacy/tag/ультрозвуковая-118	6695	6695
+prices	305	комбинированная	legacy/tag/комбинированная-116	6694	6694
+prices	308	элементная	legacy/tag/элементная-119	6694	6694
+prices	313	бандажное	legacy/tag/бандажное-124	6289	6289
+prices	314	виноградное	legacy/tag/виноградное-125	6228	6228
+prices	282	спиральные мезонити	legacy/tag/спиральные-мезонити-93	6204	6204
+prices	278	монополярный	legacy/tag/монополярный-89	4070	4070
+prices	328	электрокоагуляция	legacy/tag/электрокоагуляция-139	1927	1927
+prices	479	большая	legacy/tag/большая-291	1163	1163
+prices	480	вросшего ногтя	legacy/tag/вросшего-ногтя-292	1163	1163
+prices	481	коррекция френча	legacy/tag/коррекция-френча-293	1163	1163
+prices	482	малая	legacy/tag/малая-294	1163	1163
+prices	483	с поверхностным дизайном	legacy/tag/с-поверхностным-дизайном-295	1163	1163
+prices	484	средняя	legacy/tag/средняя-296	1163	1163
+prices	485	воском	legacy/tag/воском-297	1163	1163
+prices	486	полиролью	legacy/tag/полиролью-298	1163	1163
+prices	487	бумагой	legacy/tag/бумагой-299	1163	1163
+prices	488	гелем	legacy/tag/гелем-300	1163	1163
+prices	489	льном	legacy/tag/льном-301	1163	1163
+prices	490	шелком	legacy/tag/шелком-302	1163	1163
+prices	491	под гель лак	legacy/tag/под-гель-лак-303	1163	1163
+prices	492	воск	legacy/tag/воск-304	1163	1163
+prices	493	сахар (шугаринг)	legacy/tag/сахар-шугаринг-305	1163	1163
+prices	356	микроблейдинг 	legacy/tag/микроблейдинг-167	15	15
+prices	355	свадебный (репетиция)	legacy/tag/свадебный-репетиция-166	11	11
+prices	343	кюретаж 	legacy/tag/кюретаж-154	10	10
+prices	344	женская (длинная)	legacy/tag/женская-длинная-155	10	10
+prices	427	(60 мин)	legacy/tag/60-мин-239	1	1
+src	service_node_id	title	path	rows_cnt	users_cnt
+stock	323	медовое	legacy/tag/медовое-134	150	150
+stock	320	жасминовое	legacy/tag/жасминовое-131	111	111
+stock	304	гигиеническая	legacy/tag/гигиеническая-115	107	107
+stock	475	с покрытием гель-лаком	legacy/tag/с-покрытием-гель-лаком-287	99	99
+stock	674	био-гелем	legacy/tag/био-гелем-489	81	81
+stock	305	комбинированная	legacy/tag/комбинированная-116	79	79
+stock	337	ионофорез	legacy/tag/ионофорез-148	77	77
+stock	318	горячее	legacy/tag/горячее-129	63	63
+stock	282	спиральные мезонити	legacy/tag/спиральные-мезонити-93	56	56
+stock	313	бандажное	legacy/tag/бандажное-124	55	55
+stock	306	механическая	legacy/tag/механическая-117	53	53
+stock	314	виноградное	legacy/tag/виноградное-125	52	52
+stock	328	электрокоагуляция	legacy/tag/электрокоагуляция-139	52	52
+stock	308	элементная	legacy/tag/элементная-119	50	50
+stock	307	ультрозвуковая	legacy/tag/ультрозвуковая-118	47	47
+stock	322	масляное	legacy/tag/масляное-133	35	35
+stock	367	1D (классика)	legacy/tag/1d-классика-178	28	28
+stock	234	Aptos	legacy/tag/aptos-45	17	17
+stock	381	наращенных ресниц 1d	legacy/tag/наращенных-ресниц-1d-192	16	16
+stock	343	кюретаж 	legacy/tag/кюретаж-154	15	15
+stock	249	карбоновый	legacy/tag/карбоновый-60	10	10
+stock	278	монополярный	legacy/tag/монополярный-89	8	8
+stock	219	плазмолифтинг	legacy/tag/плазмолифтинг-30	4	4
+stock	208	ботокс	legacy/tag/ботокс-19	1	1
+stock	419	с рваными прядями	legacy/tag/с-рваными-прядями-230	1	1
+stock	596	все тело	legacy/tag/все-тело-408	1	1
+stock	666	воротниковая зона	legacy/tag/воротниковая-зона-478	1	1
+stock	669	всего тела	legacy/tag/всего-тела-483	1	1

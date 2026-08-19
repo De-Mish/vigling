@@ -1,0 +1,16 @@
+[2026-02-08 16:31:05] ProfileUserID Plugin: user_id from input = 144716
+[2026-02-08 16:31:05] ProfileUserID Plugin: $_GET = Array
+(
+    [user_id] => 144716
+)
+
+[2026-02-08 16:31:05] ProfileUserID Plugin: current user guest = yes
+[2026-02-08 16:31:05] ProfileUserID Plugin: SET user_id in session to 144716
+[2026-02-08 16:31:41] ProfileUserID Plugin: user_id from input = 144705
+[2026-02-08 16:31:41] ProfileUserID Plugin: $_GET = Array
+(
+    [user_id] => 144705
+)
+
+[2026-02-08 16:31:41] ProfileUserID Plugin: current user guest = yes
+[2026-02-08 16:31:41] ProfileUserID Plugin: SET user_id in session to 144705

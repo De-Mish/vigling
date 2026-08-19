@@ -1,0 +1,8 @@
+<?php
+defined('_JEXEC') or die;
+return array (
+  'COM_USERS_REGISTRATION_SAVE_SUCCESS' => 'Учетная запись создана. Для входа сначала подтвердите email: проверьте почту и папку "Спам".',
+  'COM_USERS_FIELD_RESET_CONFIRM_USERNAME_LABEL' => 'Email',
+  'COM_USERS_RESET_CONFIRM_LABEL' => 'На адрес электронной почты отправлено письмо с кодом подтверждения. Пожалуйста, введите email и код подтверждения в поля ниже, подтвердив право собственности на учетную запись.',
+  'COM_USERS_LOGIN_USERNAME_LABEL' => 'Email',
+);

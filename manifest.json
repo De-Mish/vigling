@@ -1,0 +1,60 @@
+{
+  "id": "/",
+  "name": "VIGLING.RU - Онлайн запись к мастерам красоты",
+  "short_name": "VIGLING",
+  "description": "Поиск мастеров и онлайн запись на услуги красоты и сервиса.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": [
+    "lifestyle",
+    "beauty",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/1.jpg",
+      "sizes": "2990x1600",
+      "type": "image/jpeg",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/images/2.jpg",
+      "sizes": "2968x1600",
+      "type": "image/jpeg",
+      "form_factor": "wide"
+    }
+  ],
+  "gcm_sender_id": "482941778795"
+}
