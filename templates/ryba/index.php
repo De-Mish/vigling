@@ -32,17 +32,30 @@ if ($option === 'com_users' && $view === 'profile') {
 }
 $isPwaInstallPage = (int) $input->getInt('pwa_install', 0) === 1;
 $requestPath = trim((string) Uri::getInstance()->getPath(), '/');
+$requestUriPath = trim((string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: ''), '/');
+$pathAliases = array_values(array_unique(array_filter([
+	strtolower($requestPath),
+	strtolower($requestUriPath),
+])));
 $isApplicationGuidePage = ((int) $input->getInt('app_install_guide', 0) === 1)
-	|| in_array(strtolower($requestPath), ['priloshenie'], true);
+	|| in_array('priloshenie', $pathAliases, true);
 $contactsPageHtml = (string) $templateParams->get('contacts_page_html', '');
 $isContactsPage = ((int) $input->getInt('contacts_page', 0) === 1)
 	|| $option === 'com_contact'
-	|| in_array(strtolower($requestPath), ['kontakty', 'contacts'], true);
+	|| in_array('kontakty', $pathAliases, true)
+	|| in_array('contacts', $pathAliases, true);
+$isPrivacyPolicyPage = ((int) $input->getInt('privacy_page', 0) === 1)
+	|| in_array('privacy-policy', $pathAliases, true);
 if ($isApplicationGuidePage) {
 	$page = 'page';
 }
 if ($isContactsPage) {
 	$page = 'page';
+}
+if ($isPrivacyPolicyPage) {
+	$page = 'page';
+	$this->setTitle('Политика конфиденциальности');
+	$this->setMetaData('description', 'Политика конфиденциальности сервиса онлайн-записи Vigling.');
 }
 
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-scale=1');
@@ -231,7 +244,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					</div>
 				<?php endif; ?>
 				<jdoc:include type="message" />
-				<?php $sbar = (!$isApplicationGuidePage && !$isContactsPage && $this->countModules('sidebar')) ? 'w_sidebar' : 'wo_sidebar'; ?>
+				<?php $sbar = (!$isApplicationGuidePage && !$isContactsPage && !$isPrivacyPolicyPage && $this->countModules('sidebar')) ? 'w_sidebar' : 'wo_sidebar'; ?>
 				<div class="cont_<?php echo $sbar; ?> ">
 					<div class="cont">
 						<?php if ($isApplicationGuidePage) : ?>
@@ -277,11 +290,13 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 								<p>Контент страницы контактов пока не заполнен.</p>
 							<?php endif; ?>
 						</section>
+						<?php elseif ($isPrivacyPolicyPage) : ?>
+						<?php include __DIR__ . '/html/privacy-policy.php'; ?>
 						<?php else : ?>
 						<jdoc:include type="component" />
 						<?php endif; ?>
 					</div>
-					<div class="sbar"<?php echo ($isApplicationGuidePage || $isContactsPage) ? ' style="display:none;"' : ''; ?>>
+					<div class="sbar"<?php echo ($isApplicationGuidePage || $isContactsPage || $isPrivacyPolicyPage) ? ' style="display:none;"' : ''; ?>>
 						<jdoc:include type="modules" name="sidebar" style="html5" />
 					</div>
 				</div>

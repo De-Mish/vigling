@@ -459,6 +459,14 @@ $durationJson = json_encode($durationOptions);
                                 </div>
                             </div>
                         </div>
+                        <div class="control-group privacy-consent-group">
+                            <div class="controls">
+                                <label class="checkbox privacy-consent-label" for="privacy_consent">
+                                    <input type="checkbox" id="privacy_consent" name="privacy_consent" value="1" />
+                                    Нажимая «Зарегистрироваться», я принимаю условия <a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a>
+                                </label>
+                            </div>
+                        </div>
                     </fieldset>
                 </div>
             </div>
@@ -513,7 +521,10 @@ $durationJson = json_encode($durationOptions);
         <div class="jsn_registration_controls calc__btn"<?php echo $hasSubmittedData ? '' : ' style="display:none;"'; ?>>
             <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
             <button type="button" class="dale" id="reg-next-step">Далее</button>
-            <button type="submit" class="dale validate" id="reg-submit" style="display:none;">Зарегистрироваться</button>
+            <div class="reg-submit-block">
+                <div id="privacy-consent-error" class="privacy-error" role="alert" hidden></div>
+                <button type="submit" class="dale validate" id="reg-submit" style="display:none;" aria-describedby="privacy-consent-error">Зарегистрироваться</button>
+            </div>
             <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>" onclick="try{sessionStorage.removeItem('vigling_registration_state_v3');sessionStorage.removeItem('vigling_registration_state_v2');sessionStorage.removeItem('vigling_registration_state_v1');localStorage.removeItem('vigling_registration_state_v3');localStorage.removeItem('vigling_registration_state_v2');localStorage.removeItem('vigling_registration_state_v1');}catch(e){}"><?php echo Text::_('JCANCEL'); ?></a>
         </div>
 
@@ -1173,9 +1184,16 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTabsContainerHeight();
         if (tabId === 'jsn_login') {
             $('#jsn_login .login-group, #jsn_login .password1-group, #jsn_login .password2-group').css('display', 'block');
+            $('#jsn_login .privacy-consent-group').css({
+                display: 'flex',
+                visibility: 'visible',
+                opacity: '1'
+            });
+            updateTabsContainerHeight();
         }
 
         syncStepButtons();
+        syncPrivacyConsentError();
         persistDraftState();
     }
 
@@ -1841,6 +1859,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 password1: $('#jform_password1').val() || '',
                 password2: $('#jform_password2').val() || ''
             },
+            privacyConsent: $('#privacy_consent').prop('checked') === true,
             specialties: selectedSpecs,
             workDays: selectedDays,
             services: serializeServiceRows(),
@@ -1945,6 +1964,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var passwordFields = draft.passwordFields || {};
         $('#jform_password1').val(passwordFields.password1 || '');
         $('#jform_password2').val(passwordFields.password2 || '');
+        $('#privacy_consent').prop('checked', draft.privacyConsent === true);
 
         $('#jform_vyberite_spetsialnos input[type="checkbox"]').prop('checked', false);
         if (Array.isArray(draft.specialties)) {
@@ -2054,6 +2074,43 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         return true;
+    }
+
+    function isPrivacyConsentChecked() {
+        return $('#privacy_consent').prop('checked') === true;
+    }
+
+    function hidePrivacyConsentError() {
+        var errorEl = $('#privacy-consent-error');
+        errorEl.removeClass('is-visible').attr('hidden', true).text('');
+        $('#privacy_consent').removeAttr('aria-invalid');
+    }
+
+    function showPrivacyConsentError() {
+        var errorEl = $('#privacy-consent-error');
+        var message = 'Для завершения регистрации необходимо принять условия Политики конфиденциальности';
+        errorEl.text(message).addClass('is-visible').removeAttr('hidden');
+        $('#privacy_consent').attr('aria-invalid', 'true');
+        if (errorEl[0] && typeof errorEl[0].scrollIntoView === 'function') {
+            errorEl[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function syncPrivacyConsentError() {
+        var allowed = tabsForCurrentType();
+        var isFinalStep = allowed.indexOf(currentTab) === allowed.length - 1;
+        if (isPrivacyConsentChecked() || !isFinalStep) {
+            hidePrivacyConsentError();
+        }
+    }
+
+    function validatePrivacyConsent() {
+        if (isPrivacyConsentChecked()) {
+            hidePrivacyConsentError();
+            return true;
+        }
+        showPrivacyConsentError();
+        return false;
     }
 
     function formatPhone(digits) {
@@ -2300,7 +2357,25 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.attr('aria-label', isText ? 'Скрыть пароль' : 'Показать пароль');
     });
 
+    $('#jsn_login').on('click', '.privacy-consent-label a.z-link', function (e) {
+        e.stopPropagation();
+    });
+
+    $('#privacy_consent').on('change', function () {
+        persistDraftState();
+        if (isPrivacyConsentChecked()) {
+            hidePrivacyConsentError();
+        }
+        updateTabsContainerHeight();
+    });
+
     form.on('submit', function (e) {
+        if (!validatePrivacyConsent()) {
+            e.preventDefault();
+            recaptchaSubmitBypass = false;
+            return false;
+        }
+
         if (recaptchaSubmitBypass) {
             recaptchaSubmitBypass = false;
             syncUsernameWithEmail();
