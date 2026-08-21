@@ -2657,6 +2657,11 @@ div[role="tooltip"][id^="tip-"] {
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 28px;
+  font-size: 0;
+}
+
+#easyprofile.registration .jsn_registration_controls > * {
+  font-size: 15px;
 }
 
 #easyprofile.registration .jsn_registration_controls .dale,
