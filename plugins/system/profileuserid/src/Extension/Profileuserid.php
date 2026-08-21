@@ -7,9 +7,11 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Event\Application\AfterInitialiseEvent;
 use Joomla\CMS\Event\Application\AfterRouteEvent;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Router\Router;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
 
@@ -17,7 +19,40 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 {
 	public static function getSubscribedEvents(): array
 	{
-		return ['onAfterRoute' => 'onAfterRoute'];
+		return [
+			'onAfterInitialise' => ['onAfterInitialise', 100],
+			'onAfterRoute' => 'onAfterRoute',
+		];
+	}
+
+	public function onAfterInitialise(AfterInitialiseEvent $event): void
+	{
+		$app = $event->getApplication();
+		if (!$app->isClient('site')) {
+			return;
+		}
+
+		$router = $app->getRouter();
+		$router->attachParseRule([$this, 'parseStandalonePages'], Router::PROCESS_BEFORE);
+	}
+
+	public function parseStandalonePages(&$router, &$uri)
+	{
+		$path = strtolower(trim((string) $uri->getPath(), '/'));
+		if ($path !== 'privacy-policy') {
+			return [];
+		}
+
+		$uri->setPath('');
+		$uri->setVar('option', 'com_content');
+		$uri->setVar('view', 'featured');
+		$uri->setVar('privacy_page', '1');
+
+		return [
+			'option' => 'com_content',
+			'view' => 'featured',
+			'privacy_page' => '1',
+		];
 	}
 
 	public function onAfterRoute(AfterRouteEvent $event): void

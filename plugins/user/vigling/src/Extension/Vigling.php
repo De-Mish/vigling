@@ -4,6 +4,7 @@ namespace Joomla\Plugin\User\Vigling\Extension;
 
 use Joomla\CMS\Event\Model\PrepareFormEvent;
 use Joomla\CMS\Event\User\AfterSaveEvent;
+use Joomla\CMS\Event\User\BeforeSaveEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Form;
 use Joomla\CMS\Form\FormHelper;
@@ -30,9 +31,45 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
     {
         return [
             'onContentPrepareForm' => ['onContentPrepareForm', 100],
+            'onUserBeforeSave' => ['onUserBeforeSave', 50],
             // Run after Joomla's custom-fields save path, then persist schedule from the raw profile POST.
             'onUserAfterSave' => ['onUserAfterSave', -100],
         ];
+    }
+
+    public function onUserBeforeSave(BeforeSaveEvent $event): void
+    {
+        try {
+            $app = Factory::getApplication();
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if (!$app->isClient('site')) {
+            return;
+        }
+
+        $user = $event->getUser();
+        $userId = (int) ($user['id'] ?? 0);
+        if ($userId > 0) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $option = $input->getCmd('option');
+        $task = $input->post->getCmd('task');
+        if ($option !== 'com_users' || !\in_array($task, ['registration.register'], true)) {
+            return;
+        }
+
+        $consent = trim((string) $input->post->get('privacy_consent', '', 'string'));
+        if ($consent === '1') {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            'Для завершения регистрации необходимо принять условия Политики конфиденциальности'
+        );
     }
 
     public function onUserAfterSave(AfterSaveEvent $event): void
