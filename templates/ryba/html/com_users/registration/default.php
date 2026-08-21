@@ -1208,6 +1208,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function stripStrayRegistrationControlText() {
+        var root = controlsBar.get(0);
+        if (!root) {
+            return;
+        }
+        var node = root.firstChild;
+        while (node) {
+            var next = node.nextSibling;
+            if (node.nodeType === 3 && String(node.nodeValue || '').replace(/\s+/g, '') !== '') {
+                root.removeChild(node);
+            }
+            node = next;
+        }
+    }
+
     function isFinalRegistrationStep() {
         var allowed = tabsForCurrentType();
         return allowed.indexOf(currentTab) === allowed.length - 1;
@@ -1233,6 +1248,7 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#reg-submit').prop('disabled', true);
             hidePrivacyConsentError();
         }
+        stripStrayRegistrationControlText();
     }
 
     function syncTypeButtons() {
@@ -2495,5 +2511,12 @@ document.addEventListener('DOMContentLoaded', function () {
     $(window).on('resize', function () {
         updateTabsContainerHeight();
     });
+    stripStrayRegistrationControlText();
+    if (window.MutationObserver && controlsBar.get(0)) {
+        var strayTextObserver = new MutationObserver(function () {
+            stripStrayRegistrationControlText();
+        });
+        strayTextObserver.observe(controlsBar.get(0), { childList: true, subtree: false });
+    }
 });
 </script>
