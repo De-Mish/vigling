@@ -463,7 +463,7 @@ $durationJson = json_encode($durationOptions);
                             <div class="controls">
                                 <label class="checkbox privacy-consent-label" for="privacy_consent">
                                     <input type="checkbox" id="privacy_consent" name="privacy_consent" value="1" />
-                                    Нажимая «Зарегистрироваться», я принимаю условия <a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a>
+                                    Нажимая «Вперед», я принимаю условия <a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a>
                                 </label>
                             </div>
                         </div>
@@ -520,10 +520,10 @@ $durationJson = json_encode($durationOptions);
 
         <div class="jsn_registration_controls calc__btn"<?php echo $hasSubmittedData ? '' : ' style="display:none;"'; ?>>
             <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
-            <button type="button" class="dale" id="reg-next-step">Далее</button>
-            <div class="reg-submit-block">
+            <button type="button" class="dale" id="reg-next-step">Вперед</button>
+            <div class="reg-submit-block" id="reg-submit-block" hidden>
                 <div id="privacy-consent-error" class="privacy-error" role="alert" hidden></div>
-                <button type="submit" class="dale validate" id="reg-submit" style="display:none;" aria-describedby="privacy-consent-error">Зарегистрироваться</button>
+                <button type="submit" class="dale validate" id="reg-submit" disabled aria-describedby="privacy-consent-error">Зарегистрироваться</button>
             </div>
             <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>" onclick="try{sessionStorage.removeItem('vigling_registration_state_v3');sessionStorage.removeItem('vigling_registration_state_v2');sessionStorage.removeItem('vigling_registration_state_v1');localStorage.removeItem('vigling_registration_state_v3');localStorage.removeItem('vigling_registration_state_v2');localStorage.removeItem('vigling_registration_state_v1');}catch(e){}"><?php echo Text::_('JCANCEL'); ?></a>
         </div>
@@ -1208,12 +1208,31 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function isFinalRegistrationStep() {
+        var allowed = tabsForCurrentType();
+        return allowed.indexOf(currentTab) === allowed.length - 1;
+    }
+
     function syncStepButtons() {
         var allowed = tabsForCurrentType();
         var idx = allowed.indexOf(currentTab);
+        var isFinal = isFinalRegistrationStep();
+        var isLoginStep = currentTab === 'jsn_login';
+
         $('#reg-prev-step').toggle(idx > 0);
-        $('#reg-next-step').toggle(idx >= 0 && idx < allowed.length - 1);
-        $('#reg-submit').toggle(idx === allowed.length - 1);
+        controlsBar.toggleClass('is-final-step', isFinal);
+        controlsBar.toggleClass('is-login-step', isLoginStep);
+
+        if (isFinal) {
+            $('#reg-next-step').attr('hidden', true);
+            $('#reg-submit-block').removeAttr('hidden');
+            $('#reg-submit').prop('disabled', false).removeAttr('hidden');
+        } else {
+            $('#reg-next-step').removeAttr('hidden');
+            $('#reg-submit-block').attr('hidden', true);
+            $('#reg-submit').prop('disabled', true);
+            hidePrivacyConsentError();
+        }
     }
 
     function syncTypeButtons() {
@@ -2369,8 +2388,16 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTabsContainerHeight();
     });
 
+    $('#reg-submit').on('click', function (e) {
+        if (!isFinalRegistrationStep() || !validatePrivacyConsent()) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    });
+
     form.on('submit', function (e) {
-        if (!validatePrivacyConsent()) {
+        if (!isFinalRegistrationStep() || !validatePrivacyConsent()) {
             e.preventDefault();
             recaptchaSubmitBypass = false;
             return false;

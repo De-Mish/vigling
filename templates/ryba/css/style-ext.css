@@ -2676,6 +2676,31 @@ div[role="tooltip"][id^="tip-"] {
   box-sizing: border-box;
 }
 
+#easyprofile.registration #reg-next-step {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#easyprofile.registration #reg-next-step[hidden],
+#easyprofile.registration .jsn_registration_controls.is-final-step #reg-next-step {
+  display: none !important;
+}
+
+#easyprofile.registration .reg-submit-block[hidden],
+#easyprofile.registration #reg-submit {
+  display: none !important;
+}
+
+#easyprofile.registration .jsn_registration_controls.is-final-step .reg-submit-block {
+  display: flex !important;
+}
+
+#easyprofile.registration .jsn_registration_controls.is-final-step #reg-submit {
+  display: inline-flex !important;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 /* Registration - portfolio upload hover */
 #easyprofile.registration #jsn_portfolio .portfolio_field-group .controls {
   transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
