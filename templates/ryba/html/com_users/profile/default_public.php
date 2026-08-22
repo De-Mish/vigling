@@ -523,6 +523,64 @@ $filterCatId = (int) $app->getInput()->getUint('cat_id', 0);
 $filterServiceId = (int) $app->getInput()->getUint('service', 0);
 $filterTagId = (int) $app->getInput()->getUint('tag', 0);
 $highlightSearchService = $filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0;
+$filterServiceTitle = '';
+$filterTagTitle = '';
+if ($highlightSearchService) {
+	$loadLookupTitle = static function (int $id): string {
+		if ($id <= 0) {
+			return '';
+		}
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			foreach (['#__content', '#__vigling_services', '#__tags'] as $table) {
+				try {
+					$query = $db->getQuery(true)
+						->select($db->quoteName('title'))
+						->from($db->quoteName($table))
+						->where($db->quoteName('id') . ' = ' . $id);
+					$title = trim((string) $db->setQuery($query)->loadResult());
+					if ($title !== '') {
+						return $title;
+					}
+				} catch (\Throwable $e) {
+					continue;
+				}
+			}
+		} catch (\Throwable $e) {
+			return '';
+		}
+		return '';
+	};
+	$filterServiceTitle = $loadLookupTitle($filterServiceId);
+	$filterTagTitle = $loadLookupTitle($filterTagId);
+}
+$serviceMatchesSearchFilter = static function (array $cat, array $item, int $filterServiceId, int $filterTagId, string $serviceTitle, string $tagTitle): bool {
+	$itemCatId = (int) ($cat['cat_id'] ?? 0);
+	$itemSvcId = (int) ($item['svc_id'] ?? 0);
+	$itemTagId = (int) ($item['tag_id'] ?? 0);
+	$legacyCatId = (int) ($item['legacy_cat_id'] ?? 0);
+	$serviceIds = array_values(array_unique(array_filter([$itemSvcId, $itemCatId, $legacyCatId], static function (int $id): bool {
+		return $id > 0;
+	})));
+	$tagIds = array_values(array_unique(array_filter([$itemTagId, $itemSvcId], static function (int $id): bool {
+		return $id > 0;
+	})));
+	$serviceMatch = in_array($filterServiceId, $serviceIds, true);
+	$tagMatch = in_array($filterTagId, $tagIds, true);
+	if ($serviceMatch && $tagMatch) {
+		return true;
+	}
+	$haystack = trim((string) ($cat['title'] ?? '') . ' ' . (string) ($item['name'] ?? ''));
+	if ($haystack === '' || $serviceTitle === '' || $tagTitle === '') {
+		return false;
+	}
+	if (function_exists('mb_stripos')) {
+		return mb_stripos($haystack, $serviceTitle) !== false && mb_stripos($haystack, $tagTitle) !== false;
+	}
+	$haystackLower = strtolower($haystack);
+	return strpos($haystackLower, strtolower($serviceTitle)) !== false
+		&& strpos($haystackLower, strtolower($tagTitle)) !== false;
+};
 $stockPricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
 	$stockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($profileOwnerId);
@@ -746,6 +804,25 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			max-height: none !important;
 			opacity: 1 !important;
 			overflow: visible !important;
+		}
+		.master__services .priceList__item.highlighted-service {
+			background-color: #f9ce54 !important;
+			border: 1px solid #e6b800;
+			border-radius: 10px;
+			padding: 12px 16px !important;
+			width: 100%;
+			max-width: 100%;
+			box-sizing: border-box;
+			color: #000000 !important;
+			margin: 8px 0;
+			display: block;
+			overflow: visible;
+		}
+		.master__services .priceList__item.highlighted-service .service-name,
+		.master__services .priceList__item.highlighted-service .service-price,
+		.master__services .priceList__item.highlighted-service .priceList__item-coll,
+		.master__services .priceList__item.highlighted-service .price_span {
+			color: #000000 !important;
 		}
 		.master__services .accordionItemHeading {
 			cursor: default !important;
@@ -1279,12 +1356,11 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							$itemCatId = (int) ($cat['cat_id'] ?? 0);
 							$itemSvcId = (int) ($item['svc_id'] ?? 0);
 							$itemTagId = (int) ($item['tag_id'] ?? 0);
+							$itemLegacyCatId = (int) ($item['legacy_cat_id'] ?? 0);
 							$isHighlightedService = $highlightSearchService
-								&& $itemSvcId === $filterServiceId
-								&& $itemTagId === $filterTagId
-								&& ($itemCatId === 0 || $itemCatId === $filterCatId);
+								&& $serviceMatchesSearchFilter($cat, $item, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 						?>
-						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>">
+						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>" data-legacy-cat-id="<?php echo $itemLegacyCatId; ?>">
 							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
@@ -2971,19 +3047,26 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 	}
 
 	function applyHighlight(filters) {
-		if (!filters || !filters.cat_id || !filters.service || !filters.tag) {
+		if (!filters || !filters.service || !filters.tag) {
 			return null;
 		}
+		var serviceTitle = <?php echo json_encode($filterServiceTitle, JSON_UNESCAPED_UNICODE); ?>;
+		var tagTitle = <?php echo json_encode($filterTagTitle, JSON_UNESCAPED_UNICODE); ?>;
 		var items = document.querySelectorAll('.master__services .priceList__item');
 		var first = null;
 		items.forEach(function (item) {
 			var svcId = parsePositiveInt(item.getAttribute('data-svc-id'));
 			var tagId = parsePositiveInt(item.getAttribute('data-tag-id'));
 			var catId = parsePositiveInt(item.getAttribute('data-cat-id'));
-			if (svcId !== filters.service || tagId !== filters.tag) {
-				return;
-			}
-			if (catId > 0 && catId !== filters.cat_id) {
+			var legacyCatId = parsePositiveInt(item.getAttribute('data-legacy-cat-id'));
+			var serviceMatch = svcId === filters.service || catId === filters.service || legacyCatId === filters.service;
+			var tagMatch = tagId === filters.tag || svcId === filters.tag;
+			var nameEl = item.querySelector('.service-name');
+			var haystack = ((nameEl && nameEl.textContent) || '').toLowerCase();
+			var nameMatch = serviceTitle && tagTitle
+				&& haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1
+				&& haystack.indexOf(String(tagTitle).toLowerCase()) !== -1;
+			if (!(serviceMatch && tagMatch) && !nameMatch) {
 				return;
 			}
 			item.classList.add('highlighted-service');
