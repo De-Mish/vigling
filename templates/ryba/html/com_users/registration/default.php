@@ -519,13 +519,15 @@ $durationJson = json_encode($durationOptions);
         </div>
 
         <div class="jsn_registration_controls calc__btn"<?php echo $hasSubmittedData ? '' : ' style="display:none;"'; ?>>
-            <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
-            <button type="button" class="dale" id="reg-next-step">Вперед</button>
+            <div id="privacy-consent-error" class="privacy-error privacy-error-box" role="alert" hidden></div>
             <div class="reg-submit-block" id="reg-submit-block" hidden>
-                <div id="privacy-consent-error" class="privacy-error" role="alert" hidden></div>
                 <button type="submit" class="dale validate" id="reg-submit" disabled aria-describedby="privacy-consent-error">Зарегистрироваться</button>
             </div>
-            <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>" onclick="try{sessionStorage.removeItem('vigling_registration_state_v3');sessionStorage.removeItem('vigling_registration_state_v2');sessionStorage.removeItem('vigling_registration_state_v1');localStorage.removeItem('vigling_registration_state_v3');localStorage.removeItem('vigling_registration_state_v2');localStorage.removeItem('vigling_registration_state_v1');}catch(e){}"><?php echo Text::_('JCANCEL'); ?></a>
+            <div class="reg-navigation-buttons">
+                <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
+                <button type="button" class="dale" id="reg-next-step">Вперед</button>
+                <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>" onclick="try{sessionStorage.removeItem('vigling_registration_state_v3');sessionStorage.removeItem('vigling_registration_state_v2');sessionStorage.removeItem('vigling_registration_state_v1');localStorage.removeItem('vigling_registration_state_v3');localStorage.removeItem('vigling_registration_state_v2');localStorage.removeItem('vigling_registration_state_v1');}catch(e){}"><?php echo Text::_('JCANCEL'); ?></a>
+            </div>
         </div>
 
         <input type="hidden" name="jform[username]" id="jform_username" value="<?php echo $this->escape($usernameValue); ?>" />
@@ -2117,14 +2119,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function hidePrivacyConsentError() {
         var errorEl = $('#privacy-consent-error');
-        errorEl.removeClass('is-visible').attr('hidden', true).text('');
+        errorEl.removeClass('is-visible').attr('hidden', true).empty();
         $('#privacy_consent').removeAttr('aria-invalid');
     }
 
     function showPrivacyConsentError() {
         var errorEl = $('#privacy-consent-error');
         var message = 'Для завершения регистрации необходимо принять условия Политики конфиденциальности';
-        errorEl.text(message).addClass('is-visible').removeAttr('hidden');
+        errorEl
+            .text(message)
+            .addClass('is-visible')
+            .removeAttr('hidden')
+            .attr('aria-hidden', 'false');
         $('#privacy_consent').attr('aria-invalid', 'true');
         if (errorEl[0] && typeof errorEl[0].scrollIntoView === 'function') {
             errorEl[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
