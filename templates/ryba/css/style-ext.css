@@ -2606,20 +2606,37 @@ div[role="tooltip"][id^="tip-"] {
   gap: 8px;
 }
 
-#easyprofile.registration .privacy-error {
+#easyprofile.registration .reg-navigation-buttons {
+  display: contents;
+}
+
+#easyprofile.registration .privacy-error,
+#easyprofile.registration .privacy-error-box {
   display: none;
-  color: #d32f2f;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid #ff0000;
+  border-radius: 6px;
+  padding: 12px 15px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  color: #ff0000;
+  background-color: #fff5f5;
   font-size: 14px;
-  line-height: 1.4;
-  margin: 0;
-  max-width: 420px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
 }
 
-#easyprofile.registration .privacy-error.is-visible {
-  display: block;
+#easyprofile.registration .privacy-error.is-visible,
+#easyprofile.registration .privacy-error-box.is-visible {
+  display: block !important;
 }
 
-#easyprofile.registration .privacy-error[hidden] {
+#easyprofile.registration .privacy-error[hidden],
+#easyprofile.registration .privacy-error-box[hidden] {
   display: none !important;
 }
 
@@ -2657,11 +2674,38 @@ div[role="tooltip"][id^="tip-"] {
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 28px;
-  font-size: 0;
+  font-size: 15px;
+  overflow: visible;
+}
+
+#easyprofile.registration .jsn_registration_controls.calc__btn {
+  overflow: visible;
 }
 
 #easyprofile.registration .jsn_registration_controls > * {
   font-size: 15px;
+}
+
+#easyprofile.registration #reg-prev-step {
+  order: 1;
+}
+
+#easyprofile.registration #reg-next-step {
+  order: 2;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#easyprofile.registration #privacy-consent-error {
+  order: 3;
+}
+
+#easyprofile.registration .reg-submit-block {
+  order: 4;
+}
+
+#easyprofile.registration #reg-cancel {
+  order: 5;
 }
 
 #easyprofile.registration .jsn_registration_controls .dale,
@@ -2679,11 +2723,6 @@ div[role="tooltip"][id^="tip-"] {
   text-overflow: ellipsis;
   font-size: 15px;
   box-sizing: border-box;
-}
-
-#easyprofile.registration #reg-next-step {
-  cursor: pointer;
-  pointer-events: auto;
 }
 
 #easyprofile.registration #reg-next-step[hidden],
@@ -2704,6 +2743,64 @@ div[role="tooltip"][id^="tip-"] {
   display: inline-flex !important;
   cursor: pointer;
   pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  #easyprofile.registration .jsn_registration_controls,
+  #easyprofile.registration .jsn_registration_controls.calc__btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    overflow: visible;
+    padding-left: 0;
+  }
+
+  #easyprofile.registration .reg-submit-block {
+    display: contents;
+  }
+
+  #easyprofile.registration .jsn_registration_controls.is-final-step .reg-submit-block {
+    display: contents !important;
+  }
+
+  #easyprofile.registration #privacy-consent-error,
+  #easyprofile.registration .privacy-error-box {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #easyprofile.registration .reg-submit-block,
+  #easyprofile.registration #reg-submit {
+    order: 2;
+  }
+
+  #easyprofile.registration .jsn_registration_controls.is-final-step #reg-submit {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  #easyprofile.registration .reg-navigation-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    order: 3;
+  }
+
+  #easyprofile.registration #reg-prev-step,
+  #easyprofile.registration #reg-next-step,
+  #easyprofile.registration #reg-cancel {
+    order: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+  }
 }
 
 /* Registration - portfolio upload hover */
@@ -2906,16 +3003,17 @@ div[role="tooltip"][id^="tip-"] {
 
   #easyprofile.registration .jsn_registration_controls {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 10px;
     justify-content: flex-start;
+    align-items: center;
   }
 
   #easyprofile.registration .jsn_registration_controls .dale,
   #easyprofile.registration .jsn_registration_controls .validate,
   #easyprofile.registration .jsn_registration_controls a.dale {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     width: auto;
   }
 
