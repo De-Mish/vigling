@@ -519,6 +519,10 @@ $pricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
 	$pricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserServicesStructuredWithIds($profileOwnerId);
 }
+$filterCatId = (int) $app->getInput()->getUint('cat_id', 0);
+$filterServiceId = (int) $app->getInput()->getUint('service', 0);
+$filterTagId = (int) $app->getInput()->getUint('tag', 0);
+$highlightSearchService = $filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0;
 $stockPricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
 	$stockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($profileOwnerId);
@@ -1272,10 +1276,17 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							$durationMin = (int) ($item['duration'] ?? 0);
 							$pauseMin = (int) ($item['pause_min'] ?? 0);
 							$srvTime = $pauseMin > 0 ? ($durationMin . '.' . $pauseMin) : (string) $durationMin;
+							$itemCatId = (int) ($cat['cat_id'] ?? 0);
+							$itemSvcId = (int) ($item['svc_id'] ?? 0);
+							$itemTagId = (int) ($item['tag_id'] ?? 0);
+							$isHighlightedService = $highlightSearchService
+								&& $itemSvcId === $filterServiceId
+								&& $itemTagId === $filterTagId
+								&& ($itemCatId === 0 || $itemCatId === $filterCatId);
 						?>
-						<div class="priceList__item" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo (int) ($item['tag_id'] ?? 0); ?>">
-							<div class="priceList__item-coll price__coll1"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
-							<div class="priceList__item-coll price__coll2">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
+						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>">
+							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
+							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
 							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
@@ -2920,6 +2931,81 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		script.defer = true;
 		script.onload = initMap;
 		document.head.appendChild(script);
+	}
+})();
+</script>
+<script>
+(function () {
+	function parsePositiveInt(value) {
+		var n = parseInt(value, 10);
+		return n > 0 ? n : 0;
+	}
+
+	function readStoredFilters() {
+		try {
+			var raw = sessionStorage.getItem('vigling_poisk_filters');
+			if (!raw) {
+				return null;
+			}
+			var data = JSON.parse(raw);
+			if (!data) {
+				return null;
+			}
+			return {
+				cat_id: parsePositiveInt(data.cat_id),
+				service: parsePositiveInt(data.service),
+				tag: parsePositiveInt(data.tag)
+			};
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function filtersFromUrl() {
+		var params = new URLSearchParams(window.location.search);
+		return {
+			cat_id: parsePositiveInt(params.get('cat_id')),
+			service: parsePositiveInt(params.get('service')),
+			tag: parsePositiveInt(params.get('tag'))
+		};
+	}
+
+	function applyHighlight(filters) {
+		if (!filters || !filters.cat_id || !filters.service || !filters.tag) {
+			return null;
+		}
+		var items = document.querySelectorAll('.master__services .priceList__item');
+		var first = null;
+		items.forEach(function (item) {
+			var svcId = parsePositiveInt(item.getAttribute('data-svc-id'));
+			var tagId = parsePositiveInt(item.getAttribute('data-tag-id'));
+			var catId = parsePositiveInt(item.getAttribute('data-cat-id'));
+			if (svcId !== filters.service || tagId !== filters.tag) {
+				return;
+			}
+			if (catId > 0 && catId !== filters.cat_id) {
+				return;
+			}
+			item.classList.add('highlighted-service');
+			if (!first) {
+				first = item;
+			}
+		});
+		return first;
+	}
+
+	var highlighted = document.querySelector('.highlighted-service');
+	if (!highlighted) {
+		var urlFilters = filtersFromUrl();
+		highlighted = applyHighlight(urlFilters);
+		if (!highlighted) {
+			highlighted = applyHighlight(readStoredFilters());
+		}
+	}
+	if (highlighted && typeof highlighted.scrollIntoView === 'function') {
+		window.setTimeout(function () {
+			highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 80);
 	}
 })();
 </script>
