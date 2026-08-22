@@ -215,4 +215,44 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
         padding-left: 15px;
     }
 }
+@media (max-width: 768px) {
+    .category__item {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    .category__item-img {
+        flex-shrink: 0;
+        float: none;
+    }
+    .category__item-master {
+        top: 0 !important;
+        transform: none !important;
+        flex-shrink: 0;
+    }
+    .category__item-content {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .category__item-content-left {
+        padding-top: 0;
+    }
+    .category__item-content-right {
+        clear: none;
+        padding-top: 0;
+        margin-top: 0;
+        border-top: none;
+        width: auto !important;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+    .btn__time-zapis {
+        margin-top: 0 !important;
+        flex-shrink: 0;
+    }
+}
 </style>
