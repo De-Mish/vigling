@@ -3513,7 +3513,9 @@ div[role="tooltip"][id^="tip-"] {
     left: auto;
     height: 67px;
     display: flex;
+    flex-direction: row;
     align-items: center;
+    justify-content: flex-end;
     width: auto !important;
     clear: none;
     padding: 0 !important;
