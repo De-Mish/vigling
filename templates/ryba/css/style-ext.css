@@ -3471,28 +3471,20 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
-/* Mobile: align the book button with the avatar without flexing the whole card.
-   Closest shared parent is .category__item. The avatar and button live in nested
-   wrappers, so on mobile those wrappers become table-cells (Option B). */
+/* Mobile: lift Записаться to the avatar’s vertical center (Option C).
+   The button is inside the text column, so it is positioned against the card.
+   Left edge stays next to the avatar — it is not pushed to the far right. */
 @media (max-width: 768px) {
   .category.jsn_list .category__item {
-    display: table;
-    width: 100%;
-    table-layout: auto;
-    border-collapse: separate;
-    border-spacing: 8px 0;
-  }
-
-  .category.jsn_list .category__item-content {
-    display: contents;
+    position: relative;
+    overflow: visible;
   }
 
   .category.jsn_list .category__item-img {
-    display: table-cell;
-    vertical-align: middle;
-    float: none;
+    float: left;
     width: 67px;
-    height: auto;
+    height: 67px;
+    margin-right: 10px;
   }
 
   .category.jsn_list .category__item-master {
@@ -3511,31 +3503,42 @@ div[role="tooltip"][id^="tip-"] {
     border-radius: 50%;
   }
 
+  .category.jsn_list .category__item-content {
+    display: block;
+    width: 100%;
+    float: none;
+  }
+
   .category.jsn_list .category__item-content-left {
-    display: table-cell;
-    vertical-align: middle;
+    clear: both;
+    padding-top: 10px;
   }
 
   .category.jsn_list .category__item-content-right {
-    display: table-cell;
-    vertical-align: middle;
-    width: 1% !important;
-    white-space: nowrap;
+    position: absolute;
+    top: 0;
+    left: 77px;
+    right: auto;
+    height: 67px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: auto !important;
     clear: none;
-    padding-top: 0;
-    margin-top: 0;
+    padding: 0 !important;
+    margin: 0;
     border-top: none;
+    z-index: 5;
   }
 
   .category.jsn_list .btn__time-zapis {
     display: inline-block !important;
-    vertical-align: middle;
     position: static;
     visibility: visible;
     opacity: 1;
-    margin-top: 0 !important;
-    margin-left: 0 !important;
-    white-space: nowrap;
+    margin: 0 !important;
+    z-index: 5;
   }
 }
 
