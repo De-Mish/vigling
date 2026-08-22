@@ -3471,30 +3471,32 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
-/* Mobile: show the full avatar and book button, and align their vertical centers. */
+/* Mobile: align the book button with the avatar without flexing the whole card.
+   Closest shared parent is .category__item. The avatar and button live in nested
+   wrappers, so on mobile those wrappers become table-cells (Option B). */
 @media (max-width: 768px) {
   .category.jsn_list .category__item {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    overflow: visible;
-    gap: 10px;
+    display: table;
+    width: 100%;
+    table-layout: auto;
+    border-collapse: separate;
+    border-spacing: 8px 0;
+  }
+
+  .category.jsn_list .category__item-content {
+    display: contents;
   }
 
   .category.jsn_list .category__item-img {
+    display: table-cell;
+    vertical-align: middle;
     float: none;
-    flex: 0 0 67px;
     width: 67px;
-    height: 67px;
-    margin-right: 0;
-    overflow: visible;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: auto;
   }
 
   .category.jsn_list .category__item-master {
+    display: block;
     width: 67px;
     height: 67px;
     box-sizing: border-box;
@@ -3507,58 +3509,32 @@ div[role="tooltip"][id^="tip-"] {
     background-position: center;
     background-repeat: no-repeat;
     border-radius: 50%;
-    flex-shrink: 0;
-    flex-shrink: 0;
-  }
-
-  .category.jsn_list .category__item-content {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    flex: 1 1 0%;
-    min-width: 0;
-    width: auto !important;
   }
 
   .category.jsn_list .category__item-content-left {
-    flex: 1 1 0%;
-    min-width: 0;
-    padding-top: 0;
-  }
-  
-  .category.jsn_list .category_cinfo-name,
-  .category.jsn_list .category_cinfo-address {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    display: table-cell;
+    vertical-align: middle;
   }
 
   .category.jsn_list .category__item-content-right {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: auto !important;
-    ax-width: 100%;
-    float: none !important;
+    display: table-cell;
+    vertical-align: middle;
+    width: 1% !important;
+    white-space: nowrap;
     clear: none;
     padding-top: 0;
-     padding-left: 0 !important;
-    margin: 0;
-    margin-right: 0 !important;
+    margin-top: 0;
     border-top: none;
-    overflow: visible;
   }
 
   .category.jsn_list .btn__time-zapis {
     display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    vertical-align: middle;
     position: static;
-    margin: 0 !important;
-    flex-shrink: 0;
+    visibility: visible;
+    opacity: 1;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
     white-space: nowrap;
   }
 }
