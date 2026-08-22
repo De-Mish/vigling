@@ -2606,10 +2606,6 @@ div[role="tooltip"][id^="tip-"] {
   gap: 8px;
 }
 
-#easyprofile.registration .reg-navigation-buttons {
-  display: contents;
-}
-
 #easyprofile.registration .privacy-error,
 #easyprofile.registration .privacy-error-box {
   display: none;
@@ -2696,16 +2692,12 @@ div[role="tooltip"][id^="tip-"] {
   pointer-events: auto;
 }
 
-#easyprofile.registration #privacy-consent-error {
+#easyprofile.registration .reg-submit-block {
   order: 3;
 }
 
-#easyprofile.registration .reg-submit-block {
-  order: 4;
-}
-
 #easyprofile.registration #reg-cancel {
-  order: 5;
+  order: 4;
 }
 
 #easyprofile.registration .jsn_registration_controls .dale,
@@ -2749,31 +2741,29 @@ div[role="tooltip"][id^="tip-"] {
   #easyprofile.registration .jsn_registration_controls,
   #easyprofile.registration .jsn_registration_controls.calc__btn {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
     overflow: visible;
     padding-left: 0;
   }
 
-  #easyprofile.registration .reg-submit-block {
-    display: contents;
-  }
-
+  #easyprofile.registration .reg-submit-block,
   #easyprofile.registration .jsn_registration_controls.is-final-step .reg-submit-block {
-    display: contents !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    flex: 1 1 100%;
+    order: 1;
   }
 
   #easyprofile.registration #privacy-consent-error,
   #easyprofile.registration .privacy-error-box {
-    order: 1;
     width: 100%;
     max-width: 100%;
-  }
-
-  #easyprofile.registration .reg-submit-block,
-  #easyprofile.registration #reg-submit {
-    order: 2;
   }
 
   #easyprofile.registration .jsn_registration_controls.is-final-step #reg-submit {
@@ -2782,20 +2772,10 @@ div[role="tooltip"][id^="tip-"] {
     justify-content: center;
   }
 
-  #easyprofile.registration .reg-navigation-buttons {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    gap: 10px;
-    order: 3;
-  }
-
   #easyprofile.registration #reg-prev-step,
   #easyprofile.registration #reg-next-step,
   #easyprofile.registration #reg-cancel {
-    order: 0;
+    order: 2;
     flex: 1 1 auto;
     min-width: 0;
     width: auto;
@@ -3003,10 +2983,10 @@ div[role="tooltip"][id^="tip-"] {
 
   #easyprofile.registration .jsn_registration_controls {
     display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 10px;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
   }
 
