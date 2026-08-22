@@ -3471,3 +3471,24 @@ div[role="tooltip"][id^="tip-"] {
     font-size: 13px;
   }
 }
+
+.master__services .priceList__item.highlighted-service {
+  background-color: #f9ce54 !important;
+  border: 1px solid #e6b800;
+  border-radius: 10px;
+  padding: 12px 16px !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  color: #000000 !important;
+  margin: 8px 0;
+  display: block;
+  overflow: visible;
+}
+
+.master__services .priceList__item.highlighted-service .service-name,
+.master__services .priceList__item.highlighted-service .service-price,
+.master__services .priceList__item.highlighted-service .priceList__item-coll,
+.master__services .priceList__item.highlighted-service .price_span {
+  color: #000000 !important;
+}

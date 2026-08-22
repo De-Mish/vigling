@@ -103,6 +103,9 @@ if (!empty($mapItems)) {
 			? implode(', ', $geocodeParts)
 			: '';
 		$profileLink = '/index.php?option=com_users&view=profile&user_id=' . (int) $mapItem->id;
+		if ($currentCatId > 0 && $currentService > 0 && $currentTag > 0) {
+			$profileLink .= '&cat_id=' . $currentCatId . '&service=' . $currentService . '&tag=' . $currentTag;
+		}
 		$specialityIds = json_decode($specialitiesRaw, true);
 		$specialityTitles = [];
 		if (is_array($specialityIds)) {
@@ -505,6 +508,74 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 });
+</script>
+<script>
+(function () {
+	var STORAGE_URL = 'vigling_poisk_search_url';
+	var STORAGE_FILTERS = 'vigling_poisk_filters';
+	var params = new URLSearchParams(window.location.search);
+	var catId = parseInt(params.get('cat_id') || '0', 10) || 0;
+	var service = parseInt(params.get('service') || '0', 10) || 0;
+	var tag = parseInt(params.get('tag') || '0', 10) || 0;
+	var currentUrl = window.location.pathname + window.location.search;
+
+	function saveSearchState() {
+		try {
+			sessionStorage.setItem(STORAGE_URL, currentUrl);
+			sessionStorage.setItem(STORAGE_FILTERS, JSON.stringify({
+				cat_id: catId,
+				service: service,
+				tag: tag
+			}));
+		} catch (e) {}
+	}
+
+	function navigationType() {
+		try {
+			if (window.performance && typeof window.performance.getEntriesByType === 'function') {
+				var entries = window.performance.getEntriesByType('navigation');
+				if (entries && entries[0] && entries[0].type) {
+					return String(entries[0].type);
+				}
+			}
+			if (window.performance && window.performance.navigation) {
+				return window.performance.navigation.type === 2 ? 'back_forward' : 'navigate';
+			}
+		} catch (e) {}
+		return 'navigate';
+	}
+
+	function maybeRestoreSearchState() {
+		if (catId > 0 && service > 0 && tag > 0) {
+			return;
+		}
+		var storedUrl = '';
+		try {
+			storedUrl = sessionStorage.getItem(STORAGE_URL) || '';
+		} catch (e) {
+			return;
+		}
+		if (!storedUrl || storedUrl === currentUrl) {
+			return;
+		}
+		if (!/[?&]cat_id=\d+/.test(storedUrl) || !/[?&]service=\d+/.test(storedUrl) || !/[?&]tag=\d+/.test(storedUrl)) {
+			return;
+		}
+		var navType = navigationType();
+		var ref = document.referrer || '';
+		var fromProfile = /[?&]option=com_users\b/.test(ref)
+			|| /[?&]view=profile\b/.test(ref)
+			|| /[?&]user_id=\d+/.test(ref)
+			|| /\/profile/.test(ref);
+		if (navType !== 'back_forward' && !fromProfile) {
+			return;
+		}
+		window.location.replace(storedUrl);
+	}
+
+	maybeRestoreSearchState();
+	saveSearchState();
+})();
 </script>
 <?php
 $doc->addScript(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/js/chosen.jquery.min.js', ['defer' => true]);

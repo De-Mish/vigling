@@ -519,6 +519,68 @@ $pricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
 	$pricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserServicesStructuredWithIds($profileOwnerId);
 }
+$filterCatId = (int) $app->getInput()->getUint('cat_id', 0);
+$filterServiceId = (int) $app->getInput()->getUint('service', 0);
+$filterTagId = (int) $app->getInput()->getUint('tag', 0);
+$highlightSearchService = $filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0;
+$filterServiceTitle = '';
+$filterTagTitle = '';
+if ($highlightSearchService) {
+	$loadLookupTitle = static function (int $id): string {
+		if ($id <= 0) {
+			return '';
+		}
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			foreach (['#__content', '#__vigling_services', '#__tags'] as $table) {
+				try {
+					$query = $db->getQuery(true)
+						->select($db->quoteName('title'))
+						->from($db->quoteName($table))
+						->where($db->quoteName('id') . ' = ' . $id);
+					$title = trim((string) $db->setQuery($query)->loadResult());
+					if ($title !== '') {
+						return $title;
+					}
+				} catch (\Throwable $e) {
+					continue;
+				}
+			}
+		} catch (\Throwable $e) {
+			return '';
+		}
+		return '';
+	};
+	$filterServiceTitle = $loadLookupTitle($filterServiceId);
+	$filterTagTitle = $loadLookupTitle($filterTagId);
+}
+$serviceMatchesSearchFilter = static function (array $cat, array $item, int $filterServiceId, int $filterTagId, string $serviceTitle, string $tagTitle): bool {
+	$itemCatId = (int) ($cat['cat_id'] ?? 0);
+	$itemSvcId = (int) ($item['svc_id'] ?? 0);
+	$itemTagId = (int) ($item['tag_id'] ?? 0);
+	$legacyCatId = (int) ($item['legacy_cat_id'] ?? 0);
+	$serviceIds = array_values(array_unique(array_filter([$itemSvcId, $itemCatId, $legacyCatId], static function (int $id): bool {
+		return $id > 0;
+	})));
+	$tagIds = array_values(array_unique(array_filter([$itemTagId, $itemSvcId], static function (int $id): bool {
+		return $id > 0;
+	})));
+	$serviceMatch = in_array($filterServiceId, $serviceIds, true);
+	$tagMatch = in_array($filterTagId, $tagIds, true);
+	if ($serviceMatch && $tagMatch) {
+		return true;
+	}
+	$haystack = trim((string) ($cat['title'] ?? '') . ' ' . (string) ($item['name'] ?? ''));
+	if ($haystack === '' || $serviceTitle === '' || $tagTitle === '') {
+		return false;
+	}
+	if (function_exists('mb_stripos')) {
+		return mb_stripos($haystack, $serviceTitle) !== false && mb_stripos($haystack, $tagTitle) !== false;
+	}
+	$haystackLower = strtolower($haystack);
+	return strpos($haystackLower, strtolower($serviceTitle)) !== false
+		&& strpos($haystackLower, strtolower($tagTitle)) !== false;
+};
 $stockPricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
 	$stockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($profileOwnerId);
@@ -742,6 +804,25 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			max-height: none !important;
 			opacity: 1 !important;
 			overflow: visible !important;
+		}
+		.master__services .priceList__item.highlighted-service {
+			background-color: #f9ce54 !important;
+			border: 1px solid #e6b800;
+			border-radius: 10px;
+			padding: 12px 16px !important;
+			width: 100%;
+			max-width: 100%;
+			box-sizing: border-box;
+			color: #000000 !important;
+			margin: 8px 0;
+			display: block;
+			overflow: visible;
+		}
+		.master__services .priceList__item.highlighted-service .service-name,
+		.master__services .priceList__item.highlighted-service .service-price,
+		.master__services .priceList__item.highlighted-service .priceList__item-coll,
+		.master__services .priceList__item.highlighted-service .price_span {
+			color: #000000 !important;
 		}
 		.master__services .accordionItemHeading {
 			cursor: default !important;
@@ -1272,10 +1353,16 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							$durationMin = (int) ($item['duration'] ?? 0);
 							$pauseMin = (int) ($item['pause_min'] ?? 0);
 							$srvTime = $pauseMin > 0 ? ($durationMin . '.' . $pauseMin) : (string) $durationMin;
+							$itemCatId = (int) ($cat['cat_id'] ?? 0);
+							$itemSvcId = (int) ($item['svc_id'] ?? 0);
+							$itemTagId = (int) ($item['tag_id'] ?? 0);
+							$itemLegacyCatId = (int) ($item['legacy_cat_id'] ?? 0);
+							$isHighlightedService = $highlightSearchService
+								&& $serviceMatchesSearchFilter($cat, $item, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 						?>
-						<div class="priceList__item" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo (int) ($item['tag_id'] ?? 0); ?>">
-							<div class="priceList__item-coll price__coll1"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
-							<div class="priceList__item-coll price__coll2">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
+						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>" data-legacy-cat-id="<?php echo $itemLegacyCatId; ?>">
+							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
+							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
 							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
@@ -2920,6 +3007,88 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		script.defer = true;
 		script.onload = initMap;
 		document.head.appendChild(script);
+	}
+})();
+</script>
+<script>
+(function () {
+	function parsePositiveInt(value) {
+		var n = parseInt(value, 10);
+		return n > 0 ? n : 0;
+	}
+
+	function readStoredFilters() {
+		try {
+			var raw = sessionStorage.getItem('vigling_poisk_filters');
+			if (!raw) {
+				return null;
+			}
+			var data = JSON.parse(raw);
+			if (!data) {
+				return null;
+			}
+			return {
+				cat_id: parsePositiveInt(data.cat_id),
+				service: parsePositiveInt(data.service),
+				tag: parsePositiveInt(data.tag)
+			};
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function filtersFromUrl() {
+		var params = new URLSearchParams(window.location.search);
+		return {
+			cat_id: parsePositiveInt(params.get('cat_id')),
+			service: parsePositiveInt(params.get('service')),
+			tag: parsePositiveInt(params.get('tag'))
+		};
+	}
+
+	function applyHighlight(filters) {
+		if (!filters || !filters.service || !filters.tag) {
+			return null;
+		}
+		var serviceTitle = <?php echo json_encode($filterServiceTitle, JSON_UNESCAPED_UNICODE); ?>;
+		var tagTitle = <?php echo json_encode($filterTagTitle, JSON_UNESCAPED_UNICODE); ?>;
+		var items = document.querySelectorAll('.master__services .priceList__item');
+		var first = null;
+		items.forEach(function (item) {
+			var svcId = parsePositiveInt(item.getAttribute('data-svc-id'));
+			var tagId = parsePositiveInt(item.getAttribute('data-tag-id'));
+			var catId = parsePositiveInt(item.getAttribute('data-cat-id'));
+			var legacyCatId = parsePositiveInt(item.getAttribute('data-legacy-cat-id'));
+			var serviceMatch = svcId === filters.service || catId === filters.service || legacyCatId === filters.service;
+			var tagMatch = tagId === filters.tag || svcId === filters.tag;
+			var nameEl = item.querySelector('.service-name');
+			var haystack = ((nameEl && nameEl.textContent) || '').toLowerCase();
+			var nameMatch = serviceTitle && tagTitle
+				&& haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1
+				&& haystack.indexOf(String(tagTitle).toLowerCase()) !== -1;
+			if (!(serviceMatch && tagMatch) && !nameMatch) {
+				return;
+			}
+			item.classList.add('highlighted-service');
+			if (!first) {
+				first = item;
+			}
+		});
+		return first;
+	}
+
+	var highlighted = document.querySelector('.highlighted-service');
+	if (!highlighted) {
+		var urlFilters = filtersFromUrl();
+		highlighted = applyHighlight(urlFilters);
+		if (!highlighted) {
+			highlighted = applyHighlight(readStoredFilters());
+		}
+	}
+	if (highlighted && typeof highlighted.scrollIntoView === 'function') {
+		window.setTimeout(function () {
+			highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 80);
 	}
 })();
 </script>

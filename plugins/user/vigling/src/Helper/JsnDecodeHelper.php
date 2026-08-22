@@ -607,6 +607,7 @@ final class JsnDecodeHelper
                 'duration' => (int) ($row['duration_min'] ?? 0),
                 'svc_id' => $svcId,
                 'tag_id' => (int) ($row['legacy_tag_id'] ?? 0),
+                'legacy_cat_id' => (int) ($row['legacy_cat_id'] ?? 0),
                 'pause_min' => (int) ($row['pause_min'] ?? 0),
             ];
 
