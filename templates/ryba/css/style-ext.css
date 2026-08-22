@@ -3472,21 +3472,31 @@ div[role="tooltip"][id^="tip-"] {
 }
 
 /* Mobile: align the book button with the avatar without flexing the whole card.
-   Closest shared parent is .category__item; the two sibling wrappers are
-   .category__item-img and .category__item-content. */
+   Closest shared parent is .category__item. The avatar and button live in nested
+   wrappers, so on mobile those wrappers become table-cells (Option B). */
 @media (max-width: 768px) {
+  .category.jsn_list .category__item {
+    display: table;
+    width: 100%;
+    table-layout: auto;
+    border-collapse: separate;
+    border-spacing: 8px 0;
+  }
+
+  .category.jsn_list .category__item-content {
+    display: contents;
+  }
+
   .category.jsn_list .category__item-img {
-    display: inline-block;
+    display: table-cell;
     vertical-align: middle;
     float: none;
     width: 67px;
-    height: 67px;
-    overflow: visible;
+    height: auto;
   }
 
   .category.jsn_list .category__item-master {
-    display: inline-block;
-    vertical-align: middle;
+    display: block;
     width: 67px;
     height: 67px;
     box-sizing: border-box;
@@ -3501,21 +3511,16 @@ div[role="tooltip"][id^="tip-"] {
     border-radius: 50%;
   }
 
-  .category.jsn_list .category__item-content {
-    display: inline-flex;
+  .category.jsn_list .category__item-content-left {
+    display: table-cell;
     vertical-align: middle;
-    align-items: center;
-    flex-direction: row;
-    width: calc(100% - 90px);
   }
 
   .category.jsn_list .category__item-content-right {
-    display: inline-flex;
-    align-items: center;
+    display: table-cell;
     vertical-align: middle;
-    flex-direction: row;
-    flex-shrink: 0;
-    width: auto !important;
+    width: 1% !important;
+    white-space: nowrap;
     clear: none;
     padding-top: 0;
     margin-top: 0;
@@ -3530,7 +3535,7 @@ div[role="tooltip"][id^="tip-"] {
     opacity: 1;
     margin-top: 0 !important;
     margin-left: 0 !important;
-    flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 
