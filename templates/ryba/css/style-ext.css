@@ -2681,7 +2681,6 @@ div[role="tooltip"][id^="tip-"] {
 #easyprofile.registration .jsn_registration_controls > * {
   font-size: 15px;
 }
-
 #easyprofile.registration #reg-prev-step {
   order: 1;
 }
@@ -2750,7 +2749,7 @@ div[role="tooltip"][id^="tip-"] {
     padding-left: 0;
   }
 
-  #easyprofile.registration .reg-submit-block,
+#easyprofile.registration .reg-submit-block,
   #easyprofile.registration .jsn_registration_controls.is-final-step .reg-submit-block {
     display: flex !important;
     flex-direction: column;
@@ -3509,6 +3508,7 @@ div[role="tooltip"][id^="tip-"] {
     background-repeat: no-repeat;
     border-radius: 50%;
     flex-shrink: 0;
+    flex-shrink: 0;
   }
 
   .category.jsn_list .category__item-content {
@@ -3520,7 +3520,6 @@ div[role="tooltip"][id^="tip-"] {
     flex: 1 1 0%;
     min-width: 0;
     width: auto !important;
-    gap: 8px;
   }
 
   .category.jsn_list .category__item-content-left {
@@ -3528,7 +3527,7 @@ div[role="tooltip"][id^="tip-"] {
     min-width: 0;
     padding-top: 0;
   }
-
+  
   .category.jsn_list .category_cinfo-name,
   .category.jsn_list .category_cinfo-address {
     overflow-wrap: anywhere;
@@ -3542,11 +3541,11 @@ div[role="tooltip"][id^="tip-"] {
     justify-content: center;
     flex: 0 0 auto;
     width: auto !important;
-    max-width: 100%;
+    ax-width: 100%;
     float: none !important;
     clear: none;
     padding-top: 0;
-    padding-left: 0 !important;
+     padding-left: 0 !important;
     margin: 0;
     margin-right: 0 !important;
     border-top: none;
