@@ -149,6 +149,82 @@ class PoiskHelper
 		return array_keys($categories);
 	}
 
+	/**
+	 * Per-specialist price for the selected service + method (3-level filter).
+	 *
+	 * @param array<int> $userIds
+	 * @return array<int, int> userId => price
+	 */
+	public static function getServicePricesForUsers(array $userIds, int $serviceId, int $tagId): array
+	{
+		$ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static function (int $id): bool {
+			return $id > 0;
+		})));
+		if ($ids === [] || $serviceId <= 0 || $tagId <= 0) {
+			return [];
+		}
+
+		try {
+			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$query = $db->getQuery(true)
+				->select([
+					$db->quoteName('us.user_id'),
+					$db->quoteName('us.price'),
+					$db->quoteName('us.legacy_cat_id'),
+					$db->quoteName('n.legacy_id', 'node_legacy_id'),
+					$db->quoteName('parent.legacy_id', 'parent_legacy_id'),
+				])
+				->from($db->quoteName('#__vigling_user_services', 'us'))
+				->join(
+					'LEFT',
+					$db->quoteName('#__vigling_service_nodes', 'n')
+					. ' ON ' . $db->quoteName('us.service_node_id') . ' = ' . $db->quoteName('n.id')
+				)
+				->join(
+					'LEFT',
+					$db->quoteName('#__vigling_service_nodes', 'parent')
+					. ' ON ' . $db->quoteName('n.parent_id') . ' = ' . $db->quoteName('parent.id')
+				)
+				->whereIn($db->quoteName('us.user_id'), $ids)
+				->where($db->quoteName('us.is_active') . ' = 1')
+				->where($db->quoteName('us.legacy_tag_id') . ' = ' . $tagId)
+				->where($db->quoteName('us.price') . ' > 0')
+				->where(
+					'('
+					. $db->quoteName('us.legacy_cat_id') . ' = ' . $serviceId
+					. ' OR ' . $db->quoteName('n.legacy_id') . ' = ' . $serviceId
+					. ' OR ' . $db->quoteName('parent.legacy_id') . ' = ' . $serviceId
+					. ')'
+				)
+				->order($db->quoteName('us.id') . ' ASC');
+			$db->setQuery($query);
+			$rows = $db->loadAssocList() ?: [];
+		} catch (\Throwable $e) {
+			return [];
+		}
+
+		$exact = [];
+		$fallback = [];
+		foreach ($rows as $row) {
+			$userId = (int) ($row['user_id'] ?? 0);
+			$price = (int) round((float) ($row['price'] ?? 0));
+			if ($userId <= 0 || $price <= 0) {
+				continue;
+			}
+			if ((int) ($row['legacy_cat_id'] ?? 0) === $serviceId) {
+				if (!isset($exact[$userId])) {
+					$exact[$userId] = $price;
+				}
+				continue;
+			}
+			if (!isset($fallback[$userId])) {
+				$fallback[$userId] = $price;
+			}
+		}
+
+		return $exact + array_diff_key($fallback, $exact);
+	}
+
 	public static function getFieldsForUserIds(array $userIds, array $fieldNames): array
 	{
 		if (empty($userIds)) {

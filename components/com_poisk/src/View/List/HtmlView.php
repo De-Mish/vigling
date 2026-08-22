@@ -26,6 +26,7 @@ class HtmlView extends BaseHtmlView
 	protected $serviceHierarchy = [];
 	protected $currentService = 0;
 	protected $currentTag = 0;
+	protected $pricesByUser = [];
 	protected $listOrder = 'id';
 	protected $listDirn = 'ASC';
 
@@ -119,6 +120,14 @@ class HtmlView extends BaseHtmlView
 			$this->fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIds($userIds, [
 				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'vyberite_spetsialnos'
 			]);
+		}
+		$this->pricesByUser = [];
+		if ($catId > 0 && $this->currentService > 0 && $this->currentTag > 0 && !empty($userIds)) {
+			$this->pricesByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getServicePricesForUsers(
+				$userIds,
+				$this->currentService,
+				$this->currentTag
+			);
 		}
 		$mapUserIds = array_map(static function ($o) { return (int) $o->id; }, (array) $this->mapItems);
 		if (!empty($mapUserIds)) {

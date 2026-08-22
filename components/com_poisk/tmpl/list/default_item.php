@@ -117,6 +117,8 @@ $avatarImage = $resolveImageUrl($avatar, false);
 $cardImage = $portfolioImage !== '' ? $portfolioImage : $avatarImage;
 $imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
+$servicePrice = isset($this->pricesByUser[(int) $item->id]) ? (int) $this->pricesByUser[(int) $item->id] : 0;
+$servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' ') . ' ₽' : '';
 ?>
 <div class="category__item" data-address="<?php echo htmlspecialchars($addr); ?>">
 	<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
@@ -134,6 +136,9 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				<?php endif; ?>
 				<?php if ($homeParts !== []) : ?>
 					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></b></span>
+				<?php endif; ?>
+				<?php if ($servicePriceLabel !== '') : ?>
+					<div class="service-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></div>
 				<?php endif; ?>
 			</div>
 			
