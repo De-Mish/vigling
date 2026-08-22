@@ -519,15 +519,13 @@ $durationJson = json_encode($durationOptions);
         </div>
 
         <div class="jsn_registration_controls calc__btn"<?php echo $hasSubmittedData ? '' : ' style="display:none;"'; ?>>
-            <div id="privacy-consent-error" class="privacy-error privacy-error-box" role="alert" hidden></div>
+            <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
+            <button type="button" class="dale" id="reg-next-step">Вперед</button>
             <div class="reg-submit-block" id="reg-submit-block" hidden>
+                <div id="privacy-consent-error" class="privacy-error privacy-error-box" role="alert" hidden></div>
                 <button type="submit" class="dale validate" id="reg-submit" disabled aria-describedby="privacy-consent-error">Зарегистрироваться</button>
             </div>
-            <div class="reg-navigation-buttons">
-                <button type="button" class="dale" id="reg-prev-step" style="display:none;">Назад</button>
-                <button type="button" class="dale" id="reg-next-step">Вперед</button>
-                <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>" onclick="try{sessionStorage.removeItem('vigling_registration_state_v3');sessionStorage.removeItem('vigling_registration_state_v2');sessionStorage.removeItem('vigling_registration_state_v1');localStorage.removeItem('vigling_registration_state_v3');localStorage.removeItem('vigling_registration_state_v2');localStorage.removeItem('vigling_registration_state_v1');}catch(e){}"><?php echo Text::_('JCANCEL'); ?></a>
-            </div>
+            <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>"><?php echo Text::_('JCANCEL'); ?></a>
         </div>
 
         <input type="hidden" name="jform[username]" id="jform_username" value="<?php echo $this->escape($usernameValue); ?>" />
@@ -1077,7 +1075,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var tabContents = tabsContainer.find('.z-content');
     var tabsRoot = $('#jsn-form');
     var controlsBar = $('.jsn_registration_controls');
-    var cancelButton = $('#reg-cancel');
     var typeInput = $('#jform_registration_type');
     var isMasterInput = $('#jform_is_master');
     var emailInput = $('#jform_email1');
@@ -1210,6 +1207,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function normalizeRegistrationCancelLink() {
+        var formEl = form.get(0);
+        var links = $('[id="reg-cancel"]');
+        if (links.length > 1) {
+            links.slice(1).remove();
+        }
+        var link = $('#reg-cancel').first();
+        if (!link.length) {
+            return;
+        }
+        link.find('input').each(function () {
+            if (formEl) {
+                formEl.appendChild(this);
+            }
+        });
+        if ($.trim(link.text()) === '') {
+            link.text('Отменить');
+        }
+    }
+
     function stripStrayRegistrationControlText() {
         var root = controlsBar.get(0);
         if (!root) {
@@ -1223,6 +1240,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             node = next;
         }
+        normalizeRegistrationCancelLink();
     }
 
     function isFinalRegistrationStep() {
@@ -2321,7 +2339,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    cancelButton.on('click', function () {
+    $(document).on('click', '#reg-cancel', function () {
         clearDraftState();
     });
 
