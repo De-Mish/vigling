@@ -181,35 +181,8 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
 	</div>
 </div>
 <style>
-/* Desktop-only: these rules stacked the button under the text and offset
-   the avatar. On mobile they blocked the old-site flex / -83px pull. */
-@media (min-width: 769px) {
-    .category__item-content-right {
-        clear: both;
-        padding-top: 15px;
-        margin-top: 5px;
-        border-top: 1px solid #e8e8e8;
-        text-align: left;
-    }
-    .category__item-content-left {
-        padding-left: 80px;
-        padding-top: 35px;
-    }
-    .category__item-master {
-        top: 60%;
-        transform: translateY(-50%);
-    }
-    .btn__time-zapis {
-        margin-left: 0 !important;
-        font-size: 13px !important;
-    }
-}
-@media (min-width: 992px) {
-    .category__item-content-left {
-        padding-left: 90px;
-        padding-top: 40px;
-    }
-}
+/* Mobile resets only. Desktop card layout is restored in style-ext.css
+   (@media min-width: 769px) so these stacking/offset rules cannot leak. */
 @media (max-width: 768px) {
     .category__item-content-left {
         padding-left: 0px;
