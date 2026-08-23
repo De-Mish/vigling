@@ -3556,6 +3556,9 @@ div[role="tooltip"][id^="tip-"] {
     margin-top: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    /* Subtle nudge down toward the avatar bottom. Transform keeps
+       name / address / flex flow unchanged and stays in document flow. */
+    transform: translateY(8px);
   }
 }
 
