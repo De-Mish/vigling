@@ -2469,10 +2469,29 @@ div[role="tooltip"][id^="tip-"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
+  padding: 6px 12px;
   font-size: 14px;
   line-height: 1.1;
   white-space: nowrap;
+  box-sizing: border-box;
+  border: 1px solid #f7cc53;
+  border-radius: 20px; /* same as .input_placeholder / #jform_o_sebe */
+  background-color: transparent;
+  color: #333;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab > a.z-link:hover,
+#easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab > a.z-link:focus {
+  background-color: #f7cc53;
+  border-color: #e6b800;
+  text-decoration: none;
+  color: #333;
+}
+
+#easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab.z-active > a.z-link {
+  border-color: #e6b800;
 }
 
 #easyprofile.registration #jsn-form > .z-container {
