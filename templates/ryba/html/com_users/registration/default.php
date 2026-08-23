@@ -237,7 +237,7 @@ $durationJson = json_encode($durationOptions);
             <li><a class="z-link" style="text-align:left;"><span class="z-title">Профиль<span></span></span><span class="z-arrow"></span></a></li>
         </ul>
         <i class="z-dropdown-arrow"></i>
-        <ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
+        <ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop reg-step-links">
             <li class="z-tab z-first z-active" data-tab="jsn_default"><a class="z-link" href="#jsn_default">Профиль<span></span></a></li>
             <li class="z-tab" data-tab="jsn_portfolio"><a class="z-link" href="#jsn_portfolio">Портфолио<span></span></a></li>
             <li class="z-tab" data-tab="jsn_spetsialnost"><a class="z-link" href="#jsn_spetsialnost">Специальность<span></span></a></li>
