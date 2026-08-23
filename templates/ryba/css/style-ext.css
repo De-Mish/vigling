@@ -3651,6 +3651,36 @@ div[role="tooltip"][id^="tip-"] {
     margin-left: auto !important;
     transform: none !important;
   }
+
+  /* Promotions: style.css pulls --stocks left by -80/-90px to cancel the
+     old content-left padding. That padding is now 0, so the UL sat on the
+     231px portfolio image. Align the list with the name (55px). */
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
+    flex-shrink: 0;
+    width: 231px;
+    height: 295px;
+    float: left;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
+    clear: none !important;
+    float: none;
+    margin-left: 0 !important;
+    padding-left: 55px !important;
+    padding-top: 12px;
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list ul,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list ul li {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    white-space: normal;
+  }
 }
 
 @media (max-width: 767px) {
