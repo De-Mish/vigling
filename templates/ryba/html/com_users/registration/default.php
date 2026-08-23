@@ -463,7 +463,10 @@ $durationJson = json_encode($durationOptions);
                             <div class="controls">
                                 <label class="checkbox privacy-consent-label" for="privacy_consent">
                                     <input type="checkbox" id="privacy_consent" name="privacy_consent" value="1" />
-                                    Нажимая «Вперед», я принимаю условия <a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a>
+                                    <span class="privacy-text-mobile">
+                                        <span class="privacy-line-1">Нажимая «Вперед», я принимаю условия</span>
+                                        <span class="privacy-line-2"><a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a></span>
+                                    </span>
                                 </label>
                             </div>
                         </div>
@@ -1114,6 +1117,12 @@ $durationJson = json_encode($durationOptions);
         right: auto !important;
         top: auto !important;
         margin: 4px 0 0 !important;
+    }
+}
+@media (max-width: 768px) {
+    #easyprofile.registration #jsn_login .privacy-line-1,
+    #easyprofile.registration #jsn_login .privacy-line-2 {
+        display: block;
     }
 }
 </style>

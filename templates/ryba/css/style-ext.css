@@ -2717,6 +2717,18 @@ div[role="tooltip"][id^="tip-"] {
   color: #8d7329;
 }
 
+#easyprofile.registration #jsn_login .privacy-text-mobile {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  #easyprofile.registration #jsn_login .privacy-line-1,
+  #easyprofile.registration #jsn_login .privacy-line-2 {
+    display: block;
+  }
+}
+
 #easyprofile.registration .reg-submit-block {
   display: flex;
   flex-direction: column;
