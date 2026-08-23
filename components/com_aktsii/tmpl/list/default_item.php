@@ -239,9 +239,25 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         background-repeat: no-repeat;
         border-radius: 50%;
     }
-    .category.jsn_stockList .category__item-content-left {
+    .category.jsn_stockList .category__item-img {
+        flex-shrink: 0;
+        width: 231px;
+        height: 295px;
         float: left;
-        width: calc(100% - 210px) !important;
+    }
+    .category.jsn_stockList .category__item-content {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        justify-content: space-between;
+        box-sizing: border-box;
+    }
+    .category.jsn_stockList .category__item-content-left {
+        float: none !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto !important;
         padding-left: 0 !important;
         padding-top: 42px !important;
         clear: none;
@@ -250,42 +266,36 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         padding-left: 55px;
     }
     .category.jsn_stockList .category__item-content-right {
-        display: block;
-        float: right !important;
+        display: block !important;
+        float: none !important;
+        flex: 0 0 175px;
         width: 175px !important;
+        max-width: 175px !important;
         margin: 0 25px 0 0 !important;
         padding: 0 !important;
         clear: none !important;
         border-top: none;
         text-align: right !important;
-        align-items: flex-end;
     }
     .category.jsn_stockList .btn__time-zapis {
         display: block !important;
-        float: none;
+        float: none !important;
         margin-top: 40px !important;
-        margin-right: 20px !important;
-        margin-left: auto !important;
+        margin-right: 0 !important;
+        margin-left: 0 !important;
         transform: none !important;
         font-size: 14px !important;
-    }
-    .category.jsn_stockList .category__item-img {
-        flex-shrink: 0;
-        width: 231px;
-        height: 295px;
-        float: left;
     }
     .category.jsn_stockList .category__content-info-list,
     .category.jsn_stockList .category__content-info-list--stocks {
         clear: none !important;
-        float: none;
+        float: none !important;
         margin-left: 0 !important;
         padding-left: 55px !important;
         padding-top: 12px;
         box-sizing: border-box;
         width: auto;
         max-width: 100%;
-        overflow: hidden;
     }
     .category.jsn_stockList .category__content-info-list ul,
     .category.jsn_stockList .category__content-info-list ul li {
