@@ -2463,6 +2463,9 @@ div[role="tooltip"][id^="tip-"] {
   width: auto !important;
 }
 
+/* Step tabs: plugin sets background:#f7cc53 !important and border-width:0,
+   so the yellow frame is invisible unless fill is cleared and border is forced. */
+#easyprofile.registration #jsn-form.flat.horizontal.clean > ul#jsn-profile-tabs.z-tabs-nav.z-tabs-desktop > li.z-tab > a.z-link,
 #easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab > a.z-link {
   height: 32px;
   min-height: 32px;
@@ -2473,25 +2476,37 @@ div[role="tooltip"][id^="tip-"] {
   font-size: 14px;
   line-height: 1.1;
   white-space: nowrap;
-  box-sizing: border-box;
-  border: 1px solid #f7cc53;
-  border-radius: 20px; /* same as .input_placeholder / #jform_o_sebe */
-  background-color: transparent;
-  color: #333;
+  box-sizing: border-box !important;
+  overflow: visible;
+  border: 2px solid #f7cc53 !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: #f7cc53 !important;
+  border-radius: 20px !important; /* same as .input_placeholder / #jform_o_sebe */
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #333 !important;
   text-decoration: none;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
+#easyprofile.registration #jsn-form.flat.horizontal.clean > ul#jsn-profile-tabs.z-tabs-nav.z-tabs-desktop > li.z-tab > a.z-link:hover,
+#easyprofile.registration #jsn-form.flat.horizontal.clean > ul#jsn-profile-tabs.z-tabs-nav.z-tabs-desktop > li.z-tab > a.z-link:focus,
 #easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab > a.z-link:hover,
 #easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab > a.z-link:focus {
-  background-color: #f7cc53;
-  border-color: #e6b800;
+  background: #fff8e1 !important;
+  background-color: #fff8e1 !important;
+  border-color: #e6b800 !important;
   text-decoration: none;
-  color: #333;
+  color: #333 !important;
 }
 
+#easyprofile.registration #jsn-form.flat.horizontal.clean > ul#jsn-profile-tabs.z-tabs-nav.z-tabs-desktop > li.z-tab.z-active > a.z-link,
 #easyprofile.registration #jsn-profile-tabs.z-tabs-desktop .z-tab.z-active > a.z-link {
-  border-color: #e6b800;
+  background: #bb9a3c !important;
+  background-color: #bb9a3c !important;
+  border-color: #f7cc53 !important;
+  color: #000 !important;
 }
 
 #easyprofile.registration #jsn-form > .z-container {
