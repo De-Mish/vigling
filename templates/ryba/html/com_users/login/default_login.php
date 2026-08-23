@@ -117,16 +117,16 @@ $hasTfa = property_exists($this, 'tfa') && !empty($this->tfa);
 	<?php endif; ?>
 </div>
 <div>
-		<ul class="nav nav-tabs log nav-stacked">
+		<ul class="nav nav-tabs log nav-stacked login-links">
 			<li>
-				<a href="<?php echo Route::_('index.php?option=com_users&view=reset'); ?>">
+				<a class="login-links__item" href="<?php echo Route::_('index.php?option=com_users&view=reset'); ?>">
 					<?php echo Text::_('COM_USERS_LOGIN_RESET'); ?>
 				</a>
 			</li>
 			<?php $usersConfig = ComponentHelper::getParams('com_users'); ?>
 			<?php if ($usersConfig->get('allowUserRegistration')) : ?>
 				<li>
-				<a href="<?php echo Route::_('index.php?option=com_users&view=registration'); ?>">
+				<a class="login-links__item" href="<?php echo Route::_('index.php?option=com_users&view=registration'); ?>">
 					<?php echo Text::_('COM_USERS_LOGIN_REGISTER'); ?>
 				</a>
 			</li>
