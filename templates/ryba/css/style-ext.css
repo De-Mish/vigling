@@ -3471,31 +3471,41 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
-/* Mobile: lift Записаться to the avatar’s vertical center (Option C).
-   The button is inside the text column, so it is positioned against the card.
-   Left edge stays next to the avatar — it is not pushed to the far right. */
+/* Replicate old.vigling.ru search-card alignment (style.css ≤820 / ≤720).
+   Measured on old.vigling.ru:
+   - ≤720: card is flex; name sits to the right of the avatar; the button
+     stays in the text column and is pulled left with margin-left:-83px.
+   - 721–820: content stays a row; the button sits on the right, centered
+     with justify-content:center.
+   New-site rules that blocked this (beaten here, search list only):
+   - style.css `.category__item { display: black; }` (invalid, flex never ran)
+   - style.css `.category__item-content-right { width: 100% !important; }`
+   - style.css `.btn__time-zapis { margin-top: 15px !important; }`
+   - default_item.php `margin-left: 0 !important`, `top: 60%`, clear/border-top
+   Desktop (≥769px) is unchanged. */
 @media (max-width: 768px) {
   .category.jsn_list .category__item {
-    position: relative;
+    display: flex;
+    box-shadow: none;
     overflow: visible;
   }
 
   .category.jsn_list .category__item-img {
-    float: left;
+    background-image: none !important;
     width: 67px;
     height: 67px;
-    margin-right: 10px;
+    margin-right: 20px;
+    float: left;
+    flex: 0 0 67px;
   }
 
   .category.jsn_list .category__item-master {
-    display: block;
-    width: 67px;
-    height: 67px;
+    display: block !important;
     box-sizing: border-box;
     position: relative !important;
-    top: 0 !important;
+    right: inherit;
     left: 0 !important;
-    right: auto !important;
+    top: 0 !important;
     transform: none !important;
     background-size: cover !important;
     background-position: center;
@@ -3504,32 +3514,38 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   .category.jsn_list .category__item-content {
-    display: block;
-    width: 100%;
+    display: flex;
+    width: calc(100% - 90px);
+    flex: 1 0 auto;
     float: none;
   }
 
   .category.jsn_list .category__item-content-left {
-    clear: both;
-    padding-top: 10px;
+    float: none;
+    flex: 1 0 auto;
+    width: auto;
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    clear: none;
   }
 
   .category.jsn_list .category__item-content-right {
-    position: absolute;
-    top: 0;
-    left: 77px;
-    right: auto;
-    height: 67px;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
     width: auto !important;
-    clear: none;
+    float: none !important;
+    margin: 0 !important;
     padding: 0 !important;
-    margin: 0;
+    clear: none;
     border-top: none;
-    z-index: 5;
+    position: static;
+    text-align: left !important;
+  }
+
+  .category.jsn_list .category__content-info {
+    padding-left: 15px;
   }
 
   .category.jsn_list .btn__time-zapis {
@@ -3537,8 +3553,39 @@ div[role="tooltip"][id^="tip-"] {
     position: static;
     visibility: visible;
     opacity: 1;
-    margin: 0 !important;
-    z-index: 5;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .category.jsn_list .category__item-content {
+    flex-direction: column;
+  }
+
+  .category.jsn_list .category__item-content-right {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .category.jsn_list .category__content-info {
+    display: flex;
+    flex-direction: column;
+    padding-left: 15px;
+    padding-top: 5px;
+    margin-bottom: 0;
+  }
+
+  .category.jsn_list .category__item-content-left {
+    min-height: 58px;
+  }
+
+  /* Old site phone pull: 67px avatar column + 20px gap; pull is -83px. */
+  .category.jsn_list .btn__time-zapis {
+    margin-top: 13px !important;
+    margin-left: -83px !important;
   }
 }
 
