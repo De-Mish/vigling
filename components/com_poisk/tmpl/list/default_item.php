@@ -212,8 +212,8 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
 }
 @media (max-width: 768px) {
     .category__item-content-left {
-        padding-left: 0;
-        padding-top: 0;
+        padding-left: 0px;
+        padding-top: 0px;
     }
     .category__item-content-right {
         clear: none;
