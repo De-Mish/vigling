@@ -269,5 +269,29 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         transform: none !important;
         font-size: 14px !important;
     }
+    .category.jsn_stockList .category__item-img {
+        flex-shrink: 0;
+        width: 231px;
+        height: 295px;
+        float: left;
+    }
+    .category.jsn_stockList .category__content-info-list,
+    .category.jsn_stockList .category__content-info-list--stocks {
+        clear: none !important;
+        float: none;
+        margin-left: 0 !important;
+        padding-left: 55px !important;
+        padding-top: 12px;
+        box-sizing: border-box;
+        width: auto;
+        max-width: 100%;
+        overflow: hidden;
+    }
+    .category.jsn_stockList .category__content-info-list ul,
+    .category.jsn_stockList .category__content-info-list ul li {
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+        white-space: normal;
+    }
 }
 </style>
