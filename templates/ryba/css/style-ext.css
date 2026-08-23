@@ -3599,7 +3599,8 @@ div[role="tooltip"][id^="tip-"] {
    Записаться in a 175px column on the right. Mobile rules below are
    unchanged. Beats style.css width:100%/float:none on content-right. */
 @media (min-width: 769px) {
-  .category.jsn_list .category__item-master {
+  .category.jsn_list .category__item-master,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-master {
     position: absolute !important;
     right: -38px !important;
     left: auto !important;
@@ -3614,7 +3615,8 @@ div[role="tooltip"][id^="tip-"] {
     border-radius: 50%;
   }
 
-  .category.jsn_list .category__item-content-left {
+  .category.jsn_list .category__item-content-left,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
     float: left;
     width: calc(100% - 210px) !important;
     padding-left: 0 !important;
@@ -3622,11 +3624,13 @@ div[role="tooltip"][id^="tip-"] {
     clear: none;
   }
 
-  .category.jsn_list .category__content-info {
+  .category.jsn_list .category__content-info,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info {
     padding-left: 55px;
   }
 
-  .category.jsn_list .category__item-content-right {
+  .category.jsn_list .category__item-content-right,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-right {
     display: block;
     float: right !important;
     width: 175px !important;
@@ -3638,7 +3642,8 @@ div[role="tooltip"][id^="tip-"] {
     align-items: flex-end;
   }
 
-  .category.jsn_list .btn__time-zapis {
+  .category.jsn_list .btn__time-zapis,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .btn__time-zapis {
     display: block !important;
     float: none;
     margin-top: 40px !important;

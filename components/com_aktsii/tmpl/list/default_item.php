@@ -221,4 +221,53 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         padding-left: 15px;
     }
 }
+/* Desktop: same avatar/button geometry as poisk-spetsialistov.
+   These beat the unscoped rules above (top:60%, clear:both, margin-left:0).
+   Mobile is unchanged. */
+@media (min-width: 769px) {
+    .category.jsn_stockList .category__item-master {
+        position: absolute !important;
+        right: -38px !important;
+        left: auto !important;
+        top: 0 !important;
+        transform: none !important;
+        width: 85px;
+        height: 80px;
+        box-sizing: border-box;
+        background-size: cover !important;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 50%;
+    }
+    .category.jsn_stockList .category__item-content-left {
+        float: left;
+        width: calc(100% - 210px) !important;
+        padding-left: 0 !important;
+        padding-top: 42px !important;
+        clear: none;
+    }
+    .category.jsn_stockList .category__content-info {
+        padding-left: 55px;
+    }
+    .category.jsn_stockList .category__item-content-right {
+        display: block;
+        float: right !important;
+        width: 175px !important;
+        margin: 0 25px 0 0 !important;
+        padding: 0 !important;
+        clear: none !important;
+        border-top: none;
+        text-align: right !important;
+        align-items: flex-end;
+    }
+    .category.jsn_stockList .btn__time-zapis {
+        display: block !important;
+        float: none;
+        margin-top: 40px !important;
+        margin-right: 20px !important;
+        margin-left: auto !important;
+        transform: none !important;
+        font-size: 14px !important;
+    }
+}
 </style>
