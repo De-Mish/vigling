@@ -3513,7 +3513,7 @@ div[role="tooltip"][id^="tip-"] {
     border-radius: 50%;
   }
 
-  .category.jsn_list .category__item-content {
+.category.jsn_list .category__item-content {
     display: flex;
     width: calc(100% - 90px);
     flex: 1 0 auto;
