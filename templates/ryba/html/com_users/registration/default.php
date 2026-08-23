@@ -238,14 +238,14 @@ $durationJson = json_encode($durationOptions);
         </ul>
         <i class="z-dropdown-arrow"></i>
         <ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop reg-step-links">
-            <li class="z-tab z-first z-active" data-tab="jsn_default"><a class="z-link" href="#jsn_default">Профиль<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_portfolio"><a class="z-link" href="#jsn_portfolio">Портфолио<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_spetsialnost"><a class="z-link" href="#jsn_spetsialnost">Специальность<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_addinfo"><a class="z-link" href="#jsn_addinfo">Услуги и цены<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_courses"><a class="z-link" href="#jsn_courses">Курсы<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_searches"><a class="z-link" href="#jsn_searches">Поиск моделей<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_login"><a class="z-link" href="#jsn_login">Email и пароль<span></span></a></li>
-            <li class="z-tab z-last" data-tab="jsn_raspisanie"><a class="z-link" href="#jsn_raspisanie">Расписание<span></span></a></li>
+            <li class="z-tab z-first z-active" data-tab="jsn_default"><a class="z-link reg-step-link" href="#jsn_default">Профиль<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_portfolio"><a class="z-link reg-step-link" href="#jsn_portfolio">Портфолио<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_spetsialnost"><a class="z-link reg-step-link" href="#jsn_spetsialnost">Специальность<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_addinfo"><a class="z-link reg-step-link" href="#jsn_addinfo">Услуги и цены<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_courses"><a class="z-link reg-step-link" href="#jsn_courses">Курсы<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_searches"><a class="z-link reg-step-link" href="#jsn_searches">Поиск моделей<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_login"><a class="z-link reg-step-link" href="#jsn_login">Email и пароль<span></span></a></li>
+            <li class="z-tab z-last" data-tab="jsn_raspisanie"><a class="z-link reg-step-link" href="#jsn_raspisanie">Расписание<span></span></a></li>
         </ul>
 
         <div class="z-container" id="registration-tabs-container">
@@ -541,6 +541,77 @@ $durationJson = json_encode($durationOptions);
 </div>
 
 <style>
+/*
+  Registration step tabs.
+  Previous CSS in style-ext.css did not show a frame: tabs.min.css zeros
+  border/radius on `a`, and style.css paints `a` with the same #f7cc53 fill.
+  This block is in the page HTML (after those files) and draws a ::after
+  frame on li.z-tab that the plugin never targets. Fill is white so the
+  gold border matches #jform_o_sebe / .input_placeholder (radius 20px).
+*/
+#easyprofile.registration #jsn-form.flat > ul#jsn-profile-tabs.reg-step-links,
+#easyprofile.registration #jsn-form.flat > ul#jsn-profile-tabs.reg-step-links > li.z-tab,
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab {
+    position: relative !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    border: 0 none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab {
+    border-radius: 20px !important;
+}
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border: 2px solid #f7cc53;
+    border-radius: 20px;
+    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 2;
+}
+#easyprofile.registration #jsn-form.flat.horizontal.clean > ul#jsn-profile-tabs.z-tabs-nav > li.z-tab > a.z-link.reg-step-link,
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab > a.z-link.reg-step-link {
+    position: relative !important;
+    z-index: 1;
+    height: 32px !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    border: 0 none !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    background-color: #fff !important;
+    color: #333 !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab > a.z-link.reg-step-link:hover,
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab > a.z-link.reg-step-link:focus {
+    background: #fff8e1 !important;
+    background-color: #fff8e1 !important;
+    color: #333 !important;
+    text-decoration: none !important;
+}
+#easyprofile.registration ul#jsn-profile-tabs.reg-step-links > li.z-tab.z-active > a.z-link.reg-step-link {
+    background: #bb9a3c !important;
+    background-color: #bb9a3c !important;
+    color: #000 !important;
+}
+
 #easyprofile.registration #jform_courses_servis {
     display: block;
 }

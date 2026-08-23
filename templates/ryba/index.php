@@ -87,7 +87,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/tabs.min.css">
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/font-awesome.min.css">
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/style.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/style-ext.css">
+	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/style-ext.css?v=<?php echo is_file(__DIR__ . '/css/style-ext.css') ? filemtime(__DIR__ . '/css/style-ext.css') : '1'; ?>">
 	<jdoc:include type="styles" />
 </head>
 <body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
