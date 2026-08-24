@@ -168,12 +168,22 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 	</div>
 </div>
 <style>
-.category.jsn_stockList .category__item {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: visible;
-}
 .category.jsn_stockList .category__item-content-right {
     display: none;
+}
+@media (max-width: 768px) {
+    .category.jsn_stockList .category__item {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: visible;
+        border-radius: 20px;
+    }
+}
+@media (min-width: 769px) {
+    .category.jsn_stockList .category__item {
+        box-shadow: none;
+        overflow: hidden;
+        border-radius: 20px;
+    }
 }
 .category__item-content-left {
     padding-left: 80px;
