@@ -3709,21 +3709,9 @@ div[role="tooltip"][id^="tip-"] {
 }
 
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: visible;
   border-radius: 20px;
-}
-
-@media (max-width: 768px) {
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: visible;
-  }
-}
-
-@media (min-width: 769px) {
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
-    box-shadow: none;
-    overflow: hidden;
-  }
 }
 
 @media (max-width: 767px) {
