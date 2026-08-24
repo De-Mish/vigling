@@ -168,6 +168,10 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 	</div>
 </div>
 <style>
+.category.jsn_stockList .category__item {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: visible;
+}
 .category.jsn_stockList .category__item-content-right {
     display: none;
 }
