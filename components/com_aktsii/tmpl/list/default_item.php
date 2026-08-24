@@ -222,8 +222,27 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
 }
 /* Desktop: hide the empty right column. Button lives in the left
-   column under the name/list, aligned with that text (55px). */
+   column under the name/list, aligned with that text (55px).
+   Card chrome matches mobile (padding, shadow, border, radius)
+   and restores spacing between cards. */
 @media (min-width: 769px) {
+    .category.jsn_stockList .category__masters {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .category.jsn_stockList .category__item,
+    div.category.jsn_stockList div.category__item {
+        display: flow-root !important;
+        box-sizing: border-box !important;
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+        border: 1px solid #ccc !important;
+        border-radius: 20px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        background: #fff !important;
+        overflow: visible !important;
+    }
     .category.jsn_stockList .category__item-master {
         position: absolute !important;
         right: -38px !important;
@@ -243,11 +262,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         width: 231px;
         height: 295px;
         float: left;
+        border-radius: 12px;
     }
     .category.jsn_stockList .category__item-content {
         display: block !important;
         float: right;
         box-sizing: border-box;
+        width: calc(100% - 231px) !important;
+        max-width: none !important;
     }
     .category.jsn_stockList .category__item-content-left {
         float: none !important;
