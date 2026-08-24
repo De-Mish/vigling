@@ -162,19 +162,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				</ul>
 			</div>
 			<?php endif; ?>
-		</div>
-		<div class="category__item-content-right">
 			<a class="btn__time-zapis" href="<?php echo $profileUrl; ?>">Записаться</a>
 		</div>
+		<div class="category__item-content-right"></div>
 	</div>
 </div>
 <style>
-.category__item-content-right {
-    clear: both;
-    padding-top: 15px;
-    margin-top: 5px;
-    border-top: 1px solid #e8e8e8;
-    text-align: left;
+.category.jsn_stockList .category__item-content-right {
+    display: none;
 }
 .category__item-content-left {
     padding-left: 80px;
@@ -217,13 +212,12 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         padding-left: 15px;
         padding-top: 20px;
     }
-    .category__item-content-right {
-        padding-left: 15px;
+    .category__item-content-left .btn__time-zapis {
+        margin-top: 15px;
     }
 }
-/* Desktop: same avatar/button geometry as poisk-spetsialistov.
-   These beat the unscoped rules above (top:60%, clear:both, margin-left:0).
-   Mobile is unchanged. */
+/* Desktop: hide the empty right column. Button lives in the left
+   column under the name/list, aligned with that text (55px). */
 @media (min-width: 769px) {
     .category.jsn_stockList .category__item-master {
         position: absolute !important;
@@ -246,45 +240,34 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         float: left;
     }
     .category.jsn_stockList .category__item-content {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: flex-start !important;
-        justify-content: space-between;
+        display: block !important;
+        float: right;
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item-content-left {
         float: none !important;
-        flex: 1 1 auto;
-        min-width: 0;
-        width: auto !important;
+        display: block;
+        width: 100% !important;
         padding-left: 0 !important;
         padding-top: 42px !important;
         clear: none;
+        text-align: left;
     }
     .category.jsn_stockList .category__content-info {
         padding-left: 55px;
     }
     .category.jsn_stockList .category__item-content-right {
-        display: block !important;
-        float: none !important;
-        flex: 0 0 175px;
-        width: 175px !important;
-        max-width: 175px !important;
-        margin: 0 25px 0 0 !important;
-        padding: 0 !important;
-        clear: none !important;
-        border-top: none;
-        text-align: right !important;
+        display: none !important;
     }
-    .category.jsn_stockList .btn__time-zapis {
-        display: block !important;
+    .category.jsn_stockList .category__item-content-left .btn__time-zapis {
+        display: inline-block !important;
         float: none !important;
-        margin-top: 40px !important;
+        margin-top: 16px !important;
         margin-right: 0 !important;
-        margin-left: 0 !important;
+        margin-left: 55px !important;
         transform: none !important;
         font-size: 14px !important;
+        text-align: left;
     }
     .category.jsn_stockList .category__content-info-list,
     .category.jsn_stockList .category__content-info-list--stocks {
