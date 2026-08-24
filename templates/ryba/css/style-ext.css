@@ -3708,6 +3708,11 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+}
+
 @media (max-width: 767px) {
   .category.jsn_list .service-price {
     margin: 6px 0;
