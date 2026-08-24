@@ -3649,10 +3649,8 @@ div[role="tooltip"][id^="tip-"] {
     transform: none !important;
   }
 
-  /* Promotions: do not use floats for name vs button. clear:none on the
-     stock list let that text wrap around Записаться, so the button sat in
-     the middle of the card. Flex keeps the button in a 175px right column
-     and the list under the name, still right of the 231px photo. */
+  /* Promotions: hide the right column. Записаться is in the left column
+     under the name/list, left-aligned with that text (55px). */
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
     flex-shrink: 0;
     width: 231px;
@@ -3661,45 +3659,33 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: flex-start !important;
-    justify-content: space-between;
+    display: block !important;
     box-sizing: border-box;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
     float: none !important;
-    flex: 1 1 auto;
-    min-width: 0;
-    width: auto !important;
+    display: block;
+    width: 100% !important;
     padding-left: 0 !important;
     padding-top: 42px !important;
     clear: none;
+    text-align: left;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-right {
-    display: block !important;
-    float: none !important;
-    flex: 0 0 175px;
-    width: 175px !important;
-    max-width: 175px !important;
-    margin: 0 25px 0 0 !important;
-    padding: 0 !important;
-    clear: none !important;
-    border-top: none;
-    text-align: right !important;
+    display: none !important;
   }
 
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .btn__time-zapis {
-    display: block !important;
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left .btn__time-zapis {
+    display: inline-block !important;
     float: none !important;
     width: auto;
-    margin-top: 40px !important;
+    margin-top: 16px !important;
     margin-right: 0 !important;
-    margin-left: 0 !important;
+    margin-left: 55px !important;
     transform: none !important;
+    text-align: left;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
