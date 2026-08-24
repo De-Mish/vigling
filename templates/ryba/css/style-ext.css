@@ -3649,6 +3649,29 @@ div[role="tooltip"][id^="tip-"] {
     transform: none !important;
   }
 
+  /* Promotions desktop: same card chrome as mobile (padding, shadow,
+     border, radius) plus spacing between cards. overflow:hidden in
+     style.css clips the shadow; display:flow-root contains floats
+     without clipping. */
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__masters {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item,
+  div.category.jsn_stockList:not(.search-catalog):not(.course-catalog) div.category__item {
+    display: flow-root !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    margin-bottom: 0 !important;
+    border: 1px solid #ccc !important;
+    border-radius: 20px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
   /* Promotions: hide the right column. Записаться is in the left column
      under the name/list, left-aligned with that text (55px). */
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
@@ -3656,11 +3679,14 @@ div[role="tooltip"][id^="tip-"] {
     width: 231px;
     height: 295px;
     float: left;
+    border-radius: 12px;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
     display: block !important;
     box-sizing: border-box;
+    width: calc(100% - 231px) !important;
+    max-width: none !important;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
@@ -3708,6 +3734,8 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
+/* Mobile (and as a baseline): soft shadow, don’t clip it. Desktop
+   chrome is forced in the min-width: 769px block above. */
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: visible;
