@@ -3623,9 +3623,14 @@ div[role="tooltip"][id^="tip-"] {
     clear: none;
   }
 
-  .category.jsn_list .category__content-info,
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info {
+  .category.jsn_list .category__content-info {
     padding-left: 55px;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info {
+    padding-left: calc(231px + 55px);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .category.jsn_list .category__item-content-right {
@@ -3672,8 +3677,9 @@ div[role="tooltip"][id^="tip-"] {
     overflow: visible !important;
   }
 
-  /* Promotions: hide the right column. Записаться is in the left column
-     under the name/list, flush with the card content’s left edge. */
+  /* Promotions: stretch content to the full card width so «Записаться»
+     can sit on the card’s left edge. Photo stays floated; name/list keep
+     231px+55px padding so they stay to the right of the photo/avatar. */
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
     flex-shrink: 0;
     width: 231px;
@@ -3683,15 +3689,21 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    float: none !important;
     box-sizing: border-box;
-    width: calc(100% - 231px) !important;
+    width: 100% !important;
     max-width: none !important;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1 1 auto;
     float: none !important;
-    display: block;
     width: 100% !important;
     padding-left: 0 !important;
     padding-top: 42px !important;
@@ -3705,6 +3717,7 @@ div[role="tooltip"][id^="tip-"] {
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left .btn__time-zapis {
     display: inline-block !important;
+    align-self: flex-start;
     float: none !important;
     width: auto;
     margin-top: 16px !important;
@@ -3719,10 +3732,10 @@ div[role="tooltip"][id^="tip-"] {
     clear: none !important;
     float: none !important;
     margin-left: 0 !important;
-    padding-left: 55px !important;
+    padding-left: calc(231px + 55px) !important;
     padding-top: 12px;
     box-sizing: border-box;
-    width: auto;
+    width: 100%;
     max-width: 100%;
   }
 
@@ -3742,22 +3755,56 @@ div[role="tooltip"][id^="tip-"] {
   border-radius: 20px;
 }
 
-/* Promotions only: left-align «Записаться» with the card’s content
-   edge. Remove the 55px indent; do not change margin-top. Does not
-   match specialists (.jsn_list), models, or courses. */
+/* Promotions only: stretch content to the card width and left-align
+   «Записаться». Specialists (.jsn_list), models, and courses are not matched. */
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content,
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+  display: flex;
+  flex-direction: column;
+  width: 100% !important;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+}
+
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+  align-items: flex-start;
+  text-align: left;
+}
+
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
   display: inline-block !important;
+  align-self: flex-start;
   float: none !important;
   margin-left: 0 !important;
   text-align: left;
 }
 
 @media (max-width: 768px) {
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+    display: flex !important;
+    flex-direction: column;
+    float: none !important;
+    width: 100% !important;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+    padding-left: 0 !important;
     text-align: left;
   }
 
+  /* Keep name/list to the right of the 67px avatar + 20px gap + former 15px pad */
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
+    padding-left: calc(67px + 20px + 15px) !important;
+    margin-left: 0 !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
+    align-self: flex-start;
     margin-left: 0 !important;
   }
 }

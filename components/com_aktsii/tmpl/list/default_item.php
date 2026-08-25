@@ -184,18 +184,48 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     top: 60%;
     transform: translateY(-50%);
 }
+.category.jsn_stockList .category__item-content,
+.category.jsn_stockList .category__item-content-left {
+    display: flex;
+    flex-direction: column;
+    width: 100% !important;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+}
+.category.jsn_stockList .category__item-content-left {
+    align-items: flex-start;
+    text-align: left;
+}
 .category.jsn_stockList .category__item .btn__time-zapis {
     display: inline-block !important;
+    align-self: flex-start;
     float: none !important;
     margin-left: 0 !important;
     text-align: left;
     font-size: 13px !important;
 }
 @media (max-width: 768px) {
+    .category.jsn_stockList .category__item-content,
     .category.jsn_stockList .category__item-content-left {
+        display: flex !important;
+        flex-direction: column;
+        float: none !important;
+        width: 100% !important;
+    }
+    .category.jsn_stockList .category__item-content-left {
+        padding-left: 0 !important;
         text-align: left;
     }
+    .category.jsn_stockList .category__content-info,
+    .category.jsn_stockList .category__content-info-list,
+    .category.jsn_stockList .category__content-info-list--stocks {
+        padding-left: calc(67px + 20px + 15px) !important;
+        margin-left: 0 !important;
+        width: 100%;
+        box-sizing: border-box;
+    }
     .category.jsn_stockList .category__item .btn__time-zapis {
+        align-self: flex-start;
         margin-left: 0 !important;
     }
 }
@@ -232,10 +262,9 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         margin-top: 15px;
     }
 }
-/* Desktop: hide the empty right column. Button lives in the left
-   column under the name/list, flush left (no 55px indent).
-   Card chrome matches mobile (padding, shadow, border, radius)
-   and restores spacing between cards. */
+/* Desktop: stretch content to the full card width so «Записаться»
+   sits on the card’s left edge. Photo stays left; name/list keep
+   231px+55px padding. */
 @media (min-width: 769px) {
     .category.jsn_stockList .category__masters {
         display: flex;
@@ -276,15 +305,20 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         border-radius: 12px;
     }
     .category.jsn_stockList .category__item-content {
-        display: block !important;
-        float: right;
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto;
+        float: none !important;
         box-sizing: border-box;
-        width: calc(100% - 231px) !important;
+        width: 100% !important;
         max-width: none !important;
     }
     .category.jsn_stockList .category__item-content-left {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        flex: 1 1 auto;
         float: none !important;
-        display: block;
         width: 100% !important;
         padding-left: 0 !important;
         padding-top: 42px !important;
@@ -292,13 +326,16 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         text-align: left;
     }
     .category.jsn_stockList .category__content-info {
-        padding-left: 55px;
+        padding-left: calc(231px + 55px);
+        width: 100%;
+        box-sizing: border-box;
     }
     .category.jsn_stockList .category__item-content-right {
         display: none !important;
     }
     .category.jsn_stockList .category__item-content-left .btn__time-zapis {
         display: inline-block !important;
+        align-self: flex-start;
         float: none !important;
         margin-top: 16px !important;
         margin-right: 0 !important;
@@ -312,10 +349,10 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         clear: none !important;
         float: none !important;
         margin-left: 0 !important;
-        padding-left: 55px !important;
+        padding-left: calc(231px + 55px) !important;
         padding-top: 12px;
         box-sizing: border-box;
-        width: auto;
+        width: 100%;
         max-width: 100%;
     }
     .category.jsn_stockList .category__content-info-list ul,
