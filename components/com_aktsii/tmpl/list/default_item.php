@@ -184,9 +184,20 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     top: 60%;
     transform: translateY(-50%);
 }
-.btn__time-zapis {
+.category.jsn_stockList .category__item .btn__time-zapis {
+    display: inline-block !important;
+    float: none !important;
     margin-left: 0 !important;
+    text-align: left;
     font-size: 13px !important;
+}
+@media (max-width: 768px) {
+    .category.jsn_stockList .category__item-content-left {
+        text-align: left;
+    }
+    .category.jsn_stockList .category__item .btn__time-zapis {
+        margin-left: 0 !important;
+    }
 }
 .category__content-info-list {
     clear: both;
@@ -222,7 +233,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
 }
 /* Desktop: hide the empty right column. Button lives in the left
-   column under the name/list, aligned with that text (55px).
+   column under the name/list, flush left (no 55px indent).
    Card chrome matches mobile (padding, shadow, border, radius)
    and restores spacing between cards. */
 @media (min-width: 769px) {
@@ -291,7 +302,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         float: none !important;
         margin-top: 16px !important;
         margin-right: 0 !important;
-        margin-left: 55px !important;
+        margin-left: 0 !important;
         transform: none !important;
         font-size: 14px !important;
         text-align: left;

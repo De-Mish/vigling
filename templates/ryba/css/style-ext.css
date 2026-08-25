@@ -3673,7 +3673,7 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   /* Promotions: hide the right column. Записаться is in the left column
-     under the name/list, left-aligned with that text (55px). */
+     under the name/list, flush with the card content’s left edge. */
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
     flex-shrink: 0;
     width: 231px;
@@ -3709,7 +3709,7 @@ div[role="tooltip"][id^="tip-"] {
     width: auto;
     margin-top: 16px !important;
     margin-right: 0 !important;
-    margin-left: 55px !important;
+    margin-left: 0 !important;
     transform: none !important;
     text-align: left;
   }
@@ -3740,6 +3740,26 @@ div[role="tooltip"][id^="tip-"] {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: visible;
   border-radius: 20px;
+}
+
+/* Promotions only: left-align «Записаться» with the card’s content
+   edge. Remove the 55px indent; do not change margin-top. Does not
+   match specialists (.jsn_list), models, or courses. */
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
+  display: inline-block !important;
+  float: none !important;
+  margin-left: 0 !important;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
+    text-align: left;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
+    margin-left: 0 !important;
+  }
 }
 
 @media (max-width: 767px) {
