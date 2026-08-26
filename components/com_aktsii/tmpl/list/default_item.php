@@ -195,6 +195,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 .category.jsn_stockList .category__item-content-left {
     align-items: flex-start;
     text-align: left;
+    padding-top: 0 !important;
+}
+.category.jsn_stockList .category__content-info,
+.category.jsn_stockList .category__content-info-list,
+.category.jsn_stockList .category__content-info-list--stocks {
+    align-self: flex-start;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 .category.jsn_stockList .category__item .btn__time-zapis {
     display: inline-block !important;
@@ -214,12 +222,15 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
     .category.jsn_stockList .category__item-content-left {
         padding-left: 0 !important;
+        padding-top: 0 !important;
         text-align: left;
     }
     .category.jsn_stockList .category__content-info,
     .category.jsn_stockList .category__content-info-list,
     .category.jsn_stockList .category__content-info-list--stocks {
         padding-left: calc(67px + 20px + 15px) !important;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
         margin-left: 0 !important;
         width: 100%;
         box-sizing: border-box;
@@ -321,12 +332,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         float: none !important;
         width: 100% !important;
         padding-left: 0 !important;
-        padding-top: 42px !important;
+        padding-top: 0 !important;
         clear: none;
         text-align: left;
     }
     .category.jsn_stockList .category__content-info {
         padding-left: calc(231px + 55px);
+        padding-top: 0 !important;
+        margin-top: 0 !important;
         width: 100%;
         box-sizing: border-box;
     }
@@ -350,7 +363,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         float: none !important;
         margin-left: 0 !important;
         padding-left: calc(231px + 55px) !important;
-        padding-top: 12px;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
         box-sizing: border-box;
         width: 100%;
         max-width: 100%;
