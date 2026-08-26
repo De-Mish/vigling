@@ -3860,8 +3860,10 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
-    align-self: flex-start;
-    margin-left: 0 !important;
+    align-self: flex-end !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    float: none !important;
   }
 }
 

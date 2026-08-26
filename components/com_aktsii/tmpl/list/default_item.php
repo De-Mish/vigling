@@ -257,8 +257,10 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
-        align-self: flex-start;
-        margin-left: 0 !important;
+        align-self: flex-end !important;
+        margin-left: auto !important;
+        margin-right: 0 !important;
+        float: none !important;
     }
 }
 .category__content-info-list {
