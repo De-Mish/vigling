@@ -3668,26 +3668,31 @@ div[role="tooltip"][id^="tip-"] {
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item,
   div.category.jsn_stockList:not(.search-catalog):not(.course-catalog) div.category__item {
-    display: flow-root !important;
+    position: relative !important;
+    display: block !important;
     box-sizing: border-box !important;
-    padding: 16px !important;
+    padding: 0 16px 16px 16px !important;
     margin-bottom: 0 !important;
     border: 1px solid #ccc !important;
     border-radius: 20px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     background: #fff !important;
     overflow: visible !important;
+    min-height: calc(16px + 295px + 16px);
   }
 
-  /* Promotions: stretch content to the full card width so «Записаться»
-     can sit on the card’s left edge. Photo stays floated; name/list keep
-     231px+55px padding so they stay to the right of the photo/avatar. */
+  /* Photo is taken out of flow so the text column is not pushed below
+     the 295px image (width:100% + float wraps). Avatar stays on the
+     photo at top:0. */
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
-    flex-shrink: 0;
+    position: absolute !important;
+    top: 16px;
+    left: 16px;
+    float: none !important;
     width: 231px;
     height: 295px;
-    float: left;
     border-radius: 12px;
+    z-index: 1;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
@@ -3700,8 +3705,10 @@ div[role="tooltip"][id^="tip-"] {
     box-sizing: border-box;
     width: 100% !important;
     max-width: none !important;
-    margin-top: -16px !important;
+    margin-top: 0 !important;
     padding-top: 0 !important;
+    position: relative;
+    z-index: 2;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
@@ -3760,6 +3767,7 @@ div[role="tooltip"][id^="tip-"] {
 /* Mobile (and as a baseline): soft shadow, don’t clip it. Desktop
    chrome is forced in the min-width: 769px block above. */
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
+  position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: visible;
   border-radius: 20px;
@@ -3785,14 +3793,6 @@ div[role="tooltip"][id^="tip-"] {
   text-align: left;
 }
 
-@media (min-width: 769px) {
-  /* Card uses padding: 16px. Pull only the text column up to the
-     top border. Photo / .category__item-master are not pulled. */
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
-    margin-top: -16px !important;
-  }
-}
-
 /* Promotions: pin name/address and stock list to the top of the card.
    Avatar (.category__item-master) is not restyled — desktop top:0 and
    mobile top:60% stay as they are. */
@@ -3813,6 +3813,22 @@ div[role="tooltip"][id^="tip-"] {
 }
 
 @media (max-width: 768px) {
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
+    position: relative;
+    min-height: 67px;
+  }
+
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    float: none !important;
+    width: 67px !important;
+    height: 67px !important;
+    margin-right: 0 !important;
+    z-index: 1;
+  }
+
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
     display: flex !important;

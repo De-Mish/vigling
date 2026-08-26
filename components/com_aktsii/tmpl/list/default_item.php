@@ -119,9 +119,6 @@ $imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($car
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
 ?>
 <div class="category__item" data-address="<?php echo htmlspecialchars($addr); ?>">
-	<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
-		<div class="category__item-master" style="<?php echo $masterAvatarStyle; ?>"></div>
-	</div>
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
@@ -166,12 +163,16 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 		</div>
 		<div class="category__item-content-right"></div>
 	</div>
+	<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
+		<div class="category__item-master" style="<?php echo $masterAvatarStyle; ?>"></div>
+	</div>
 </div>
 <style>
 .category.jsn_stockList .category__item-content-right {
     display: none;
 }
 .category.jsn_stockList .category__item {
+    position: relative;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: visible;
     border-radius: 20px;
@@ -216,6 +217,20 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     font-size: 13px !important;
 }
 @media (max-width: 768px) {
+    .category.jsn_stockList .category__item {
+        position: relative;
+        min-height: 67px;
+    }
+    .category.jsn_stockList .category__item-img {
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        float: none !important;
+        width: 67px !important;
+        height: 67px !important;
+        margin-right: 0 !important;
+        z-index: 1;
+    }
     .category.jsn_stockList .category__item-content,
     .category.jsn_stockList .category__item-content-left {
         display: flex !important;
@@ -280,9 +295,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         margin-top: 15px;
     }
 }
-/* Desktop: stretch content to the full card width so «Записаться»
-   sits on the card’s left edge. Photo stays left; name/list keep
-   231px+55px padding. */
+/* Desktop: photo is position:absolute so the left text column can sit
+   at the top of the card instead of wrapping below the 295px image. */
 @media (min-width: 769px) {
     .category.jsn_stockList .category__masters {
         display: flex;
@@ -291,15 +305,17 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
     .category.jsn_stockList .category__item,
     div.category.jsn_stockList div.category__item {
-        display: flow-root !important;
+        position: relative !important;
+        display: block !important;
         box-sizing: border-box !important;
-        padding: 16px !important;
+        padding: 0 16px 16px 16px !important;
         margin-bottom: 0 !important;
         border: 1px solid #ccc !important;
         border-radius: 20px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
         background: #fff !important;
         overflow: visible !important;
+        min-height: calc(16px + 295px + 16px);
     }
     .category.jsn_stockList .category__item-master {
         position: absolute !important;
@@ -316,11 +332,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         border-radius: 50%;
     }
     .category.jsn_stockList .category__item-img {
-        flex-shrink: 0;
+        position: absolute !important;
+        top: 16px;
+        left: 16px;
+        float: none !important;
         width: 231px;
         height: 295px;
-        float: left;
         border-radius: 12px;
+        z-index: 1;
     }
     .category.jsn_stockList .category__item-content {
         display: flex !important;
@@ -332,8 +351,10 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         box-sizing: border-box;
         width: 100% !important;
         max-width: none !important;
-        margin-top: -16px !important;
+        margin-top: 0 !important;
         padding-top: 0 !important;
+        position: relative;
+        z-index: 2;
     }
     .category.jsn_stockList .category__item-content-left {
         display: flex !important;
