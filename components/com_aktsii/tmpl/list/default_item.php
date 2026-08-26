@@ -188,14 +188,17 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 .category.jsn_stockList .category__item-content-left {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
     width: 100% !important;
     flex: 1 1 auto;
     box-sizing: border-box;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 .category.jsn_stockList .category__item-content-left {
-    align-items: flex-start;
+    align-self: flex-start;
     text-align: left;
-    padding-top: 0 !important;
 }
 .category.jsn_stockList .category__content-info,
 .category.jsn_stockList .category__content-info-list,
@@ -217,8 +220,12 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     .category.jsn_stockList .category__item-content-left {
         display: flex !important;
         flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
         float: none !important;
         width: 100% !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }
     .category.jsn_stockList .category__item-content-left {
         padding-left: 0 !important;
@@ -318,21 +325,28 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     .category.jsn_stockList .category__item-content {
         display: flex !important;
         flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
         flex: 1 1 auto;
         float: none !important;
         box-sizing: border-box;
         width: 100% !important;
         max-width: none !important;
+        margin-top: -16px !important;
+        padding-top: 0 !important;
     }
     .category.jsn_stockList .category__item-content-left {
         display: flex !important;
         flex-direction: column;
+        justify-content: flex-start;
         align-items: flex-start;
+        align-self: flex-start;
         flex: 1 1 auto;
         float: none !important;
         width: 100% !important;
         padding-left: 0 !important;
         padding-top: 0 !important;
+        margin-top: 0 !important;
         clear: none;
         text-align: left;
     }
