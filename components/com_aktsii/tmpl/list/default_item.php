@@ -257,8 +257,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
-        align-self: flex-end !important;
-        margin-left: auto !important;
+        align-self: flex-start !important;
+        margin-left: 0 !important;
         margin-right: 0 !important;
         float: none !important;
     }
@@ -382,11 +382,11 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
     .category.jsn_stockList .category__item-content-left .btn__time-zapis {
         display: inline-block !important;
-        align-self: flex-start;
+        align-self: flex-end !important;
         float: none !important;
         margin-top: 16px !important;
         margin-right: 0 !important;
-        margin-left: 0 !important;
+        margin-left: auto !important;
         transform: none !important;
         font-size: 14px !important;
         text-align: left;
