@@ -136,8 +136,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 			
 			<?php if (!empty($stocks)) : ?>
 			<div class="category__content-info-list category__content-info-list--stocks">
-				<button style="color:green; font-weight:bold; background-color:#fff; border-radius:5px; margin-bottom:10px; border:1px solid green; padding:4px 12px;">Акции</button>
-				<ul style="line-height: 1.6; padding-left: 0; margin-left: 0;">
+				<ul style="line-height: 1.6; padding-left: 0; margin: 0;">
 					<?php foreach ($stocks as $stock) : 
 						$serviceName = $getFullServiceName($item->id, $stock['cat_id'], $stock['tag_id']);
 					?>
@@ -271,13 +270,11 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 .category__content-info-list ul {
     line-height: 1.6;
     padding-left: 0 !important;
+    margin-top: 0 !important;
     margin-left: 0 !important;
 }
 .category__content-info-list ul li {
     padding-left: 0 !important;
-    margin-left: 0 !important;
-}
-.category__content-info-list button {
     margin-left: 0 !important;
 }
 @media (min-width: 992px) {
