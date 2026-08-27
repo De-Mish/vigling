@@ -257,10 +257,12 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
+        position: static;
         align-self: flex-start !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
         float: none !important;
+        transform: translate(4px, -4px);
     }
 }
 .category__content-info-list {
@@ -307,14 +309,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         position: relative !important;
         display: block !important;
         box-sizing: border-box !important;
-        padding: 0 16px 16px 16px !important;
+        padding: 0 16px 58px 16px !important;
         margin-bottom: 0 !important;
         border: 1px solid #ccc !important;
         border-radius: 20px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
         background: #fff !important;
         overflow: visible !important;
-        min-height: calc(16px + 295px + 16px);
+        min-height: calc(16px + 295px + 58px);
     }
     .category.jsn_stockList .category__item-master {
         position: absolute !important;
@@ -352,8 +354,9 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         max-width: none !important;
         margin-top: 0 !important;
         padding-top: 0 !important;
-        position: relative;
-        z-index: 2;
+        /* Static so the «Записаться» button's containing block is the card. */
+        position: static;
+        z-index: auto;
     }
     .category.jsn_stockList .category__item-content-left {
         display: flex !important;
@@ -381,12 +384,14 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         display: none !important;
     }
     .category.jsn_stockList .category__item-content-left .btn__time-zapis {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        z-index: 3;
         display: inline-block !important;
-        align-self: flex-end !important;
         float: none !important;
-        margin-top: 16px !important;
-        margin-right: 0 !important;
-        margin-left: auto !important;
+        width: auto;
+        margin: 0 !important;
         transform: none !important;
         font-size: 14px !important;
         text-align: left;
