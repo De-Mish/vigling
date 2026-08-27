@@ -609,6 +609,32 @@ function validateAndCorrectTime(input) {
 	}
 })();
 
+(function() {
+	function fixMobileSearchImages() {
+		if (window.innerWidth > 820) return;
+		var items = document.querySelectorAll('.search-catalog .category__item-img');
+		items.forEach(function(el) {
+			var img = el.querySelector('img');
+			if (img) {
+				img.style.display = 'block';
+				img.style.width = '100%';
+				img.style.height = '100%';
+				img.style.objectFit = 'cover';
+			}
+		});
+	}
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', fixMobileSearchImages);
+	} else {
+		fixMobileSearchImages();
+	}
+	window.addEventListener('resize', function() {
+		if (window.innerWidth <= 820) {
+			fixMobileSearchImages();
+		}
+	});
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
 	var filterForm = document.querySelector('.filter');
 	if (filterForm) {

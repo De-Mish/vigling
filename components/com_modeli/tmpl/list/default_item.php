@@ -85,15 +85,50 @@ $extractFirstPortfolioImage = static function (string $rawValue, callable $resol
 	return '';
 };
 
-$portfolioImage = $extractFirstPortfolioImage($portfolioRaw, $resolveImageUrl);
-$avatarImage = $resolveImageUrl($avatar, false);
+$resolveSearchMediaUrl = static function (string $rawValue): string {
+	$rawValue = trim($rawValue);
+	if ($rawValue === '') {
+		return '';
+	}
+	$decoded = json_decode($rawValue, true);
+	if (is_string($decoded)) {
+		$rawValue = trim($decoded);
+	} elseif (is_array($decoded)) {
+		$rawValue = trim((string) reset($decoded));
+	}
+	if ($rawValue === '') {
+		return '';
+	}
+	if (stripos($rawValue, 'http://') === 0 || stripos($rawValue, 'https://') === 0) {
+		return $rawValue;
+	}
+	$clean = str_replace('\\', '/', ltrim($rawValue, '/'));
+	if ($clean === '' || preg_match('#^(images/?|images/search/?|search/?)$#i', $clean)) {
+		return '';
+	}
+	if (!preg_match('/\.(jpe?g|png|gif|webp|avif)$/i', $clean)) {
+		return '';
+	}
+	if (preg_match('#^images/(search_[^/]+)$#i', $clean, $matches)) {
+		return '/images/search/' . $matches[1];
+	}
+	if (stripos($clean, 'images/') === 0) {
+		return '/' . $clean;
+	}
+	if (stripos($clean, 'search/') === 0) {
+		return '/images/' . $clean;
+	}
+
+	return '/images/search/' . $clean;
+};
+
 $searchImage = trim((string) ($item->media_path ?? ''));
-$searchImageUrl = $searchImage !== '' ? $resolveImageUrl($searchImage, true) : '';
+$searchImageUrl = $resolveSearchMediaUrl($searchImage);
 
 if ($searchImageUrl !== '') {
 	$cardImage = $searchImageUrl;
 } else {
-	$cardImage = $portfolioImage !== '' ? $portfolioImage : ($avatarImage !== '' ? $avatarImage : '/images/service4.png');
+	$cardImage = '/images/service4.png';
 }
 
 $imgStyle = 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
