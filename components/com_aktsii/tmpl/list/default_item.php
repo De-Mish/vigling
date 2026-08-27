@@ -125,13 +125,13 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				<?php if ($about !== '') : ?>
 					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($about, 0, 120)) . (mb_strlen($about) > 120 ? '…' : ''); ?></span>
 				<?php endif; ?>
-				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 				<?php if ($addr !== '') : ?>
 					<span class="category_cinfo-address"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($addr); ?></span>
 				<?php endif; ?>
 				<?php if ($homeParts !== []) : ?>
 					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></b></span>
 				<?php endif; ?>
+				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 			</div>
 			
 			<?php if (!empty($stocks)) : ?>
