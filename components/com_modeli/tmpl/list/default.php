@@ -215,6 +215,64 @@ $doc->addStyleDeclaration('
 		.category__masters-sidebar select { width: 100%; }
 		.category__masters-sidebar .chosen-container { width: 100% !important; }
 		.category__masters-sidebar input.filed__master.vg-datetime-picker { width: 100%; box-sizing: border-box; }
+		@media (max-width: 768px) {
+			.search-catalog .category__item.search-catalog__item {
+				position: relative !important;
+				box-sizing: border-box;
+				padding-bottom: 50px !important;
+			}
+			.search-catalog .category__item.search-catalog__item .category__item-content,
+			.search-catalog .category__item.search-catalog__item .category__item-content-right {
+				position: static;
+			}
+			.search-catalog .category__item.search-catalog__item .category__item-content-right {
+				width: 0 !important;
+				height: 0;
+				margin: 0 !important;
+				padding: 0 !important;
+				float: none !important;
+				overflow: visible;
+			}
+			.search-catalog .category__item.search-catalog__item .btn__time-zapis {
+				position: absolute;
+				bottom: 8px;
+				left: 8px;
+				right: auto;
+				z-index: 3;
+				margin: 0 !important;
+				float: none !important;
+				transform: none;
+			}
+		}
+		@media (min-width: 769px) {
+			.search-catalog .category__item.search-catalog__item {
+				position: relative !important;
+				box-sizing: border-box;
+				padding-bottom: 50px;
+			}
+			.search-catalog .category__item.search-catalog__item .category__item-content,
+			.search-catalog .category__item.search-catalog__item .category__item-content-right {
+				position: static;
+			}
+			.search-catalog .category__item.search-catalog__item .category__item-content-right {
+				width: 0 !important;
+				height: 0;
+				margin: 0 !important;
+				padding: 0 !important;
+				float: none !important;
+				overflow: visible;
+			}
+			.search-catalog .category__item.search-catalog__item .btn__time-zapis {
+				position: absolute;
+				bottom: 8px;
+				right: 8px;
+				left: auto;
+				z-index: 3;
+				margin: 0 !important;
+				float: none !important;
+				transform: none;
+			}
+		}
 		@media (max-width: 767px) {
 			.search-catalog .search-catalog__item {
 				align-items: flex-start;
