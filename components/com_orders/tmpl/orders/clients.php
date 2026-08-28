@@ -11,27 +11,12 @@ require_once __DIR__ . '/_reschedule_helper.php';
 
 /** @var \Viglin\Component\Orders\Site\View\Orders\HtmlView $this */
 $items = $this->items;
-$app = Factory::getApplication();
-$menu = $app->getMenu();
 $token = Session::getFormToken();
 $returnEncoded = base64_encode(Uri::getInstance()->toString());
 $db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.rescheduleByMaster');
 $rescheduleCourseAction = Route::_('index.php?option=com_orders&task=orders.rescheduleCourseSlotByMaster');
 $rescheduleSearchAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSearchSlotByMaster');
-$profileMenuItem = null;
-foreach ($menu->getMenu() as $it) {
-	if (!isset($it->query['option'], $it->query['view']) || $it->query['option'] !== 'com_users' || $it->query['view'] !== 'profile') {
-		continue;
-	}
-	if (isset($it->alias) && $it->alias === 'lk') {
-		$profileMenuItem = $it;
-		break;
-	}
-	if ($profileMenuItem === null) {
-		$profileMenuItem = $it;
-	}
-}
 $displayRows = [];
 foreach ($items as $item) {
 	$bookingKind = trim((string) ($item->booking_kind ?? 'service'));
@@ -450,9 +435,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 									$participantIsPast = $participantTimeUtc ? ($participantTimeUtc < $nowUtc) : false;
 									$participantCompleted = !empty($participant->completed);
 									$participantContacts = array_filter([trim((string) ($participant->client_email ?? '')), trim((string) ($participant->client_phone ?? ''))]);
-									$clientProfileUrl = $profileMenuItem
-										? Route::_('index.php?option=com_users&view=profile&user_id=' . (int) $participant->user_id . '&Itemid=' . (int) $profileMenuItem->id)
-										: Route::_('index.php?option=com_users&view=profile&user_id=' . (int) $participant->user_id);
+									$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $participant->user_id;
 								?>
 								<div class="course-participant">
 									<div class="course-participant-head">
@@ -488,9 +471,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 					$isPast = $timeUtc ? ($timeUtc < $nowUtc) : false;
 					$completed = !empty($item->completed);
 					$rowClass = 'orders-row' . ($isPast ? ' orders-row--past' : '');
-					$clientProfileUrl = $profileMenuItem
-						? Route::_('index.php?option=com_users&view=profile&user_id=' . (int) $item->user_id . '&Itemid=' . (int) $profileMenuItem->id)
-						: Route::_('index.php?option=com_users&view=profile&user_id=' . (int) $item->user_id);
+					$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->user_id;
 					$contacts = array_filter([trim((string) ($item->client_email ?? '')), trim((string) ($item->client_phone ?? ''))]);
 				?>
 				<tr class="<?php echo $rowClass; ?>" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">

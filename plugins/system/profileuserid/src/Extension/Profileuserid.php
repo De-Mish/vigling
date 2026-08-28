@@ -12,6 +12,7 @@ use Joomla\CMS\Event\Application\AfterRouteEvent;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Router\Router;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
 
@@ -25,6 +26,31 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 		];
 	}
 
+	/**
+	 * Site-relative public profile URL: /144675 or /144675?cat_id=1&service=2&tag=3
+	 */
+	public static function publicProfileUrl(int $userId, array $extra = []): string
+	{
+		$userId = (int) $userId;
+		if ($userId <= 0) {
+			return '';
+		}
+
+		$url = rtrim(Uri::root(true), '/') . '/' . $userId;
+		$query = [];
+		foreach ($extra as $key => $value) {
+			if ($value === null || $value === '') {
+				continue;
+			}
+			$query[$key] = $value;
+		}
+		if ($query !== []) {
+			$url .= '?' . http_build_query($query);
+		}
+
+		return $url;
+	}
+
 	public function onAfterInitialise(AfterInitialiseEvent $event): void
 	{
 		$app = $event->getApplication();
@@ -33,7 +59,38 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 		}
 
 		$router = $app->getRouter();
+		$router->attachParseRule([$this, 'parseNumericProfile'], Router::PROCESS_BEFORE);
 		$router->attachParseRule([$this, 'parseStandalonePages'], Router::PROCESS_BEFORE);
+		// PROCESS_DURING runs after SiteRouter::buildSefRoute, so /lk is not prepended.
+		$router->attachBuildRule([$this, 'buildNumericProfile'], Router::PROCESS_DURING);
+	}
+
+	/**
+	 * Map a single numeric path segment (/144675) to com_users profile.
+	 * Does not consume nested numeric segments such as /poisk-spetsialistov/16.
+	 */
+	public function parseNumericProfile(&$router, &$uri)
+	{
+		$path = trim((string) $uri->getPath(), '/');
+		if (!preg_match('/^[1-9][0-9]*$/', $path)) {
+			return [];
+		}
+
+		if ($this->hasConflictingNumericRoute($path)) {
+			return [];
+		}
+
+		$userId = (int) $path;
+		$uri->setPath('');
+		$uri->setVar('option', 'com_users');
+		$uri->setVar('view', 'profile');
+		$uri->setVar('user_id', $userId);
+
+		return [
+			'option' => 'com_users',
+			'view' => 'profile',
+			'user_id' => $userId,
+		];
 	}
 
 	public function parseStandalonePages(&$router, &$uri)
@@ -53,6 +110,54 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 			'view' => 'featured',
 			'privacy_page' => '1',
 		];
+	}
+
+	/**
+	 * Emit /144675 for public profiles. Leave /lk, login, registration and layout=edit alone.
+	 *
+	 * Runs after SiteRouter::buildSefRoute, which may already have turned the URI into /lk
+	 * and left user_id in the query string.
+	 */
+	public function buildNumericProfile(&$router, &$uri): void
+	{
+		$userId = (int) $uri->getVar('user_id', 0);
+		if ($userId <= 0) {
+			return;
+		}
+		if ((string) $uri->getVar('layout', '') === 'edit') {
+			return;
+		}
+		if ((string) $uri->getVar('task', '') !== '') {
+			return;
+		}
+
+		$option = (string) $uri->getVar('option', '');
+		$view = (string) $uri->getVar('view', '');
+		if ($option !== '' && $option !== 'com_users') {
+			return;
+		}
+		if ($view !== '' && $view !== 'profile') {
+			return;
+		}
+
+		$path = trim(str_replace('index.php', '', (string) $uri->getPath()), '/');
+		if ($option === '' && $view === '') {
+			$looksLikeProfile = $path === 'lk'
+				|| str_starts_with($path, 'lk/')
+				|| $path === 'component/users'
+				|| str_starts_with($path, 'component/users/')
+				|| $path === 'profile'
+				|| str_ends_with($path, '/profile');
+			if (!$looksLikeProfile) {
+				return;
+			}
+		}
+
+		$uri->setPath((string) $userId);
+		$uri->delVar('option');
+		$uri->delVar('view');
+		$uri->delVar('user_id');
+		$uri->delVar('Itemid');
 	}
 
 	public function onAfterRoute(AfterRouteEvent $event): void
@@ -107,10 +212,78 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 		}
 
 		if ($userId > 0) {
+			$this->maybeRedirectToShortProfileUrl($app, $userId);
 			$app->setUserState('com_users.edit.profile.id', $userId);
 		} else {
 			$app->setUserState('com_users.edit.profile.id', null);
 		}
+	}
+
+	private function maybeRedirectToShortProfileUrl($app, int $userId): void
+	{
+		if (strtoupper((string) $app->getInput()->getMethod()) !== 'GET') {
+			return;
+		}
+		if ((string) $app->getInput()->getCmd('task', '') !== '') {
+			return;
+		}
+
+		$path = $this->currentSitePath();
+		if ($this->isLkPath($path)) {
+			return;
+		}
+		if ($path === (string) $userId) {
+			return;
+		}
+
+		$target = rtrim(Uri::root(), '/') . '/' . $userId;
+		$query = Uri::getInstance()->getQuery(true);
+		unset($query['option'], $query['view'], $query['user_id'], $query['Itemid']);
+		if ($query !== []) {
+			$target .= '?' . http_build_query($query);
+		}
+
+		$app->redirect($target, 301);
+	}
+
+	private function currentSitePath(): string
+	{
+		$path = trim((string) Uri::getInstance()->getPath(), '/');
+		$base = trim((string) Uri::root(true), '/');
+		if ($base !== '') {
+			if ($path === $base) {
+				return '';
+			}
+			if (str_starts_with($path, $base . '/')) {
+				$path = substr($path, strlen($base) + 1);
+			}
+		}
+		if (str_starts_with($path, 'index.php')) {
+			$path = trim(substr($path, strlen('index.php')), '/');
+		}
+
+		return $path;
+	}
+
+	private function isLkPath(string $path): bool
+	{
+		return $path === 'lk' || str_starts_with($path, 'lk/');
+	}
+
+	private function hasConflictingNumericRoute(string $segment): bool
+	{
+		$items = Factory::getApplication()->getMenu()->getItems('alias', $segment) ?: [];
+		foreach ((array) $items as $item) {
+			if ((int) ($item->published ?? 0) !== 1) {
+				continue;
+			}
+			$route = trim((string) ($item->route ?? $item->alias ?? ''), '/');
+			if ($route === $segment || (int) ($item->parent_id ?? 0) === 1) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function handleEmailVerificationBridge($app): bool

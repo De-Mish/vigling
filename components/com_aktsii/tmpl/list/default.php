@@ -78,7 +78,7 @@ if (!empty($mapItems)) {
 		$geocodeQuery = count($geocodeParts) >= 3
 			? implode(', ', $geocodeParts)
 			: '';
-		$profileLink = '/index.php?option=com_users&view=profile&user_id=' . (int) $mapItem->id;
+		$profileLink = '/' . (int) $mapItem->id;
 		$specialityIds = json_decode($specialitiesRaw, true);
 		$specialityTitles = [];
 		if (is_array($specialityIds)) {

@@ -102,9 +102,13 @@ if (!empty($mapItems)) {
 		$geocodeQuery = count($geocodeParts) >= 3
 			? implode(', ', $geocodeParts)
 			: '';
-		$profileLink = '/index.php?option=com_users&view=profile&user_id=' . (int) $mapItem->id;
+		$profileLink = '/' . (int) $mapItem->id;
 		if ($currentCatId > 0 && $currentService > 0 && $currentTag > 0) {
-			$profileLink .= '&cat_id=' . $currentCatId . '&service=' . $currentService . '&tag=' . $currentTag;
+			$profileLink .= '?' . http_build_query([
+				'cat_id' => $currentCatId,
+				'service' => $currentService,
+				'tag' => $currentTag,
+			]);
 		}
 		$specialityIds = json_decode($specialitiesRaw, true);
 		$specialityTitles = [];
@@ -566,7 +570,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		var fromProfile = /[?&]option=com_users\b/.test(ref)
 			|| /[?&]view=profile\b/.test(ref)
 			|| /[?&]user_id=\d+/.test(ref)
-			|| /\/profile/.test(ref);
+			|| /\/profile/.test(ref)
+			|| /https?:\/\/[^/]+\/\d+(?:[/?#]|$)/.test(ref);
 		if (navType !== 'back_forward' && !fromProfile) {
 			return;
 		}
