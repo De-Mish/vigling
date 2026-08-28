@@ -3938,6 +3938,73 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
+/* /kurs only: pin «Записаться» to the card corners. */
+@media (max-width: 768px) {
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item {
+    position: relative !important;
+    box-sizing: border-box;
+    padding-bottom: 50px !important;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content,
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content-right {
+    position: static;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content-right {
+    width: 0 !important;
+    height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+    overflow: visible;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .btn__time-zapis {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: auto;
+    z-index: 3;
+    margin: 0 !important;
+    float: none !important;
+    transform: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item {
+    position: relative !important;
+    box-sizing: border-box;
+    padding-bottom: 50px;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content,
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content-right {
+    position: static;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .category__item-content-right {
+    width: 0 !important;
+    height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+    overflow: visible;
+  }
+
+  .category.jsn_stockList.course-catalog .category__item.course-catalog__item .btn__time-zapis {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    left: auto;
+    z-index: 3;
+    margin: 0 !important;
+    float: none !important;
+    transform: none;
+  }
+}
+
 @media (max-width: 767px) {
   .category.jsn_list .service-price {
     margin: 6px 0;
