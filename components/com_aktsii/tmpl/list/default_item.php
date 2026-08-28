@@ -219,6 +219,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     .category.jsn_stockList .category__item {
         position: relative;
         min-height: 67px;
+        box-sizing: border-box;
+        padding-bottom: 50px;
     }
     .category.jsn_stockList .category__item-img {
         position: absolute !important;
@@ -240,6 +242,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         width: 100% !important;
         margin-top: 0 !important;
         padding-top: 0 !important;
+        position: static;
     }
     .category.jsn_stockList .category__item-content-left {
         padding-left: 0 !important;
@@ -257,12 +260,15 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
-        position: static;
-        align-self: flex-start !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        right: auto;
+        z-index: 3;
+        align-self: auto !important;
+        margin: 0 !important;
         float: none !important;
-        transform: translate(4px, -4px);
+        transform: none;
     }
 }
 .category__content-info-list {
@@ -387,6 +393,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         position: absolute;
         bottom: 8px;
         right: 8px;
+        left: auto;
         z-index: 3;
         display: inline-block !important;
         float: none !important;

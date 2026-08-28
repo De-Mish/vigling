@@ -3736,6 +3736,7 @@ div[role="tooltip"][id^="tip-"] {
     position: absolute;
     bottom: 8px;
     right: 8px;
+    left: auto;
     z-index: 3;
     display: inline-block !important;
     float: none !important;
@@ -3818,6 +3819,9 @@ div[role="tooltip"][id^="tip-"] {
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item {
     position: relative;
     min-height: 67px;
+    box-sizing: border-box;
+    /* Room for the absolutely positioned «Записаться» button. */
+    padding-bottom: 50px;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-img {
@@ -3841,6 +3845,7 @@ div[role="tooltip"][id^="tip-"] {
     width: 100% !important;
     margin-top: 0 !important;
     padding-top: 0 !important;
+    position: static;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
@@ -3862,12 +3867,15 @@ div[role="tooltip"][id^="tip-"] {
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
-    position: static;
-    align-self: flex-start !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: auto;
+    z-index: 3;
+    align-self: auto !important;
+    margin: 0 !important;
     float: none !important;
-    transform: translate(4px, -4px);
+    transform: none;
   }
 }
 
