@@ -215,6 +215,64 @@ $doc->addStyleDeclaration('
 		.category__masters-sidebar select { width: 100%; }
 		.category__masters-sidebar .chosen-container { width: 100% !important; }
 		.category__masters-sidebar input.filed__master.vg-datetime-picker { width: 100%; box-sizing: border-box; }
+		@media (max-width: 768px) {
+			.course-catalog .category__item.course-catalog__item {
+				position: relative !important;
+				box-sizing: border-box;
+				padding-bottom: 50px !important;
+			}
+			.course-catalog .category__item.course-catalog__item .category__item-content,
+			.course-catalog .category__item.course-catalog__item .category__item-content-right {
+				position: static;
+			}
+			.course-catalog .category__item.course-catalog__item .category__item-content-right {
+				width: 0 !important;
+				height: 0;
+				margin: 0 !important;
+				padding: 0 !important;
+				float: none !important;
+				overflow: visible;
+			}
+			.course-catalog .category__item.course-catalog__item .btn__time-zapis {
+				position: absolute;
+				bottom: 8px;
+				left: 8px;
+				right: auto;
+				z-index: 3;
+				margin: 0 !important;
+				float: none !important;
+				transform: none;
+			}
+		}
+		@media (min-width: 769px) {
+			.course-catalog .category__item.course-catalog__item {
+				position: relative !important;
+				box-sizing: border-box;
+				padding-bottom: 50px;
+			}
+			.course-catalog .category__item.course-catalog__item .category__item-content,
+			.course-catalog .category__item.course-catalog__item .category__item-content-right {
+				position: static;
+			}
+			.course-catalog .category__item.course-catalog__item .category__item-content-right {
+				width: 0 !important;
+				height: 0;
+				margin: 0 !important;
+				padding: 0 !important;
+				float: none !important;
+				overflow: visible;
+			}
+			.course-catalog .category__item.course-catalog__item .btn__time-zapis {
+				position: absolute;
+				bottom: 8px;
+				right: 8px;
+				left: auto;
+				z-index: 3;
+				margin: 0 !important;
+				float: none !important;
+				transform: none;
+			}
+		}
 		@media (max-width: 767px) {
 			.course-catalog .course-catalog__item {
 				align-items: flex-start;
