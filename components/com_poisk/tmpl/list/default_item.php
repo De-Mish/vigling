@@ -12,9 +12,13 @@ $input = $app->getInput();
 $filterCatId = (int) ($currentCatId ?? $input->getUint('cat_id', 0));
 $filterServiceId = (int) ($currentService ?? $input->getUint('service', 0));
 $filterTagId = (int) ($currentTag ?? $input->getUint('tag', 0));
-$profileUrl = Uri::root() . 'index.php?option=com_users&view=profile&user_id=' . (int) $item->id;
+$profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
 if ($filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0) {
-	$profileUrl .= '&cat_id=' . $filterCatId . '&service=' . $filterServiceId . '&tag=' . $filterTagId;
+	$profileUrl .= '?' . http_build_query([
+		'cat_id' => $filterCatId,
+		'service' => $filterServiceId,
+		'tag' => $filterTagId,
+	]);
 }
 
 $sity = trim($fields['sity'] ?? '');

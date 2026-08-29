@@ -4,7 +4,7 @@
 
 use Joomla\CMS\Uri\Uri;
 
-$profileUrl = Uri::root() . 'index.php?option=com_users&view=profile&user_id=' . (int) ($item->master_id ?? 0);
+$profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) ($item->master_id ?? 0);
 
 $masterFields = $fieldsByUser[(int) ($item->master_id ?? 0)] ?? [];
 $sity = trim((string) ($masterFields['sity'] ?? ''));

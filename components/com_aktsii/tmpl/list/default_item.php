@@ -8,7 +8,7 @@ use Joomla\CMS\Uri\Uri;
 $app = Factory::getApplication();
 $currentUser = $app->getIdentity();
 $isGuest = $currentUser->guest;
-$profileUrl = Uri::root() . 'index.php?option=com_users&view=profile&user_id=' . (int) $item->id;
+$profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
 
 $sity = trim($fields['sity'] ?? '');
 $area = trim($fields['area'] ?? '');

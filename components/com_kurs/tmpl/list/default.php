@@ -61,7 +61,7 @@ if (!empty($mapItems)) {
 			$normalizeAddressPart($house),
 		])));
 		$geocodeQuery = $geocodeParts !== [] ? implode(', ', $geocodeParts) : '';
-		$profileLink = '/index.php?option=com_users&view=profile&user_id=' . (int) ($mapItem->master_id ?? 0);
+		$profileLink = '/' . (int) ($mapItem->master_id ?? 0);
 		$courseTitle = htmlspecialchars((string) ($mapItem->title ?? $mapItem->description ?? 'Курс'), ENT_QUOTES, 'UTF-8');
 		$masterName = htmlspecialchars((string) ($mapItem->master_name ?? ''), ENT_QUOTES, 'UTF-8');
 		$addrEsc = htmlspecialchars($addr, ENT_QUOTES, 'UTF-8');
