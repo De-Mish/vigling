@@ -4167,3 +4167,65 @@ div[role="tooltip"][id^="tip-"] {
 .master__services .priceList__item.highlighted-service .price_span {
   color: #000000 !important;
 }
+
+/* Homepage search shortcuts: replace the old specialists search form.
+   Scoped to body#home (homepage only). */
+body#home .home-search-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+body#home .home-search-links li {
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+body#home .home-search-links li:last-child {
+  margin-bottom: 0;
+}
+
+body#home .home-search-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 220px;
+  height: 42px;
+  padding: 0 24px;
+  background: transparent;
+  border: 1px solid #000;
+  border-radius: 3px;
+  color: #000;
+  font-family: "GothamPro-Bold", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1.08px;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+body#home .home-search-links a:hover,
+body#home .home-search-links a:focus {
+  background: transparent;
+  color: #000;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  body#home .home-search-links {
+    align-items: center;
+  }
+
+  body#home .search__specialists .search__coll-left {
+    width: 100%;
+    float: none;
+    display: flex;
+    justify-content: center;
+  }
+}
+

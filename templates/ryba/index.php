@@ -304,111 +304,84 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 		</section>
 	<?php endif; ?>
 	<?php if ($page === 'home') : ?>
-		<?php if ($this->countModules('top')) : ?>
-			<jdoc:include type="modules" name="top" style="html5" />
-		<?php else :
-			$searchCategories = [];
-			try {
-				$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
-				$prefix = $db->getPrefix();
-				$q = $db->getQuery(true)
-					->select('id, title')
-					->from($db->quoteName($prefix . 'categories'))
-					->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
-					->where($db->quoteName('published') . ' = 1')
-					->where('(' . $db->quoteName('parent_id') . ' = 39 OR ' . $db->quoteName('path') . ' LIKE ' . $db->quote('uslugi/%') . ' OR ' . $db->quoteName('id') . ' IN (9,10,11,12,13,14,16,17,18,19,20,21))')
-					->order('title ASC');
-				$db->setQuery($q);
-				$searchCategories = $db->loadAssocList('id') ?: [];
-			} catch (\Throwable $e) {
-			}
-			$searchCategoriesJson = json_encode(array_values(array_map(function ($c) { return ['id' => (int)$c['id'], 'title' => $c['title']]; }, $searchCategories)));
+		<?php
+		$homeSearchBase = rtrim(Uri::root(true), '/');
+		$homeSearchLinks = [
+			['label' => 'Поиск мастера', 'href' => $homeSearchBase . '/poisk-spetsialistov'],
+			['label' => 'Поиск акций', 'href' => $homeSearchBase . '/poisk-aktsij'],
+			['label' => 'Поиск курсов', 'href' => $homeSearchBase . '/kurs'],
+			['label' => 'Поиск моделей', 'href' => $homeSearchBase . '/modeli'],
+		];
 		?>
 		<section class="search__specialists search__section">
+			<style>
+				body#home .home-search-links {
+					display: flex;
+					flex-direction: column;
+					align-items: flex-start;
+					list-style: none;
+					margin: 0;
+					padding: 0;
+				}
+				body#home .home-search-links li {
+					margin: 0 0 12px;
+					padding: 0;
+				}
+				body#home .home-search-links li:last-child {
+					margin-bottom: 0;
+				}
+				body#home .home-search-links a {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					box-sizing: border-box;
+					min-width: 220px;
+					height: 42px;
+					padding: 0 24px;
+					background: transparent;
+					border: 1px solid #000;
+					border-radius: 3px;
+					color: #000;
+					font-family: "GothamPro-Bold", sans-serif;
+					font-size: 13px;
+					font-weight: 500;
+					letter-spacing: 1.08px;
+					line-height: 1.2;
+					text-align: center;
+					text-decoration: none;
+				}
+				body#home .home-search-links a:hover,
+				body#home .home-search-links a:focus {
+					background: transparent;
+					color: #000;
+					text-decoration: none;
+				}
+				@media (max-width: 768px) {
+					body#home .home-search-links {
+						align-items: center;
+					}
+					body#home .search__specialists .search__coll-left {
+						width: 100%;
+						float: none;
+						display: flex;
+						justify-content: center;
+					}
+				}
+			</style>
 			<div class="container">
 				<div class="search__coll-left">
-					<h2 class="search_title">поиск специалистов</h2>
-					<span class="search__sub"></span>
-					<form action="<?php echo Route::_('index.php?option=com_poisk&view=list'); ?>" method="get">
-						<input type="hidden" name="search" value="1">
-						<div class="jsn_search_module-ext jsn_result_poisk">
-							<div class="filed filed1">
-								<input type="text" id="search_service_input" placeholder="Услуга или специальность" autocomplete="off">
-								<input type="hidden" name="cat_id" id="search_cat_id" value="">
-							</div>
-							<div class="filed filed2">
-								<input type="text" name="date" placeholder="Дата" class="date-input">
-							</div>
-							<div class="filed filed3">
-								<div class="control-group">
-									<div class="controls">
-										<fieldset class="checkboxes" id="at_home">
-											<label class="checkbox"><input type="checkbox" name="home[]" value="1"><b>Салон</b></label>
-											<label class="checkbox"><input type="checkbox" name="home[]" value="2"><b>Вызов на дом</b></label>
-											<label class="checkbox"><input type="checkbox" name="home[]" value="3"><b>Мастер на дому</b></label>
-										</fieldset>
-									</div>
-								</div>
-							</div>
-							<span class="form-sub">Популярные запросы: </span>
-							<input type="submit" class="btn search-sbmt" value="Поиск">
-						</div>
-					</form>
+					<ul class="home-search-links">
+						<?php foreach ($homeSearchLinks as $homeSearchLink) : ?>
+						<li>
+							<a href="<?php echo htmlspecialchars($homeSearchLink['href']); ?>"><?php echo htmlspecialchars($homeSearchLink['label']); ?></a>
+						</li>
+						<?php endforeach; ?>
+					</ul>
 				</div>
 				<p class="search__text"></p>
 				<div class="clearFloat"></div>
 			</div>
 		</section>
-		<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css">
-		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-		<script>
-		(function(){
-			var categories = <?php echo $searchCategoriesJson; ?>;
-			jQuery(document).ready(function($){
-				var $input = $('#search_service_input');
-				var $catId = $('#search_cat_id');
-				var $result = $('<div class="search_box-result"></div>');
-				$input.after($result);
-				function filterCategories(val){
-					val = (val || '').toLowerCase().trim();
-					if (val.length < 1) return [];
-					return categories.filter(function(c){ return c.title.toLowerCase().indexOf(val) !== -1; });
-				}
-				$input.on('keyup', function(){
-					var val = $(this).val();
-					var list = filterCategories(val);
-					$result.empty();
-					if (list.length) {
-						list.forEach(function(c){
-							$result.append($('<div class="result" data-id="'+c.id+'">').text(c.title));
-						});
-						$result.show();
-					} else {
-						$result.hide();
-					}
-				});
-				$input.on('focus', function(){
-					if ($(this).val().length > 0 && $result.children().length) $result.show();
-				});
-				$(document).on('click', function(e){
-					if (!$(e.target).closest('.filed1').length) $result.hide();
-				});
-				$result.on('click', '> div', function(){
-					$catId.val($(this).data('id'));
-					$input.val($(this).text());
-					$result.hide().empty();
-				});
-				$('.filed2').on('focus', 'input', function(){
-					if (!$(this).hasClass('hasDatepicker')) {
-						$.datepicker.regional['ru'] = {closeText:'Закрыть',prevText:'&lt;Пред',nextText:'След&gt;',currentText:'Сегодня',monthNames:['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],monthNamesShort:['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'],dayNames:['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],dayNamesShort:['вск','пнд','втр','срд','чтв','птн','сбт'],dayNamesMin:['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],weekHeader:'Не',dateFormat:'dd.mm.yy',firstDay:1,isRTL:false,yearSuffix:''};
-						$.datepicker.setDefaults($.datepicker.regional['ru']);
-						$('.filed2 input').datepicker({minDate:'now'});
-					}
-				});
-			});
-		})();
-		</script>
-		<?php endif; ?>
 		<section class="search__catalog">
 			<div class="container">
 				<h2>поиск по услугам</h2>
