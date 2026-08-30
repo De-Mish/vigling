@@ -161,6 +161,15 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 <div class="category jsn_list">
 	<style>
 		main > .container { padding: 0; max-width: 1170px; }
+		.category.jsn_list .category__masters,
+		.category.jsn_list .category__item {
+			margin-left: -4px;
+		}
+		@media (max-width: 1190px) {
+			.category.jsn_list .category__masters {
+				width: calc(100% + 4px);
+			}
+		}
 		.category__masters-sidebar .clearable { width: 100%; }
 		.category__masters-sidebar select { width: 100%; }
 		.category__masters-sidebar .chosen-container { width: 100% !important; }

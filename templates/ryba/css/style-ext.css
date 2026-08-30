@@ -3588,6 +3588,20 @@ div[role="tooltip"][id^="tip-"] {
   white-space: nowrap;
 }
 
+/* Shift specialist cards and their list 4px left. Neither rule currently
+   sets padding-left/margin-left (0). Scoped to .jsn_list so promotions,
+   models, and courses (.jsn_stockList) are unchanged. */
+.category.jsn_list .category__masters,
+.category.jsn_list .category__item {
+  margin-left: -4px;
+}
+
+@media (max-width: 1190px) {
+  .category.jsn_list .category__masters {
+    width: calc(100% + 4px);
+  }
+}
+
 .category.jsn_list .category__item-content-right {
   display: flex;
   flex-direction: column;
