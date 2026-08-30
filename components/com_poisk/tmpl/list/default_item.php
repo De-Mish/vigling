@@ -185,6 +185,9 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
 	</div>
 </div>
 <style>
+.category.jsn_list .service-price {
+    background-color: transparent;
+}
 /* Mobile resets only. Desktop card layout is restored in style-ext.css
    (@media min-width: 769px) so these stacking/offset rules cannot leak. */
 @media (max-width: 768px) {

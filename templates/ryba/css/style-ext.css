@@ -3577,7 +3577,7 @@ div[role="tooltip"][id^="tip-"] {
   width: auto;
   max-width: 100%;
   box-sizing: border-box;
-  background-color: #B2B2B2;
+  background-color: transparent;
   color: #333;
   font-weight: 700;
   font-size: 14px;
