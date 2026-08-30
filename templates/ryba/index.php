@@ -191,9 +191,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 				font-size: 14px;
 				font-weight: 500;
 				letter-spacing: 1.08px;
-				text-align: center;
+				text-align: left;
 				text-decoration: none;
-				border-radius: 21px;
+				border-radius: 3px;
 				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 				padding: 10px 18px;
 				margin: 6px 0;
