@@ -315,32 +315,40 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 		?>
 		<section class="search__specialists search__section">
 			<style>
+				body#home .search__specialists .search__coll-left {
+					width: 100%;
+					float: none;
+					position: relative;
+					z-index: 2;
+				}
 				body#home .home-search-links {
 					display: flex;
-					flex-direction: column;
-					align-items: flex-start;
+					flex-direction: row;
+					flex-wrap: wrap;
+					align-items: center;
+					gap: 12px;
 					list-style: none;
 					margin: 0;
 					padding: 0;
 				}
 				body#home .home-search-links li {
-					margin: 0 0 12px;
+					margin: 0;
 					padding: 0;
 				}
-				body#home .home-search-links li:last-child {
-					margin-bottom: 0;
-				}
-				body#home .home-search-links a {
-					display: flex;
+				body#home .home-search-links a.homepage-link-btn {
+					display: inline-flex;
 					align-items: center;
 					justify-content: center;
 					box-sizing: border-box;
-					min-width: 220px;
+					width: auto;
+					min-width: 142px;
 					height: 42px;
 					padding: 0 24px;
+					margin: 0;
 					background: transparent;
-					border: 1px solid #000;
-					border-radius: 3px;
+					border: 1px solid #f9ce54;
+					border-radius: 25px;
+					box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 					color: #000;
 					font-family: "GothamPro-Bold", sans-serif;
 					font-size: 13px;
@@ -349,20 +357,20 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					line-height: 1.2;
 					text-align: center;
 					text-decoration: none;
+					cursor: pointer;
 				}
-				body#home .home-search-links a:hover,
-				body#home .home-search-links a:focus {
+				body#home .home-search-links a.homepage-link-btn:hover,
+				body#home .home-search-links a.homepage-link-btn:focus {
 					background: transparent;
 					color: #000;
 					text-decoration: none;
 				}
 				@media (max-width: 768px) {
 					body#home .home-search-links {
+						flex-direction: column;
 						align-items: center;
 					}
 					body#home .search__specialists .search__coll-left {
-						width: 100%;
-						float: none;
 						display: flex;
 						justify-content: center;
 					}
@@ -373,7 +381,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					<ul class="home-search-links">
 						<?php foreach ($homeSearchLinks as $homeSearchLink) : ?>
 						<li>
-							<a href="<?php echo htmlspecialchars($homeSearchLink['href']); ?>"><?php echo htmlspecialchars($homeSearchLink['label']); ?></a>
+							<a class="homepage-link-btn" href="<?php echo htmlspecialchars($homeSearchLink['href']); ?>"><?php echo htmlspecialchars($homeSearchLink['label']); ?></a>
 						</li>
 						<?php endforeach; ?>
 					</ul>
