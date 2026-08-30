@@ -179,6 +179,33 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 			</div>
 		</div>
 	</header>
+	<style>
+		@media (max-width: 768px) {
+			#header-mobile-panel .header-mobile__nav li.current > a,
+			#header-mobile-panel .header-mobile__nav a[aria-current="page"] {
+				display: block;
+				box-sizing: border-box;
+				background-color: #f9ce54bf;
+				color: #000;
+				font-family: "GothamPro-Bold", sans-serif;
+				font-size: 14px;
+				font-weight: 500;
+				letter-spacing: 1.08px;
+				text-align: center;
+				text-decoration: none;
+				border-radius: 21px;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+				padding: 10px 18px;
+				margin: 6px 0;
+				line-height: 1.4;
+			}
+			#header-mobile-panel .header-mobile__nav li.current > a:hover,
+			#header-mobile-panel .header-mobile__nav a[aria-current="page"]:hover {
+				background-color: #f9ce54bf;
+				text-decoration: none;
+			}
+		}
+	</style>
 	<?php if ($isPwaInstallPage) : ?>
 	<div class="pwa-install-page" id="pwa-install-overlay" role="dialog" aria-modal="true" aria-labelledby="pwa-install-title">
 		<div class="pwa-install-backdrop" data-close-pwa-install="1"></div>
