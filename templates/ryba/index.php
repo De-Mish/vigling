@@ -129,6 +129,75 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 			</div>
 		</div>
 	</header>
+	<style>
+		@media (min-width: 769px) {
+			.header--desktop .container.d-flex {
+				align-items: center;
+				gap: 12px;
+			}
+			.header--desktop .header__menu {
+				margin: 0;
+				margin-left: 8px;
+				flex: 1 1 auto;
+				min-width: 0;
+			}
+			.header--desktop .header__menu .mod-menu,
+			.header--desktop .header__menu .nav {
+				display: flex;
+				flex-wrap: nowrap;
+				align-items: center;
+				justify-content: flex-start;
+				gap: 6px;
+				margin: 0;
+				padding: 0;
+			}
+			.header--desktop .header__menu .mod-menu > li,
+			.header--desktop .header__menu .nav > li {
+				display: block;
+				flex: 0 1 auto;
+				margin: 0;
+				position: relative;
+			}
+			.header--desktop .header__menu .mod-menu > li > a,
+			.header--desktop .header__menu .nav > li > a {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				box-sizing: border-box;
+				width: auto;
+				min-width: 0;
+				height: 42px;
+				padding: 0 12px;
+				margin: 0;
+				background: transparent;
+				border: 1px solid #f9ce54;
+				border-radius: 25px;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+				color: #000;
+				font-family: "GothamPro-Bold", sans-serif;
+				font-size: 13px;
+				font-weight: 500;
+				letter-spacing: 1.08px;
+				line-height: 1.2;
+				text-align: center;
+				text-decoration: none;
+				white-space: nowrap;
+				cursor: pointer;
+			}
+			.header--desktop .header__menu .mod-menu > li > a:hover,
+			.header--desktop .header__menu .mod-menu > li > a:focus,
+			.header--desktop .header__menu .nav > li > a:hover,
+			.header--desktop .header__menu .nav > li > a:focus {
+				background: transparent;
+				color: #000;
+				text-decoration: none;
+			}
+			body#home .home-search-links,
+			body#home .home-search-links a.homepage-link-btn {
+				display: none;
+			}
+		}
+	</style>
 	<header class="header header--mobile" id="header-mobile" aria-hidden="false">
 		<div class="header-mobile__bar">
 			<a class="header-mobile__logo" href="<?php echo Uri::root(); ?>">
@@ -382,6 +451,12 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					body#home .search__specialists .search__coll-left {
 						display: flex;
 						justify-content: center;
+					}
+				}
+				@media (min-width: 769px) {
+					body#home .home-search-links,
+					body#home .home-search-links a.homepage-link-btn {
+						display: none;
 					}
 				}
 			</style>
