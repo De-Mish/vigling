@@ -214,27 +214,41 @@ class OrdersController extends BaseController
 		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$tableName = $db->getPrefix() . 'vigling_bookings';
-		if (self::hasCourseSlotsOverlap($db, (int) $table->master_id, $timeDb, $timeToDb)) {
-			$this->setMessage('Это время занято курсом', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasSearchSlotsOverlap($db, (int) $table->master_id, $timeDb, $timeToDb)) {
-			$this->setMessage('Это время занято поиском', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasBookingsOverlap($db, $tableName, (int) $table->master_id, $timeDb, $timeToDb, (int) $table->id)) {
-			$this->setMessage('Это время уже занято', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		$table->time = $timeDb;
-		$table->time_to = $timeToDb;
-		if (!$table->store()) {
-			$this->setMessage($table->getError() ?: 'Ошибка переноса записи', 'error');
-			$this->setRedirectAndExit();
-			return;
+		$masterId = (int) $table->master_id;
+		$lockHeld = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$table->time = $timeDb;
+			$table->time_to = $timeToDb;
+			if (!$table->store()) {
+				$this->setMessage($table->getError() ?: 'Ошибка переноса записи', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
 		}
 		$this->setMessage('Запись перенесена');
 		$this->setRedirectAndExit();
@@ -410,27 +424,41 @@ class OrdersController extends BaseController
 		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$tableName = $db->getPrefix() . 'vigling_bookings';
-		if (self::hasCourseSlotsOverlap($db, (int) $table->master_id, $timeDb, $timeToDb)) {
-			$this->setMessage('Это время занято курсом', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasSearchSlotsOverlap($db, (int) $table->master_id, $timeDb, $timeToDb)) {
-			$this->setMessage('Это время занято поиском', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasBookingsOverlap($db, $tableName, (int) $table->master_id, $timeDb, $timeToDb, (int) $table->id)) {
-			$this->setMessage('Это время уже занято', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		$table->time = $timeDb;
-		$table->time_to = $timeToDb;
-		if (!$table->store()) {
-			$this->setMessage($table->getError() ?: 'Ошибка переноса записи', 'error');
-			$this->setRedirectAndExit();
-			return;
+		$masterId = (int) $table->master_id;
+		$lockHeld = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$table->time = $timeDb;
+			$table->time_to = $timeToDb;
+			if (!$table->store()) {
+				$this->setMessage($table->getError() ?: 'Ошибка переноса записи', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
 		}
 		$this->setMessage('Запись перенесена');
 		$this->setRedirectAndExit();
@@ -597,41 +625,55 @@ class OrdersController extends BaseController
 
 		$tableName = $db->getPrefix() . 'vigling_bookings';
 		$excludeIds = self::getCourseSlotBookingIds($db, $courseSlotId, (int) $user->id);
-		if (self::hasCourseSlotsOverlap($db, (int) $user->id, $timeDb, $timeToDb, $courseSlotId)) {
-			$this->setMessage('Это время занято другим курсом', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasSearchSlotsOverlap($db, (int) $user->id, $timeDb, $timeToDb, 0)) {
-			$this->setMessage('Это время занято поиском', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasBookingsOverlap($db, $tableName, (int) $user->id, $timeDb, $timeToDb, 0, $excludeIds)) {
-			$this->setMessage('Это время уже занято', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-
-		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
-		$table = new OrderTable($db, $dispatcher);
-		foreach ($excludeIds as $bookingId) {
-			if (!$table->load((int) $bookingId)) {
-				continue;
-			}
-			if ((int) $table->master_id !== (int) $user->id) {
-				continue;
-			}
-			$table->time = $timeDb;
-			$table->time_to = $timeToDb;
-			if (!$table->store()) {
-				$this->setMessage($table->getError() ?: 'Ошибка переноса курса', 'error');
+		$masterId = (int) $user->id;
+		$lockHeld = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-		}
+			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $courseSlotId)) {
+				$this->setMessage('Это время занято другим курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, 0)) {
+				$this->setMessage('Это время занято поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, 0, $excludeIds)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 
-		self::updateCourseSlotTime($db, $courseSlotId, $timeDb, $timeToDb);
+			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+			$table = new OrderTable($db, $dispatcher);
+			foreach ($excludeIds as $bookingId) {
+				if (!$table->load((int) $bookingId)) {
+					continue;
+				}
+				if ((int) $table->master_id !== $masterId) {
+					continue;
+				}
+				$table->time = $timeDb;
+				$table->time_to = $timeToDb;
+				if (!$table->store()) {
+					$this->setMessage($table->getError() ?: 'Ошибка переноса курса', 'error');
+					$this->setRedirectAndExit();
+					return;
+				}
+			}
+
+			self::updateCourseSlotTime($db, $courseSlotId, $timeDb, $timeToDb);
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
+		}
 		$this->setMessage('Курс перенесён для всех участников');
 		$this->setRedirectAndExit();
 	}
@@ -797,41 +839,55 @@ class OrdersController extends BaseController
 
 		$tableName = $db->getPrefix() . 'vigling_bookings';
 		$excludeIds = self::getSearchSlotBookingIds($db, $searchSlotId, (int) $user->id);
-		if (self::hasSearchSlotsOverlap($db, (int) $user->id, $timeDb, $timeToDb, $searchSlotId)) {
-			$this->setMessage('Это время занято другим поиском', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasCourseSlotsOverlap($db, (int) $user->id, $timeDb, $timeToDb, 0)) {
-			$this->setMessage('Это время занято курсом', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (self::hasBookingsOverlap($db, $tableName, (int) $user->id, $timeDb, $timeToDb, 0, $excludeIds)) {
-			$this->setMessage('Это время уже занято', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-
-		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
-		$table = new OrderTable($db, $dispatcher);
-		foreach ($excludeIds as $bookingId) {
-			if (!$table->load((int) $bookingId)) {
-				continue;
-			}
-			if ((int) $table->master_id !== (int) $user->id) {
-				continue;
-			}
-			$table->time = $timeDb;
-			$table->time_to = $timeToDb;
-			if (!$table->store()) {
-				$this->setMessage($table->getError() ?: 'Ошибка переноса поиска', 'error');
+		$masterId = (int) $user->id;
+		$lockHeld = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-		}
+			$lockHeld = true;
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $searchSlotId)) {
+				$this->setMessage('Это время занято другим поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, 0)) {
+				$this->setMessage('Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, 0, $excludeIds)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 
-		self::updateSearchSlotTime($db, $searchSlotId, $timeDb, $timeToDb);
+			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+			$table = new OrderTable($db, $dispatcher);
+			foreach ($excludeIds as $bookingId) {
+				if (!$table->load((int) $bookingId)) {
+					continue;
+				}
+				if ((int) $table->master_id !== $masterId) {
+					continue;
+				}
+				$table->time = $timeDb;
+				$table->time_to = $timeToDb;
+				if (!$table->store()) {
+					$this->setMessage($table->getError() ?: 'Ошибка переноса поиска', 'error');
+					$this->setRedirectAndExit();
+					return;
+				}
+			}
+
+			self::updateSearchSlotTime($db, $searchSlotId, $timeDb, $timeToDb);
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
+		}
 		$this->setMessage('Поиск моделей перенесён для всех участников');
 		$this->setRedirectAndExit();
 	}
@@ -977,44 +1033,58 @@ class OrdersController extends BaseController
 		$tableName = $db->getPrefix() . 'vigling_bookings';
 		$startDb = $startUtc->format('Y-m-d H:i:s');
 		$endDb = $endUtc->format('Y-m-d H:i:s');
-		if (self::hasBookingsOverlap($db, $tableName, (int) $user->id, $startDb, $endDb, 0)) {
-			$this->setMessage('Это время уже занято', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-
-		$comment = preg_replace('/\s+/u', ' ', $commentRaw);
-		$comment = trim((string) $comment);
-		if (function_exists('mb_substr')) {
-			$comment = mb_substr($comment, 0, 500);
-		} else {
-			$comment = substr($comment, 0, 500);
-		}
-
-		$serviceName = '[journal] Блок времени';
-		if ($comment !== '') {
-			$serviceName .= ' | Комментарий: ' . $comment;
-		}
-
-		$query = $db->getQuery(true)
-			->insert($db->quoteName($tableName))
-			->columns($db->quoteName(['user_id', 'master_id', 'time', 'time_to', 'service_name', 'completed', 'time_sum']))
-			->values(
-				'0, '
-				. (int) $user->id . ', '
-				. $db->quote($startDb) . ', '
-				. $db->quote($endDb) . ', '
-				. $db->quote($serviceName) . ', '
-				. '0, '
-				. (int) $durationMin
-			);
-
+		$masterId = (int) $user->id;
+		$lockHeld = false;
 		try {
-			$db->setQuery($query)->execute();
-		} catch (\Throwable $e) {
-			$this->setMessage('Не удалось сохранить блок времени', 'error');
-			$this->setRedirectAndExit();
-			return;
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$lockHeld = true;
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $startDb, $endDb, 0)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+
+			$comment = preg_replace('/\s+/u', ' ', $commentRaw);
+			$comment = trim((string) $comment);
+			if (function_exists('mb_substr')) {
+				$comment = mb_substr($comment, 0, 500);
+			} else {
+				$comment = substr($comment, 0, 500);
+			}
+
+			$serviceName = '[journal] Блок времени';
+			if ($comment !== '') {
+				$serviceName .= ' | Комментарий: ' . $comment;
+			}
+
+			$query = $db->getQuery(true)
+				->insert($db->quoteName($tableName))
+				->columns($db->quoteName(['user_id', 'master_id', 'time', 'time_to', 'service_name', 'completed', 'time_sum']))
+				->values(
+					'0, '
+					. $masterId . ', '
+					. $db->quote($startDb) . ', '
+					. $db->quote($endDb) . ', '
+					. $db->quote($serviceName) . ', '
+					. '0, '
+					. (int) $durationMin
+				);
+
+			try {
+				$db->setQuery($query)->execute();
+			} catch (\Throwable $e) {
+				$this->setMessage('Не удалось сохранить блок времени', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
 		}
 
 		$this->setMessage('Время заблокировано');
