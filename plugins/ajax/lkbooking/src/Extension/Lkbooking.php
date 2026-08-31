@@ -9,6 +9,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Session\Session;
 use Joomla\Event\SubscriberInterface;
+use Viglin\Component\Orders\Site\Table\OrderTable;
 use Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper;
 
 final class Lkbooking extends CMSPlugin implements SubscriberInterface
@@ -141,6 +142,12 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		if ($bookingKind === 'stock' && $stockServiceId <= 0) {
 			$event->updateEventResult(['success' => false, 'message' => 'Не удалось определить акцию для записи']);
 			return;
+		}
+		if ($bookingKind === 'stock') {
+			self::ensureOrderTableLoaded();
+			if (class_exists(OrderTable::class) && OrderTable::ensureStockServiceIdColumn($db)) {
+				$tableColumns['stock_service_id'] = true;
+			}
 		}
 
 		$courseContext = null;
@@ -321,6 +328,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$columns[] = 'search_slot_id';
 			$values[] = $searchSlotId > 0 ? (string) $searchSlotId : 'NULL';
 		}
+		if ($bookingKind === 'stock' && $stockServiceId > 0 && isset($tableColumns['stock_service_id'])) {
+			$columns[] = 'stock_service_id';
+			$values[] = (string) $stockServiceId;
+		}
 
 		$transactionStarted = false;
 		try {
@@ -373,6 +384,17 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 
 		$event->updateEventResult(['success' => true, 'message' => 'Вы записались!']);
+	}
+
+	private static function ensureOrderTableLoaded(): void
+	{
+		if (class_exists(OrderTable::class)) {
+			return;
+		}
+		$path = JPATH_ROOT . '/components/com_orders/src/Table/OrderTable.php';
+		if (is_file($path)) {
+			require_once $path;
+		}
 	}
 
 	private static function reserveStockOffer(\Joomla\Database\DatabaseInterface $db, int $stockServiceId, int $masterId): void
