@@ -259,44 +259,25 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 
-		if ($bookingKind === 'course' && $courseSlotId > 0) {
-			$capacityTotal = (int) ($courseContext['slot_capacity_total'] ?? 0);
-			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, $courseSlotId) >= $capacityTotal) {
-				$event->updateEventResult(['success' => false, 'message' => 'На курсе больше нет свободных мест']);
-				return;
-			}
-		} elseif ($bookingKind === 'course') {
-			$capacityTotal = (int) ($courseContext['capacity'] ?? 0);
-			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, 0) >= $capacityTotal) {
-				$event->updateEventResult(['success' => false, 'message' => 'На курсе больше нет свободных мест']);
-				return;
-			}
-		}
-		if ($bookingKind === 'search' && $searchSlotId > 0) {
-			$capacityTotal = (int) ($searchContext['slot_capacity_total'] ?? 0);
-			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, $searchSlotId) >= $capacityTotal) {
-				$event->updateEventResult(['success' => false, 'message' => 'На этом предложении поиска больше нет свободных мест']);
-				return;
-			}
-		} elseif ($bookingKind === 'search') {
-			$capacityTotal = (int) ($searchContext['capacity'] ?? 0);
-			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, 0) >= $capacityTotal) {
-				$event->updateEventResult(['success' => false, 'message' => 'На этом предложении поиска больше нет свободных мест']);
-				return;
-			}
-		}
-
-		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : 0)) {
-			$event->updateEventResult(['success' => false, 'message' => $bookingKind === 'course' ? 'На данное время запланирован другой курс' : 'Это время занято курсом']);
-			return;
-		}
-		if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'search' ? $searchSlotId : 0)) {
-			$event->updateEventResult(['success' => false, 'message' => $bookingKind === 'search' ? 'На данное время запланирован другой поиск' : 'Это время занято поиском']);
-			return;
-		}
-
-		if (self::hasBookingsOverlap($db, $table, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns)) {
-			$event->updateEventResult(['success' => false, 'message' => ($bookingKind === 'course' || $bookingKind === 'search') ? 'На данное время запланировано другое' : 'Это время уже занято']);
+		$conflict = self::bookingCreateConflictMessage(
+			$db,
+			$table,
+			(int) $user->id,
+			$masterId,
+			$bookingKind,
+			$courseId,
+			$courseSlotId,
+			$searchId,
+			$searchSlotId,
+			$timeDb,
+			$timeToDb,
+			$courseContext,
+			$searchContext,
+			$hasCourseBookingColumns,
+			$hasSearchBookingColumns
+		);
+		if ($conflict !== null) {
+			$event->updateEventResult(['success' => false, 'message' => $conflict]);
 			return;
 		}
 
@@ -333,16 +314,52 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$values[] = (string) $stockServiceId;
 		}
 
+		$lockHeld = false;
 		$transactionStarted = false;
+		$insertedId = 0;
 		try {
+			self::ensureOrderTableLoaded();
+			if (!class_exists(OrderTable::class) || !OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$event->updateEventResult(['success' => false, 'message' => 'Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз']);
+				return;
+			}
+			$lockHeld = true;
+
 			$db->transactionStart();
 			$transactionStarted = true;
+			self::lockBookingParents($db, $bookingKind, $masterId, $courseId, $courseSlotId, $searchId, $searchSlotId);
+
+			$conflict = self::bookingCreateConflictMessage(
+				$db,
+				$table,
+				(int) $user->id,
+				$masterId,
+				$bookingKind,
+				$courseId,
+				$courseSlotId,
+				$searchId,
+				$searchSlotId,
+				$timeDb,
+				$timeToDb,
+				$courseContext,
+				$searchContext,
+				$hasCourseBookingColumns,
+				$hasSearchBookingColumns
+			);
+			if ($conflict !== null) {
+				$db->transactionRollback();
+				$transactionStarted = false;
+				$event->updateEventResult(['success' => false, 'message' => $conflict]);
+				return;
+			}
+
 			if ($bookingKind === 'stock') {
 				self::reserveStockOffer($db, $stockServiceId, $masterId);
 			}
 			$db->setQuery(
 				'INSERT INTO ' . $db->quoteName($table) . ' (' . implode(', ', array_map([$db, 'quoteName'], $columns)) . ') VALUES (' . implode(', ', $values) . ')'
 			)->execute();
+			$insertedId = (int) $db->insertid();
 			$db->transactionCommit();
 			$transactionStarted = false;
 		} catch (\Throwable $e) {
@@ -354,19 +371,33 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 			$msg = $e->getMessage();
 			if (strpos($msg, 'Duplicate entry') !== false) {
-				$msg = 'Запись на это время уже есть';
+				if (strpos($msg, 'uniq_user_course_id') !== false) {
+					$msg = 'Вы уже записаны на этот курс';
+				} elseif (strpos($msg, 'uniq_user_search_id') !== false) {
+					$msg = 'Вы уже записаны на это предложение поиска';
+				} else {
+					$msg = 'Запись на это время уже есть';
+				}
 			}
 			if ($msg === 'stock-sold-out') {
 				$msg = 'Акция закончилась';
 			} elseif ($msg === 'stock-not-found') {
 				$msg = 'Акция не найдена';
+			} elseif ($msg === 'course-not-found') {
+				$msg = 'Курс или слот курса не найден';
+			} elseif ($msg === 'search-not-found') {
+				$msg = 'Предложение поиска или слот не найден';
 			}
 			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения: ' . $msg]);
 			return;
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
 		}
 
 		$order = [
-			'id'           => (int) $db->insertid(),
+			'id'           => $insertedId,
 			'user_id'      => (int) $user->id,
 			'master_id'    => $masterId,
 			'time'         => $timeDb,
@@ -394,6 +425,130 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$path = JPATH_ROOT . '/components/com_orders/src/Table/OrderTable.php';
 		if (is_file($path)) {
 			require_once $path;
+		}
+	}
+
+	/**
+	 * @param array<string,mixed>|null $courseContext
+	 * @param array<string,mixed>|null $searchContext
+	 */
+	private static function bookingCreateConflictMessage(
+		\Joomla\Database\DatabaseInterface $db,
+		string $tableName,
+		int $userId,
+		int $masterId,
+		string $bookingKind,
+		int $courseId,
+		int $courseSlotId,
+		int $searchId,
+		int $searchSlotId,
+		string $timeDb,
+		string $timeToDb,
+		?array $courseContext,
+		?array $searchContext,
+		bool $hasCourseBookingColumns,
+		bool $hasSearchBookingColumns
+	): ?string {
+		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId)) {
+			return 'Вы уже записаны на этот курс';
+		}
+		if ($bookingKind === 'search' && self::hasUserSearchBooking($db, $userId, $searchId)) {
+			return 'Вы уже записаны на это предложение поиска';
+		}
+
+		if ($bookingKind === 'course' && $courseSlotId > 0) {
+			$capacityTotal = (int) ($courseContext['slot_capacity_total'] ?? 0);
+			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, $courseSlotId) >= $capacityTotal) {
+				return 'На курсе больше нет свободных мест';
+			}
+		} elseif ($bookingKind === 'course') {
+			$capacityTotal = (int) ($courseContext['capacity'] ?? 0);
+			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, 0) >= $capacityTotal) {
+				return 'На курсе больше нет свободных мест';
+			}
+		}
+
+		if ($bookingKind === 'search' && $searchSlotId > 0) {
+			$capacityTotal = (int) ($searchContext['slot_capacity_total'] ?? 0);
+			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, $searchSlotId) >= $capacityTotal) {
+				return 'На этом предложении поиска больше нет свободных мест';
+			}
+		} elseif ($bookingKind === 'search') {
+			$capacityTotal = (int) ($searchContext['capacity'] ?? 0);
+			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, 0) >= $capacityTotal) {
+				return 'На этом предложении поиска больше нет свободных мест';
+			}
+		}
+
+		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : 0)) {
+			return $bookingKind === 'course' ? 'На данное время запланирован другой курс' : 'Это время занято курсом';
+		}
+		if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'search' ? $searchSlotId : 0)) {
+			return $bookingKind === 'search' ? 'На данное время запланирован другой поиск' : 'Это время занято поиском';
+		}
+		if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns)) {
+			return ($bookingKind === 'course' || $bookingKind === 'search') ? 'На данное время запланировано другое' : 'Это время уже занято';
+		}
+
+		return null;
+	}
+
+	private static function lockBookingParents(
+		\Joomla\Database\DatabaseInterface $db,
+		string $bookingKind,
+		int $masterId,
+		int $courseId,
+		int $courseSlotId,
+		int $searchId,
+		int $searchSlotId
+	): void {
+		if ($bookingKind === 'course' && $courseId > 0) {
+			$db->setQuery(
+				'SELECT ' . $db->quoteName('id')
+				. ' FROM ' . $db->quoteName('#__vigling_user_courses')
+				. ' WHERE ' . $db->quoteName('id') . ' = ' . $courseId
+				. ' AND ' . $db->quoteName('user_id') . ' = ' . $masterId
+				. ' FOR UPDATE'
+			);
+			if (!(int) $db->loadResult()) {
+				throw new \RuntimeException('course-not-found');
+			}
+			if ($courseSlotId > 0) {
+				$db->setQuery(
+					'SELECT ' . $db->quoteName('id')
+					. ' FROM ' . $db->quoteName('#__vigling_course_slots')
+					. ' WHERE ' . $db->quoteName('id') . ' = ' . $courseSlotId
+					. ' AND ' . $db->quoteName('course_id') . ' = ' . $courseId
+					. ' FOR UPDATE'
+				);
+				if (!(int) $db->loadResult()) {
+					throw new \RuntimeException('course-not-found');
+				}
+			}
+		}
+		if ($bookingKind === 'search' && $searchId > 0) {
+			$db->setQuery(
+				'SELECT ' . $db->quoteName('id')
+				. ' FROM ' . $db->quoteName('#__vigling_user_searches')
+				. ' WHERE ' . $db->quoteName('id') . ' = ' . $searchId
+				. ' AND ' . $db->quoteName('user_id') . ' = ' . $masterId
+				. ' FOR UPDATE'
+			);
+			if (!(int) $db->loadResult()) {
+				throw new \RuntimeException('search-not-found');
+			}
+			if ($searchSlotId > 0) {
+				$db->setQuery(
+					'SELECT ' . $db->quoteName('id')
+					. ' FROM ' . $db->quoteName('#__vigling_search_slots')
+					. ' WHERE ' . $db->quoteName('id') . ' = ' . $searchSlotId
+					. ' AND ' . $db->quoteName('search_id') . ' = ' . $searchId
+					. ' FOR UPDATE'
+				);
+				if (!(int) $db->loadResult()) {
+					throw new \RuntimeException('search-not-found');
+				}
+			}
 		}
 	}
 

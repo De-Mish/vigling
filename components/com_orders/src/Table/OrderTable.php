@@ -83,4 +83,32 @@ class OrderTable extends Table
 			->where($db->quoteName('user_id') . ' = ' . $masterId);
 		$db->setQuery($query)->execute();
 	}
+
+	public static function masterBookingLockName(int $masterId): string
+	{
+		return 'vigling-book-master-' . $masterId;
+	}
+
+	public static function acquireMasterBookingLock(DatabaseInterface $db, int $masterId, int $timeoutSeconds = 10): bool
+	{
+		if ($masterId <= 0) {
+			return false;
+		}
+		$db->setQuery(
+			'SELECT GET_LOCK(' . $db->quote(self::masterBookingLockName($masterId)) . ', ' . (int) $timeoutSeconds . ')'
+		);
+		return (int) $db->loadResult() === 1;
+	}
+
+	public static function releaseMasterBookingLock(DatabaseInterface $db, int $masterId): void
+	{
+		if ($masterId <= 0) {
+			return;
+		}
+		try {
+			$db->setQuery('SELECT RELEASE_LOCK(' . $db->quote(self::masterBookingLockName($masterId)) . ')');
+			$db->loadResult();
+		} catch (\Throwable $e) {
+		}
+	}
 }
