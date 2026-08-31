@@ -192,6 +192,27 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 				color: #000;
 				text-decoration: none;
 			}
+			.header--desktop .header__menu .mod-menu > li.current > a,
+			.header--desktop .header__menu .nav > li.current > a,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"],
+			.header--desktop .header__menu .nav > li > a[aria-current="page"] {
+				background-color: #f9ce54;
+				border: 0;
+				color: #000;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+			}
+			.header--desktop .header__menu .mod-menu > li.current > a:hover,
+			.header--desktop .header__menu .mod-menu > li.current > a:focus,
+			.header--desktop .header__menu .nav > li.current > a:hover,
+			.header--desktop .header__menu .nav > li.current > a:focus,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"]:hover,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"]:focus,
+			.header--desktop .header__menu .nav > li > a[aria-current="page"]:hover,
+			.header--desktop .header__menu .nav > li > a[aria-current="page"]:focus {
+				background-color: #f9ce54;
+				color: #000;
+				text-decoration: none;
+			}
 			body#home .home-search-links,
 			body#home .home-search-links a.homepage-link-btn {
 				display: none;
