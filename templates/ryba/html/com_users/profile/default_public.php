@@ -306,8 +306,8 @@ foreach ($workDayLabels as $wd => $label) {
 }
 
 $calendarDays = [];
-$bookedRangesByDate = [];
 $reservedRangesByDate = [];
+$bookedRangesByDate = [];
 $siteOffset = (string) $app->get('offset', 'UTC');
 $masterTz = new \DateTimeZone($siteOffset !== '' ? $siteOffset : 'UTC');
 $utcTz = new \DateTimeZone('UTC');
