@@ -307,10 +307,60 @@ foreach ($workDayLabels as $wd => $label) {
 
 $calendarDays = [];
 $bookedRangesByDate = [];
+$reservedRangesByDate = [];
 $siteOffset = (string) $app->get('offset', 'UTC');
 $masterTz = new \DateTimeZone($siteOffset !== '' ? $siteOffset : 'UTC');
 $utcTz = new \DateTimeZone('UTC');
 $dowShort = [1 => 'пн.', 2 => 'вт.', 3 => 'ср.', 4 => 'чт.', 5 => 'пт.', 6 => 'сб.', 7 => 'вс.'];
+
+$appendUtcRangeToLocalDays = static function (
+	array &$target,
+	string $fromRaw,
+	string $toRaw,
+	\DateTimeZone $utcTz,
+	\DateTimeZone $masterTz,
+	string $kind = ''
+): void {
+	$fromRaw = trim($fromRaw);
+	$toRaw = trim($toRaw);
+	if ($fromRaw === '') {
+		return;
+	}
+	try {
+		$fromUtc = new \DateTimeImmutable($fromRaw, $utcTz);
+		$toUtc = $toRaw !== '' ? new \DateTimeImmutable($toRaw, $utcTz) : $fromUtc->modify('+60 minutes');
+	} catch (\Throwable $e) {
+		return;
+	}
+	$fromLocal = $fromUtc->setTimezone($masterTz);
+	$toLocal = $toUtc->setTimezone($masterTz);
+	if ($toLocal <= $fromLocal) {
+		$toLocal = $fromLocal->modify('+15 minutes');
+	}
+
+	$cursor = $fromLocal;
+	$lastDay = $toLocal->format('Y-m-d');
+	while (true) {
+		$dayKey = $cursor->format('Y-m-d');
+		$dayStart = new \DateTimeImmutable($dayKey . ' 00:00:00', $masterTz);
+		$dayEnd = $dayStart->modify('+1 day');
+		$rangeStart = $cursor > $dayStart ? $cursor : $dayStart;
+		$rangeEnd = $toLocal < $dayEnd ? $toLocal : $dayEnd;
+		if ($rangeEnd > $rangeStart) {
+			$startMinutes = ((int) $rangeStart->format('H')) * 60 + (int) $rangeStart->format('i');
+			$endMinutes = ((int) $rangeEnd->format('H')) * 60 + (int) $rangeEnd->format('i');
+			$entry = [$startMinutes, $endMinutes];
+			if ($kind !== '') {
+				$entry[] = $kind;
+			}
+			$target[$dayKey][] = $entry;
+		}
+		if ($dayKey >= $lastDay) {
+			break;
+		}
+		$cursor = $dayStart->modify('+1 day');
+	}
+};
 
 if ($profileOwnerId > 0) {
 	try {
@@ -334,49 +384,84 @@ if ($profileOwnerId > 0) {
 		$table = $db->replacePrefix('#__vigling_bookings');
 		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
 		if ($db->loadResult()) {
+			$tableColumns = [];
+			try {
+				$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			} catch (\Throwable $ignore) {
+			}
+			$hasBookingKind = isset($tableColumns['booking_kind']);
+			$selectCols = [$db->quoteName('time'), $db->quoteName('time_to')];
+			if ($hasBookingKind) {
+				$selectCols[] = $db->quoteName('booking_kind');
+			}
 			$query = $db->getQuery(true)
-				->select([$db->quoteName('time'), $db->quoteName('time_to')])
+				->select($selectCols)
 				->from($db->quoteName('#__vigling_bookings'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
 				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
 			$db->setQuery($query);
 			$rows = $db->loadAssocList() ?: [];
 			foreach ($rows as $row) {
-				$timeFromRaw = trim((string) ($row['time'] ?? ''));
-				$timeToRaw = trim((string) ($row['time_to'] ?? ''));
-				if ($timeFromRaw === '') {
+				$bookingKind = $hasBookingKind ? strtolower(trim((string) ($row['booking_kind'] ?? ''))) : '';
+				if ($bookingKind === 'course' || $bookingKind === 'search') {
 					continue;
 				}
-				$fromUtc = new \DateTimeImmutable($timeFromRaw, $utcTz);
-				$toUtc = $timeToRaw !== '' ? new \DateTimeImmutable($timeToRaw, $utcTz) : $fromUtc->modify('+60 minutes');
-				$fromLocal = $fromUtc->setTimezone($masterTz);
-				$toLocal = $toUtc->setTimezone($masterTz);
-				if ($toLocal <= $fromLocal) {
-					$toLocal = $fromLocal->modify('+15 minutes');
-				}
-
-				$cursor = $fromLocal;
-				$lastDay = $toLocal->format('Y-m-d');
-				while (true) {
-					$dayKey = $cursor->format('Y-m-d');
-					$dayStart = new \DateTimeImmutable($dayKey . ' 00:00:00', $masterTz);
-					$dayEnd = $dayStart->modify('+1 day');
-					$rangeStart = $cursor > $dayStart ? $cursor : $dayStart;
-					$rangeEnd = $toLocal < $dayEnd ? $toLocal : $dayEnd;
-					if ($rangeEnd > $rangeStart) {
-						$startMinutes = ((int) $rangeStart->format('H')) * 60 + (int) $rangeStart->format('i');
-						$endMinutes = ((int) $rangeEnd->format('H')) * 60 + (int) $rangeEnd->format('i');
-						$bookedRangesByDate[$dayKey][] = [$startMinutes, $endMinutes];
-					}
-					if ($dayKey >= $lastDay) {
-						break;
-					}
-					$cursor = $dayStart->modify('+1 day');
-				}
+				$appendUtcRangeToLocalDays(
+					$bookedRangesByDate,
+					(string) ($row['time'] ?? ''),
+					(string) ($row['time_to'] ?? ''),
+					$utcTz,
+					$masterTz
+				);
 			}
+		}
+
+		try {
+			$courseSlotQuery = $db->getQuery(true)
+				->select([$db->quoteName('starts_at_utc'), $db->quoteName('ends_at_utc')])
+				->from($db->quoteName('#__vigling_course_slots'))
+				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
+				->where($db->quoteName('is_active') . ' = 1')
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()');
+			$db->setQuery($courseSlotQuery);
+			$courseSlotRows = $db->loadAssocList() ?: [];
+			foreach ($courseSlotRows as $slotRow) {
+				$appendUtcRangeToLocalDays(
+					$reservedRangesByDate,
+					(string) ($slotRow['starts_at_utc'] ?? ''),
+					(string) ($slotRow['ends_at_utc'] ?? ''),
+					$utcTz,
+					$masterTz,
+					'course'
+				);
+			}
+		} catch (\Throwable $ignore) {
+		}
+
+		try {
+			$searchSlotQuery = $db->getQuery(true)
+				->select([$db->quoteName('starts_at_utc'), $db->quoteName('ends_at_utc')])
+				->from($db->quoteName('#__vigling_search_slots'))
+				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
+				->where($db->quoteName('is_active') . ' = 1')
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()');
+			$db->setQuery($searchSlotQuery);
+			$searchSlotRows = $db->loadAssocList() ?: [];
+			foreach ($searchSlotRows as $slotRow) {
+				$appendUtcRangeToLocalDays(
+					$reservedRangesByDate,
+					(string) ($slotRow['starts_at_utc'] ?? ''),
+					(string) ($slotRow['ends_at_utc'] ?? ''),
+					$utcTz,
+					$masterTz,
+					'search'
+				);
+			}
+		} catch (\Throwable $ignore) {
 		}
 	} catch (\Throwable $e) {
 		$bookedRangesByDate = [];
+		$reservedRangesByDate = [];
 	}
 }
 
@@ -388,25 +473,41 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 	$slots = [];
 	$slotUtcByTime = [];
 	$slotMinutes = [];
+	$slotReservedByTime = [];
 	$range = $workRangeByDay[$dow] ?? null;
 	if (is_array($range)) {
 		$dayBookedRanges = $bookedRangesByDate[$dateKey] ?? [];
+		$dayOfferRanges = $reservedRangesByDate[$dateKey] ?? [];
 		for ($minute = (int) $range[0]; $minute <= (int) $range[1]; $minute += 15) {
-			$isReserved = false;
+			$isBooked = false;
 			foreach ($dayBookedRanges as $bookedRange) {
 				$bookedStart = (int) ($bookedRange[0] ?? 0);
 				$bookedEnd = (int) ($bookedRange[1] ?? 0);
 				if ($minute >= $bookedStart && $minute < $bookedEnd) {
-					$isReserved = true;
+					$isBooked = true;
 					break;
 				}
 			}
-			if (!$isReserved) {
-				$slotLabel = $formatMinutes($minute);
-				$slotDateTimeLocal = $currentDay->setTime((int) floor($minute / 60), $minute % 60, 0);
-				$slotUtcByTime[$slotLabel] = $slotDateTimeLocal->setTimezone($utcTz)->format(\DateTimeInterface::ATOM);
-				$slots[] = $slotLabel;
-				$slotMinutes[] = (int) $minute;
+			if ($isBooked) {
+				continue;
+			}
+			$offerKind = '';
+			foreach ($dayOfferRanges as $offerRange) {
+				$offerStart = (int) ($offerRange[0] ?? 0);
+				$offerEnd = (int) ($offerRange[1] ?? 0);
+				if ($minute >= $offerStart && $minute < $offerEnd) {
+					$kind = strtolower(trim((string) ($offerRange[2] ?? '')));
+					$offerKind = ($kind === 'search') ? 'search' : 'course';
+					break;
+				}
+			}
+			$slotLabel = $formatMinutes($minute);
+			$slotDateTimeLocal = $currentDay->setTime((int) floor($minute / 60), $minute % 60, 0);
+			$slotUtcByTime[$slotLabel] = $slotDateTimeLocal->setTimezone($utcTz)->format(\DateTimeInterface::ATOM);
+			$slots[] = $slotLabel;
+			$slotMinutes[] = (int) $minute;
+			if ($offerKind !== '') {
+				$slotReservedByTime[$slotLabel] = $offerKind;
 			}
 		}
 	}
@@ -417,6 +518,7 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 		'slots' => $slots,
 		'slot_utc' => $slotUtcByTime,
 		'slot_minutes' => $slotMinutes,
+		'slot_reserved' => $slotReservedByTime,
 		'range_from_min' => is_array($range) ? (int) $range[0] : null,
 		'range_to_min' => is_array($range) ? (int) $range[1] : null,
 	];
@@ -1014,6 +1116,45 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		#zapis .screen3 .error-msg {
 			margin-top: 8px;
 		}
+		#zapis .screen1 .error-msg {
+			margin: 8px 0 0;
+			color: #9b1c1c;
+			font-size: 14px;
+			line-height: 1.35;
+		}
+		#zapis .zapis-reserved-notice {
+			display: none;
+			position: relative;
+			margin: 0 0 16px;
+			padding: 12px 42px 12px 14px;
+			background: #fff6d8;
+			border: 1px solid #f3d378;
+			border-radius: 10px;
+			color: #222;
+			font-family: "GothamPro-Medium", sans-serif;
+			font-size: 14px;
+			line-height: 1.4;
+		}
+		#zapis .zapis-reserved-notice.is-visible {
+			display: block;
+		}
+		#zapis .zapis-reserved-notice__close {
+			position: absolute;
+			top: 4px;
+			right: 8px;
+			border: 0;
+			background: transparent;
+			padding: 4px 6px;
+			font-size: 22px;
+			line-height: 1;
+			cursor: pointer;
+			color: #333;
+		}
+		#zapis .calendar__master-item label.btn-select.reserved {
+			cursor: pointer;
+			background-color: #ddd;
+			pointer-events: auto;
+		}
 		#zapis.modal {
 			padding-right: 0 !important;
 		}
@@ -1251,6 +1392,10 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 				-webkit-overflow-scrolling: touch;
 				padding-right: 4px;
 				margin-bottom: 0;
+			}
+			#zapis .calendar__master-item label.btn-select.reserved {
+				cursor: pointer;
+				background-color: #ddd;
 			}
 			#zapis .screen4 #zapis__add-calendar,
 			#zapis .screen4 #zapis__enable-notify,
@@ -1653,6 +1798,11 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					<div class="screen screen1">
 						<div class="calc__body">
 							<h2>Выберите дату и время</h2>
+							<div id="zapis__reserved-notice" class="zapis-reserved-notice" role="status" hidden>
+								<span class="zapis-reserved-notice__text"></span>
+								<button type="button" class="zapis-reserved-notice__close" aria-label="Закрыть">&times;</button>
+							</div>
+							<div class="error-msg" style="display:none;"></div>
 							<div class="calendar__master preload">
 								<?php foreach ($calendarDays as $calendarDay) : ?>
 								<div class="calendar__master-item">
@@ -1666,9 +1816,11 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 											$slotValue = (string) ($calendarDay['date'] ?? '') . ' ' . (string) $slotTime;
 											$slotId = preg_replace('/[^a-zA-Z0-9\-_]/', '-', (string) ($calendarDay['date'] ?? '') . '-' . str_replace(':', '-', (string) $slotTime));
 											$slotUtc = (string) (($calendarDay['slot_utc'][(string) $slotTime] ?? ''));
+											$slotReserved = (string) (($calendarDay['slot_reserved'][(string) $slotTime] ?? ''));
+											$labelClass = $slotReserved !== '' ? 'btn-select reserved' : 'btn-select';
 										?>
-										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="time" value="<?php echo $this->escape($slotValue); ?>" data-time-utc="<?php echo $this->escape($slotUtc); ?>">
-										<label for="<?php echo $this->escape($slotId); ?>" class="btn-select"><?php echo $this->escape((string) $slotTime); ?></label>
+										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="time" value="<?php echo $this->escape($slotValue); ?>" data-time-utc="<?php echo $this->escape($slotUtc); ?>"<?php echo $slotReserved !== '' ? ' data-reserved="' . $this->escape($slotReserved) . '"' : ''; ?>>
+										<label for="<?php echo $this->escape($slotId); ?>" class="<?php echo $this->escape($labelClass); ?>"><?php echo $this->escape((string) $slotTime); ?></label>
 										<?php endforeach; ?>
 									</p>
 									<?php else : ?>
@@ -2014,7 +2166,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					}
 					dayDate = parsed.date;
 					slotInfos.push({ radio: radio, parsed: parsed });
-					availableStartMins.add(parsed.minutes);
+					if (!String(radio.getAttribute('data-reserved') || '').trim()) {
+						availableStartMins.add(parsed.minutes);
+					}
 				});
 
 				var dayMeta = dayDate ? bookingCalendarByDate[dayDate] : null;
@@ -2026,7 +2180,22 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					var label = dayItem.querySelector('label[for="' + radio.id + '"]');
 					var startMin = slotInfo.parsed.minutes;
 					var slotTs = slotInfo.parsed.dateObj.getTime();
+					var reservedKind = String(radio.getAttribute('data-reserved') || '').trim();
 					var visible = slotTs > minFutureTs;
+
+					if (reservedKind) {
+						if (!visible && radio.checked) {
+							radio.checked = false;
+						}
+						if (label) {
+							label.style.display = visible ? '' : 'none';
+							label.classList.add('reserved');
+						}
+						if (visible) {
+							visibleCount++;
+						}
+						return;
+					}
 
 					if (visible && rangeTo !== null && (startMin + requiredMin) > rangeTo) {
 						visible = false;
@@ -2083,6 +2252,42 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			bookingForm.querySelectorAll('.screen3 .field-error').forEach(function (el) {
 				el.classList.remove('field-error');
 			});
+		}
+
+		function hideReservedNotice() {
+			var notice = document.getElementById('zapis__reserved-notice');
+			if (!notice) {
+				return;
+			}
+			notice.classList.remove('is-visible');
+			notice.hidden = true;
+			var textEl = notice.querySelector('.zapis-reserved-notice__text');
+			if (textEl) {
+				textEl.textContent = '';
+			}
+		}
+
+		function showReservedNotice(kind) {
+			var notice = document.getElementById('zapis__reserved-notice');
+			if (!notice) {
+				return;
+			}
+			var textEl = notice.querySelector('.zapis-reserved-notice__text');
+			var message = String(kind || '') === 'search'
+				? 'Это время уже занято поиском моделей'
+				: 'Это время уже занято курсом';
+			if (textEl) {
+				textEl.textContent = message;
+			}
+			notice.hidden = false;
+			notice.classList.add('is-visible');
+		}
+
+		function reservedKindOf(el) {
+			if (!el || typeof el.getAttribute !== 'function') {
+				return '';
+			}
+			return String(el.getAttribute('data-reserved') || '').trim();
 		}
 
 		function setError(screen, text) {
@@ -2307,6 +2512,13 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			hideErrors();
 			var chosenTime = bookingForm.querySelector('input[name="time"]:checked');
 			var split = null;
+			if (chosenTime && reservedKindOf(chosenTime)) {
+				var reservedKind = reservedKindOf(chosenTime);
+				chosenTime.checked = false;
+				showScreen('screen1');
+				showReservedNotice(reservedKind);
+				return Promise.reject(new Error('reserved-slot'));
+			}
 			if (!chosenTime) {
 				if (!(isFixedCourseBooking() && applyFixedCourseSelection())) {
 					setError(bookingForm.querySelector('.screen1'), 'Выберите дату и время');
@@ -2803,18 +3015,49 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			});
 		}
 
+		var reservedNotice = document.getElementById('zapis__reserved-notice');
+		if (reservedNotice) {
+			var reservedClose = reservedNotice.querySelector('.zapis-reserved-notice__close');
+			if (reservedClose) {
+				reservedClose.addEventListener('click', function (e) {
+					e.preventDefault();
+					hideReservedNotice();
+				});
+			}
+		}
+
+		bookingModal.addEventListener('click', function (e) {
+			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
+			if (!label || !bookingModal.contains(label)) {
+				return;
+			}
+			var input = document.getElementById(label.getAttribute('for') || '');
+			var kind = reservedKindOf(input);
+			if (!kind) {
+				hideReservedNotice();
+				return;
+			}
+			e.preventDefault();
+			if (input) {
+				input.checked = false;
+			}
+			showReservedNotice(kind);
+		});
+
 		document.querySelectorAll('.btn_add-master[data-booking-toggle="1"]').forEach(function (button) {
 			button.addEventListener('click', function () {
 				if (this.disabled || this.getAttribute('data-booking-disabled') === '1') {
 					return;
 				}
 				activeBookingButton = this;
+				hideReservedNotice();
 				updateSummaryFromButton(this);
 			});
 		});
 
 		jQuery(bookingModal).on('shown.bs.modal', function () {
 			hideErrors();
+			hideReservedNotice();
 			showScreen('screen1');
 			bookingForm.reset();
 			resetPasswordToggles();
@@ -2868,6 +3111,11 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 				}
 				if (screen.classList.contains('screen1')) {
 					var selected = bookingForm.querySelector('input[name="time"]:checked');
+					if (selected && reservedKindOf(selected)) {
+						selected.checked = false;
+						showReservedNotice(reservedKindOf(selected));
+						return;
+					}
 					if (!selected && !isFixedCourseBooking()) {
 						setError(screen, 'Выберите дату и время');
 						return;
