@@ -1797,9 +1797,40 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
 }
 
 .calendar__master-item label.btn-select.reserved {
-  cursor: inherit;
+  cursor: pointer;
   background-color: #ddd;
-  pointer-events: none
+  pointer-events: auto
+}
+
+#zapis .zapis-reserved-notice {
+  display: none;
+  position: relative;
+  margin: 0 0 16px;
+  padding: 12px 42px 12px 14px;
+  background: #fff6d8;
+  border: 1px solid #f3d378;
+  border-radius: 10px;
+  color: #222;
+  font-family: "GothamPro-Medium", sans-serif;
+  font-size: 14px;
+  line-height: 1.4
+}
+
+#zapis .zapis-reserved-notice.is-visible {
+  display: block
+}
+
+#zapis .zapis-reserved-notice__close {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #333
 }
 
 .calendar__master .slick-arrow.slick-disabled {

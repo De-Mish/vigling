@@ -7163,9 +7163,9 @@ input[type=text] {
     }
     .calendar__master-item .btns-m .btn-select.reserved {
         background-color: #f0f0f0 !important;
-        color: #aaa !important;
+        color: #555 !important;
         border-color: #e8e8e8 !important;
-        cursor: not-allowed !important;
+        cursor: pointer !important;
     }
     .calendar__master-item .btns-m input:checked + .btn-select {
         background-color: #f3d378 !important;
@@ -7243,9 +7243,9 @@ input[type=text] {
     }
     .calendar__master-item .btns-m .btn-select.reserved {
         background-color: #f0f0f0 !important;
-        color: #aaa !important;
+        color: #555 !important;
         border-color: #e8e8e8 !important;
-        cursor: not-allowed !important;
+        cursor: pointer !important;
     }
     .calendar__master-item .btns-m input:checked + .btn-select {
         background-color: #f3d378 !important;
