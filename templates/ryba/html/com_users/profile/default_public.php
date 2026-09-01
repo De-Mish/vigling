@@ -2290,6 +2290,10 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			return String(el.getAttribute('data-reserved') || '').trim();
 		}
 
+		function isReservedSlotError(err) {
+			return String((err && err.message) || '') === 'reserved-slot';
+		}
+
 		function setError(screen, text) {
 			var errorEl = screen.querySelector('.error-msg');
 			if (!errorEl) {
@@ -2963,6 +2967,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 								return true;
 							})
 						.catch(function (err) {
+							if (isReservedSlotError(err)) {
+								return false;
+							}
 							setError(screen3, err.message || 'Ошибка записи');
 							return false;
 						})
@@ -3146,6 +3153,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							setButtonLoading(screen2Btn, true, 'Записываем...');
 							submitBooking()
 							.catch(function (err) {
+								if (isReservedSlotError(err)) {
+									return;
+								}
 								setError(screen, err.message || 'Ошибка записи');
 							})
 							.finally(function () {
