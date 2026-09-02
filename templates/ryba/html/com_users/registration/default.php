@@ -710,6 +710,7 @@ $durationJson = json_encode($durationOptions);
 #easyprofile.registration #jform_courses_servis .service__item .course_price,
 #easyprofile.registration #jform_courses_servis .service__item .course_duration,
 #easyprofile.registration #jform_courses_servis .service__item .course_capacity,
+#easyprofile.registration #jform_courses_servis .service__item .course_concurrent,
 #easyprofile.registration #jform_courses_servis .service__item .course_mode,
 #easyprofile.registration #jform_courses_servis .service__item .course_slot {
     display: flex !important;
@@ -726,6 +727,7 @@ $durationJson = json_encode($durationOptions);
 #easyprofile.registration #jform_courses_servis .service__item .course_price label,
 #easyprofile.registration #jform_courses_servis .service__item .course_duration label,
 #easyprofile.registration #jform_courses_servis .service__item .course_capacity label,
+#easyprofile.registration #jform_courses_servis .service__item .course_concurrent label,
 #easyprofile.registration #jform_courses_servis .service__item .course_mode label,
 #easyprofile.registration #jform_courses_servis .service__item .course_slot label {
     min-width: 165px;
@@ -739,13 +741,15 @@ $durationJson = json_encode($durationOptions);
 }
 #easyprofile.registration #jform_courses_servis .service__item .course_price input,
 #easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
+#easyprofile.registration #jform_courses_servis .service__item .course_concurrent input,
 #easyprofile.registration #jform_courses_servis .service__item .course_duration select,
 #easyprofile.registration #jform_courses_servis .service__item .course_mode select {
     max-width: 180px !important;
     width: 180px !important;
 }
 #easyprofile.registration #jform_courses_servis .service__item .course_price input,
-#easyprofile.registration #jform_courses_servis .service__item .course_capacity input {
+#easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
+#easyprofile.registration #jform_courses_servis .service__item .course_concurrent input {
     max-width: 90px !important;
     width: 90px !important;
     text-align: center;
@@ -800,6 +804,10 @@ $durationJson = json_encode($durationOptions);
 #easyprofile.registration #jform_courses_servis .service__item .stock-remove::before { transform: translate(-50%, -50%) rotate(45deg); }
 #easyprofile.registration #jform_courses_servis .service__item .stock-remove::after { transform: translate(-50%, -50%) rotate(-45deg); }
 #easyprofile.registration #jform_courses_servis .service__item .course_mode.is-free .course_slot {
+    display: none !important;
+}
+#easyprofile.registration #jform_courses_servis .service__item:not(.is-free-mode) .course_concurrent,
+#easyprofile.registration #jform_courses_servis .service__item:not(.has-capacity) .course_concurrent {
     display: none !important;
 }
 #easyprofile.registration #jform_searches_servis {
@@ -1007,6 +1015,7 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_courses_servis .service__item .course_price,
     #easyprofile.registration #jform_courses_servis .service__item .course_duration,
     #easyprofile.registration #jform_courses_servis .service__item .course_capacity,
+    #easyprofile.registration #jform_courses_servis .service__item .course_concurrent,
     #easyprofile.registration #jform_courses_servis .service__item .course_mode,
     #easyprofile.registration #jform_courses_servis .service__item .course_slot {
         flex-direction: column !important;
@@ -1022,6 +1031,7 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_courses_servis .service__item .course_price label,
     #easyprofile.registration #jform_courses_servis .service__item .course_duration label,
     #easyprofile.registration #jform_courses_servis .service__item .course_capacity label,
+    #easyprofile.registration #jform_courses_servis .service__item .course_concurrent label,
     #easyprofile.registration #jform_courses_servis .service__item .course_mode label,
     #easyprofile.registration #jform_courses_servis .service__item .course_slot label {
         min-width: 0 !important;
@@ -1036,6 +1046,7 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_courses_servis .service__item .course_media .course-media-file-input,
     #easyprofile.registration #jform_courses_servis .service__item .course_price input,
     #easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
+    #easyprofile.registration #jform_courses_servis .service__item .course_concurrent input,
     #easyprofile.registration #jform_courses_servis .service__item .course_duration select,
     #easyprofile.registration #jform_courses_servis .service__item .course_mode select {
         width: 100% !important;
@@ -1619,10 +1630,27 @@ document.addEventListener('DOMContentLoaded', function () {
         var modeSelect = row.find('.course-mode-select');
         var modeWrap = row.find('.course_mode');
         var slotInput = row.find('.course-slot-input');
+        var capacityInput = row.find('.course-capacity-input');
+        var concurrentInput = row.find('.course-concurrent-input');
         var mode = String(modeSelect.val() || 'free');
+        var capacity = parseInt(String(capacityInput.val() || '0'), 10) || 0;
         modeWrap.toggleClass('is-free', mode !== 'fixed');
+        row.toggleClass('is-free-mode', mode !== 'fixed');
+        row.toggleClass('has-capacity', capacity >= 1);
         if (mode !== 'fixed') {
             slotInput.val('');
+        }
+        if (concurrentInput.length) {
+            var maxConcurrent = Math.max(1, capacity);
+            concurrentInput.attr('max', String(maxConcurrent));
+            var concurrent = parseInt(String(concurrentInput.val() || '1'), 10) || 1;
+            if (concurrent < 1) {
+                concurrent = 1;
+            }
+            if (concurrent > maxConcurrent) {
+                concurrent = maxConcurrent;
+            }
+            concurrentInput.val(String(concurrent));
         }
     }
 
@@ -1706,6 +1734,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
             '<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+            '<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
             '<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label><input type="datetime-local" class="course-slot-input" value="" /></span></span>' +
             '<i class="stock-remove" title="Удалить"></i>' +
         '</p>');
@@ -1771,6 +1800,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 price: parseInt(row.find('.course-price-input').val() || '0', 10) || 0,
                 duration: parseInt(row.find('.course-duration-select').val() || '0', 10) || 0,
                 capacity: parseInt(row.find('.course-capacity-input').val() || '1', 10) || 1,
+                concurrentParticipants: parseInt(row.find('.course-concurrent-input').val() || '1', 10) || 1,
                 bookingMode: String(row.find('.course-mode-select').val() || 'free'),
                 slotStartLocal: String(row.find('.course-slot-input').val() || ''),
                 slotStartUtc: normalizeDatetimeFromLocal(String(row.find('.course-slot-input').val() || ''))
@@ -1808,6 +1838,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .map(function (row) {
                     var slotStartUtc = String(row.slotStartUtc || '').trim();
+                    var capacity = Math.max(1, parseInt(row.capacity || 1, 10) || 1);
+                    var concurrent = Math.max(1, parseInt(row.concurrentParticipants || 1, 10) || 1);
+                    if (concurrent > capacity) {
+                        concurrent = capacity;
+                    }
                     return {
                         id: parseInt(row.id || 0, 10) || 0,
                         category_id: row.categoryId,
@@ -1816,7 +1851,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         media_path: String(row.mediaPath || '').trim(),
                         price: row.price,
                         duration_min: row.duration,
-                        capacity: Math.max(1, parseInt(row.capacity || 1, 10) || 1),
+                        capacity: capacity,
+                        concurrent_participants: concurrent,
                         booking_mode: String(row.bookingMode || 'free') === 'fixed' ? 'fixed' : 'free',
                         slot_start_utc: String(row.bookingMode || 'free') === 'fixed' && slotStartUtc !== ''
                             ? slotStartUtc
@@ -1918,6 +1954,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.find('.course-price-input').val(String(parseInt(item.price || '0', 10) || 0));
             row.find('.course-duration-select').val(String(parseInt(item.duration || '0', 10) || 0));
             row.find('.course-capacity-input').val(String(Math.max(1, parseInt(item.capacity || '1', 10) || 1)));
+            row.find('.course-concurrent-input').val(String(Math.max(1, parseInt(item.concurrentParticipants || '1', 10) || 1)));
             row.find('.course-mode-select').val(String(item.bookingMode || 'free'));
             row.find('.course-slot-input').val(formatDatetimeLocal(String(item.slotStartUtc || '')));
             syncCourseModeState(row);
@@ -2451,6 +2488,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#jform_courses_servis').on('change', '.course-mode-select', function () {
+        var row = $(this).closest('.service__item');
+        syncCourseModeState(row);
+        persistDraftState();
+    });
+
+    $('#jform_courses_servis').on('input change', '.course-capacity-input, .course-concurrent-input', function () {
         var row = $(this).closest('.service__item');
         syncCourseModeState(row);
         persistDraftState();
