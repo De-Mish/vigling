@@ -459,7 +459,7 @@ $durationJson = json_encode($durationOptions);
                                 </div>
                             </div>
                         </div>
-                        <div class="control-group privacy-consent-group">
+                        <?php echo '<div class="control-group privacy-consent-group">'; ?>
                             <div class="controls">
                                 <label class="checkbox privacy-consent-label" for="privacy_consent">
                                     <input type="checkbox" id="privacy_consent" name="privacy_consent" value="1" />
@@ -527,7 +527,7 @@ $durationJson = json_encode($durationOptions);
             <div class="reg-submit-block" id="reg-submit-block" hidden>
                 <div id="privacy-consent-error" class="privacy-error privacy-error-box" role="alert" hidden></div>
                 <button type="submit" class="dale validate" id="reg-submit" disabled aria-describedby="privacy-consent-error">Зарегистрироваться</button>
-            </div>
+            </div><!-- /reg-submit-block -->
             <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>"><?php echo Text::_('JCANCEL'); ?></a>
         </div>
 
