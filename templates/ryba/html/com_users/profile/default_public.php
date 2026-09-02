@@ -502,7 +502,6 @@ if ($profileOwnerId > 0) {
 					$masterTz
 				);
 			}
-			// Anytime groups are collected after the bookings loop — keep this brace.
 			if ($anytimeGroupsRaw !== []) {
 				$anytimeCourseIds = [];
 				foreach ($anytimeGroupsRaw as $group) {
