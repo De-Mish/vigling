@@ -527,7 +527,7 @@ $durationJson = json_encode($durationOptions);
             <div class="reg-submit-block" id="reg-submit-block" hidden>
                 <div id="privacy-consent-error" class="privacy-error privacy-error-box" role="alert" hidden></div>
                 <button type="submit" class="dale validate" id="reg-submit" disabled aria-describedby="privacy-consent-error">Зарегистрироваться</button>
-            </div>
+            </div><!-- /reg-submit-block -->
             <a class="dale" id="reg-cancel" href="<?php echo Route::_('index.php'); ?>" title="<?php echo Text::_('JCANCEL'); ?>"><?php echo Text::_('JCANCEL'); ?></a>
         </div>
 
@@ -1733,6 +1733,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept="image/*" class="course-media-file-input" /><span class="course-media-current">Файл не выбран</span></span></span>' +
             '<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
             '<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+            // Keep both fields: Лимит мест, then Одновременно участников.
             '<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
             '<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
             '<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label><input type="datetime-local" class="course-slot-input" value="" /></span></span>' +
