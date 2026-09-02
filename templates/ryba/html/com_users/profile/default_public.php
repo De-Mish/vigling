@@ -3390,6 +3390,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					redirectAfterClose = false;
 					redirectAfterCloseUrl = '';
 					submitBooking().catch(function (err) {
+						if (isReservedSlotError(err)) {
+							return;
+						}
 						setError(screen, err.message || 'Ошибка записи');
 					});
 				});
