@@ -550,10 +550,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<?php endif; ?>
 	<footer class="footer">
 		<div class="container">
-			<a class="footer__logo" href="<?php echo Uri::root(); ?>" aria-label="<?php echo $sitename; ?>">
-				<img src="/images/logo.jpg" width="65" height="65" alt="<?php echo $sitename; ?>">
-				<span class="footer__logo-text"><?php echo $sitename; ?></span>
-			</a>
 			<jdoc:include type="modules" name="bottommenu" style="none" />
 			<div class="clearFloat"></div>
 		</div>
