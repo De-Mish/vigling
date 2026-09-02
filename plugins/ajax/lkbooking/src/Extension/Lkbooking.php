@@ -466,6 +466,16 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, 0) >= $capacityTotal) {
 				return 'На курсе больше нет свободных мест';
 			}
+			$concurrent = max(1, (int) ($courseContext['concurrent_participants'] ?? 1));
+			if ($capacityTotal > 0) {
+				$concurrent = min($concurrent, $capacityTotal);
+			}
+			if (self::countCourseBookingsOverlapOtherStart($db, $courseId, $timeDb, $timeToDb) > 0) {
+				return 'Это время занято курсом';
+			}
+			if (self::countCourseBookingsAtStart($db, $courseId, $timeDb) >= $concurrent) {
+				return 'На это время больше нет мест в группе';
+			}
 		}
 
 		if ($bookingKind === 'search' && $searchSlotId > 0) {
@@ -486,7 +496,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'search' ? $searchSlotId : 0)) {
 			return $bookingKind === 'search' ? 'На данное время запланирован другой поиск' : 'Это время занято поиском';
 		}
-		if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns)) {
+		if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns, $courseId)) {
 			return ($bookingKind === 'course' || $bookingKind === 'search') ? 'На данное время запланировано другое' : 'Это время уже занято';
 		}
 
@@ -627,7 +637,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		return ['ok' => true, 'message' => ''];
 	}
 
-	private static function hasBookingsOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $masterId, string $startUtc, string $endUtc, string $bookingKind = 'service', int $courseSlotId = 0, int $searchSlotId = 0, bool $hasCourseBookingColumns = false, bool $hasSearchBookingColumns = false): bool
+	private static function hasBookingsOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $masterId, string $startUtc, string $endUtc, string $bookingKind = 'service', int $courseSlotId = 0, int $searchSlotId = 0, bool $hasCourseBookingColumns = false, bool $hasSearchBookingColumns = false, int $courseId = 0): bool
 	{
 		$query = $db->getQuery(true)
 			->select('COUNT(*)')
@@ -635,7 +645,14 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
 			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
 			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
-		if ($hasCourseBookingColumns && $bookingKind === 'course' && $courseSlotId > 0) {
+		if ($hasCourseBookingColumns && $bookingKind === 'course' && $courseId > 0) {
+			$query->where(
+				'NOT (' .
+				$db->quoteName('booking_kind') . ' = ' . $db->quote('course') .
+				' AND ' . $db->quoteName('course_id') . ' = ' . (int) $courseId .
+				')'
+			);
+		} elseif ($hasCourseBookingColumns && $bookingKind === 'course' && $courseSlotId > 0) {
 			$query->where(
 				'NOT (' .
 				$db->quoteName('booking_kind') . ' = ' . $db->quote('course') .
@@ -714,7 +731,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$db->quoteName('slot.starts_at_utc', 'slot_start_utc'),
 				$db->quoteName('slot.ends_at_utc', 'slot_end_utc'),
 				$db->quoteName('slot.capacity_total', 'slot_capacity_total'),
-			])
+			]);
+		if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserCoursesService')
+			&& \Joomla\Plugin\User\Vigling\Service\UserCoursesService::ensureConcurrentParticipantsColumn($db)
+		) {
+			$query->select($db->quoteName('c.concurrent_participants'));
+		}
+		$query
 			->from($db->quoteName('#__vigling_user_courses', 'c'))
 			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
 			->where($db->quoteName('c.id') . ' = ' . (int) $courseId)
@@ -731,8 +754,49 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$title = trim((string) ($row['title'] ?? $row['description'] ?? ''));
 		$row['service_name'] = $title !== '' ? ('Курс: ' . $title) : 'Курс';
+		$row['concurrent_participants'] = max(1, (int) ($row['concurrent_participants'] ?? 1));
+		$capacity = max(1, (int) ($row['capacity'] ?? 1));
+		if ($row['concurrent_participants'] > $capacity) {
+			$row['concurrent_participants'] = $capacity;
+		}
 
 		return $row;
+	}
+
+	private static function countCourseBookingsAtStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc): int
+	{
+		if ($courseId <= 0 || trim($startUtc) === '') {
+			return 0;
+		}
+
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName('#__vigling_bookings'))
+			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
+			->where($db->quoteName('course_id') . ' = ' . (int) $courseId)
+			->where($db->quoteName('time') . ' = ' . $db->quote($startUtc));
+		$db->setQuery($query);
+
+		return (int) $db->loadResult();
+	}
+
+	private static function countCourseBookingsOverlapOtherStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc, string $endUtc): int
+	{
+		if ($courseId <= 0 || trim($startUtc) === '' || trim($endUtc) === '') {
+			return 0;
+		}
+
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName('#__vigling_bookings'))
+			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
+			->where($db->quoteName('course_id') . ' = ' . (int) $courseId)
+			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc))
+			->where($db->quoteName('time') . ' <> ' . $db->quote($startUtc));
+		$db->setQuery($query);
+
+		return (int) $db->loadResult();
 	}
 
 	private static function countCourseBookings(\Joomla\Database\DatabaseInterface $db, int $courseId, int $courseSlotId = 0): int

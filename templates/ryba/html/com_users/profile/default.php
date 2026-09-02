@@ -726,6 +726,9 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 														<span class="price"><label>Стоимость:</label><?php echo $coursePrice; ?>&nbsp;RUB</span>
 														<span class="time"><label>Время:</label><?php echo $courseDurationMin; ?>&nbsp;мин.</span>
 														<span class="time2"><label>Лимит мест:</label><?php echo max(1, $courseCapacity); ?></span>
+														<?php if ($courseBookingMode !== 'fixed') : ?>
+														<span class="time2"><label>Одновременно участников:</label><?php echo max(1, (int) ($course['concurrent_participants'] ?? 1)); ?></span>
+														<?php endif; ?>
 														<span class="course-mode"><label>Режим:</label><?php echo $this->escape($courseBookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'); ?></span>
 														<?php if ($courseSlotDisplay !== '') : ?>
 														<span class="course-slot"><label>Дата и время:</label><span class="lk-time-utc" data-time-utc="<?php echo $this->escape($courseSlotIso); ?>"><?php echo $this->escape($courseSlotDisplay); ?></span></span>

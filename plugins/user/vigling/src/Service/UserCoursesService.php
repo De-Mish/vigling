@@ -35,10 +35,11 @@ final class UserCoursesService
             return [];
         }
 
+        $hasConcurrent = false;
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
-            $query = $db->getQuery(true)
-                ->select([
+            $hasConcurrent = self::ensureConcurrentParticipantsColumn($db);
+            $select = [
                     $db->quoteName('c.id'),
                     $db->quoteName('c.user_id'),
                     $db->quoteName('c.category_id'),
@@ -58,7 +59,12 @@ final class UserCoursesService
                     $db->quoteName('slot.starts_at_utc'),
                     $db->quoteName('slot.ends_at_utc'),
                     $db->quoteName('slot.capacity_total'),
-                ])
+            ];
+            if ($hasConcurrent) {
+                $select[] = $db->quoteName('c.concurrent_participants');
+            }
+            $query = $db->getQuery(true)
+                ->select($select)
                 ->from($db->quoteName('#__vigling_user_courses', 'c'))
                 ->join('LEFT', $db->quoteName('#__categories', 'cat') . ' ON ' . $db->quoteName('cat.id') . ' = ' . $db->quoteName('c.category_id'))
                 ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
@@ -89,6 +95,11 @@ final class UserCoursesService
                 'price' => self::toInt($row['price'] ?? 0),
                 'duration_min' => self::toInt($row['duration_min'] ?? 0),
                 'capacity' => max(1, self::toInt($row['capacity'] ?? 1)),
+                'concurrent_participants' => self::normalizeConcurrentParticipants(
+                    $hasConcurrent ? ($row['concurrent_participants'] ?? 1) : 1,
+                    max(1, self::toInt($row['capacity'] ?? 1)),
+                    self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free'))
+                ),
                 'booking_mode' => self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free')),
                 'booking_count' => max(0, self::toInt($row['booking_count'] ?? 0)),
                 'slot_id' => (int) ($row['slot_id'] ?? 0),
@@ -104,6 +115,7 @@ final class UserCoursesService
     public static function syncUserCoursesPayloadToTables(DatabaseInterface $db, int $userId, string $payloadJson): void
     {
         self::ensureOrderTableLoaded();
+        self::ensureConcurrentParticipantsColumn($db);
 
         $payloadJson = trim($payloadJson);
         $payload = [];
@@ -160,10 +172,51 @@ final class UserCoursesService
         }
     }
 
+    public static function ensureConcurrentParticipantsColumn(?DatabaseInterface $db = null): bool
+    {
+        static $ensured = null;
+        if ($ensured !== null) {
+            return $ensured;
+        }
+
+        try {
+            $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
+            $columns = array_change_key_case($db->getTableColumns('#__vigling_user_courses', false), CASE_LOWER);
+            if (isset($columns['concurrent_participants'])) {
+                $ensured = true;
+
+                return true;
+            }
+            $db->setQuery(
+                'ALTER TABLE ' . $db->quoteName('#__vigling_user_courses')
+                . ' ADD COLUMN ' . $db->quoteName('concurrent_participants') . ' INT UNSIGNED NOT NULL DEFAULT 1'
+                . ' AFTER ' . $db->quoteName('capacity')
+            )->execute();
+            $ensured = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            $ensured = false;
+
+            return false;
+        }
+    }
+
     private static function normalizeBookingMode(string $mode): string
     {
         $mode = trim($mode);
         return $mode === 'fixed' ? 'fixed' : 'free';
+    }
+
+    private static function normalizeConcurrentParticipants($value, int $capacity, string $bookingMode = 'free'): int
+    {
+        $capacity = max(1, $capacity);
+        $n = (int) $value;
+        if ($n < 1) {
+            $n = 1;
+        }
+
+        return min($capacity, $n);
     }
 
     private static function normalizeLocalDateTime(string $value): string
@@ -198,6 +251,11 @@ final class UserCoursesService
         $durationMin = max(0, (int) ($item['duration_min'] ?? 0));
         $capacity = max(1, (int) ($item['capacity'] ?? 1));
         $bookingMode = self::normalizeBookingMode((string) ($item['booking_mode'] ?? 'free'));
+        $concurrent = self::normalizeConcurrentParticipants(
+            $item['concurrent_participants'] ?? $item['concurrentParticipants'] ?? 1,
+            $capacity,
+            $bookingMode
+        );
         $slotStartUtc = self::normalizeUtcDateTime((string) ($item['slot_start_utc'] ?? ''));
         $slotStartLocal = self::normalizeLocalDateTime((string) ($item['slot_start_local'] ?? ''));
 
@@ -214,6 +272,7 @@ final class UserCoursesService
             'price' => $price,
             'duration_min' => $durationMin,
             'capacity' => $capacity,
+            'concurrent_participants' => $concurrent,
             'booking_mode' => $bookingMode,
             'slot_start_utc' => $bookingMode === 'fixed' ? $slotStartUtc : '',
             'slot_start_local' => $bookingMode === 'fixed' ? $slotStartLocal : '',
@@ -229,8 +288,8 @@ final class UserCoursesService
             return [];
         }
 
-        $query = $db->getQuery(true)
-            ->select([
+        $hasConcurrent = self::ensureConcurrentParticipantsColumn($db);
+        $select = [
                 $db->quoteName('c.id'),
                 $db->quoteName('c.user_id'),
                 $db->quoteName('c.category_id'),
@@ -245,7 +304,12 @@ final class UserCoursesService
                 $db->quoteName('slot.starts_at_utc', 'slot_start_utc'),
                 $db->quoteName('slot.ends_at_utc', 'slot_end_utc'),
                 $db->quoteName('slot.capacity_total', 'slot_capacity_total'),
-            ])
+        ];
+        if ($hasConcurrent) {
+            $select[] = $db->quoteName('c.concurrent_participants');
+        }
+        $query = $db->getQuery(true)
+            ->select($select)
             ->from($db->quoteName('#__vigling_user_courses', 'c'))
             ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
             ->where($db->quoteName('c.user_id') . ' = ' . (int) $userId);
@@ -268,6 +332,10 @@ final class UserCoursesService
                 'price' => self::parsePrice($row['price'] ?? 0),
                 'duration_min' => (int) ($row['duration_min'] ?? 0),
                 'capacity' => max(1, (int) ($row['capacity'] ?? 1)),
+                'concurrent_participants' => self::normalizeConcurrentParticipants(
+                    $hasConcurrent ? ($row['concurrent_participants'] ?? 1) : 1,
+                    max(1, (int) ($row['capacity'] ?? 1))
+                ),
                 'booking_mode' => self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free')),
                 'slot_id' => $slotId,
                 'slot_start_utc' => trim((string) ($row['slot_start_utc'] ?? '')),
@@ -295,6 +363,7 @@ final class UserCoursesService
                 'price' => (float) $normalized['price'],
                 'duration_min' => (int) $normalized['duration_min'],
                 'capacity' => (int) $normalized['capacity'],
+                'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => (string) $normalized['booking_mode'],
             ],
             'payload_variant' => 'courses_payload_v2',
@@ -327,6 +396,10 @@ final class UserCoursesService
             '1',
             $db->quote(json_encode($coursePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
         ];
+        if (self::ensureConcurrentParticipantsColumn($db)) {
+            array_splice($columns, 8, 0, [$db->quoteName('concurrent_participants')]);
+            array_splice($values, 8, 0, [(string) (int) ($normalized['concurrent_participants'] ?? 1)]);
+        }
 
         $query = $db->getQuery(true)
             ->insert($db->quoteName('#__vigling_user_courses'))
@@ -364,6 +437,11 @@ final class UserCoursesService
             $normalized['capacity'] = $bookingCount;
         }
 
+        $normalized['concurrent_participants'] = self::normalizeConcurrentParticipants(
+            $normalized['concurrent_participants'] ?? 1,
+            (int) $normalized['capacity']
+        );
+
         if ($bookingCount > 0 && $existingMode === 'free' && $requestedMode === 'fixed') {
             self::warn('Нельзя перевести курс "' . (string) ($existing['title'] ?? '') . '" в fixed-режим, пока на него уже есть записи.');
             $requestedMode = 'free';
@@ -381,6 +459,7 @@ final class UserCoursesService
                 'price' => (float) $normalized['price'],
                 'duration_min' => (int) $normalized['duration_min'],
                 'capacity' => (int) $normalized['capacity'],
+                'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => $requestedMode,
             ],
             'payload_variant' => 'courses_payload_v2',
@@ -397,7 +476,11 @@ final class UserCoursesService
             ->set($db->quoteName('capacity') . ' = ' . (int) $normalized['capacity'])
             ->set($db->quoteName('booking_mode') . ' = ' . $db->quote($requestedMode))
             ->set($db->quoteName('is_active') . ' = 1')
-            ->set($db->quoteName('source_payload') . ' = ' . $db->quote(json_encode($coursePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))
+            ->set($db->quoteName('source_payload') . ' = ' . $db->quote(json_encode($coursePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
+        if (self::ensureConcurrentParticipantsColumn($db)) {
+            $query->set($db->quoteName('concurrent_participants') . ' = ' . (int) ($normalized['concurrent_participants'] ?? 1));
+        }
+        $query
             ->where($db->quoteName('id') . ' = ' . $courseId)
             ->where($db->quoteName('user_id') . ' = ' . $userId);
         $db->setQuery($query)->execute();

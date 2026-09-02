@@ -739,6 +739,7 @@ try {
 				'price' => (int) ($course['price'] ?? 0),
 				'duration' => (int) ($course['duration_min'] ?? 60),
 				'capacity' => (int) ($course['capacity'] ?? 1),
+				'concurrentParticipants' => (int) ($course['concurrent_participants'] ?? 1),
 				'bookingMode' => (string) ($course['booking_mode'] ?? 'free'),
 				'bookingCount' => (int) ($course['booking_count'] ?? 0),
 				'slotStartUtc' => (string) ($course['slot_start_utc'] ?? ''),
@@ -1476,6 +1477,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 .profile-edit #jform_courses_servis .service__item .course_price,
 .profile-edit #jform_courses_servis .service__item .course_duration,
 .profile-edit #jform_courses_servis .service__item .course_capacity,
+.profile-edit #jform_courses_servis .service__item .course_concurrent,
 .profile-edit #jform_courses_servis .service__item .course_mode,
 .profile-edit #jform_courses_servis .service__item .course_slot {
     display: flex !important;
@@ -1510,6 +1512,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 .profile-edit #jform_courses_servis .service__item .course_media label,
 .profile-edit #jform_courses_servis .service__item .course_price label,
 .profile-edit #jform_courses_servis .service__item .course_capacity label,
+.profile-edit #jform_courses_servis .service__item .course_concurrent label,
 .profile-edit #jform_courses_servis .service__item .course_mode label,
 .profile-edit #jform_courses_servis .service__item .course_slot label {
     min-width: 0 !important;
@@ -1520,6 +1523,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 .profile-edit #jform_courses_servis .service__item .course_title input,
 .profile-edit #jform_courses_servis .service__item .course_price input,
 .profile-edit #jform_courses_servis .service__item .course_capacity input,
+.profile-edit #jform_courses_servis .service__item .course_concurrent input,
 .profile-edit #jform_courses_servis .service__item .course_mode select,
 .profile-edit #jform_courses_servis .service__item .course_slot input {
     max-width: 100% !important;
@@ -1594,6 +1598,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	border-color: #bbb;
 }
 .profile-edit #jform_courses_servis .service__item .course_mode.is-free .course_slot {
+	display: none !important;
+}
+.profile-edit #jform_courses_servis .service__item:not(.is-free-mode) .course_concurrent,
+.profile-edit #jform_courses_servis .service__item:not(.has-capacity) .course_concurrent {
 	display: none !important;
 }
 .profile-edit #jform_searches_servis .stock_key {
@@ -1990,6 +1998,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	.profile-edit #jform_courses_servis .service__item .course_price,
 	.profile-edit #jform_courses_servis .service__item .course_duration,
 	.profile-edit #jform_courses_servis .service__item .course_capacity,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent,
 	.profile-edit #jform_courses_servis .service__item .course_mode,
 	.profile-edit #jform_courses_servis .service__item .course_slot {
 		flex-direction: column !important;
@@ -2005,6 +2014,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	.profile-edit #jform_courses_servis .service__item .course_price label,
 	.profile-edit #jform_courses_servis .service__item .course_duration label,
 	.profile-edit #jform_courses_servis .service__item .course_capacity label,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent label,
 	.profile-edit #jform_courses_servis .service__item .course_mode label,
 	.profile-edit #jform_courses_servis .service__item .course_slot label {
 		min-width: 0 !important;
@@ -2019,6 +2029,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	.profile-edit #jform_courses_servis .service__item .course_media .course-media-file-input,
 	.profile-edit #jform_courses_servis .service__item .course_price input,
 	.profile-edit #jform_courses_servis .service__item .course_capacity input,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent input,
 	.profile-edit #jform_courses_servis .service__item .course_duration select,
 	.profile-edit #jform_courses_servis .service__item .course_mode select {
 		width: 100% !important;
@@ -2536,12 +2547,29 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		var modeSelect = row.querySelector('.course-mode-select');
 		var modeWrap = row.querySelector('.course_mode');
 		var slotInput = row.querySelector('.course-slot-input');
+		var capacityInput = row.querySelector('.course-capacity-input');
+		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var mode = modeSelect ? String(modeSelect.value || 'free') : 'free';
+		var capacity = parseInt(capacityInput ? String(capacityInput.value || '0') : '0', 10) || 0;
 		if (modeWrap) {
 			modeWrap.classList.toggle('is-free', mode !== 'fixed');
 		}
+		row.classList.toggle('is-free-mode', mode !== 'fixed');
+		row.classList.toggle('has-capacity', capacity >= 1);
 		if (slotInput && mode !== 'fixed') {
 			slotInput.value = '';
+		}
+		if (concurrentInput) {
+			var maxConcurrent = Math.max(1, capacity);
+			concurrentInput.max = String(maxConcurrent);
+			var concurrent = parseInt(String(concurrentInput.value || '1'), 10) || 1;
+			if (concurrent < 1) {
+				concurrent = 1;
+			}
+			if (concurrent > maxConcurrent) {
+				concurrent = maxConcurrent;
+			}
+			concurrentInput.value = String(concurrent);
 		}
 	}
 	function addCourseRow(categoryLabel, rowData) {
@@ -2565,6 +2593,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
 		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 		'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+		'<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
 		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label><input type="datetime-local" class="course-slot-input" value="" /></span></span>' +
 		'<button type="button" class="btn-remove-service">Удалить</button>';
 	serviceList.appendChild(row);
@@ -2575,6 +2604,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		var priceInput = row.querySelector('.course-price-input');
 		var durationSelect = row.querySelector('.course-duration-select');
 		var capacityInput = row.querySelector('.course-capacity-input');
+		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var modeSelect = row.querySelector('.course-mode-select');
 		var slotInput = row.querySelector('.course-slot-input');
 		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
@@ -2583,6 +2613,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
 		if (durationSelect) durationSelect.value = String(parseInt(rowData.duration || '60', 10) || 60);
 		if (capacityInput) capacityInput.value = String(parseInt(rowData.capacity || '1', 10) || 1);
+		if (concurrentInput) concurrentInput.value = String(Math.max(1, parseInt(rowData.concurrentParticipants || '1', 10) || 1));
 		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
 		if (slotInput) slotInput.value = formatDatetimeLocal(String(rowData.slotStartUtc || ''));
 	}
@@ -2594,6 +2625,23 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		modeSelect.addEventListener('change', function(){
 			syncCourseModeState(row);
 			syncCourseEditConstraints(row);
+		});
+	}
+	var capacityInputListen = row.querySelector('.course-capacity-input');
+	if (capacityInputListen) {
+		capacityInputListen.addEventListener('input', function(){
+			syncCourseModeState(row);
+			syncCourseEditConstraints(row);
+		});
+		capacityInputListen.addEventListener('change', function(){
+			syncCourseModeState(row);
+			syncCourseEditConstraints(row);
+		});
+	}
+	var concurrentInputListen = row.querySelector('.course-concurrent-input');
+	if (concurrentInputListen) {
+		concurrentInputListen.addEventListener('change', function(){
+			syncCourseModeState(row);
 		});
 	}
 	var mediaFileInput = row.querySelector('.course-media-file-input');
@@ -2624,6 +2672,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 				capacityInput.value = String(minCapacity);
 			}
 		}
+		syncCourseModeState(row);
 	}
 	function collectCourseRows() {
 		var rows = [];
@@ -2635,6 +2684,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 			var priceInput = row.querySelector('.course-price-input');
 			var durationSelect = row.querySelector('.course-duration-select');
 			var capacityInput = row.querySelector('.course-capacity-input');
+			var concurrentInput = row.querySelector('.course-concurrent-input');
 			var modeSelect = row.querySelector('.course-mode-select');
 			var slotInput = row.querySelector('.course-slot-input');
 			rows.push({
@@ -2646,6 +2696,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
 				duration: parseInt(durationSelect ? String(durationSelect.value || '0') : '0', 10) || 0,
 				capacity: parseInt(capacityInput ? String(capacityInput.value || '1') : '1', 10) || 1,
+				concurrentParticipants: parseInt(concurrentInput ? String(concurrentInput.value || '1') : '1', 10) || 1,
 				bookingMode: modeSelect ? String(modeSelect.value || 'free') : 'free',
 				slotStartLocal: slotInput ? String(slotInput.value || '') : '',
 				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : '')
@@ -2664,6 +2715,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 			var duration = parseInt(row.duration || 0, 10) || 0;
 			var capacity = Math.max(1, parseInt(row.capacity || 1, 10) || 1);
 			var bookingMode = String(row.bookingMode || 'free') === 'fixed' ? 'fixed' : 'free';
+			var concurrent = Math.max(1, parseInt(row.concurrentParticipants || 1, 10) || 1);
+			if (concurrent > capacity) {
+				concurrent = capacity;
+			}
 			var slotStartUtc = String(row.slotStartUtc || '').trim();
 			if (!categoryId || !title || !price || !duration) {
 				return;
@@ -2677,6 +2732,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 				price: price,
 				duration_min: duration,
 				capacity: capacity,
+				concurrent_participants: concurrent,
 				booking_mode: bookingMode,
 				slot_start_utc: bookingMode === 'fixed' ? slotStartUtc : '',
 				slot_start_local: bookingMode === 'fixed' ? String(row.slotStartLocal || '').trim() : ''
