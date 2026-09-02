@@ -34,7 +34,7 @@ final class UserCoursesService
         if ($ids === []) {
             return [];
         }
-        
+
         $hasConcurrent = false;
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
@@ -218,7 +218,7 @@ final class UserCoursesService
 
         return min($capacity, $n);
     }
-    
+
     private static function normalizeLocalDateTime(string $value): string
     {
         $value = trim($value);
@@ -441,7 +441,7 @@ final class UserCoursesService
             $normalized['concurrent_participants'] ?? 1,
             (int) $normalized['capacity']
         );
-        
+
         if ($bookingCount > 0 && $existingMode === 'free' && $requestedMode === 'fixed') {
             self::warn('Нельзя перевести курс "' . (string) ($existing['title'] ?? '') . '" в fixed-режим, пока на него уже есть записи.');
             $requestedMode = 'free';

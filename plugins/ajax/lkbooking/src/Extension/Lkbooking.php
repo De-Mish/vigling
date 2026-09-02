@@ -309,7 +309,6 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$columns[] = 'search_slot_id';
 			$values[] = $searchSlotId > 0 ? (string) $searchSlotId : 'NULL';
 		}
-		
 		if ($bookingKind === 'stock' && $stockServiceId > 0 && isset($tableColumns['stock_service_id'])) {
 			$columns[] = 'stock_service_id';
 			$values[] = (string) $stockServiceId;
@@ -353,7 +352,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$event->updateEventResult(['success' => false, 'message' => $conflict]);
 				return;
 			}
-			
+
 			if ($bookingKind === 'stock') {
 				self::reserveStockOffer($db, $stockServiceId, $masterId);
 			}
@@ -428,7 +427,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			require_once $path;
 		}
 	}
-	
+
 	/**
 	 * @param array<string,mixed>|null $courseContext
 	 * @param array<string,mixed>|null $searchContext
@@ -799,7 +798,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		return (int) $db->loadResult();
 	}
-	
+
 	private static function countCourseBookings(\Joomla\Database\DatabaseInterface $db, int $courseId, int $courseSlotId = 0): int
 	{
 		if ($courseId <= 0) {

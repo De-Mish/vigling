@@ -306,9 +306,9 @@ foreach ($workDayLabels as $wd => $label) {
 }
 
 $calendarDays = [];
+$bookedRangesByDate = [];
 $reservedRangesByDate = [];
 $anytimeOccupancyByDate = [];
-$bookedRangesByDate = [];
 $siteOffset = (string) $app->get('offset', 'UTC');
 $masterTz = new \DateTimeZone($siteOffset !== '' ? $siteOffset : 'UTC');
 $utcTz = new \DateTimeZone('UTC');
@@ -465,8 +465,8 @@ if ($profileOwnerId > 0) {
 				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
 				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
 			$db->setQuery($query);
-			$anytimeGroupsRaw = [];
 			$rows = $db->loadAssocList() ?: [];
+			$anytimeGroupsRaw = [];
 			foreach ($rows as $row) {
 				$bookingKind = $hasBookingKind ? strtolower(trim((string) ($row['booking_kind'] ?? ''))) : '';
 				if ($bookingKind === 'search') {
@@ -501,6 +501,7 @@ if ($profileOwnerId > 0) {
 					$utcTz,
 					$masterTz
 				);
+			}
 			if ($anytimeGroupsRaw !== []) {
 				$anytimeCourseIds = [];
 				foreach ($anytimeGroupsRaw as $group) {
@@ -599,7 +600,7 @@ if ($profileOwnerId > 0) {
 			}
 		} catch (\Throwable $ignore) {
 		}
-		} catch (\Throwable $e) {
+	} catch (\Throwable $e) {
 		$bookedRangesByDate = [];
 		$reservedRangesByDate = [];
 		$anytimeOccupancyByDate = [];
@@ -620,7 +621,7 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 	if (is_array($range)) {
 		$dayBookedRanges = $bookedRangesByDate[$dateKey] ?? [];
 		$dayOfferRanges = $reservedRangesByDate[$dateKey] ?? [];
-		dayAnytimeGroups = $anytimeOccupancyByDate[$dateKey] ?? [];
+		$dayAnytimeGroups = $anytimeOccupancyByDate[$dateKey] ?? [];
 		for ($minute = (int) $range[0]; $minute <= (int) $range[1]; $minute += 15) {
 			$isBooked = false;
 			foreach ($dayBookedRanges as $bookedRange) {
@@ -2356,7 +2357,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					}
 					dayDate = parsed.date;
 					slotInfos.push({ radio: radio, parsed: parsed });
-					f (String(radio.getAttribute('data-reserved') || '').trim()) {
+					if (String(radio.getAttribute('data-reserved') || '').trim()) {
 						return;
 					}
 					var anytimeMeta = anytimeMetaOf(radio);
@@ -2407,7 +2408,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 						}
 						return;
 					}
-					
+
 					if (visible && rangeTo !== null && (startMin + requiredMin) > rangeTo) {
 						visible = false;
 					}
@@ -2504,7 +2505,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		function isReservedSlotError(err) {
 			return String((err && err.message) || '') === 'reserved-slot';
 		}
-		
+
 		function setError(screen, text) {
 			var errorEl = screen.querySelector('.error-msg');
 			if (!errorEl) {
