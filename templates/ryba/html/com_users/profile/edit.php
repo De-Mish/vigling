@@ -2592,7 +2592,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept="image/*" class="course-media-file-input" /><span class="course-media-current">Файл не выбран</span></span></span>' +
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
 		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
-		'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
 		'<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
 		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label><input type="datetime-local" class="course-slot-input" value="" /></span></span>' +
 		'<button type="button" class="btn-remove-service">Удалить</button>';
@@ -2613,7 +2612,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
 		if (durationSelect) durationSelect.value = String(parseInt(rowData.duration || '60', 10) || 60);
 		if (capacityInput) capacityInput.value = String(parseInt(rowData.capacity || '1', 10) || 1);
-		if (concurrentInput) concurrentInput.value = String(Math.max(1, parseInt(rowData.concurrentParticipants || '1', 10) || 1));
 		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
 		if (slotInput) slotInput.value = formatDatetimeLocal(String(rowData.slotStartUtc || ''));
 	}
@@ -2672,8 +2670,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 				capacityInput.value = String(minCapacity);
 			}
 		}
-		syncCourseModeState(row);
 	}
+		syncCourseModeState(row);
 	function collectCourseRows() {
 		var rows = [];
 		document.querySelectorAll('#jform_courses_servis .service__item').forEach(function(row){
