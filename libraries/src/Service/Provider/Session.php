@@ -155,13 +155,10 @@ class Session implements ServiceProviderInterface
                 $lifetime = $config->get('lifetime') ? $config->get('lifetime') * 60 : 900;
 
                 // Initialize the options for the Session object.
-                // Persist the site session cookie for the same window so closing
-                // the browser does not drop a still-valid server session.
+                // createSessionHandler() only allows name/expire/force_ssl.
                 $options = [
-                    'name'            => $name,
-                    'expire'          => $lifetime,
-                    'cookie_lifetime' => $lifetime,
-                    'gc_maxlifetime'  => $lifetime,
+                    'name'   => $name,
+                    'expire' => $lifetime,
                 ];
 
                 if ($config->get('force_ssl') == 2) {
@@ -174,8 +171,12 @@ class Session implements ServiceProviderInterface
                     $this->registerSessionHandlerAsService($container, $handler);
                 }
 
-                $options['cookie_domain'] = $config->get('cookie_domain', '');
-                $options['cookie_path']   = $config->get('cookie_path', '/');
+                // Persist the site session cookie for the same window so closing
+                // the browser does not drop a still-valid server session.
+                $options['cookie_domain']   = $config->get('cookie_domain', '');
+                $options['cookie_path']     = $config->get('cookie_path', '/');
+                $options['cookie_lifetime'] = $lifetime;
+                $options['gc_maxlifetime']  = $lifetime;
 
                 return new \Joomla\CMS\Session\Session(
                     new JoomlaStorage($input, $handler, $options),
