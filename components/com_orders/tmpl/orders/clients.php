@@ -339,6 +339,12 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			overflow-wrap: anywhere;
 			word-break: break-word;
 		}
+		.com_orders .order-comment {
+			margin-top: 6px;
+			font-size: 13px;
+			color: #555;
+			white-space: pre-wrap;
+		}
 		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions {
 			display: block;
 			margin-top: 8px;
@@ -434,7 +440,19 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 									$participantTimeIso = $participantTimeUtc ? $participantTimeUtc->format('c') : '';
 									$participantIsPast = $participantTimeUtc ? ($participantTimeUtc < $nowUtc) : false;
 									$participantCompleted = !empty($participant->completed);
-									$participantContacts = array_filter([trim((string) ($participant->client_email ?? '')), trim((string) ($participant->client_phone ?? ''))]);
+									$participantContacts = array_filter([
+										trim((string) ($participant->contact_name ?? '')) !== ''
+											&& trim((string) ($participant->contact_name ?? '')) !== trim((string) ($participant->client_name ?? ''))
+											? trim((string) $participant->contact_name)
+											: '',
+										trim((string) ($participant->contact_phone ?? '')) !== ''
+											? trim((string) $participant->contact_phone)
+											: '',
+										trim((string) ($participant->client_email ?? '')),
+										trim((string) ($participant->contact_phone ?? '')) === ''
+											? trim((string) ($participant->client_phone ?? ''))
+											: '',
+									]);
 									$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $participant->user_id;
 								?>
 								<div class="course-participant">
@@ -448,6 +466,9 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 												<?php endif; ?>
 											</div>
 											<div class="course-meta"><?php echo $participantContacts !== [] ? htmlspecialchars(implode(', ', $participantContacts)) : '—'; ?></div>
+											<?php if (trim((string) ($participant->comment ?? '')) !== '') : ?>
+												<div class="order-comment"><?php echo htmlspecialchars((string) $participant->comment); ?></div>
+											<?php endif; ?>
 										</div>
 										<div class="course-participant-time">
 											<span class="lk-time-utc" data-time-utc="<?php echo $participantTimeIso ? $this->escape($participantTimeIso) : ''; ?>">—</span>
@@ -472,7 +493,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 					$completed = !empty($item->completed);
 					$rowClass = 'orders-row' . ($isPast ? ' orders-row--past' : '');
 					$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->user_id;
-					$contacts = array_filter([trim((string) ($item->client_email ?? '')), trim((string) ($item->client_phone ?? ''))]);
 				?>
 				<tr class="<?php echo $rowClass; ?>" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">
 					<td data-label="Клиент">
@@ -482,9 +502,24 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 							<?php echo htmlspecialchars($item->client_name); ?>
 						<?php endif; ?>
 					</td>
-					<td data-label="Услуга"><?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name)); ?></td>
+					<td data-label="Услуга">
+						<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name)); ?>
+						<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
+							<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
+						<?php endif; ?>
+					</td>
 					<td data-label="Дата и время"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></td>
-					<td data-label="Контакты"><?php echo $contacts !== [] ? htmlspecialchars(implode(', ', $contacts)) : '—'; ?></td>
+					<td data-label="Контакты"><?php
+						$bookingPhone = trim((string) ($item->contact_phone ?? ''));
+						$bookingContactName = trim((string) ($item->contact_name ?? ''));
+						$contactBits = array_filter([
+							$bookingContactName !== '' && $bookingContactName !== trim((string) ($item->client_name ?? '')) ? $bookingContactName : '',
+							$bookingPhone !== '' ? $bookingPhone : '',
+							trim((string) ($item->client_email ?? '')),
+							$bookingPhone === '' ? trim((string) ($item->client_phone ?? '')) : '',
+						]);
+						echo $contactBits !== [] ? htmlspecialchars(implode(', ', $contactBits)) : '—';
+					?></td>
 					<td class="orders-actions" data-label="Действия">
 						<?php echo $renderOrderActions($item, $isPast, $completed, $token, $returnEncoded, $timeIso); ?>
 					</td>

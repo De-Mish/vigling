@@ -1273,6 +1273,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			line-height: 1.25;
 			color: #777;
 		}
+		#zapis .screen3 .js-booking-contact {
+			margin-top: 8px;
+		}
 		#zapis .screen3 .error-msg {
 			margin-top: 8px;
 		}
@@ -2084,6 +2087,15 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 											<input type="password" name="qa_login_password" placeholder="Пароль" data-required="login" required>
 											<button type="button" class="password-toggle" data-target-name="qa_login_password">Показать</button>
 										</div>
+									</div>
+									<div class="clearFloat"></div>
+								</div>
+								<div class="form__finish-top control-group js-booking-contact">
+									<div class="form__finish-left controls">
+										<input type="text" name="name" value="" placeholder="Имя для этой записи (необязательно)">
+									</div>
+									<div class="form__finish-right controls">
+										<input type="text" name="telefon" value="" placeholder="Телефон для этой записи (необязательно)">
 									</div>
 									<div class="clearFloat"></div>
 								</div>
