@@ -70,7 +70,7 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 		$credentials = ['username' => $username, 'password' => $password];
-		if (true !== $app->login($credentials, ['remember' => false])) {
+		if (true !== $app->login($credentials, ['remember' => true])) {
 			$blockedByUnverified = $this->isBlockedByUnverified($username);
 			$this->loadLanguage();
 			$message = $blockedByUnverified
@@ -154,7 +154,7 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		$password = isset($jform['password1']) ? (string) $jform['password1'] : '';
 		if ($username !== '' && $password !== '') {
 			$credentials = ['username' => $username, 'password' => $password];
-			$app->login($credentials, ['remember' => false]);
+			$app->login($credentials, ['remember' => true]);
 		}
 		$redirect = $this->buildRedirectUrl($return);
 		$event->updateEventResult(['success' => true, 'redirect' => $redirect, 'form_token' => Session::getFormToken()]);

@@ -155,9 +155,13 @@ class Session implements ServiceProviderInterface
                 $lifetime = $config->get('lifetime') ? $config->get('lifetime') * 60 : 900;
 
                 // Initialize the options for the Session object.
+                // Persist the site session cookie for the same window so closing
+                // the browser does not drop a still-valid server session.
                 $options = [
-                    'name'   => $name,
-                    'expire' => $lifetime,
+                    'name'            => $name,
+                    'expire'          => $lifetime,
+                    'cookie_lifetime' => $lifetime,
+                    'gc_maxlifetime'  => $lifetime,
                 ];
 
                 if ($config->get('force_ssl') == 2) {

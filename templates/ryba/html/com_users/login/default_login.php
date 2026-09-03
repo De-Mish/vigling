@@ -61,7 +61,7 @@ $hasTfa = property_exists($this, 'tfa') && !empty($this->tfa);
 						</label>
 					</div>
 					<div class="controls">
-						<input id="remember" type="checkbox" name="remember" class="inputbox" value="yes" />
+						<input id="remember" type="checkbox" name="remember" class="inputbox" value="yes" checked="checked" />
 					</div>
 				</div>
 			<?php endif; ?>

@@ -192,7 +192,7 @@ class RegistrationController extends BaseController implements UserFactoryAwareI
 
             if ($username !== '' && $password !== '') {
                 $credentials = ['username' => $username, 'password' => $password];
-                if (true === $this->app->login($credentials, ['remember' => false])) {
+                if (true === $this->app->login($credentials, ['remember' => true])) {
                     $this->setRedirect(Route::_($redirectUrl, false));
                 } else {
                     $this->setRedirect(Route::_('index.php?option=com_users&view=login', false));
