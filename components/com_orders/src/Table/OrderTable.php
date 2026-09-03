@@ -39,6 +39,47 @@ class OrderTable extends Table
 		return $result;
 	}
 
+	public static function ensureBookingCommentColumns(DatabaseInterface $db): bool
+	{
+		try {
+			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			$after = 'service_name';
+			if (!isset($columns['comment'])) {
+				$db->setQuery(
+					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+					. ' ADD COLUMN ' . $db->quoteName('comment') . ' VARCHAR(500) NULL DEFAULT NULL'
+					. ' AFTER ' . $db->quoteName($after)
+				)->execute();
+				$columns['comment'] = true;
+				$after = 'comment';
+			} else {
+				$after = 'comment';
+			}
+			if (!isset($columns['contact_name'])) {
+				$db->setQuery(
+					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+					. ' ADD COLUMN ' . $db->quoteName('contact_name') . ' VARCHAR(150) NULL DEFAULT NULL'
+					. ' AFTER ' . $db->quoteName($after)
+				)->execute();
+				$columns['contact_name'] = true;
+				$after = 'contact_name';
+			} else {
+				$after = 'contact_name';
+			}
+			if (!isset($columns['contact_phone'])) {
+				$db->setQuery(
+					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+					. ' ADD COLUMN ' . $db->quoteName('contact_phone') . ' VARCHAR(50) NULL DEFAULT NULL'
+					. ' AFTER ' . $db->quoteName($after)
+				)->execute();
+			}
+
+			return true;
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	public static function ensureStockServiceIdColumn(DatabaseInterface $db): bool
 	{
 		try {

@@ -8,6 +8,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\DatabaseQuery;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
+use Viglin\Component\Orders\Site\Table\OrderTable;
 
 class OrdersModel extends ListModel
 {
@@ -23,6 +24,7 @@ class OrdersModel extends ListModel
 		$user = Factory::getApplication()->getIdentity();
 		$db = $this->getDatabase();
 		$layout = (string) $this->getState('layout', 'default');
+		OrderTable::ensureBookingCommentColumns($db);
 		$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
@@ -53,6 +55,15 @@ class OrdersModel extends ListModel
 			->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name')
 			->from($db->quoteName('#__vigling_bookings', 'o'))
 			->order($db->quoteName('o.time') . ' DESC');
+		if (isset($tableColumns['comment'])) {
+			$query->select($db->quoteName('o.comment'));
+		}
+		if (isset($tableColumns['contact_name'])) {
+			$query->select($db->quoteName('o.contact_name'));
+		}
+		if (isset($tableColumns['contact_phone'])) {
+			$query->select($db->quoteName('o.contact_phone'));
+		}
 		if ($hasCourseColumns) {
 			$query->select([
 				$db->quoteName('o.booking_kind'),

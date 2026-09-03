@@ -127,6 +127,11 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 		$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		self::ensureOrderTableLoaded();
+		if (class_exists(OrderTable::class) && OrderTable::ensureBookingCommentColumns($db)) {
+			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		}
+		$bookingExtras = self::bookingExtrasFromInput($input);
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 
@@ -283,6 +288,17 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$columns = ['user_id', 'master_id', 'time', 'time_to', 'service_name'];
 		$values = [(int) $user->id, $masterId, $db->quote($timeDb), $db->quote($timeToDb), $db->quote($serviceName)];
+		$extraColumnValues = [
+			'comment' => $bookingExtras['comment'],
+			'contact_name' => $bookingExtras['contact_name'],
+			'contact_phone' => $bookingExtras['contact_phone'],
+		];
+		foreach ($extraColumnValues as $columnName => $columnValue) {
+			if (isset($tableColumns[$columnName]) && $columnValue !== '') {
+				$columns[] = $columnName;
+				$values[] = $db->quote($columnValue);
+			}
+		}
 		$optionalColumnValues = [
 			'svc_id' => (int) $input->post->get('svc_id', 0),
 			'tag_id' => (int) $input->post->get('tag_id', 0),
@@ -1097,5 +1113,42 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		} catch (\Throwable $e) {
 		}
 		return $fallback;
+	}
+
+	/**
+	 * @return array{comment: string, contact_name: string, contact_phone: string}
+	 */
+	private static function bookingExtrasFromInput($input): array
+	{
+		$note = self::clipUtf8((string) $input->post->get('note', '', 'string'), 500);
+		$name = self::clipUtf8((string) $input->post->get('name', '', 'string'), 150);
+		if ($name === '') {
+			$name = self::clipUtf8((string) $input->post->get('qa_name', '', 'string'), 150);
+		}
+		$phone = self::clipUtf8((string) $input->post->get('telefon', '', 'raw'), 50);
+		if ($phone === '') {
+			$phone = self::clipUtf8((string) $input->post->get('qa_phone', '', 'raw'), 50);
+		}
+		$phone = trim((string) preg_replace('/[^\d+\s()\-]/', '', $phone));
+		$phone = self::clipUtf8($phone, 50);
+
+		return [
+			'comment' => $note,
+			'contact_name' => $name,
+			'contact_phone' => $phone,
+		];
+	}
+
+	private static function clipUtf8(string $value, int $max): string
+	{
+		$value = trim((string) preg_replace('/\s+/u', ' ', $value));
+		if ($value === '') {
+			return '';
+		}
+		if (function_exists('mb_substr')) {
+			return (string) mb_substr($value, 0, $max);
+		}
+
+		return substr($value, 0, $max);
 	}
 }

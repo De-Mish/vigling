@@ -19,6 +19,11 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 <div class="com_orders orders-list">
 	<style>
 	.com_orders .reschedule-open { margin-right: 8px; margin-bottom: 4px; }
+	.com_orders .order-comment {
+		margin-top: 6px;
+		font-size: 13px;
+		color: #555;
+	}
 	#zapis-reschedule .modal-dialog {
 		width: 96vw !important;
 		max-width: 1180px !important;
@@ -172,6 +177,9 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 						<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name)); ?>
 						<?php if ($isFixedCourse || $isFixedSearch) : ?>
 							<div style="font-size:13px;color:#666;margin-top:4px;">Время <?php echo $isFixedSearch ? 'поиска' : 'курса'; ?> задаёт мастер для всей группы</div>
+						<?php endif; ?>
+						<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
+							<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
 						<?php endif; ?>
 					</td>
 					<td class="orders-actions" data-label="Действия">
