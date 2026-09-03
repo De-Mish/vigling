@@ -9,6 +9,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Session\Session;
 use Joomla\Event\SubscriberInterface;
+use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
 use Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper;
 
@@ -63,6 +64,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 		$durationMin = (int) $input->post->get('duration_min', 60);
+		$catalogSvcId = (int) $input->post->get('svc_id', 0);
+		if ($catalogSvcId <= 0) {
+			$catalogSvcId = (int) $input->post->get('service_id', 0);
+		}
+		$catalogTagId = (int) $input->post->get('tag_id', 0);
+		$catalogPrice = max(0, (int) $input->post->get('price', 0));
+		$catalogTimeSum = max(0, (int) $input->post->get('time_sum', 0));
 
 		if ($masterId <= 0) {
 			$event->updateEventResult(['success' => false, 'message' => 'Не указан мастер']);
@@ -250,6 +258,37 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 
+		if ($bookingKind === 'service' || $bookingKind === 'stock') {
+			$catalogItem = self::resolveMasterCatalogItem(
+				$masterId,
+				$bookingKind === 'stock',
+				$catalogSvcId,
+				$catalogTagId,
+				$stockServiceId
+			);
+			$catalogRequired = $bookingKind === 'stock' || self::masterHasCatalog($masterId, false);
+			if ($catalogItem === null && $catalogRequired) {
+				$event->updateEventResult(['success' => false, 'message' => 'Услуга не найдена в прайсе мастера']);
+				return;
+			}
+			if ($catalogItem !== null) {
+				if (($catalogItem['name'] ?? '') !== '') {
+					$serviceName = (string) $catalogItem['name'];
+				}
+				$durationMin = (int) $catalogItem['duration'];
+				$catalogSvcId = (int) $catalogItem['svc_id'];
+				$catalogTagId = (int) $catalogItem['tag_id'];
+				$catalogPrice = (int) $catalogItem['price'];
+				$catalogTimeSum = (int) $catalogItem['duration'] + (int) $catalogItem['pause_min'];
+				if ($bookingKind === 'stock' && (int) ($catalogItem['stock_service_id'] ?? 0) > 0) {
+					$stockServiceId = (int) $catalogItem['stock_service_id'];
+				}
+				$timeTo = clone $time;
+				$timeTo->modify('+' . max(15, min(480, $durationMin)) . ' minutes');
+				$timeToDb = $timeTo->format('Y-m-d H:i:s');
+			}
+		}
+
 		$nowUtc = new \DateTimeImmutable('now', $utc);
 		$startUtc = \DateTimeImmutable::createFromMutable($time);
 		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
@@ -300,10 +339,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 		$optionalColumnValues = [
-			'svc_id' => (int) $input->post->get('svc_id', 0),
-			'tag_id' => (int) $input->post->get('tag_id', 0),
-			'price' => max(0, (int) $input->post->get('price', 0)),
-			'time_sum' => max(0, (int) $input->post->get('time_sum', 0)),
+			'svc_id' => $catalogSvcId,
+			'tag_id' => $catalogTagId,
+			'price' => $catalogPrice,
+			'time_sum' => $catalogTimeSum,
 		];
 		foreach ($optionalColumnValues as $columnName => $columnValue) {
 			if (isset($tableColumns[$columnName]) && $columnValue > 0) {
@@ -1150,5 +1189,93 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 
 		return substr($value, 0, $max);
+	}
+
+	private static function masterHasCatalog(int $masterId, bool $isStock): bool
+	{
+		return self::catalogGroupsForMaster($masterId, $isStock) !== [];
+	}
+
+	/**
+	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int}|null
+	 */
+	private static function resolveMasterCatalogItem(int $masterId, bool $isStock, int $svcId, int $tagId, int $stockServiceId = 0): ?array
+	{
+		$groups = self::catalogGroupsForMaster($masterId, $isStock);
+		if ($groups === []) {
+			return null;
+		}
+
+		$svcKey = (string) $svcId;
+		$matches = [];
+		foreach ($groups as $group) {
+			if (!is_array($group) || empty($group['items']) || !is_array($group['items'])) {
+				continue;
+			}
+			foreach ($group['items'] as $item) {
+				if (!is_array($item)) {
+					continue;
+				}
+				if ($isStock && $stockServiceId > 0) {
+					if ((int) ($item['stock_service_id'] ?? 0) === $stockServiceId) {
+						return self::normalizeCatalogItem($item);
+					}
+					continue;
+				}
+				$itemSvc = trim((string) ($item['svc_id'] ?? ''));
+				if ($svcKey !== '0' && $itemSvc !== '' && $itemSvc === $svcKey) {
+					$matches[] = $item;
+				}
+			}
+		}
+		if ($isStock && $stockServiceId > 0) {
+			return null;
+		}
+		if ($matches === []) {
+			return null;
+		}
+		if ($tagId > 0) {
+			foreach ($matches as $item) {
+				if ((int) ($item['tag_id'] ?? 0) === $tagId) {
+					return self::normalizeCatalogItem($item);
+				}
+			}
+		}
+
+		return self::normalizeCatalogItem($matches[0]);
+	}
+
+	/**
+	 * @return array<int, array<string,mixed>>
+	 */
+	private static function catalogGroupsForMaster(int $masterId, bool $isStock): array
+	{
+		if ($masterId <= 0 || !class_exists(JsnDecodeHelper::class)) {
+			return [];
+		}
+		$groups = $isStock
+			? JsnDecodeHelper::getUserStockServicesStructuredWithIds($masterId)
+			: JsnDecodeHelper::getUserServicesStructuredWithIds($masterId);
+
+		return is_array($groups) ? $groups : [];
+	}
+
+	/**
+	 * @param array<string,mixed> $item
+	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int}
+	 */
+	private static function normalizeCatalogItem(array $item): array
+	{
+		$duration = (int) ($item['duration'] ?? 0);
+
+		return [
+			'name' => trim((string) ($item['name'] ?? '')),
+			'price' => max(0, (int) ($item['price'] ?? 0)),
+			'duration' => max(15, min(480, $duration > 0 ? $duration : 60)),
+			'svc_id' => (int) ($item['svc_id'] ?? 0),
+			'tag_id' => (int) ($item['tag_id'] ?? 0),
+			'pause_min' => max(0, (int) ($item['pause_min'] ?? 0)),
+			'stock_service_id' => (int) ($item['stock_service_id'] ?? 0),
+		];
 	}
 }

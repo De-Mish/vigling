@@ -175,11 +175,7 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$durationMin = (int) $this->input->get('duration_min', 0);
-		if ($durationMin <= 0) {
-			$durationMin = self::deriveDurationMinFromOrder($table);
-		}
-		$durationMin = max(15, min(480, $durationMin));
+		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
 		$timeDb = $time->format('Y-m-d H:i:s');
@@ -386,11 +382,7 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$durationMin = (int) $this->input->get('duration_min', 0);
-		if ($durationMin <= 0) {
-			$durationMin = self::deriveDurationMinFromOrder($table);
-		}
-		$durationMin = max(15, min(480, $durationMin));
+		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
 		$timeDb = $time->format('Y-m-d H:i:s');
