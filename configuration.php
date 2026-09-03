@@ -64,7 +64,7 @@ class JConfig {
 	public $log_path = '/home/v/viglinbd/vigling.ru/public_html/administrator/logs';
 	public $tmp_path = '/home/v/viglinbd/vigling.ru/public_html/tmp';
 	public $log_everything = 0;
-	public $lifetime = 15;
+	public $lifetime = 10080;
 	public $session_handler = 'database';
 	public $shared_session = false;
 	public $session_metadata = true;
