@@ -11,6 +11,7 @@ class PoiskHelper
 {
 	private static $fieldMapCache = null;
 	private static $serviceHierarchyCache = [];
+	private static array $categoriesCache = [];
 	private static array $filterListCache = [];
 	private const FILTER_LIST_CACHE_TTL = 3600;
 	private const CATEGORY_ORDER = [
@@ -59,6 +60,11 @@ class PoiskHelper
 
 	public static function getCategories(?string $pathPrefix = null): array
 	{
+		$cacheKey = $pathPrefix ?? '__default__';
+		if (isset(self::$categoriesCache[$cacheKey])) {
+			return self::$categoriesCache[$cacheKey];
+		}
+
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$prefix = $db->getPrefix();
 		$query = $db->getQuery(true)
@@ -93,9 +99,9 @@ class PoiskHelper
 				unset($row);
 				$rows = self::sortCategories($rows);
 			}
-			return $rows;
+			return self::$categoriesCache[$cacheKey] = $rows;
 		} catch (\Throwable $e) {
-			return [];
+			return self::$categoriesCache[$cacheKey] = [];
 		}
 	}
 

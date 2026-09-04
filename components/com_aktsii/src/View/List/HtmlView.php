@@ -40,7 +40,8 @@ class HtmlView extends BaseHtmlView
 		$model->populateState();
 
 		$this->items = $model->getItems();
-		$this->mapItems = $model->getMapItems();
+		// Map pins use the current page of results to avoid a second 500-row query.
+		$this->mapItems = $this->items;
 		$total = $model->getTotal();
 		$limit = (int) $model->getState('list.limit');
 		$start = (int) $model->getState('list.start');
@@ -86,12 +87,7 @@ class HtmlView extends BaseHtmlView
 			$this->categoryByUser = $this->loadCategoryByUser($userIds);
 		}
 
-		$mapUserIds = array_map(static function ($o) { return (int) $o->id; }, (array) $this->mapItems);
-		if (!empty($mapUserIds)) {
-			$this->mapFieldsByUser = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getFieldsForUserIds($mapUserIds, [
-				'sity', 'area', 'street', 'house_number', 'vyberite_spetsialnos'
-			]);
-		}
+		$this->mapFieldsByUser = $this->fieldsByUser;
 
 		return parent::display($tpl);
 	}
