@@ -83,7 +83,9 @@ class HtmlView extends BaseHtmlView
 		$model->setState('branch_scope', $branchScope);
 
 		$this->items = $model->getItems();
-		$this->mapItems = $model->getMapItems();
+		// Map pins use the current page of results. Loading hundreds of extra
+		// matches on every HTML request made /poisk-spetsialistov take ~12s.
+		$this->mapItems = $this->items;
 		
 		$total = $model->getTotal();
 		$limit = (int) $model->getState('list.limit');
@@ -129,12 +131,7 @@ class HtmlView extends BaseHtmlView
 				$this->currentTag
 			);
 		}
-		$mapUserIds = array_map(static function ($o) { return (int) $o->id; }, (array) $this->mapItems);
-		if (!empty($mapUserIds)) {
-			$this->mapFieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIds($mapUserIds, [
-				'sity', 'area', 'street', 'house_number', 'vyberite_spetsialnos'
-			]);
-		}
+		$this->mapFieldsByUser = $this->fieldsByUser;
 
 		return parent::display($tpl);
 	}

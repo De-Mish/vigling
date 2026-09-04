@@ -95,7 +95,7 @@ class JConfig {
 	public $session_redis_server_host = 'localhost';
 	public $session_redis_server_port = 6379;
 	public $session_redis_server_db = 0;
-	public $session_metadata_for_guest = true;
+	public $session_metadata_for_guest = false;
 	public $log_deprecated = 0;
 	public $log_priorities = array('0' => 'all');
 	public $log_categories = '';

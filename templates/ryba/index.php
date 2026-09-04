@@ -69,6 +69,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<link rel="apple-touch-icon" sizes="180x180" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/apple-touch-icon.png">
 	<meta name="theme-color" content="#111111">
 	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json">
+	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
+	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
 	<script src="<?php echo $tplPath; ?>js/jquery.min.js"></script>
 	<script src="<?php echo $tplPath; ?>js/slick.min.js"></script>
 	<script src="<?php echo $tplPath; ?>js/scripts.js"></script>
@@ -77,11 +80,15 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.full.min.js"></script>
+<?php endif; ?>
 	<jdoc:include type="metas" />
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.css">
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
+<?php endif; ?>
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/slick.css">
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/slick-theme.css">
 	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/tabs.min.css">
