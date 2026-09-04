@@ -158,7 +158,7 @@ class ListModel extends BaseListModel
 		$pathPrefix = $this->getState('category_path_prefix');
 		$branchScope = (string) $this->getState('branch_scope', 'default');
 		$specialistConds = [
-			$db->quoteName('specfv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)',
+			$db->quoteName('specfv.item_id') . ' = ' . $this->userIdAsFieldItemId(),
 			$db->quoteName('specfv.field_id') . ' = ' . $fieldVyberite,
 			$db->quoteName('specfv.value') . ' <> ' . $db->quote(''),
 			$db->quoteName('specfv.value') . ' <> ' . $db->quote('{}'),
@@ -198,7 +198,7 @@ class ListModel extends BaseListModel
 			$cityClean = trim($city);
 			$q->where(
 				'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'cityfv')
-				. ' WHERE ' . $db->quoteName('cityfv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+				. ' WHERE ' . $db->quoteName('cityfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 				. ' AND ' . $db->quoteName('cityfv.field_id') . ' = ' . $fieldCity
 				. ' AND LOWER(TRIM(' . $db->quoteName('cityfv.value') . ')) = LOWER(' . $db->quote($cityClean) . '))'
 			);
@@ -209,7 +209,7 @@ class ListModel extends BaseListModel
 			$areaClean = trim($area);
 			$q->where(
 				'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'areafv')
-				. ' WHERE ' . $db->quoteName('areafv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+				. ' WHERE ' . $db->quoteName('areafv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 				. ' AND ' . $db->quoteName('areafv.field_id') . ' = ' . $fieldArea
 				. ' AND LOWER(TRIM(' . $db->quoteName('areafv.value') . ')) = LOWER(' . $db->quote($areaClean) . '))'
 			);
@@ -251,7 +251,7 @@ class ListModel extends BaseListModel
 			if ($conds !== []) {
 				$q->where(
 					'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'homefv')
-					. ' WHERE ' . $db->quoteName('homefv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+					. ' WHERE ' . $db->quoteName('homefv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 					. ' AND ' . $db->quoteName('homefv.field_id') . ' = ' . $fieldHome
 					. ' AND (' . str_replace('fv.', 'homefv.', implode(' OR ', $conds)) . '))'
 				);
@@ -277,7 +277,7 @@ class ListModel extends BaseListModel
 					
 					if ($fieldWorkDay > 0) {
 						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wdfv')
-							. ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+							. ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 							. ' AND ' . $db->quoteName('wdfv.field_id') . ' = ' . $fieldWorkDay
 							. ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%') . ')';
 						$hasWorkData = true;
@@ -285,7 +285,7 @@ class ListModel extends BaseListModel
 					
 					if ($fieldWorkFrom > 0) {
 						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wffv')
-							. ' WHERE ' . $db->quoteName('wffv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+							. ' WHERE ' . $db->quoteName('wffv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 							. ' AND ' . $db->quoteName('wffv.field_id') . ' = ' . $fieldWorkFrom
 							. ' AND ' . $db->quoteName('wffv.value') . ' <> ' . $db->quote('')
 							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wffv.value') . ', ".", ":"), "%H:%i") <= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
@@ -294,7 +294,7 @@ class ListModel extends BaseListModel
 					
 					if ($fieldWorkTo > 0) {
 						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wtfv')
-							. ' WHERE ' . $db->quoteName('wtfv.item_id') . ' = CAST(' . $db->quoteName('u.id') . ' AS CHAR)'
+							. ' WHERE ' . $db->quoteName('wtfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
 							. ' AND ' . $db->quoteName('wtfv.field_id') . ' = ' . $fieldWorkTo
 							. ' AND ' . $db->quoteName('wtfv.value') . ' <> ' . $db->quote('')
 							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wtfv.value') . ', ".", ":"), "%H:%i") >= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
@@ -310,6 +310,13 @@ class ListModel extends BaseListModel
 			}
 		}
 		
+	}
+
+	private function userIdAsFieldItemId(): string
+	{
+		$db = $this->getDatabase();
+
+		return 'CAST(' . $db->quoteName('u.id') . ' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci';
 	}
 
 	private function getUserFieldIds($db, string $prefix): array

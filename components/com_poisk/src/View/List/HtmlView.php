@@ -131,7 +131,11 @@ class HtmlView extends BaseHtmlView
 				$this->currentTag
 			);
 		}
-		$this->mapFieldsByUser = $this->fieldsByUser;
+		$mapFieldsByUser = $this->fieldsByUser;
+		if (!is_array($mapFieldsByUser)) {
+			$mapFieldsByUser = [];
+		}
+		$this->mapFieldsByUser = $mapFieldsByUser;
 
 		return parent::display($tpl);
 	}
