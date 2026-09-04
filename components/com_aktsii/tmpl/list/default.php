@@ -37,85 +37,28 @@ $currentAvailDate = $input->getString('avail_date', '');
 if ($currentAvailDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?$/', $currentAvailDate)) {
 	$currentAvailDate = '';
 }
-$mapMasters = [];
-
-$normalizeAddressPart = static function (string $value): string {
-	$value = trim(preg_replace('/\s+/u', ' ', $value));
-	return trim($value, " ,");
-};
-
-if (!empty($mapItems)) {
-	$categoryTitleById = [];
-	foreach ((array) $categories as $cid => $cat) {
-		$categoryTitleById[(int) $cid] = trim((string) ($cat['title'] ?? ''));
-	}
-	foreach ($mapItems as $mapItem) {
-		$mapFields = $mapFieldsByUser[$mapItem->id] ?? [];
-		$sity = trim((string) ($mapFields['sity'] ?? ''));
-		$area = trim((string) ($mapFields['area'] ?? ''));
-		$street = trim((string) ($mapFields['street'] ?? ''));
-		$house = trim((string) ($mapFields['house_number'] ?? ''));
-		$specialitiesRaw = (string) ($mapFields['vyberite_spetsialnos'] ?? '');
-		$displayAddressParts = array_values(array_filter(array_map($normalizeAddressPart, [$sity, $area, $street, $house])));
-		$addr = implode(', ', $displayAddressParts);
-		if ($addr === '') {
-			$addr = $currentCity !== '' ? $currentCity : 'Москва';
-		}
-		$geocodeParts = [];
-		if ($sity !== '') {
-			$geocodeParts[] = $normalizeAddressPart($sity);
-		}
-		if ($area !== '') {
-			$geocodeParts[] = $normalizeAddressPart($area);
-		}
-		if ($street !== '') {
-			$geocodeParts[] = $normalizeAddressPart($street);
-		}
-		if ($house !== '') {
-			$geocodeParts[] = $normalizeAddressPart($house);
-		}
-		$geocodeParts = array_values(array_unique(array_filter($geocodeParts)));
-		$geocodeQuery = count($geocodeParts) >= 3
-			? implode(', ', $geocodeParts)
-			: '';
-		$profileLink = '/' . (int) $mapItem->id;
-		$specialityIds = json_decode($specialitiesRaw, true);
-		$specialityTitles = [];
-		if (is_array($specialityIds)) {
-			foreach ($specialityIds as $sid) {
-				$sid = (int) $sid;
-				if ($sid > 0 && !empty($categoryTitleById[$sid])) {
-					$specialityTitles[] = $categoryTitleById[$sid];
-				}
-			}
-		}
-		$specialityTitles = array_values(array_unique(array_filter($specialityTitles)));
-		$servicesText = $specialityTitles ? implode(', ', $specialityTitles) : 'Услуги не указаны';
-		$name = htmlspecialchars((string) ($mapItem->name ?? ''), ENT_QUOTES, 'UTF-8');
-		$addrEsc = htmlspecialchars($addr, ENT_QUOTES, 'UTF-8');
-		$servicesEsc = htmlspecialchars($servicesText, ENT_QUOTES, 'UTF-8');
-		$iconUser = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5"/></svg>';
-		$iconServices = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path fill="currentColor" d="M10 2h4v4h-4zM4 8h16v2H4zm1 4h6v8H5zm8 0h6v8h-6z"/></svg>';
-		$iconMap = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 4.89 7 13 7 13s7-8.11 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9A2.5 2.5 0 0 1 12 11.5"/></svg>';
-		$balloon = '<div class="map-balloon">'
-			. '<a href="' . $profileLink . '">' . $iconUser . $name . '</a><br>'
-			. '<span>' . $iconServices . $servicesEsc . '</span><br>'
-			. '<span>' . $iconMap . $addrEsc . '</span>'
-			. '</div>';
-		$mapMasters[] = [
-			'user_id' => (int) $mapItem->id,
-			'name' => (string) ($mapItem->name ?? ''),
-			'address' => $addr,
-			'geocode_query' => $geocodeQuery,
-			'services' => $servicesText,
-			'balloon' => $balloon,
-		];
-	}
+$vgMapCity = $currentCity !== '' ? $currentCity : 'Москва';
+$vgMapTotal = $pagination ? (int) $pagination->total : 0;
+$vgMapQuery = [
+	'option' => 'com_aktsii',
+	'task' => 'map.pins',
+	'format' => 'raw',
+	'cat_id' => $currentCatId,
+	'service' => $currentService,
+	'tag' => $currentTag,
+	'city' => $currentCity,
+	'area' => $currentArea,
+	'avail_date' => $currentAvailDate,
+];
+foreach ($currentHome as $homeId) {
+	$vgMapQuery['home'][] = (int) $homeId;
 }
+$vgMapPinsUrl = rtrim(Uri::root(true), '/') . '/index.php?' . http_build_query($vgMapQuery);
 $doc = Factory::getDocument();
 $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chosen.min.css');
 ?>
-<div id="map" style="width:100%; height:380px"></div>
+<?php include JPATH_ROOT . '/templates/ryba/html/list-map.php'; ?>
+
 <div class="category jsn_stockList">
 	<style>
 		main > .container { padding: 0; max-width: 1170px; }
@@ -255,92 +198,6 @@ function isTimeMultipleOf15(time) {
 	return minutes % 15 === 0;
 }
 
-window.onAktsiiYmapsReady = function() {
-	var mapCenterCity = <?php echo json_encode($currentCity !== '' ? $currentCity : 'Москва'); ?>;
-	var masters = <?php echo json_encode($mapMasters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-	var mapObj = null;
-	var geocodeCache = {};
-
-	function geocodeAddress(address) {
-		var key = String(address || '').trim();
-		if (!key) {
-			return Promise.resolve(null);
-		}
-		if (geocodeCache[key]) {
-			return geocodeCache[key];
-		}
-		geocodeCache[key] = ymaps.geocode(key, { results: 1 })
-			.then(function (res) {
-				var first = res.geoObjects.get(0);
-				if (!first) {
-					return null;
-				}
-				var meta = first.properties.get('metaDataProperty');
-				var geocoderMeta = meta && meta.GeocoderMetaData ? meta.GeocoderMetaData : null;
-				var precision = geocoderMeta && geocoderMeta.precision ? String(geocoderMeta.precision) : '';
-				if (precision && ['exact', 'number', 'near', 'street'].indexOf(precision) === -1) {
-					return null;
-				}
-				return first.geometry.getCoordinates();
-			})
-			.catch(function () {
-				return null;
-			});
-		return geocodeCache[key];
-	}
-
-	function updateMap() {
-		if (!mapObj) return;
-		mapObj.geoObjects.removeAll();
-		if (!masters.length) {
-			geocodeAddress(mapCenterCity).then(function (coords) {
-				if (coords) {
-					mapObj.setCenter(coords);
-					mapObj.setZoom(11);
-				} else {
-					mapObj.setCenter([55.751244, 37.618423]);
-					mapObj.setZoom(10);
-				}
-			});
-			return;
-		}
-
-		Promise.all(masters.map(function (master) {
-			var addr = (master && master.geocode_query) ? master.geocode_query : '';
-			if (!addr) {
-				return null;
-			}
-			return geocodeAddress(addr).then(function (coords) {
-				if (coords) {
-					var m = new ymaps.Placemark(coords, { balloonContent: (master && master.balloon) ? master.balloon : '' }, {
-						preset: 'islands#darkBlueCircleDotIcon'
-					});
-					mapObj.geoObjects.add(m);
-				}
-				return coords;
-			});
-		})).then(function () {
-			if (mapObj.geoObjects.getLength() > 0) {
-				mapObj.setBounds(mapObj.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 50 });
-			} else {
-				geocodeAddress(mapCenterCity).then(function (coords) {
-					if (coords) {
-						mapObj.setCenter(coords);
-						mapObj.setZoom(11);
-					} else {
-						mapObj.setCenter([55.751244, 37.618423]);
-						mapObj.setZoom(10);
-					}
-				});
-			}
-		});
-	}
-	ymaps.ready(function() {
-		mapObj = new ymaps.Map('map', { center: [61.5240, 105.3188], zoom: 3, controls: [] });
-		updateMap();
-	});
-};
-
 function validateTimeStep(timeStr) {
 	if (!timeStr) return true;
 	var parts = timeStr.split(':');
@@ -377,28 +234,6 @@ function validateAndCorrectTime(input) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-	if (window.ymaps && typeof window.onAktsiiYmapsReady === 'function') {
-		window.onAktsiiYmapsReady();
-		return;
-	}
-
-	var script = document.createElement('script');
-	script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=705d45a1-9138-4d99-afd4-dc261c612036';
-	script.async = true;
-	script.defer = true;
-	script.onload = function () {
-		if (typeof window.onAktsiiYmapsReady === 'function') {
-			window.onAktsiiYmapsReady();
-		}
-	};
-	script.onerror = function () {
-		var mapEl = document.getElementById('map');
-		if (mapEl) {
-			mapEl.style.display = 'none';
-		}
-	};
-	document.head.appendChild(script);
-
 	var filterForm = document.querySelector('.filter');
 	if (filterForm) {
 		filterForm.addEventListener('submit', function(e) {

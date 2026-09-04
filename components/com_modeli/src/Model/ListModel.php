@@ -9,6 +9,8 @@ use Joomla\CMS\MVC\Model\ListModel as BaseListModel;
 
 class ListModel extends BaseListModel
 {
+	private const MAP_ITEMS_LIMIT = 800;
+
 	private array $totalCache = [];
 	private array $itemsCache = [];
 	private array $mapItemsCache = [];
@@ -94,7 +96,7 @@ class ListModel extends BaseListModel
 
 		try {
 			$query = $this->buildListQuery();
-			$query->setLimit(5000, 0);
+			$query->setLimit(self::MAP_ITEMS_LIMIT, 0);
 			$this->getDatabase()->setQuery($query);
 			$this->mapItemsCache[$store] = $this->getDatabase()->loadObjectList() ?: [];
 		} catch (\Throwable $e) {

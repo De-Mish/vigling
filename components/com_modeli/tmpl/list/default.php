@@ -33,53 +33,22 @@ $currentAvailDate = $input->getString('avail_date', '');
 if ($currentAvailDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?$/', $currentAvailDate)) {
 	$currentAvailDate = '';
 }
-$mapMasters = [];
-
-$normalizeAddressPart = static function (string $value): string {
-	$value = trim((string) preg_replace('/\s+/u', ' ', $value));
-
-	return trim($value, " ,");
-};
-
-if (!empty($mapItems)) {
-	foreach ($mapItems as $mapItem) {
-		$mapFields = $mapFieldsByUser[(int) ($mapItem->master_id ?? 0)] ?? [];
-		$sity = trim((string) ($mapFields['sity'] ?? ''));
-		$area = trim((string) ($mapFields['area'] ?? ''));
-		$street = trim((string) ($mapFields['street'] ?? ''));
-		$house = trim((string) ($mapFields['house_number'] ?? ''));
-		$displayAddressParts = array_values(array_filter(array_map($normalizeAddressPart, [$sity, $area, $street, $house])));
-		$addr = implode(', ', $displayAddressParts);
-		if ($addr === '') {
-			$addr = $currentCity !== '' ? $currentCity : 'Москва';
-		}
-
-		$geocodeParts = array_values(array_unique(array_filter([
-			$normalizeAddressPart($sity),
-			$normalizeAddressPart($area),
-			$normalizeAddressPart($street),
-			$normalizeAddressPart($house),
-		])));
-		$geocodeQuery = $geocodeParts !== [] ? implode(', ', $geocodeParts) : '';
-		$profileLink = '/' . (int) ($mapItem->master_id ?? 0);
-		$searchTitle = htmlspecialchars((string) ($mapItem->title ?? $mapItem->description ?? 'Поиск моделей'), ENT_QUOTES, 'UTF-8');
-		$masterName = htmlspecialchars((string) ($mapItem->master_name ?? ''), ENT_QUOTES, 'UTF-8');
-		$addrEsc = htmlspecialchars($addr, ENT_QUOTES, 'UTF-8');
-		$balloon = '<div class="map-balloon">'
-			. '<a href="' . $profileLink . '">' . $searchTitle . '</a><br>'
-			. '<span>Мастер: ' . $masterName . '</span><br>'
-			. '<span>' . $addrEsc . '</span>'
-			. '</div>';
-		$mapMasters[] = [
-			'search_id' => (int) ($mapItem->search_id ?? 0),
-			'user_id' => (int) ($mapItem->master_id ?? 0),
-			'name' => (string) ($mapItem->title ?? $mapItem->description ?? 'Поиск моделей'),
-			'address' => $addr,
-			'geocode_query' => $geocodeQuery,
-			'balloon' => $balloon,
-		];
-	}
+$vgMapCity = $currentCity !== '' ? $currentCity : 'Москва';
+$vgMapTotal = $pagination ? (int) $pagination->total : 0;
+$vgMapQuery = [
+	'option' => 'com_modeli',
+	'task' => 'map.pins',
+	'format' => 'raw',
+	'cat_id' => $currentCatId,
+	'city' => $currentCity,
+	'area' => $currentArea,
+	'booking_mode' => $currentBookingMode,
+	'avail_date' => $currentAvailDate,
+];
+foreach ($currentHome as $homeId) {
+	$vgMapQuery['home'][] = (int) $homeId;
 }
+$vgMapPinsUrl = rtrim(Uri::root(true), '/') . '/index.php?' . http_build_query($vgMapQuery);
 
 $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root(true) . '/templates/ryba/css/chosen.min.css');
@@ -207,7 +176,7 @@ $doc->addStyleDeclaration('
 	}
 ');
 ?>
-<div id="map" style="width:100%; height:380px"></div>
+<?php include JPATH_ROOT . '/templates/ryba/html/list-map.php'; ?>
 <div class="category jsn_stockList search-catalog">
 	<style>
 		main > .container { padding: 0; max-width: 1170px; }
@@ -427,86 +396,6 @@ function isTimeMultipleOf15(time) {
 	return minutes % 15 === 0;
 }
 
-window.onModeliYmapsReady = function() {
-	var mapCenterCity = <?php echo json_encode($currentCity !== '' ? $currentCity : 'Москва'); ?>;
-	var masters = <?php echo json_encode($mapMasters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-	var mapObj = null;
-	var geocodeCache = {};
-
-	function geocodeAddress(address) {
-		var key = String(address || '').trim();
-		if (!key) return Promise.resolve(null);
-		if (geocodeCache[key]) return geocodeCache[key];
-		geocodeCache[key] = ymaps.geocode(key, { results: 1 }).then(function(res) {
-			var first = res.geoObjects.get(0);
-			if (!first) return null;
-			var meta = first.properties.get('metaDataProperty');
-			var geocoderMeta = meta && meta.GeocoderMetaData ? meta.GeocoderMetaData : null;
-			var precision = geocoderMeta && geocoderMeta.precision ? String(geocoderMeta.precision) : '';
-			if (precision && ['exact', 'number', 'near', 'street'].indexOf(precision) === -1) return null;
-			return first.geometry.getCoordinates();
-		}).catch(function() { return null; });
-		return geocodeCache[key];
-	}
-
-	function updateMap() {
-		if (!mapObj) return;
-		mapObj.geoObjects.removeAll();
-		if (!masters.length) {
-			geocodeAddress(mapCenterCity).then(function(coords) {
-				if (coords) {
-					mapObj.setCenter(coords);
-					mapObj.setZoom(11);
-				} else {
-					mapObj.setCenter([55.751244, 37.618423]);
-					mapObj.setZoom(10);
-				}
-			});
-			return;
-		}
-
-		Promise.all(masters.map(function(master) {
-			var query = master.geocode_query || master.address || '';
-			if (!query) {
-				return null;
-			}
-			return geocodeAddress(query).then(function(coords) {
-				if (coords) {
-					var marker = new ymaps.Placemark(coords, {
-						balloonContent: master.balloon
-					}, {
-						preset: 'islands#darkBlueCircleDotIcon'
-					});
-					mapObj.geoObjects.add(marker);
-				}
-				return coords;
-			});
-		})).then(function() {
-			if (mapObj.geoObjects.getLength() > 0) {
-				mapObj.setBounds(mapObj.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 50 });
-			} else {
-				geocodeAddress(mapCenterCity).then(function(coords) {
-					if (coords) {
-						mapObj.setCenter(coords);
-						mapObj.setZoom(11);
-					} else {
-						mapObj.setCenter([55.751244, 37.618423]);
-						mapObj.setZoom(10);
-					}
-				});
-			}
-		});
-	}
-	ymaps.ready(function() {
-		mapObj = new ymaps.Map('map', {
-			center: [61.5240, 105.3188],
-			zoom: 3,
-			controls: []
-		});
-		updateMap();
-	});
-};
-
 function validateTimeStep(timeStr) {
 	if (!timeStr) return true;
 	var parts = timeStr.split(':');
@@ -631,39 +520,14 @@ function validateAndCorrectTime(input) {
 		}
 	}
 
-	function loadYmaps() {
-		if (window.ymaps) {
-			window.onModeliYmapsReady();
-			return;
-		}
-		var script = document.createElement('script');
-		script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=705d45a1-9138-4d99-afd4-dc261c612036';
-		script.async = true;
-		script.defer = true;
-		script.onload = function() {
-			if (typeof window.onModeliYmapsReady === 'function') {
-				window.onModeliYmapsReady();
-			}
-		};
-		script.onerror = function() {
-			var mapEl = document.getElementById('map');
-			if (mapEl) {
-				mapEl.style.display = 'none';
-			}
-		};
-		document.head.appendChild(script);
-	}
-
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function() {
 			localizeSearchTimes();
 			initChosen();
-			loadYmaps();
 		});
 	} else {
 		localizeSearchTimes();
 		initChosen();
-		loadYmaps();
 	}
 })();
 
