@@ -32,8 +32,14 @@ class ListMapHelper
 			return '';
 		}
 
-		$fields = PoiskHelper::getFieldsForUserIds([$userId], ['sity']);
-		$city = trim((string) ($fields[$userId]['sity'] ?? $fields[(string) $userId]['sity'] ?? ''));
+		$fields = PoiskHelper::getFieldsForUserIds([$userId], ['sity', 'city']);
+		$city = trim((string) (
+			$fields[$userId]['sity']
+			?? $fields[(string) $userId]['sity']
+			?? $fields[$userId]['city']
+			?? $fields[(string) $userId]['city']
+			?? ''
+		));
 		if ($city !== '') {
 			return $city;
 		}
@@ -44,7 +50,10 @@ class ListMapHelper
 				->select($db->quoteName('profile_value'))
 				->from($db->quoteName('#__user_profiles'))
 				->where($db->quoteName('user_id') . ' = ' . $userId)
-				->where($db->quoteName('profile_key') . ' = ' . $db->quote('profile.city'));
+				->where($db->quoteName('profile_key') . ' IN ('
+					. $db->quote('profile.city') . ', '
+					. $db->quote('profile.sity')
+					. ')');
 			$db->setQuery($query);
 			$value = trim((string) $db->loadResult());
 		} catch (\Throwable $e) {
@@ -69,6 +78,7 @@ class ListMapHelper
 
 		$profileCity = self::viewerCity();
 		if ($profileCity === '') {
+			// Clients/guests without a city keep a general map: all pins, not a forced Moscow filter.
 			return;
 		}
 
