@@ -3,6 +3,9 @@
 
 	var API_KEY = '705d45a1-9138-4d99-afd4-dc261c612036';
 	var API_SRC = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=' + API_KEY;
+	var CITY_ZOOM = 10;
+	var MAX_FIT_ZOOM = 11;
+	var STREET_ZOOM = 13;
 	var CITY_LL = {
 		'москва': [37.6173, 55.7558],
 		'санкт-петербург': [30.3159, 59.9391],
@@ -45,7 +48,6 @@
 		'курск': [36.192, 51.7304],
 		'сочи': [39.7231, 43.6028]
 	};
-	var STREET_ZOOM = 12;
 	var ymapsLoading = null;
 	var geocodeCache = {};
 
@@ -61,6 +63,66 @@
 	function cityLatLon(name) {
 		var ll = cityLonLat(name);
 		return [ll[1], ll[0]];
+	}
+
+	function hashString(value) {
+		var hash = 0;
+		var text = String(value || '');
+		for (var i = 0; i < text.length; i++) {
+			hash = ((hash << 5) - hash) + text.charCodeAt(i);
+			hash |= 0;
+		}
+		return Math.abs(hash);
+	}
+
+	function groupKey(pin) {
+		var city = String(pin.city || '').trim();
+		var area = String(pin.area || '').trim();
+		if (city && area) {
+			return city + ', ' + area;
+		}
+		return city || 'Москва';
+	}
+
+	function streetQuery(pin) {
+		return String(pin.query || '').trim();
+	}
+
+	function offsetAroundCity(cityName, key) {
+		var center = cityLatLon(cityName);
+		var hash = hashString(key);
+		var angle = (hash % 360) * Math.PI / 180;
+		var distance = 0.018 + ((hash >> 8) % 10) * 0.004;
+		return [
+			center[0] + Math.sin(angle) * distance,
+			center[1] + Math.cos(angle) * distance * 1.55
+		];
+	}
+
+	function coordsForGroup(key) {
+		var cityName = String(key.split(',')[0] || '').trim();
+		if (CITY_LL[cityKey(cityName)]) {
+			if (key.indexOf(',') === -1) {
+				return cityLatLon(cityName);
+			}
+			return offsetAroundCity(cityName, key);
+		}
+		return offsetAroundCity('Москва', key);
+	}
+
+	function pinBalloon(pin) {
+		if (pin.balloon) {
+			return pin.balloon;
+		}
+		var href = pin.href || '#';
+		var name = pin.name || '';
+		var line = pin.line || '';
+		var addr = pin.addr || '';
+		return '<div class="map-balloon">'
+			+ '<a href="' + href + '">' + name + '</a>'
+			+ (line ? '<br><span>' + line + '</span>' : '')
+			+ (addr ? '<br><span>' + addr + '</span>' : '')
+			+ '</div>';
 	}
 
 	function loadYmaps() {
@@ -113,19 +175,6 @@
 		return geocodeCache[key];
 	}
 
-	function groupKey(pin) {
-		var city = String(pin.city || '').trim();
-		var area = String(pin.area || '').trim();
-		if (city && area) {
-			return city + ', ' + area;
-		}
-		return city || 'Москва';
-	}
-
-	function streetQuery(pin) {
-		return String(pin.query || '').trim();
-	}
-
 	function runPool(items, worker, limit) {
 		var index = 0;
 		var running = 0;
@@ -150,9 +199,26 @@
 		});
 	}
 
-	function createClusterer(ymaps) {
+	function createLayouts(ymaps) {
+		return {
+			cluster: ymaps.templateLayoutFactory.createClass(
+				'<div class="vg-list-map__cluster-icon">{{ properties.geoObjects.length }}</div>'
+			),
+			dot: ymaps.templateLayoutFactory.createClass(
+				'<div class="vg-list-map__dot"></div>'
+			)
+		};
+	}
+
+	function createClusterer(ymaps, layouts) {
 		return new ymaps.Clusterer({
-			preset: 'islands#invertedNightClusterIcons',
+			clusterIconLayout: layouts.cluster,
+			clusterIconShape: {
+				type: 'Circle',
+				coordinates: [0, 0],
+				radius: 20
+			},
+			clusterIconOffset: [-20, -20],
 			groupByCoordinates: false,
 			clusterDisableClickZoom: false,
 			clusterHideIconOnBalloonOpen: false,
@@ -165,28 +231,6 @@
 			clusterBalloonItemContentLayout: 'cluster#balloonAccordionItemContent',
 			clusterBalloonPanelMaxMapArea: 0
 		});
-	}
-
-	function initPreview(root) {
-		var city = root.getAttribute('data-city') || 'Москва';
-		var img = root.querySelector('.vg-list-map__static');
-		if (!img) {
-			return;
-		}
-		var ll = cityLonLat(city);
-		var triedKey = false;
-		img.alt = '';
-		img.addEventListener('error', function () {
-			if (!triedKey) {
-				triedKey = true;
-				img.src = 'https://static-maps.yandex.ru/v1?lang=ru_RU&ll=' + ll[0] + ',' + ll[1]
-					+ '&z=10&size=650,240&apikey=' + encodeURIComponent(API_KEY);
-				return;
-			}
-			root.classList.add('is-static-fallback');
-		});
-		img.src = 'https://static-maps.yandex.ru/1.x/?l=map&ll=' + ll[0] + ',' + ll[1]
-			+ '&z=10&size=650,240&lang=ru_RU';
 	}
 
 	function setBusy(root, busy, label) {
@@ -211,6 +255,33 @@
 		}
 	}
 
+	function fitCityView(mapObj, clusterer, city, cityLocked) {
+		if (cityLocked && city) {
+			mapObj.setCenter(cityLatLon(city), CITY_ZOOM);
+			return Promise.resolve();
+		}
+		var bounds = clusterer.getBounds();
+		if (!bounds) {
+			mapObj.setCenter(cityLatLon(city || 'Москва'), CITY_ZOOM);
+			return Promise.resolve();
+		}
+		var south = bounds[0][0];
+		var north = bounds[1][0];
+		var west = bounds[0][1];
+		var east = bounds[1][1];
+		var span = Math.max(Math.abs(north - south), Math.abs(east - west));
+		if (span < 0.02) {
+			mapObj.setCenter(cityLatLon(city || 'Москва'), CITY_ZOOM);
+			return Promise.resolve();
+		}
+		var ready = mapObj.setBounds(bounds, { checkZoomRange: true, zoomMargin: 56 }) || Promise.resolve();
+		return Promise.resolve(ready).then(function () {
+			if (mapObj.getZoom() > MAX_FIT_ZOOM) {
+				mapObj.setZoom(MAX_FIT_ZOOM);
+			}
+		});
+	}
+
 	function openMap(root) {
 		if (root.getAttribute('data-open') === '1') {
 			return;
@@ -219,17 +290,20 @@
 		setBusy(root, true, 'Загрузка…');
 
 		var city = root.getAttribute('data-city') || 'Москва';
+		var cityLocked = root.getAttribute('data-city-filter') === '1';
 		var pinsUrl = root.getAttribute('data-pins-url') || '';
 		var canvas = root.querySelector('.vg-list-map__canvas');
 
 		loadYmaps().then(function (ymaps) {
 			hidePreview(root);
+			var layouts = createLayouts(ymaps);
 			var mapObj = new ymaps.Map(canvas, {
 				center: cityLatLon(city),
-				zoom: 10,
+				zoom: CITY_ZOOM,
 				controls: ['zoomControl']
 			});
-			var clusterer = createClusterer(ymaps);
+			var clusterer = createClusterer(ymaps, layouts);
+			root._vgLayouts = layouts;
 			mapObj.geoObjects.add(clusterer);
 			root._vgMap = mapObj;
 			root._vgClusterer = clusterer;
@@ -244,7 +318,7 @@
 				})
 				.then(function (payload) {
 					var pins = (payload && payload.pins) ? payload.pins : [];
-					return placePins(ymaps, mapObj, clusterer, pins, city);
+					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked, layouts);
 				});
 		}).then(function () {
 			setBusy(root, false, 'Показать на карте');
@@ -260,13 +334,10 @@
 		});
 	}
 
-	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity) {
+	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts) {
 		if (!pins.length) {
-			return geocodeAddress(ymaps, fallbackCity).then(function (coords) {
-				if (coords) {
-					mapObj.setCenter(coords, 11);
-				}
-			});
+			mapObj.setCenter(cityLatLon(fallbackCity), CITY_ZOOM);
+			return Promise.resolve();
 		}
 
 		var groups = {};
@@ -279,51 +350,44 @@
 		});
 
 		var placemarks = [];
-		var groupNames = Object.keys(groups);
-
-		return runPool(groupNames, function (key) {
-			return geocodeAddress(ymaps, key).then(function (coords) {
-				if (!coords) {
-					coords = cityLatLon(key.split(',')[0]);
-				}
-				groups[key].forEach(function (pin) {
-					var mark = new ymaps.Placemark(coords, {
-						balloonContent: pin.balloon || pin.name || '',
-						hintContent: pin.name || '',
-						clusterCaption: pin.name || ''
-					}, {
-						preset: 'islands#nightCircleDotIcon',
-						hasBalloon: true
-					});
-					mark._vgPin = pin;
-					mark._vgStreetReady = false;
-					placemarks.push(mark);
+		Object.keys(groups).forEach(function (key) {
+			var coords = coordsForGroup(key);
+			groups[key].forEach(function (pin) {
+				var mark = new ymaps.Placemark(coords, {
+					balloonContent: pinBalloon(pin),
+					hintContent: pin.name || '',
+					clusterCaption: pin.name || ''
+				}, {
+					iconLayout: layouts.dot,
+					iconShape: {
+						type: 'Circle',
+						coordinates: [0, 0],
+						radius: 8
+					},
+					iconOffset: [-8, -8],
+					hasBalloon: true
 				});
-			});
-		}, 4).then(function () {
-			clusterer.add(placemarks);
-
-			var refining = false;
-			function maybeRefine() {
-				if (mapObj.getZoom() < STREET_ZOOM || refining) {
-					return;
-				}
-				refining = true;
-				refineStreets(ymaps, mapObj, clusterer, placemarks).then(function () {
-					refining = false;
-				});
-			}
-
-			mapObj.events.add('boundschange', maybeRefine);
-
-			var boundsReady = Promise.resolve();
-			if (clusterer.getBounds()) {
-				boundsReady = mapObj.setBounds(clusterer.getBounds(), { checkZoomRange: true, zoomMargin: 48 }) || Promise.resolve();
-			}
-			return Promise.resolve(boundsReady).then(function () {
-				maybeRefine();
+				mark._vgPin = pin;
+				mark._vgStreetReady = false;
+				placemarks.push(mark);
 			});
 		});
+
+		clusterer.add(placemarks);
+
+		var refining = false;
+		function maybeRefine() {
+			if (mapObj.getZoom() < STREET_ZOOM || refining) {
+				return;
+			}
+			refining = true;
+			refineStreets(ymaps, mapObj, clusterer, placemarks).then(function () {
+				refining = false;
+			});
+		}
+
+		mapObj.events.add('boundschange', maybeRefine);
+		return fitCityView(mapObj, clusterer, fallbackCity, cityLocked);
 	}
 
 	function refineStreets(ymaps, mapObj, clusterer, placemarks) {
@@ -365,7 +429,7 @@
 			return;
 		}
 		root.setAttribute('data-ready', '1');
-		initPreview(root);
+		root.classList.add('is-static-fallback');
 		var btn = root.querySelector('.vg-list-map__btn');
 		if (btn) {
 			btn.addEventListener('click', function (event) {
@@ -379,6 +443,13 @@
 		var nodes = document.querySelectorAll('.vg-list-map');
 		for (var i = 0; i < nodes.length; i++) {
 			initRoot(nodes[i]);
+		}
+		if (nodes.length && 'requestIdleCallback' in window) {
+			window.requestIdleCallback(function () {
+				loadYmaps();
+			}, { timeout: 2500 });
+		} else if (nodes.length) {
+			window.setTimeout(loadYmaps, 1200);
 		}
 	}
 

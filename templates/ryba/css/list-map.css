@@ -31,24 +31,15 @@
 }
 
 .vg-list-map__static {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(0.55) contrast(0.92) brightness(1.04);
-  pointer-events: none;
-}
-
-.vg-list-map.is-static-fallback .vg-list-map__static {
   display: none;
 }
 
 .vg-list-map.is-static-fallback .vg-list-map__preview {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
-    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(120, 140, 160, 0.12) 28px),
-    repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(120, 140, 160, 0.12) 28px),
-    #cfd8e1;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
+    repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(90, 120, 150, 0.1) 32px),
+    repeating-linear-gradient(90deg, transparent, transparent 31px, rgba(90, 120, 150, 0.1) 32px),
+    #c5d3de;
 }
 
 .vg-list-map__overlay {
@@ -86,6 +77,27 @@
 .vg-list-map__btn:disabled {
   opacity: 0.85;
   cursor: wait;
+}
+
+.vg-list-map__cluster-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f9ce54;
+  border: 2px solid #111;
+  color: #111;
+  font: 700 13px/36px Arial, sans-serif;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.vg-list-map__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f9ce54;
+  border: 2px solid #111;
+  box-sizing: border-box;
 }
 
 .vg-list-map .map-balloon a {

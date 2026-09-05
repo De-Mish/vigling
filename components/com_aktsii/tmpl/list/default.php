@@ -38,6 +38,7 @@ if ($currentAvailDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{
 	$currentAvailDate = '';
 }
 $vgMapCity = $currentCity !== '' ? $currentCity : 'Москва';
+$vgMapCityLocked = $currentCity !== '';
 $vgMapTotal = $pagination ? (int) $pagination->total : 0;
 $vgMapQuery = [
 	'option' => 'com_aktsii',

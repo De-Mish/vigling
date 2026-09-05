@@ -22,13 +22,8 @@ class MapController extends BaseController
 				return (int) ($item->id ?? 0);
 			}, $items)));
 			$fieldsByUser = $userIds !== []
-				? AktsiiHelper::getFieldsForUserIds($userIds, ['sity', 'area', 'street', 'house_number', 'vyberite_spetsialnos'])
+				? AktsiiHelper::getFieldsForUserIds($userIds, ['sity', 'area', 'street', 'house_number'])
 				: [];
-			$categories = AktsiiHelper::getCategories();
-			$categoryTitleById = [];
-			foreach ($categories as $cid => $cat) {
-				$categoryTitleById[(int) $cid] = trim((string) ($cat['title'] ?? ''));
-			}
 
 			$pins = [];
 			foreach ($items as $item) {
@@ -37,22 +32,11 @@ class MapController extends BaseController
 					continue;
 				}
 				$fields = $fieldsByUser[$userId] ?? $fieldsByUser[(string) $userId] ?? [];
-				$specialityIds = json_decode((string) ($fields['vyberite_spetsialnos'] ?? ''), true);
-				$titles = [];
-				if (is_array($specialityIds)) {
-					foreach ($specialityIds as $sid) {
-						$sid = (int) $sid;
-						if ($sid > 0 && !empty($categoryTitleById[$sid])) {
-							$titles[] = $categoryTitleById[$sid];
-						}
-					}
-				}
 				$pins[] = ListMapHelper::pinFromFields(
 					$userId,
 					(string) ($item->name ?? ''),
 					$fields,
-					'/' . $userId,
-					$titles !== [] ? implode(', ', array_unique($titles)) : ''
+					'/' . $userId
 				);
 			}
 
