@@ -111,7 +111,14 @@
 	}
 
 	function pinHref(pin) {
-		return String((pin && pin.href) || '').trim();
+		var href = String((pin && pin.href) || '').trim();
+		if (!href || href === '#') {
+			return '';
+		}
+		if (href.charAt(0) === '/' || /^https?:/i.test(href)) {
+			return href;
+		}
+		return '/' + href;
 	}
 
 	function openPinProfile(pin) {
@@ -212,13 +219,17 @@
 		});
 	}
 
+	function yellowDotHref() {
+		var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
+			+ '<circle cx="9" cy="9" r="7" fill="#f9ce54" stroke="#111" stroke-width="2"/>'
+			+ '</svg>';
+		return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+	}
+
 	function createLayouts(ymaps) {
 		return {
 			cluster: ymaps.templateLayoutFactory.createClass(
 				'<div class="vg-list-map__cluster-icon">{{ properties.geoObjects.length }}</div>'
-			),
-			dot: ymaps.templateLayoutFactory.createClass(
-				'<div class="vg-list-map__dot"></div>'
 			)
 		};
 	}
@@ -372,13 +383,15 @@
 					hintContent: pin.name || '',
 					clusterCaption: pin.name || ''
 				}, {
-					iconLayout: layouts.dot,
+					iconLayout: 'default#image',
+					iconImageHref: yellowDotHref(),
+					iconImageSize: [18, 18],
+					iconImageOffset: [-9, -9],
 					iconShape: {
 						type: 'Circle',
 						coordinates: [0, 0],
-						radius: 12
+						radius: 14
 					},
-					iconOffset: [-9, -9],
 					hasBalloon: false,
 					hasHint: true,
 					cursor: 'pointer'
@@ -386,7 +399,9 @@
 				mark._vgPin = pin;
 				mark._vgStreetReady = false;
 				mark.events.add('click', function (event) {
-					event.preventDefault();
+					if (typeof event.preventDefault === 'function') {
+						event.preventDefault();
+					}
 					openPinProfile(pin);
 				});
 				placemarks.push(mark);
