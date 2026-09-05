@@ -333,19 +333,19 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	function maybeRestoreSearchState() {
-		if (catId > 0 && service > 0 && tag > 0) {
+		if (window.location.search && window.location.search !== '?') {
 			return;
 		}
 		var storedUrl = '';
 		try {
-			storedUrl = sessionStorage.getItem(STORAGE_URL) || '';
+			storedUrl = sessionStorage.getItem('vigling_catalog_return_url') || sessionStorage.getItem(STORAGE_URL) || '';
 		} catch (e) {
 			return;
 		}
 		if (!storedUrl || storedUrl === currentUrl) {
 			return;
 		}
-		if (!/[?&]cat_id=\d+/.test(storedUrl) || !/[?&]service=\d+/.test(storedUrl) || !/[?&]tag=\d+/.test(storedUrl)) {
+		if (storedUrl.indexOf('?') === -1) {
 			return;
 		}
 		var navType = navigationType();

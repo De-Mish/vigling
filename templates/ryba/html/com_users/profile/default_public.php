@@ -979,6 +979,44 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 ?>
 
 <div<?php echo $isLkEmbed ? '' : ' id="easyprofile"'; ?> class="view_profile view_profile-public<?php echo $isLkEmbed ? ' view_profile-public--embed' : ''; ?>">
+	<?php if (empty($isLkEmbed)) : ?>
+	<p class="vg-profile-back-wrap">
+		<a class="vg-profile-back" href="#" data-vg-catalog-back="1">Назад</a>
+	</p>
+	<style>
+		.vg-profile-back-wrap { margin: 0 0 12px; }
+		.vg-profile-back { color: #111; font-size: 14px; text-decoration: none; }
+		.vg-profile-back:hover { text-decoration: underline; }
+	</style>
+	<script>
+	(function () {
+		var link = document.querySelector('[data-vg-catalog-back="1"]');
+		if (!link) return;
+		link.addEventListener('click', function (event) {
+			event.preventDefault();
+			var stored = '';
+			try { stored = sessionStorage.getItem('vigling_catalog_return_url') || sessionStorage.getItem('vigling_poisk_search_url') || ''; } catch (e) {}
+			var ref = document.referrer || '';
+			var sameHost = false;
+			try { sameHost = ref && new URL(ref, window.location.origin).origin === window.location.origin; } catch (e) {}
+			var fromCatalog = sameHost && !/\/\d+\/?(\?|$)/.test((function () { try { return new URL(ref).pathname; } catch (e) { return ''; } })());
+			if (fromCatalog && window.history.length > 1) {
+				window.history.back();
+				return;
+			}
+			if (stored) {
+				window.location.assign(stored);
+				return;
+			}
+			if (window.history.length > 1) {
+				window.history.back();
+				return;
+			}
+			window.location.assign('/');
+		});
+	})();
+	</script>
+	<?php endif; ?>
 	<div class="masters__big-img-cont col-md-6">
 		<div class="arrows_master-slider">
 			<button type="button" class="my-slick-prev slick-arrow"><i class="fa fa-angle-left" aria-hidden="true"></i></button>

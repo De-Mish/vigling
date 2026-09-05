@@ -12,6 +12,67 @@
   height: 420px;
 }
 
+.vg-list-map.is-open.has-card {
+  overflow: visible;
+}
+
+.vg-list-map__card {
+  position: absolute;
+  z-index: 6;
+  min-width: 176px;
+  max-width: 240px;
+  padding: 12px 32px 12px 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  transform: translate(-50%, calc(-100% - 14px));
+  pointer-events: auto;
+}
+
+.vg-list-map__card.is-below {
+  transform: translate(-50%, 14px);
+}
+
+.vg-list-map__card-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font-size: 22px;
+  line-height: 26px;
+  cursor: pointer;
+}
+
+.vg-list-map__card-name {
+  display: block;
+  color: #111;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.vg-list-map__card-name:hover {
+  text-decoration: underline;
+}
+
+span.vg-list-map__card-name {
+  cursor: default;
+}
+
+.vg-list-map__card-addr {
+  margin-top: 4px;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .vg-list-map__canvas {
   position: absolute;
   inset: 0;
@@ -119,5 +180,10 @@
 
   .vg-list-map.is-open {
     height: 320px;
+  }
+
+  .vg-list-map__card {
+    min-width: 160px;
+    max-width: 200px;
   }
 }
