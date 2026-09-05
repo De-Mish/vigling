@@ -3,7 +3,6 @@
 
 	var API_KEY = '705d45a1-9138-4d99-afd4-dc261c612036';
 	var API_SRC = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=' + API_KEY;
-	var MARKER_COLOR = '#f9ce54';
 	var CITY_ZOOM = 10;
 	var MAX_FIT_ZOOM = 11;
 	var STREET_ZOOM = 13;
@@ -126,13 +125,6 @@
 			+ '</div>';
 	}
 
-	function clusterIconHref(size) {
-		var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 48 48">'
-			+ '<circle cx="24" cy="24" r="22" fill="' + MARKER_COLOR + '" stroke="#111" stroke-width="2"/>'
-			+ '</svg>';
-		return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
-	}
-
 	function loadYmaps() {
 		if (window.ymaps) {
 			return Promise.resolve(window.ymaps);
@@ -207,18 +199,26 @@
 		});
 	}
 
-	function createClusterer(ymaps) {
-		var iconContent = ymaps.templateLayoutFactory.createClass(
-			'<div class="vg-list-map__cluster">{{ properties.geoObjects.length }}</div>'
-		);
+	function createLayouts(ymaps) {
+		return {
+			cluster: ymaps.templateLayoutFactory.createClass(
+				'<div class="vg-list-map__cluster-icon">{{ properties.geoObjects.length }}</div>'
+			),
+			dot: ymaps.templateLayoutFactory.createClass(
+				'<div class="vg-list-map__dot"></div>'
+			)
+		};
+	}
+
+	function createClusterer(ymaps, layouts) {
 		return new ymaps.Clusterer({
-			clusterIcons: [
-				{ href: clusterIconHref(40), size: [40, 40], offset: [-20, -20] },
-				{ href: clusterIconHref(48), size: [48, 48], offset: [-24, -24] },
-				{ href: clusterIconHref(56), size: [56, 56], offset: [-28, -28] }
-			],
-			clusterNumbers: [10, 50],
-			clusterIconContentLayout: iconContent,
+			clusterIconLayout: layouts.cluster,
+			clusterIconShape: {
+				type: 'Circle',
+				coordinates: [0, 0],
+				radius: 20
+			},
+			clusterIconOffset: [-20, -20],
 			groupByCoordinates: false,
 			clusterDisableClickZoom: false,
 			clusterHideIconOnBalloonOpen: false,
@@ -296,12 +296,14 @@
 
 		loadYmaps().then(function (ymaps) {
 			hidePreview(root);
+			var layouts = createLayouts(ymaps);
 			var mapObj = new ymaps.Map(canvas, {
 				center: cityLatLon(city),
 				zoom: CITY_ZOOM,
 				controls: ['zoomControl']
 			});
-			var clusterer = createClusterer(ymaps);
+			var clusterer = createClusterer(ymaps, layouts);
+			root._vgLayouts = layouts;
 			mapObj.geoObjects.add(clusterer);
 			root._vgMap = mapObj;
 			root._vgClusterer = clusterer;
@@ -316,7 +318,7 @@
 				})
 				.then(function (payload) {
 					var pins = (payload && payload.pins) ? payload.pins : [];
-					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked);
+					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked, layouts);
 				});
 		}).then(function () {
 			setBusy(root, false, 'Показать на карте');
@@ -332,7 +334,7 @@
 		});
 	}
 
-	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked) {
+	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts) {
 		if (!pins.length) {
 			mapObj.setCenter(cityLatLon(fallbackCity), CITY_ZOOM);
 			return Promise.resolve();
@@ -356,8 +358,13 @@
 					hintContent: pin.name || '',
 					clusterCaption: pin.name || ''
 				}, {
-					preset: 'islands#circleDotIcon',
-					iconColor: MARKER_COLOR,
+					iconLayout: layouts.dot,
+					iconShape: {
+						type: 'Circle',
+						coordinates: [0, 0],
+						radius: 8
+					},
+					iconOffset: [-8, -8],
 					hasBalloon: true
 				});
 				mark._vgPin = pin;
