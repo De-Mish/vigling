@@ -57,12 +57,33 @@
 
 	function cityLonLat(name) {
 		var hit = CITY_LL[cityKey(name)];
-		return hit ? hit.slice() : CITY_LL['москва'].slice();
+		return hit ? hit.slice() : null;
 	}
 
 	function cityLatLon(name) {
-		var ll = cityLonLat(name);
+		var ll = cityLonLat(name) || CITY_LL['москва'].slice();
 		return [ll[1], ll[0]];
+	}
+
+	function rememberCityLatLon(name, latLon) {
+		if (!name || !latLon || latLon.length < 2) {
+			return;
+		}
+		CITY_LL[cityKey(name)] = [latLon[1], latLon[0]];
+	}
+
+	function resolveCityLatLon(ymaps, name) {
+		var cityName = String(name || '').trim() || 'Москва';
+		if (CITY_LL[cityKey(cityName)]) {
+			return Promise.resolve(cityLatLon(cityName));
+		}
+		return geocodeAddress(ymaps, cityName).then(function (coords) {
+			if (coords) {
+				rememberCityLatLon(cityName, coords);
+				return coords;
+			}
+			return cityLatLon('Москва');
+		});
 	}
 
 	function hashString(value) {
@@ -101,13 +122,16 @@
 
 	function coordsForGroup(key) {
 		var cityName = String(key.split(',')[0] || '').trim();
-		if (CITY_LL[cityKey(cityName)]) {
-			if (key.indexOf(',') === -1) {
-				return cityLatLon(cityName);
-			}
-			return offsetAroundCity(cityName, key);
+		if (!cityName) {
+			return offsetAroundCity('Москва', key);
 		}
-		return offsetAroundCity('Москва', key);
+		if (!CITY_LL[cityKey(cityName)]) {
+			return null;
+		}
+		if (key.indexOf(',') === -1) {
+			return cityLatLon(cityName);
+		}
+		return offsetAroundCity(cityName, key);
 	}
 
 	function pinHref(pin) {
@@ -465,10 +489,11 @@
 		}
 	}
 
-	function fitCityView(mapObj, clusterer, city, cityLocked) {
+	function fitCityView(mapObj, clusterer, city, cityLocked, ymaps) {
 		if (cityLocked && city) {
-			mapObj.setCenter(cityLatLon(city), CITY_ZOOM);
-			return Promise.resolve();
+			return resolveCityLatLon(ymaps, city).then(function (center) {
+				mapObj.setCenter(center, CITY_ZOOM);
+			});
 		}
 		var bounds = clusterer.getBounds();
 		if (!bounds) {
@@ -507,8 +532,9 @@
 		loadYmaps().then(function (ymaps) {
 			hidePreview(root);
 			var layouts = createLayouts(ymaps);
+			return resolveCityLatLon(ymaps, city).then(function (center) {
 			var mapObj = new ymaps.Map(canvas, {
-				center: cityLatLon(city),
+				center: center,
 				zoom: CITY_ZOOM,
 				controls: ['zoomControl']
 			}, {
@@ -532,6 +558,7 @@
 					var pins = (payload && payload.pins) ? payload.pins : [];
 					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked, layouts, root);
 				});
+			});
 		}).then(function () {
 			setBusy(root, false, 'Показать на карте');
 		}).catch(function () {
@@ -548,8 +575,9 @@
 
 	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts, root) {
 		if (!pins.length) {
-			mapObj.setCenter(cityLatLon(fallbackCity), CITY_ZOOM);
-			return Promise.resolve();
+			return resolveCityLatLon(ymaps, fallbackCity).then(function (center) {
+				mapObj.setCenter(center, CITY_ZOOM);
+			});
 		}
 
 		var groups = {};
@@ -561,9 +589,20 @@
 			groups[key].push(pin);
 		});
 
+		var unknownCities = [];
+		Object.keys(groups).forEach(function (key) {
+			var cityName = String(key.split(',')[0] || '').trim();
+			if (cityName && !CITY_LL[cityKey(cityName)] && unknownCities.indexOf(cityName) === -1) {
+				unknownCities.push(cityName);
+			}
+		});
+
+		return runPool(unknownCities, function (cityName) {
+			return resolveCityLatLon(ymaps, cityName);
+		}, 4).then(function () {
 		var placemarks = [];
 		Object.keys(groups).forEach(function (key) {
-			var baseCoords = coordsForGroup(key);
+			var baseCoords = coordsForGroup(key) || offsetAroundCity(String(key.split(',')[0] || '').trim() || 'Москва', key);
 			var groupPins = groups[key];
 			groupPins.forEach(function (pin, index) {
 				var coords = spreadCoords(baseCoords, index, groupPins.length);
@@ -641,7 +680,8 @@
 		}
 
 		mapObj.events.add('boundschange', maybeRefine);
-		return fitCityView(mapObj, clusterer, fallbackCity, cityLocked);
+		return fitCityView(mapObj, clusterer, fallbackCity, cityLocked, ymaps);
+		});
 	}
 
 	function refineStreets(ymaps, mapObj, clusterer, placemarks) {
