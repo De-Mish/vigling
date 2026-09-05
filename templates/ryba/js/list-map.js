@@ -126,8 +126,98 @@
 		if (!href || href === '#') {
 			return false;
 		}
-		window.location.href = href;
+		window.location.assign(href);
 		return true;
+	}
+
+	function pinFromTarget(target) {
+		if (!target) {
+			return null;
+		}
+		if (typeof target.getGeoObjects === 'function') {
+			var grouped = target.getGeoObjects() || [];
+			if (grouped.length === 1) {
+				return grouped[0]._vgPin || null;
+			}
+			return null;
+		}
+		return target._vgPin || null;
+	}
+
+	function spreadCoords(base, index, total) {
+		if (!base || total < 2) {
+			return base ? base.slice() : base;
+		}
+		var angle = (index / total) * Math.PI * 2;
+		var dist = 0.0024 + (index % 4) * 0.0006;
+		return [
+			base[0] + Math.sin(angle) * dist,
+			base[1] + Math.cos(angle) * dist * 1.45
+		];
+	}
+
+	function pixelDistance(mapObj, geoA, geoB) {
+		var projection = mapObj.options.get('projection');
+		var zoom = mapObj.getZoom();
+		var a = projection.toGlobalPixels(geoA, zoom);
+		var b = projection.toGlobalPixels(geoB, zoom);
+		return Math.hypot(a[0] - b[0], a[1] - b[1]);
+	}
+
+	function nearestLonePin(mapObj, placemarks, geo) {
+		var best = null;
+		var bestDist = 28;
+		var closeCount = 0;
+		placemarks.forEach(function (mark) {
+			var pos = mark.geometry.getCoordinates();
+			var dist = pixelDistance(mapObj, geo, pos);
+			if (dist <= 28) {
+				closeCount += 1;
+			}
+			if (dist < bestDist) {
+				bestDist = dist;
+				best = mark._vgPin || null;
+			}
+		});
+		return closeCount === 1 ? best : null;
+	}
+
+	function bindPointerFallback(mapObj, placemarks) {
+		var pane = mapObj.container.getElement();
+		if (!pane || pane.getAttribute('data-vg-pin-nav') === '1') {
+			return;
+		}
+		pane.setAttribute('data-vg-pin-nav', '1');
+		var startX = 0;
+		var startY = 0;
+
+		function geoFromClient(clientX, clientY) {
+			var projection = mapObj.options.get('projection');
+			var globalPixels = mapObj.converter.pageToGlobal([
+				clientX + (window.scrollX || window.pageXOffset || 0),
+				clientY + (window.scrollY || window.pageYOffset || 0)
+			]);
+			return projection.fromGlobalPixels(globalPixels, mapObj.getZoom());
+		}
+
+		function onStart(event) {
+			startX = event.clientX;
+			startY = event.clientY;
+		}
+
+		function onEnd(event) {
+			if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) {
+				return;
+			}
+			var geo = geoFromClient(event.clientX, event.clientY);
+			var pin = nearestLonePin(mapObj, placemarks, geo);
+			if (pin) {
+				openPinProfile(pin);
+			}
+		}
+
+		pane.addEventListener('pointerdown', onStart, true);
+		pane.addEventListener('pointerup', onEnd, true);
 	}
 
 	function pinBalloon(pin) {
@@ -220,8 +310,8 @@
 	}
 
 	function yellowDotHref() {
-		var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
-			+ '<circle cx="9" cy="9" r="7" fill="#f9ce54" stroke="#111" stroke-width="2"/>'
+		var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
+			+ '<circle cx="11" cy="11" r="8" fill="#f9ce54" stroke="#111" stroke-width="2"/>'
 			+ '</svg>';
 		return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 	}
@@ -325,7 +415,10 @@
 			var mapObj = new ymaps.Map(canvas, {
 				center: cityLatLon(city),
 				zoom: CITY_ZOOM,
-				controls: ['zoomControl']
+				controls: ['zoomControl'],
+				yandexMapDisablePoiInteractivity: true
+			}, {
+				yandexMapDisablePoiInteractivity: true
 			});
 			var clusterer = createClusterer(ymaps, layouts);
 			root._vgLayouts = layouts;
@@ -376,8 +469,10 @@
 
 		var placemarks = [];
 		Object.keys(groups).forEach(function (key) {
-			var coords = coordsForGroup(key);
-			groups[key].forEach(function (pin) {
+			var baseCoords = coordsForGroup(key);
+			var groupPins = groups[key];
+			groupPins.forEach(function (pin, index) {
+				var coords = spreadCoords(baseCoords, index, groupPins.length);
 				var mark = new ymaps.Placemark(coords, {
 					balloonContent: pinBalloon(pin),
 					hintContent: pin.name || '',
@@ -385,12 +480,12 @@
 				}, {
 					iconLayout: 'default#image',
 					iconImageHref: yellowDotHref(),
-					iconImageSize: [18, 18],
-					iconImageOffset: [-9, -9],
+					iconImageSize: [22, 22],
+					iconImageOffset: [-11, -11],
 					iconShape: {
 						type: 'Circle',
 						coordinates: [0, 0],
-						radius: 14
+						radius: 18
 					},
 					hasBalloon: false,
 					hasHint: true,
@@ -399,10 +494,10 @@
 				mark._vgPin = pin;
 				mark._vgStreetReady = false;
 				mark.events.add('click', function (event) {
-					if (typeof event.preventDefault === 'function') {
+					if (openPinProfile(pin)) {
 						event.preventDefault();
+						event.stopPropagation();
 					}
-					openPinProfile(pin);
 				});
 				placemarks.push(mark);
 			});
@@ -410,14 +505,26 @@
 
 		clusterer.add(placemarks);
 		clusterer.events.add('click', function (event) {
-			var target = event.get('target');
-			if (!target || typeof target.getGeoObjects === 'function') {
+			var pin = pinFromTarget(event.get('target'));
+			if (pin && openPinProfile(pin)) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+		});
+		mapObj.events.add('click', function (event) {
+			if (event.get('target') !== mapObj) {
 				return;
 			}
-			if (openPinProfile(target._vgPin || {})) {
+			var geo = event.get('coords');
+			if (!geo) {
+				return;
+			}
+			var pin = nearestLonePin(mapObj, placemarks, geo);
+			if (pin && openPinProfile(pin)) {
 				event.preventDefault();
 			}
 		});
+		bindPointerFallback(mapObj, placemarks);
 
 		var refining = false;
 		function maybeRefine() {
