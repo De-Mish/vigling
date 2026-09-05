@@ -17,6 +17,7 @@ $doc->addScript(Uri::root(true) . '/templates/ryba/js/list-map.js', ['version' =
 	class="vg-list-map"
 	data-city="<?php echo htmlspecialchars($vgMapCity, ENT_QUOTES, 'UTF-8'); ?>"
 	data-city-filter="<?php echo $vgMapCityLocked ? '1' : '0'; ?>"
+	data-auto-open="1"
 	data-pins-url="<?php echo htmlspecialchars($vgMapPinsUrl, ENT_QUOTES, 'UTF-8'); ?>"
 	data-total="<?php echo $vgMapTotal; ?>"
 >

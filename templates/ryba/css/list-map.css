@@ -89,15 +89,19 @@
   font: 700 13px/36px Arial, sans-serif;
   text-align: center;
   box-sizing: border-box;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .vg-list-map__dot {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #f9ce54;
   border: 2px solid #111;
   box-sizing: border-box;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .vg-list-map .map-balloon a {
