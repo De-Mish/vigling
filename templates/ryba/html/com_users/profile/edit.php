@@ -858,6 +858,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 											<input type="text" name="jform[profile][lastname]" id="jform_lastname" value="<?php echo $this->escape($lastnameValue); ?>" placeholder="Фамилия">
 										</div>
 									</div>
+									<div class="control-group sity-group">
+										<div class="control-label">
+											<label for="jform_sity">Город</label>
+										</div>
+										<div class="controls">
+											<input type="text" name="jform[profile][city]" id="jform_sity" value="<?php echo $this->escape($cityValue); ?>" placeholder="Город">
+										</div>
+									</div>
 									<div class="control-group telefon-group">
 										<div class="control-label">
 											<label for="jform_telefon">Телефон</label>
@@ -1779,9 +1787,15 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 .profile-edit #jsn-form .o_sebe-group { width: 100%; }
 .profile-edit #jsn-form .mail-group,
 .profile-edit #jsn-form .name-group,
+.profile-edit #jsn-form .lastname-group,
 .profile-edit #jsn-form .sity-group {
 	display: block !important;
 	margin-right: 0 !important;
+	width: 100%;
+}
+.profile-edit #jsn-form .lastname-group .controls,
+.profile-edit #jsn-form .sity-group .controls {
+	max-width: 680px !important;
 }
 
 .profile-edit .lk-avatar-edit-controls { display: flex !important; align-items: center; gap: 12px; }
