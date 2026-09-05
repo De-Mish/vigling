@@ -415,8 +415,7 @@
 			var mapObj = new ymaps.Map(canvas, {
 				center: cityLatLon(city),
 				zoom: CITY_ZOOM,
-				controls: ['zoomControl'],
-				yandexMapDisablePoiInteractivity: true
+				controls: ['zoomControl']
 			}, {
 				yandexMapDisablePoiInteractivity: true
 			});
@@ -491,8 +490,7 @@
 					hasHint: true,
 					cursor: 'pointer'
 				});
-				mark._vgPin = pin;
-				mark._vgStreetReady = false;
+				mark._vgPin = pin; mark._vgStreetReady = false;
 				mark.events.add('click', function (event) {
 					if (openPinProfile(pin)) {
 						event.preventDefault();
@@ -575,23 +573,19 @@
 		});
 	}
 
+	function onShowMapButton(event) {
+		event.preventDefault();
+		var root = event.currentTarget.closest('.vg-list-map');
+		if (root) openMap(root);
+	}
+
 	function initRoot(root) {
-		if (!root || root.getAttribute('data-ready') === '1') {
-			return;
-		}
+		if (!root || root.getAttribute('data-ready') === '1') return;
 		root.setAttribute('data-ready', '1');
 		root.classList.add('is-static-fallback');
 		var btn = root.querySelector('.vg-list-map__btn');
-		if (btn) {
-			btn.addEventListener('click', function (event) {
-				event.preventDefault();
-				openMap(root);
-			});
-		}
-		if (root.getAttribute('data-auto-open') === '1') {
-			root.classList.add('is-open');
-			openMap(root);
-		}
+		if (btn) btn.addEventListener('click', onShowMapButton);
+		if (root.getAttribute('data-auto-open') === '1') { root.classList.add('is-open'); openMap(root); }
 	}
 
 	function initAll() {
