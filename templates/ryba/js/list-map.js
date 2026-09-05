@@ -110,11 +110,24 @@
 		return offsetAroundCity('Москва', key);
 	}
 
+	function pinHref(pin) {
+		return String((pin && pin.href) || '').trim();
+	}
+
+	function openPinProfile(pin) {
+		var href = pinHref(pin);
+		if (!href || href === '#') {
+			return false;
+		}
+		window.location.href = href;
+		return true;
+	}
+
 	function pinBalloon(pin) {
 		if (pin.balloon) {
 			return pin.balloon;
 		}
-		var href = pin.href || '#';
+		var href = pinHref(pin) || '#';
 		var name = pin.name || '';
 		var line = pin.line || '';
 		var addr = pin.addr || '';
@@ -227,6 +240,7 @@
 			minClusterSize: 2,
 			hasBalloon: true,
 			clusterOpenBalloonOnClick: true,
+			geoObjectOpenBalloonOnClick: false,
 			clusterBalloonContentLayout: 'cluster#balloonAccordion',
 			clusterBalloonItemContentLayout: 'cluster#balloonAccordionItemContent',
 			clusterBalloonPanelMaxMapArea: 0
@@ -362,18 +376,33 @@
 					iconShape: {
 						type: 'Circle',
 						coordinates: [0, 0],
-						radius: 8
+						radius: 12
 					},
-					iconOffset: [-8, -8],
-					hasBalloon: true
+					iconOffset: [-9, -9],
+					hasBalloon: false,
+					hasHint: true,
+					cursor: 'pointer'
 				});
 				mark._vgPin = pin;
 				mark._vgStreetReady = false;
+				mark.events.add('click', function (event) {
+					event.preventDefault();
+					openPinProfile(pin);
+				});
 				placemarks.push(mark);
 			});
 		});
 
 		clusterer.add(placemarks);
+		clusterer.events.add('click', function (event) {
+			var target = event.get('target');
+			if (!target || typeof target.getGeoObjects === 'function') {
+				return;
+			}
+			if (openPinProfile(target._vgPin || {})) {
+				event.preventDefault();
+			}
+		});
 
 		var refining = false;
 		function maybeRefine() {
@@ -436,6 +465,10 @@
 				event.preventDefault();
 				openMap(root);
 			});
+		}
+		if (root.getAttribute('data-auto-open') === '1') {
+			root.classList.add('is-open');
+			openMap(root);
 		}
 	}
 

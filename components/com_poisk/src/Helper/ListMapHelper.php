@@ -24,6 +24,59 @@ class ListMapHelper
 		$app->close();
 	}
 
+	public static function viewerCity(): string
+	{
+		$user = Factory::getApplication()->getIdentity();
+		$userId = $user ? (int) $user->id : 0;
+		if ($userId <= 0) {
+			return '';
+		}
+
+		$fields = PoiskHelper::getFieldsForUserIds([$userId], ['sity']);
+		$city = trim((string) ($fields[$userId]['sity'] ?? $fields[(string) $userId]['sity'] ?? ''));
+		if ($city !== '') {
+			return $city;
+		}
+
+		try {
+			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$query = $db->getQuery(true)
+				->select($db->quoteName('profile_value'))
+				->from($db->quoteName('#__user_profiles'))
+				->where($db->quoteName('user_id') . ' = ' . $userId)
+				->where($db->quoteName('profile_key') . ' = ' . $db->quote('profile.city'));
+			$db->setQuery($query);
+			$value = trim((string) $db->loadResult());
+		} catch (\Throwable $e) {
+			return '';
+		}
+
+		if ($value !== '' && ($value[0] === '"' || $value[0] === '[' || $value[0] === '{')) {
+			$decoded = json_decode($value, true);
+			if (is_string($decoded)) {
+				$value = trim($decoded);
+			}
+		}
+
+		return $value;
+	}
+
+	public static function applyViewerCity(string &$city, bool &$locked, array &$query): void
+	{
+		if ($locked && trim((string) ($query['city'] ?? '')) !== '') {
+			return;
+		}
+
+		$profileCity = self::viewerCity();
+		if ($profileCity === '') {
+			return;
+		}
+
+		$city = $profileCity;
+		$locked = true;
+		$query['city'] = $profileCity;
+	}
+
 	public static function pinFromFields(
 		int $userId,
 		string $name,

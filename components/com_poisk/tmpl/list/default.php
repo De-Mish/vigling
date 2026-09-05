@@ -62,6 +62,7 @@ if ($requestPath === 'zatochka-remont' || str_starts_with($requestPath, 'zatochk
 foreach ($currentHome as $homeId) {
 	$vgMapQuery['home'][] = (int) $homeId;
 }
+\Viglin\Component\Poisk\Site\Helper\ListMapHelper::applyViewerCity($vgMapCity, $vgMapCityLocked, $vgMapQuery);
 $vgMapPinsUrl = rtrim(Uri::root(true), '/') . '/index.php?' . http_build_query($vgMapQuery);
 $doc = Factory::getDocument();
 $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chosen.min.css');
