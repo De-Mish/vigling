@@ -121,13 +121,33 @@
 		return '/' + href;
 	}
 
-	function openPinProfile(pin) {
-		var href = pinHref(pin);
-		if (!href || href === '#') {
-			return false;
+	function rememberCatalogReturn() {
+		try {
+			sessionStorage.setItem('vigling_catalog_return_url', window.location.pathname + window.location.search + window.location.hash);
+		} catch (e) {}
+	}
+
+	function escapeHtml(text) {
+		return String(text || '').replace(/[&<>"']/g, function (ch) {
+			return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+		});
+	}
+
+	function pinAddressLocal(pin) {
+		var local = String((pin && pin.addr_local) || '').trim();
+		if (local && local !== 'Адрес не указан') {
+			return local;
 		}
-		window.location.assign(href);
-		return true;
+		var city = String((pin && pin.city) || '').trim();
+		var addr = String((pin && pin.addr) || '').trim();
+		if (city && addr) {
+			var prefix = new RegExp('^' + city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*,\\s*', 'i');
+			addr = addr.replace(prefix, '').trim();
+			if (addr.toLowerCase() === city.toLowerCase()) {
+				addr = '';
+			}
+		}
+		return addr || 'Адрес не указан';
 	}
 
 	function pinFromTarget(target) {
@@ -164,7 +184,7 @@
 		return Math.hypot(a[0] - b[0], a[1] - b[1]);
 	}
 
-	function nearestLonePin(mapObj, placemarks, geo) {
+	function nearestLoneMark(mapObj, placemarks, geo) {
 		var best = null;
 		var bestDist = 28;
 		var closeCount = 0;
@@ -176,13 +196,13 @@
 			}
 			if (dist < bestDist) {
 				bestDist = dist;
-				best = mark._vgPin || null;
+				best = mark;
 			}
 		});
 		return closeCount === 1 ? best : null;
 	}
 
-	function bindPointerFallback(mapObj, placemarks) {
+	function bindPointerFallback(root, mapObj, placemarks) {
 		var pane = mapObj.container.getElement();
 		if (!pane || pane.getAttribute('data-vg-pin-nav') === '1') {
 			return;
@@ -209,15 +229,90 @@
 			if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) {
 				return;
 			}
+			if (event.target && event.target.closest && event.target.closest('.vg-list-map__card')) {
+				return;
+			}
 			var geo = geoFromClient(event.clientX, event.clientY);
-			var pin = nearestLonePin(mapObj, placemarks, geo);
-			if (pin) {
-				openPinProfile(pin);
+			var mark = nearestLoneMark(mapObj, placemarks, geo);
+			if (mark) {
+				showPinCard(root, mapObj, mark);
 			}
 		}
 
 		pane.addEventListener('pointerdown', onStart, true);
 		pane.addEventListener('pointerup', onEnd, true);
+	}
+
+	function closePinCard(root) {
+		if (!root || !root._vgCard) {
+			return;
+		}
+		if (root._vgCard.el && root._vgCard.el.parentNode) {
+			root._vgCard.el.parentNode.removeChild(root._vgCard.el);
+		}
+		if (root._vgCard.off && root._vgMap) {
+			root._vgMap.events.remove('boundschange', root._vgCard.off);
+		}
+		root._vgCard = null;
+		root.classList.remove('has-card');
+	}
+
+	function positionPinCard(root, mapObj, mark, card) {
+		var geo = mark.geometry.getCoordinates();
+		var projection = mapObj.options.get('projection');
+		var globalPixels = projection.toGlobalPixels(geo, mapObj.getZoom());
+		var page = mapObj.converter.globalToPage(globalPixels);
+		var rect = root.getBoundingClientRect();
+		var x = page[0] - (window.scrollX || window.pageXOffset || 0) - rect.left;
+		var y = page[1] - (window.scrollY || window.pageYOffset || 0) - rect.top;
+		var placeBelow = y < 88;
+		card.style.left = Math.round(x) + 'px';
+		card.style.top = Math.round(y) + 'px';
+		card.classList.toggle('is-below', placeBelow);
+	}
+
+	function showPinCard(root, mapObj, mark) {
+		if (!root || !mapObj || !mark) {
+			return false;
+		}
+		var pin = mark._vgPin || {};
+		var href = pinHref(pin);
+		var name = String(pin.name || 'Специалист').trim() || 'Специалист';
+		closePinCard(root);
+		rememberCatalogReturn();
+		var card = document.createElement('div');
+		card.className = 'vg-list-map__card';
+		card.innerHTML = '<button type="button" class="vg-list-map__card-close" aria-label="Закрыть">×</button>'
+			+ (href
+				? '<a class="vg-list-map__card-name" href="' + escapeHtml(href) + '">' + escapeHtml(name) + '</a>'
+				: '<span class="vg-list-map__card-name">' + escapeHtml(name) + '</span>')
+			+ '<div class="vg-list-map__card-addr">' + escapeHtml(pinAddressLocal(pin)) + '</div>';
+		var closeBtn = card.querySelector('.vg-list-map__card-close');
+		if (closeBtn) {
+			closeBtn.addEventListener('click', function (event) {
+				event.preventDefault();
+				event.stopPropagation();
+				closePinCard(root);
+			});
+		}
+		var nameLink = card.querySelector('a.vg-list-map__card-name');
+		if (nameLink) {
+			nameLink.addEventListener('click', function () {
+				rememberCatalogReturn();
+			});
+		}
+		root.appendChild(card);
+		root.classList.add('has-card');
+		positionPinCard(root, mapObj, mark, card);
+		function onBounds() {
+			if (root._vgCard && root._vgCard.el) {
+				positionPinCard(root, mapObj, mark, root._vgCard.el);
+			}
+		}
+		mapObj.events.add('boundschange', onBounds);
+		root._vgCard = { el: card, mark: mark, off: onBounds };
+		root._vgMap = mapObj;
+		return true;
 	}
 
 	function pinBalloon(pin) {
@@ -435,7 +530,7 @@
 				})
 				.then(function (payload) {
 					var pins = (payload && payload.pins) ? payload.pins : [];
-					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked, layouts);
+					return placePins(ymaps, mapObj, clusterer, pins, city, cityLocked, layouts, root);
 				});
 		}).then(function () {
 			setBusy(root, false, 'Показать на карте');
@@ -451,7 +546,7 @@
 		});
 	}
 
-	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts) {
+	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts, root) {
 		if (!pins.length) {
 			mapObj.setCenter(cityLatLon(fallbackCity), CITY_ZOOM);
 			return Promise.resolve();
@@ -492,7 +587,7 @@
 				});
 				mark._vgPin = pin; mark._vgStreetReady = false;
 				mark.events.add('click', function (event) {
-					if (openPinProfile(pin)) {
+					if (showPinCard(root, mapObj, mark)) {
 						event.preventDefault();
 						event.stopPropagation();
 					}
@@ -502,9 +597,19 @@
 		});
 
 		clusterer.add(placemarks);
+		var mapRoot = root || mapObj.container.getElement().closest('.vg-list-map');
 		clusterer.events.add('click', function (event) {
 			var pin = pinFromTarget(event.get('target'));
-			if (pin && openPinProfile(pin)) {
+			if (!pin) {
+				return;
+			}
+			var mark = null;
+			placemarks.forEach(function (item) {
+				if (item._vgPin === pin) {
+					mark = item;
+				}
+			});
+			if (mark && showPinCard(mapRoot, mapObj, mark)) {
 				event.preventDefault();
 				event.stopPropagation();
 			}
@@ -517,12 +622,12 @@
 			if (!geo) {
 				return;
 			}
-			var pin = nearestLonePin(mapObj, placemarks, geo);
-			if (pin && openPinProfile(pin)) {
+			var mark = nearestLoneMark(mapObj, placemarks, geo);
+			if (mark && showPinCard(mapRoot, mapObj, mark)) {
 				event.preventDefault();
 			}
 		});
-		bindPointerFallback(mapObj, placemarks);
+		bindPointerFallback(mapRoot, mapObj, placemarks);
 
 		var refining = false;
 		function maybeRefine() {
@@ -583,6 +688,7 @@
 		if (!root || root.getAttribute('data-ready') === '1') return;
 		root.setAttribute('data-ready', '1');
 		root.classList.add('is-static-fallback');
+		rememberCatalogReturn();
 		var btn = root.querySelector('.vg-list-map__btn');
 		if (btn) btn.addEventListener('click', onShowMapButton);
 		if (root.getAttribute('data-auto-open') === '1') { root.classList.add('is-open'); openMap(root); }

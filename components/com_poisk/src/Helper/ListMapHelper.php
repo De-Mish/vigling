@@ -101,6 +101,8 @@ class ListMapHelper
 		$house = trim((string) ($fields['house_number'] ?? ''));
 		$parts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$sity, $area, $street, $house])));
 		$addr = implode(', ', $parts);
+		$localParts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$area, $street, $house])));
+		$addrLocal = implode(', ', $localParts);
 		$queryParts = array_values(array_unique(array_filter($parts)));
 		$query = count($queryParts) >= 2 ? implode(', ', $queryParts) : ($sity !== '' ? $sity : '');
 
@@ -113,6 +115,7 @@ class ListMapHelper
 			'href' => $profileHref,
 			'line' => $servicesText,
 			'addr' => $addr !== '' ? $addr : ($sity !== '' ? $sity : 'Адрес не указан'),
+			'addr_local' => $addrLocal !== '' ? $addrLocal : 'Адрес не указан',
 		], $extra);
 	}
 }
