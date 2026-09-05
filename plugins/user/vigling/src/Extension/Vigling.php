@@ -86,6 +86,7 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
 
         $this->saveScheduleFieldsFromPost($userId);
         $this->saveSocialLinkFieldsFromPost($userId);
+        $this->saveProfileCityFromPost($userId);
         $this->validateVkProfileWebsite($userId);
 
         $jform = $this->getPostedJform();
@@ -242,6 +243,68 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         } catch (\Throwable $e) {
             Log::add(
                 'Vigling schedule fields save failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveProfileCityFromPost(int $userId): void
+    {
+        $profile = isset($_POST['jform']['profile']) && \is_array($_POST['jform']['profile'])
+            ? $_POST['jform']['profile']
+            : [];
+        $comFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+
+        if (!\array_key_exists('city', $profile) && !\array_key_exists('sity', $comFields)) {
+            return;
+        }
+
+        $city = '';
+        if (\array_key_exists('city', $profile)) {
+            $city = trim((string) $profile['city']);
+        } elseif (\array_key_exists('sity', $comFields)) {
+            $city = trim((string) $comFields['sity']);
+        }
+        $city = preg_replace('/\s+/u', ' ', $city) ?? '';
+        $city = trim($city, ' ,');
+        if (mb_strlen($city) > 120) {
+            $city = mb_substr($city, 0, 120);
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $q = $db->getQuery(true)
+                ->select($db->quoteName('id'))
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' = ' . $db->quote('sity'));
+            $db->setQuery($q);
+            $fieldId = (int) $db->loadResult();
+            if ($fieldId <= 0) {
+                return;
+            }
+
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete($db->quoteName('#__fields_values'))
+                    ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                    ->where($db->quoteName('item_id') . ' = ' . $userId)
+            )->execute();
+
+            if ($city !== '') {
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->insert($db->quoteName('#__fields_values'))
+                        ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                        ->values($fieldId . ', ' . $userId . ', ' . $db->quote($city))
+                )->execute();
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                'Vigling profile city save failed for user_id=' . $userId . ': ' . $e->getMessage(),
                 Log::ERROR,
                 'plg_user_vigling'
             );

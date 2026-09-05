@@ -24,30 +24,49 @@ class ListMapHelper
 		$app->close();
 	}
 
-	public static function viewerCity(): string
+	public static function decodeCityValue($value): string
 	{
-		$user = Factory::getApplication()->getIdentity();
-		$userId = $user ? (int) $user->id : 0;
+		if (!is_scalar($value)) {
+			return '';
+		}
+
+		$current = self::normalizeAddressPart((string) $value);
+		if ($current === '') {
+			return '';
+		}
+
+		for ($i = 0; $i < 3; $i++) {
+			$first = $current[0] ?? '';
+			if ($first !== '"' && $first !== '[' && $first !== '{') {
+				break;
+			}
+			$decoded = json_decode($current, true);
+			if (is_string($decoded)) {
+				$current = self::normalizeAddressPart($decoded);
+				continue;
+			}
+			if (is_array($decoded)) {
+				$firstValue = reset($decoded);
+				$current = is_scalar($firstValue) ? self::normalizeAddressPart((string) $firstValue) : '';
+				continue;
+			}
+			break;
+		}
+
+		return $current;
+	}
+
+	public static function cityForUser(int $userId): string
+	{
 		if ($userId <= 0) {
 			return '';
 		}
 
-		$fields = PoiskHelper::getFieldsForUserIds([$userId], ['sity', 'city']);
-		$city = trim((string) (
-			$fields[$userId]['sity']
-			?? $fields[(string) $userId]['sity']
-			?? $fields[$userId]['city']
-			?? $fields[(string) $userId]['city']
-			?? ''
-		));
-		if ($city !== '') {
-			return $city;
-		}
-
+		$fromProfile = '';
 		try {
 			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 			$query = $db->getQuery(true)
-				->select($db->quoteName('profile_value'))
+				->select([$db->quoteName('profile_key'), $db->quoteName('profile_value')])
 				->from($db->quoteName('#__user_profiles'))
 				->where($db->quoteName('user_id') . ' = ' . $userId)
 				->where($db->quoteName('profile_key') . ' IN ('
@@ -55,36 +74,54 @@ class ListMapHelper
 					. $db->quote('profile.sity')
 					. ')');
 			$db->setQuery($query);
-			$value = trim((string) $db->loadResult());
-		} catch (\Throwable $e) {
-			return '';
-		}
-
-		if ($value !== '' && ($value[0] === '"' || $value[0] === '[' || $value[0] === '{')) {
-			$decoded = json_decode($value, true);
-			if (is_string($decoded)) {
-				$value = trim($decoded);
+			$rows = $db->loadAssocList() ?: [];
+			$byKey = [];
+			foreach ($rows as $row) {
+				$byKey[(string) ($row['profile_key'] ?? '')] = self::decodeCityValue($row['profile_value'] ?? '');
 			}
+			$fromProfile = $byKey['profile.city'] ?? '';
+			if ($fromProfile === '') {
+				$fromProfile = $byKey['profile.sity'] ?? '';
+			}
+		} catch (\Throwable $e) {
+			$fromProfile = '';
 		}
 
-		return $value;
+		if ($fromProfile !== '') {
+			return $fromProfile;
+		}
+
+		$fields = PoiskHelper::getFieldsForUserIds([$userId], ['sity', 'city']);
+		$userFields = $fields[$userId] ?? $fields[(string) $userId] ?? [];
+
+		return self::decodeCityValue($userFields['sity'] ?? '')
+			?: self::decodeCityValue($userFields['city'] ?? '');
+	}
+
+	public static function viewerCity(): string
+	{
+		$user = Factory::getApplication()->getIdentity();
+		$userId = $user ? (int) $user->id : 0;
+
+		return self::cityForUser($userId);
 	}
 
 	public static function applyViewerCity(string &$city, bool &$locked, array &$query): void
 	{
-		if ($locked && trim((string) ($query['city'] ?? '')) !== '') {
+		$requested = self::decodeCityValue($query['city'] ?? '');
+		if ($requested !== '') {
+			$city = $requested;
+			$locked = true;
+			$query['city'] = $requested;
 			return;
 		}
 
+		// Profile city only sets the viewport. Do not inject it into the pins query:
+		// markers must stay at each specialist's own city, matching the unfiltered list.
 		$profileCity = self::viewerCity();
-		if ($profileCity === '') {
-			// Clients/guests without a city keep a general map: all pins, not a forced Moscow filter.
-			return;
-		}
-
-		$city = $profileCity;
+		$city = $profileCity !== '' ? $profileCity : 'Москва';
 		$locked = true;
-		$query['city'] = $profileCity;
+		$query['city'] = '';
 	}
 
 	public static function pinFromFields(
@@ -95,7 +132,7 @@ class ListMapHelper
 		string $servicesText = '',
 		array $extra = []
 	): array {
-		$sity = trim((string) ($fields['sity'] ?? ''));
+		$sity = self::decodeCityValue($fields['sity'] ?? '');
 		$area = trim((string) ($fields['area'] ?? ''));
 		$street = trim((string) ($fields['street'] ?? ''));
 		$house = trim((string) ($fields['house_number'] ?? ''));

@@ -271,6 +271,9 @@ if ($phoneValue === '') {
 if ($cityValue === '' && isset($jcfields['sity']->rawvalue) && is_scalar($jcfields['sity']->rawvalue)) {
 	$cityValue = trim((string) $jcfields['sity']->rawvalue);
 }
+if ($cityValue === '' && class_exists(\Viglin\Component\Poisk\Site\Helper\ListMapHelper::class)) {
+	$cityValue = \Viglin\Component\Poisk\Site\Helper\ListMapHelper::cityForUser($userId);
+}
 if ($regionValue === '' && isset($jcfields['area']->rawvalue) && is_scalar($jcfields['area']->rawvalue)) {
 	$regionValue = trim((string) $jcfields['area']->rawvalue);
 }
