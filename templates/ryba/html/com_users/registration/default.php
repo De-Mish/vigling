@@ -388,7 +388,7 @@ $durationJson = json_encode($durationOptions);
                 <div class="z-content-inner">
                     <fieldset id="jsn_raspisanie" class="jsn-form-fieldset">
                         <legend style="display:none;">Расписание</legend>
-                        <p class="schedule-hint" style="margin:0 0 16px;color:#888;font-size:13px;">Расписание используется для отображения ваших рабочих дней и часов. Оно не требует указывать услуги, акции, курсы или поиск моделей.</p>
+                        <p class="schedule-hint" style="margin:0 0 16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
                         <div class="control-group work_day-group">
                             <div class="control-label"><label for="jform_work_day">Рабочие дни</label></div>
                             <div class="controls">
