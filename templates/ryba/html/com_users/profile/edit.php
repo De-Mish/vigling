@@ -1118,7 +1118,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 											</select>
 										</div>
 									</div>
-									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения ваших рабочих дней и часов. Оно не требует указывать услуги, акции, курсы или поиск моделей.</p>
+									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
 								<?php elseif ($tabKey === 'login') : ?>
 									<p class="lk-login-hint">В качестве email для входа используется почта аккаунта</p>
 									<?php
