@@ -1179,6 +1179,82 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 .profile-edit {
 	padding-bottom: 42px;
 }
+.profile-edit #jsn-profile-tabs.z-tabs-desktop {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	width: 100%;
+	margin: 0 0 8px;
+	padding: 0;
+	list-style: none;
+	box-sizing: border-box;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
+	display: inline-block;
+	float: none;
+	width: auto !important;
+	margin: 0;
+	padding: 0;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link {
+	display: inline-block;
+	box-sizing: border-box;
+	width: auto;
+	min-height: 30px !important;
+	height: 30px;
+	line-height: 30px !important;
+	margin: 0 15px 15px 0 !important;
+	padding: 0 16px !important;
+	border: 2px solid transparent !important;
+	border-radius: 4px !important;
+	background-color: #dfe6ed !important;
+	color: #55677d !important;
+	font-size: 12.5px !important;
+	text-align: center;
+	text-decoration: none !important;
+	box-shadow: none !important;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link,
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:hover,
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:focus {
+	background-color: #f7cc53 !important;
+	color: #343a40 !important;
+	border: 2px solid #343a40 !important;
+}
+@media only screen and (max-width: 1020px) {
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop {
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		width: 100%;
+		max-width: 100%;
+	}
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
+		display: block;
+		width: 100% !important;
+		max-width: 100%;
+		margin: 0 0 8px;
+		box-sizing: border-box;
+	}
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link,
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		width: 100%;
+		max-width: 100%;
+		height: auto;
+		min-height: 44px !important;
+		line-height: 1.25 !important;
+		margin: 0 !important;
+		padding: 10px 16px !important;
+		font-size: 14px !important;
+		text-align: left;
+		white-space: normal;
+		box-sizing: border-box;
+	}
+}
 .profile-edit #member-profile {
 	display: block;
 	width: 100%;
