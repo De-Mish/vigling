@@ -259,24 +259,6 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		if (
-			isset($table->booking_kind, $table->course_slot_id)
-			&& trim((string) $table->booking_kind) === 'course'
-			&& (int) $table->course_slot_id > 0
-		) {
-			$this->setMessage('Фиксированный курс отменяется только мастером целиком', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (
-			isset($table->booking_kind, $table->search_slot_id)
-			&& trim((string) $table->booking_kind) === 'search'
-			&& (int) $table->search_slot_id > 0
-		) {
-			$this->setMessage('Фиксированный поиск отменяется только мастером целиком', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
 		if (!$table->delete($id)) {
 			$this->setMessage($table->getError() ?: 'Ошибка отмены записи', 'error');
 			$this->setRedirectAndExit();
@@ -314,24 +296,6 @@ class OrdersController extends BaseController
 		}
 		if ((int) $table->master_id !== (int) $user->id) {
 			$this->setMessage('Нет прав на перенос этой записи', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (
-			isset($table->booking_kind, $table->course_slot_id)
-			&& trim((string) $table->booking_kind) === 'course'
-			&& (int) $table->course_slot_id > 0
-		) {
-			$this->setMessage('Фиксированный курс переносится только мастером целиком', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-		if (
-			isset($table->booking_kind, $table->search_slot_id)
-			&& trim((string) $table->booking_kind) === 'search'
-			&& (int) $table->search_slot_id > 0
-		) {
-			$this->setMessage('Фиксированный поиск переносится только мастером целиком', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
@@ -402,6 +366,7 @@ class OrdersController extends BaseController
 			}
 			$table->time = $timeDb;
 			$table->time_to = $timeToDb;
+			self::detachFixedGroupBooking($table);
 			if (!$table->store()) {
 				$this->setMessage($table->getError() ?: 'Ошибка переноса записи', 'error');
 				$this->setRedirectAndExit();
@@ -1347,6 +1312,25 @@ class OrdersController extends BaseController
 		} catch (\Throwable $e) {
 		}
 		return null;
+	}
+
+	/**
+	 * Moving one person off a fixed group makes them a normal visit,
+	 * so the remaining group keeps its shared time and a seat opens.
+	 */
+	private static function detachFixedGroupBooking(OrderTable $table): void
+	{
+		$kind = isset($table->booking_kind) ? trim((string) $table->booking_kind) : '';
+		$courseSlotId = isset($table->course_slot_id) ? (int) $table->course_slot_id : 0;
+		$searchSlotId = isset($table->search_slot_id) ? (int) $table->search_slot_id : 0;
+		if ($kind === 'course' && $courseSlotId > 0) {
+			$table->booking_kind = 'service';
+			$table->course_slot_id = null;
+		}
+		if ($kind === 'search' && $searchSlotId > 0) {
+			$table->booking_kind = 'service';
+			$table->search_slot_id = null;
+		}
 	}
 
 	/**
