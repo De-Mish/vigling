@@ -2344,8 +2344,9 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
 
 #content.view-profile #jsn-form.flat>ul.z-tabs-nav>li.z-active>a,
 #content.view_profile #jsn-form.flat>ul.z-tabs-nav>li.z-active>a {
-  background: #5181b8 !important;
-  color: #fff !important
+  background: #f7cc53 !important;
+  color: #343a40 !important;
+  border: 2px solid #343a40 !important;
 }
 
 #easyprofile #jsn-profile-tabs.z-tabs-desktop {
@@ -2390,7 +2391,7 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   padding: 0 16px !important;
   margin: 0 15px 15px 0 !important;
   outline: none;
-  border: none !important;
+  border: 2px solid transparent !important;
   border-radius: 4px !important;
   height: 30px;
   min-height: 30px !important;
@@ -2433,15 +2434,17 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
 #easyprofile.view_profile #jsn-form.flat.clean #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link,
 #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link,
 #content.view_profile #easyprofile.view_profile #jsn-form.flat.clean #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link {
-  color: #fff !important;
-  background-color: #5181b8 !important;
+  color: #343a40 !important;
+  background-color: #f7cc53 !important;
+  border: 2px solid #343a40 !important;
 }
 
 #easyprofile.view_profile #jsn-form.flat.clean #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:hover,
 #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:hover {
   opacity: 0.88;
-  color: #fff !important;
-  background-color: #5181b8 !important;
+  color: #343a40 !important;
+  background-color: #f7cc53 !important;
+  border: 2px solid #343a40 !important;
 }
 
 #easyprofile.view_profile #jsn-form.flat.clean #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link > span:empty {
@@ -2471,19 +2474,45 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
     font-size: 13px;
   }
 
+  #easyprofile.view_profile #jsn-form.flat #jsn-profile-tabs.z-tabs-desktop,
+  #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   #easyprofile.view_profile #jsn-profile-tabs.z-tabs-desktop .z-tab,
-  #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
-    width: auto !important;
+  #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab,
+  #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-first,
+  #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-last {
+    display: block;
+    float: none;
+    width: 100% !important;
+    max-width: 100%;
+    margin: 0 0 8px;
+    box-sizing: border-box;
   }
 
   #easyprofile.view_profile #jsn-form.flat.clean #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link,
   #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link {
-    display: inline-block;
-    padding: 0 16px !important;
-    height: 30px;
-    min-height: 30px !important;
-    line-height: 30px !important;
-    font-size: 12.5px !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 44px !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    text-align: left;
+    white-space: normal;
+    box-sizing: border-box;
   }
 }
 
@@ -2494,7 +2523,7 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
 
   #easyprofile.view_profile #jsn-profile-tabs.z-tabs-desktop .z-tab,
   #easyprofile.view_profile #jsn-form.flat.clean.horizontal #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
-    width: auto !important;
+    width: 100% !important;
   }
 }
 
