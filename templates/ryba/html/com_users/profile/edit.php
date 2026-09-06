@@ -1160,10 +1160,33 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 										});
 										var form = document.getElementById('member-profile');
 										if (form) {
-											form.addEventListener('submit', function() {
+											form.addEventListener('submit', function(e) {
+												var submitter = e.submitter;
+												if (submitter && String(submitter.value || '') === 'profile.cancel') {
+													return;
+												}
 												document.querySelectorAll('.schedule-from, .schedule-to').forEach(function(sel) {
 													sel.disabled = false;
 												});
+												var incomplete = false;
+												document.querySelectorAll('.schedule-day-row').forEach(function(row) {
+													var cb = row.querySelector('.schedule-day-cb');
+													var fromSel = row.querySelector('.schedule-from');
+													var toSel = row.querySelector('.schedule-to');
+													if (!cb || !cb.checked || !fromSel || !toSel) {
+														return;
+													}
+													var f = String(fromSel.value || '').trim();
+													var t = String(toSel.value || '').trim();
+													if (!f || !t || f >= t) {
+														incomplete = true;
+													}
+												});
+												if (incomplete) {
+													e.preventDefault();
+													alert('Для каждого выбранного рабочего дня укажите время начала и окончания, и время окончания должно быть позже начала.');
+													return;
+												}
 												syncSchedulePayload();
 											});
 										}

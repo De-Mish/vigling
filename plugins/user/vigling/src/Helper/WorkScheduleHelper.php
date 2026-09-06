@@ -44,11 +44,6 @@ final class WorkScheduleHelper
     }
 
     /**
-     * @param array<int, string> $fromByDay
-     * @param array<int, string> $toByDay
-     * @return array{days: string[], fromJson: string, toJson: string}
-     */
-    /**
      * @param array<int|string, mixed> $checkedDays
      * @param array<int|string, mixed> $fromByDay
      * @param array<int|string, mixed> $toByDay
@@ -174,7 +169,7 @@ final class WorkScheduleHelper
             . ' THEN JSON_UNQUOTE(JSON_EXTRACT(' . $timeValueSql . ', ' . $db->quote('$[0]') . '))'
             . ' WHEN TRIM(' . $timeValueSql . ') LIKE ' . $db->quote('[%')
             . ' AND JSON_SEARCH(' . $daysValueSql . ', ' . $db->quote('one') . ', ' . $dayQ . ') IS NOT NULL'
-            . ' THEN JSON_UNQUOTE(JSON_EXTRACT(' . $timeValueSql . ', JSON_SEARCH(' . $daysValueSql . ', ' . $db->quote('one') . ', ' . $dayQ . ')))'
+            . ' THEN JSON_UNQUOTE(JSON_EXTRACT(' . $timeValueSql . ', JSON_UNQUOTE(JSON_SEARCH(' . $daysValueSql . ', ' . $db->quote('one') . ', ' . $dayQ . '))))'
             . ' ELSE TRIM(' . $timeValueSql . ')'
             . ' END)';
     }
