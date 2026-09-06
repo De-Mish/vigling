@@ -116,33 +116,6 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$utc = new \DateTimeZone('UTC');
-		$time = null;
-		if ($timeUtcStr !== '') {
-			try {
-				$time = new \DateTime($timeUtcStr, $utc);
-			} catch (\Throwable $e) {
-			}
-		}
-		if (!$time && $timeStr !== '') {
-			$app = Factory::getApplication();
-			$siteTz = new \DateTimeZone($app->get('offset', 'UTC'));
-			$time = \DateTime::createFromFormat('Y-m-d H:i:s', $timeStr, $siteTz);
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d H:i', $timeStr, $siteTz);
-			}
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d\TH:i', $timeStr, $siteTz);
-			}
-			if ($time) {
-				$time->setTimezone($utc);
-			}
-		}
-		if (!$time) {
-			$this->setMessage('Укажите новое дату/время', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
 		$table = new OrderTable(
 			Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class),
 			Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class)
@@ -175,6 +148,14 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		$masterTimezone = self::getUserTimezoneById((int) $table->master_id, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$time = self::parseRescheduleDateTime($timeUtcStr, $timeStr, $masterTimezone);
+		if (!$time) {
+			$this->setMessage('Укажите новое дату/время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$utc = new \DateTimeZone('UTC');
 		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
@@ -201,7 +182,6 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$masterTimezone = self::getUserTimezoneById((int) $table->master_id, (string) Factory::getApplication()->get('offset', 'UTC'));
 		$scheduleCheck = self::validateMasterSchedule((int) $table->master_id, $startUtc, $endUtc, $masterTimezone);
 		if (!$scheduleCheck['ok']) {
 			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
@@ -323,33 +303,6 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$utc = new \DateTimeZone('UTC');
-		$time = null;
-		if ($timeUtcStr !== '') {
-			try {
-				$time = new \DateTime($timeUtcStr, $utc);
-			} catch (\Throwable $e) {
-			}
-		}
-		if (!$time && $timeStr !== '') {
-			$app = Factory::getApplication();
-			$siteTz = new \DateTimeZone($app->get('offset', 'UTC'));
-			$time = \DateTime::createFromFormat('Y-m-d H:i:s', $timeStr, $siteTz);
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d H:i', $timeStr, $siteTz);
-			}
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d\TH:i', $timeStr, $siteTz);
-			}
-			if ($time) {
-				$time->setTimezone($utc);
-			}
-		}
-		if (!$time) {
-			$this->setMessage('Укажите новое дату/время', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
 		$table = new OrderTable(
 			Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class),
 			Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class)
@@ -382,6 +335,14 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		$masterTimezone = self::getUserTimezoneById((int) $table->master_id, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$time = self::parseRescheduleDateTime($timeUtcStr, $timeStr, $masterTimezone);
+		if (!$time) {
+			$this->setMessage('Укажите новое дату/время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$utc = new \DateTimeZone('UTC');
 		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
@@ -407,7 +368,6 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$masterTimezone = self::getUserTimezoneById((int) $table->master_id, (string) Factory::getApplication()->get('offset', 'UTC'));
 		$scheduleCheck = self::validateMasterSchedule((int) $table->master_id, $startUtc, $endUtc, $masterTimezone);
 		if (!$scheduleCheck['ok']) {
 			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
@@ -535,34 +495,6 @@ class OrdersController extends BaseController
 			return;
 		}
 
-		$utc = new \DateTimeZone('UTC');
-		$time = null;
-		if ($timeUtcStr !== '') {
-			try {
-				$time = new \DateTime($timeUtcStr, $utc);
-			} catch (\Throwable $e) {
-			}
-		}
-		if (!$time && $timeStr !== '') {
-			$app = Factory::getApplication();
-			$siteTz = new \DateTimeZone($app->get('offset', 'UTC'));
-			$time = \DateTime::createFromFormat('Y-m-d H:i:s', $timeStr, $siteTz);
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d H:i', $timeStr, $siteTz);
-			}
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d\TH:i', $timeStr, $siteTz);
-			}
-			if ($time) {
-				$time->setTimezone($utc);
-			}
-		}
-		if (!$time) {
-			$this->setMessage('Укажите новое дату/время', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$courseContext = self::loadCourseSlotContext($db, $courseSlotId);
 		if ($courseContext === null) {
@@ -575,6 +507,15 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+
+		$masterTimezone = self::getUserTimezoneById((int) $user->id, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$time = self::parseRescheduleDateTime($timeUtcStr, $timeStr, $masterTimezone);
+		if (!$time) {
+			$this->setMessage('Укажите новое дату/время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$utc = new \DateTimeZone('UTC');
 
 		$durationMin = (int) ($courseContext['duration_min'] ?? 0);
 		if ($durationMin <= 0) {
@@ -607,7 +548,6 @@ class OrdersController extends BaseController
 			return;
 		}
 
-		$masterTimezone = self::getUserTimezoneById((int) $user->id, (string) Factory::getApplication()->get('offset', 'UTC'));
 		$scheduleCheck = self::validateMasterSchedule((int) $user->id, $startUtc, $endUtc, $masterTimezone);
 		if (!$scheduleCheck['ok']) {
 			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
@@ -749,34 +689,6 @@ class OrdersController extends BaseController
 			return;
 		}
 
-		$utc = new \DateTimeZone('UTC');
-		$time = null;
-		if ($timeUtcStr !== '') {
-			try {
-				$time = new \DateTime($timeUtcStr, $utc);
-			} catch (\Throwable $e) {
-			}
-		}
-		if (!$time && $timeStr !== '') {
-			$app = Factory::getApplication();
-			$siteTz = new \DateTimeZone($app->get('offset', 'UTC'));
-			$time = \DateTime::createFromFormat('Y-m-d H:i:s', $timeStr, $siteTz);
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d H:i', $timeStr, $siteTz);
-			}
-			if (!$time) {
-				$time = \DateTime::createFromFormat('Y-m-d\TH:i', $timeStr, $siteTz);
-			}
-			if ($time) {
-				$time->setTimezone($utc);
-			}
-		}
-		if (!$time) {
-			$this->setMessage('Укажите новое дату/время', 'error');
-			$this->setRedirectAndExit();
-			return;
-		}
-
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$searchContext = self::loadSearchSlotContext($db, $searchSlotId);
 		if ($searchContext === null) {
@@ -789,6 +701,15 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+
+		$masterTimezone = self::getUserTimezoneById((int) $user->id, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$time = self::parseRescheduleDateTime($timeUtcStr, $timeStr, $masterTimezone);
+		if (!$time) {
+			$this->setMessage('Укажите новое дату/время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$utc = new \DateTimeZone('UTC');
 
 		$durationMin = (int) ($searchContext['duration_min'] ?? 0);
 		if ($durationMin <= 0) {
@@ -821,7 +742,6 @@ class OrdersController extends BaseController
 			return;
 		}
 
-		$masterTimezone = self::getUserTimezoneById((int) $user->id, (string) Factory::getApplication()->get('offset', 'UTC'));
 		$scheduleCheck = self::validateMasterSchedule((int) $user->id, $startUtc, $endUtc, $masterTimezone);
 		if (!$scheduleCheck['ok']) {
 			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
@@ -1427,6 +1347,47 @@ class OrdersController extends BaseController
 		} catch (\Throwable $e) {
 		}
 		return null;
+	}
+
+	/**
+	 * Prefer an explicit UTC instant. If only a local clock string is sent,
+	 * interpret it in the specialist timezone, not the site offset.
+	 */
+	private static function parseRescheduleDateTime(string $timeUtcStr, string $timeStr, string $specialistTimezone): ?\DateTime
+	{
+		$utc = new \DateTimeZone('UTC');
+		$timeUtcStr = trim($timeUtcStr);
+		$timeStr = trim($timeStr);
+		if ($timeUtcStr !== '') {
+			try {
+				$time = new \DateTime($timeUtcStr, $utc);
+				$time->setTimezone($utc);
+
+				return $time;
+			} catch (\Throwable $e) {
+			}
+		}
+		if ($timeStr === '') {
+			return null;
+		}
+		try {
+			$localTz = new \DateTimeZone(trim($specialistTimezone) !== '' ? trim($specialistTimezone) : 'UTC');
+		} catch (\Throwable $e) {
+			$localTz = $utc;
+		}
+		$time = \DateTime::createFromFormat('Y-m-d H:i:s', $timeStr, $localTz);
+		if (!$time) {
+			$time = \DateTime::createFromFormat('Y-m-d H:i', $timeStr, $localTz);
+		}
+		if (!$time) {
+			$time = \DateTime::createFromFormat('Y-m-d\TH:i', $timeStr, $localTz);
+		}
+		if (!$time) {
+			return null;
+		}
+		$time->setTimezone($utc);
+
+		return $time;
 	}
 
 	private static function parseDurationMinutes(string $raw): int
