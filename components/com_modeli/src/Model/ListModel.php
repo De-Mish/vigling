@@ -256,38 +256,40 @@ class ListModel extends BaseListModel
 					$dt = new \DateTime($dateOnly);
 					$weekday = (int) $dt->format('N');
 					$timeCompare = $time . ':00';
+					$orParts = [
+						'(' . $db->quoteName('slot.id') . ' IS NOT NULL'
+						. ' AND DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
+					];
 
+					$scheduleConds = [];
 					if ($fieldWorkDay > 0) {
-						$query->where(
-							'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wdfv')
+						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wdfv')
 							. ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = ' . $db->quoteName('u.id')
 							. ' AND ' . $db->quoteName('wdfv.field_id') . ' = ' . $fieldWorkDay
-							. ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%') . ')'
-						);
+							. ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%') . ')';
 					}
-
 					if ($fieldWorkFrom > 0) {
-						$query->where(
-							'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wffv')
+						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wffv')
 							. ' WHERE ' . $db->quoteName('wffv.item_id') . ' = ' . $db->quoteName('u.id')
 							. ' AND ' . $db->quoteName('wffv.field_id') . ' = ' . $fieldWorkFrom
 							. ' AND ' . $db->quoteName('wffv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wffv.value') . ', ".", ":"), "%H:%i") <= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))'
-						);
+							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wffv.value') . ', ".", ":"), "%H:%i") <= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
 					}
-
 					if ($fieldWorkTo > 0) {
-						$query->where(
-							'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wtfv')
+						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wtfv')
 							. ' WHERE ' . $db->quoteName('wtfv.item_id') . ' = ' . $db->quoteName('u.id')
 							. ' AND ' . $db->quoteName('wtfv.field_id') . ' = ' . $fieldWorkTo
 							. ' AND ' . $db->quoteName('wtfv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wtfv.value') . ', ".", ":"), "%H:%i") >= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))'
-						);
+							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wtfv.value') . ', ".", ":"), "%H:%i") >= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
+					}
+					if ($scheduleConds !== []) {
+						$orParts[] = '(' . implode(' AND ', array_merge(
+							$scheduleConds,
+							$this->busyMasterConditions($db, $dateOnly . ' ' . $time . ':00')
+						)) . ')';
 					}
 
-					$this->applyBusyMasterFilter($query, $db, $dateOnly . ' ' . $time . ':00');
-
+					$query->where('(' . implode(' OR ', $orParts) . ')');
 				} catch (\Throwable $e) {
 				}
 			} elseif ($dateOnly !== '') {
@@ -296,15 +298,18 @@ class ListModel extends BaseListModel
 		}
 	}
 
-	private function applyBusyMasterFilter($query, $db, string $dt): void
+	/**
+	 * @return string[]
+	 */
+	private function busyMasterConditions($db, string $dt): array
 	{
 		$dtQ = $db->quote($dt);
-		$query->where(
+		$conds = [
 			'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_bookings', 'b')
 			. ' WHERE ' . $db->quoteName('b.master_id') . ' = ' . $db->quoteName('u.id')
 			. ' AND ' . $db->quoteName('b.time') . ' <= ' . $dtQ
-			. ' AND ' . $db->quoteName('b.time_to') . ' > ' . $dtQ . ')'
-		);
+			. ' AND ' . $db->quoteName('b.time_to') . ' > ' . $dtQ . ')',
+		];
 		try {
 			$tables = $db->getTableList();
 			$prefix = $db->getPrefix();
@@ -313,25 +318,23 @@ class ListModel extends BaseListModel
 			$searchSlotsTable = $prefixLc . 'vigling_search_slots';
 			$tablesLc = array_map('strtolower', (array) $tables);
 			if (in_array($courseSlotsTable, $tablesLc, true)) {
-				$query->where(
-					'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_course_slots', 'cs')
+				$conds[] = 'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_course_slots', 'cs')
 					. ' WHERE ' . $db->quoteName('cs.master_id') . ' = ' . $db->quoteName('u.id')
 					. ' AND ' . $db->quoteName('cs.is_active') . ' = 1'
 					. ' AND ' . $db->quoteName('cs.starts_at_utc') . ' <= ' . $dtQ
-					. ' AND ' . $db->quoteName('cs.ends_at_utc') . ' > ' . $dtQ . ')'
-				);
+					. ' AND ' . $db->quoteName('cs.ends_at_utc') . ' > ' . $dtQ . ')';
 			}
 			if (in_array($searchSlotsTable, $tablesLc, true)) {
-				$query->where(
-					'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_search_slots', 'ss')
+				$conds[] = 'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_search_slots', 'ss')
 					. ' WHERE ' . $db->quoteName('ss.master_id') . ' = ' . $db->quoteName('u.id')
 					. ' AND ' . $db->quoteName('ss.is_active') . ' = 1'
 					. ' AND ' . $db->quoteName('ss.starts_at_utc') . ' <= ' . $dtQ
-					. ' AND ' . $db->quoteName('ss.ends_at_utc') . ' > ' . $dtQ . ')'
-				);
+					. ' AND ' . $db->quoteName('ss.ends_at_utc') . ' > ' . $dtQ . ')';
 			}
 		} catch (\Throwable $ignored) {
 		}
+
+		return $conds;
 	}
 
 	private function getUserFieldIds($db): array

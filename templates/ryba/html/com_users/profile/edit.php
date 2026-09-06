@@ -102,7 +102,7 @@ if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 }
 
 $tabs = $isMaster
-	? ['profile', 'portfolio', 'speciality', 'services', 'stocks', 'courses', 'searches', 'schedule', 'login']
+	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'login']
 	: ['profile', 'login'];
 
 $tabTitles = [
@@ -338,9 +338,9 @@ if ($aboutMeValue === '' && isset($jcfields['o_sebe']->rawvalue) && is_scalar($j
 	$aboutMeValue = trim((string) $jcfields['o_sebe']->rawvalue);
 }
 
-$scheduleWorkDays = [1, 2, 3, 4, 5, 6];
-$scheduleWorkFrom = '10:00';
-$scheduleWorkTo = '20:00';
+$scheduleWorkDays = [];
+$scheduleWorkFrom = '';
+$scheduleWorkTo = '';
 $scheduleFieldRaw = [];
 if ($userId > 0) {
 	try {
@@ -1118,7 +1118,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 											</select>
 										</div>
 									</div>
-									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется в системе онлайн-записи для отображения доступных слотов у клиентов.</p>
+									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения ваших рабочих дней и часов. Оно не требует указывать услуги, акции, курсы или поиск моделей.</p>
 								<?php elseif ($tabKey === 'login') : ?>
 									<p class="lk-login-hint">В качестве email для входа используется почта аккаунта</p>
 									<?php
