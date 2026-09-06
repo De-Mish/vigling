@@ -195,13 +195,15 @@ if (!is_array($selectedSpecialties)) {
 }
 $selectedSpecialties = array_map('intval', $selectedSpecialties);
 
-$selectedWorkDays = $registrationData['work_day'] ?? [1, 2, 3, 4, 5, 6];
+$selectedWorkDays = $registrationData['work_day'] ?? [];
 if (!is_array($selectedWorkDays)) {
-    $selectedWorkDays = [1, 2, 3, 4, 5, 6];
+    $selectedWorkDays = [];
 }
-$selectedWorkDays = array_map('intval', $selectedWorkDays);
-$workFromValue = $getValue($registrationData, 'work_from', '10:00');
-$workToValue = $getValue($registrationData, 'work_to', '20:00');
+$selectedWorkDays = array_values(array_filter(array_map('intval', $selectedWorkDays), static function (int $day): bool {
+    return $day >= 1 && $day <= 7;
+}));
+$workFromValue = $getValue($registrationData, 'work_from', '');
+$workToValue = $getValue($registrationData, 'work_to', '');
 
 $days = [
     1 => 'Понедельник',
@@ -241,11 +243,11 @@ $durationJson = json_encode($durationOptions);
             <li class="z-tab z-first z-active" data-tab="jsn_default"><a class="z-link reg-step-link" href="#jsn_default">Профиль<span></span></a></li>
             <li class="z-tab" data-tab="jsn_portfolio"><a class="z-link reg-step-link" href="#jsn_portfolio">Портфолио<span></span></a></li>
             <li class="z-tab" data-tab="jsn_spetsialnost"><a class="z-link reg-step-link" href="#jsn_spetsialnost">Специальность<span></span></a></li>
+            <li class="z-tab" data-tab="jsn_raspisanie"><a class="z-link reg-step-link" href="#jsn_raspisanie">Расписание<span></span></a></li>
             <li class="z-tab" data-tab="jsn_addinfo"><a class="z-link reg-step-link" href="#jsn_addinfo">Услуги и цены<span></span></a></li>
             <li class="z-tab" data-tab="jsn_courses"><a class="z-link reg-step-link" href="#jsn_courses">Курсы<span></span></a></li>
             <li class="z-tab" data-tab="jsn_searches"><a class="z-link reg-step-link" href="#jsn_searches">Поиск моделей<span></span></a></li>
-            <li class="z-tab" data-tab="jsn_login"><a class="z-link reg-step-link" href="#jsn_login">Email и пароль<span></span></a></li>
-            <li class="z-tab z-last" data-tab="jsn_raspisanie"><a class="z-link reg-step-link" href="#jsn_raspisanie">Расписание<span></span></a></li>
+            <li class="z-tab z-last" data-tab="jsn_login"><a class="z-link reg-step-link" href="#jsn_login">Email и пароль<span></span></a></li>
         </ul>
 
         <div class="z-container" id="registration-tabs-container">
@@ -382,6 +384,52 @@ $durationJson = json_encode($durationOptions);
                 </div>
             </div>
 
+            <div class="z-content" data-tab="jsn_raspisanie" style="display:none;">
+                <div class="z-content-inner">
+                    <fieldset id="jsn_raspisanie" class="jsn-form-fieldset">
+                        <legend style="display:none;">Расписание</legend>
+                        <p class="schedule-hint" style="margin:0 0 16px;color:#888;font-size:13px;">Расписание используется для отображения ваших рабочих дней и часов. Оно не требует указывать услуги, акции, курсы или поиск моделей.</p>
+                        <div class="control-group work_day-group">
+                            <div class="control-label"><label for="jform_work_day">Рабочие дни</label></div>
+                            <div class="controls">
+                                <fieldset id="jform_work_day" class="checkboxes">
+                                    <?php foreach ($days as $dayValue => $dayLabel) : ?>
+                                    <label for="jform_work_day<?php echo (int) $dayValue; ?>" class="checkbox">
+                                        <input type="checkbox" id="jform_work_day<?php echo (int) $dayValue; ?>" name="jform[work_day][]" value="<?php echo (int) $dayValue; ?>" <?php echo in_array((int) $dayValue, $selectedWorkDays, true) ? 'checked' : ''; ?> />
+                                        <?php echo $dayLabel; ?>
+                                    </label>
+                                    <?php endforeach; ?>
+                                </fieldset>
+                            </div>
+                        </div>
+
+                        <div class="control-group work_from-group">
+                            <div class="control-label"><label for="jform_work_from">Работаем с</label></div>
+                            <div class="controls">
+                                <select id="jform_work_from" name="jform[work_from]">
+                                    <option value="">выбрать</option>
+                                    <?php foreach ($timeOptions as $timeOption) : ?>
+                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workFromValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="control-group work_to-group">
+                            <div class="control-label"><label for="jform_work_to">Работаем до</label></div>
+                            <div class="controls">
+                                <select id="jform_work_to" name="jform[work_to]">
+                                    <option value="">выбрать</option>
+                                    <?php foreach ($timeOptions as $timeOption) : ?>
+                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workToValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+
             <div class="z-content" data-tab="jsn_addinfo" style="display:none;">
                 <div class="z-content-inner">
                     <fieldset id="jsn_addinfo" class="jsn-form-fieldset">
@@ -468,51 +516,6 @@ $durationJson = json_encode($durationOptions);
                                         <span class="privacy-line-2"><a class="z-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Политики конфиденциальности</a></span>
                                     </span>
                                 </label>
-                            </div>
-                        </div>
-                    </fieldset>
-                </div>
-            </div>
-
-            <div class="z-content" data-tab="jsn_raspisanie" style="display:none;">
-                <div class="z-content-inner">
-                    <fieldset id="jsn_raspisanie" class="jsn-form-fieldset">
-                        <legend style="display:none;">Расписание</legend>
-                        <div class="control-group work_day-group">
-                            <div class="control-label"><label for="jform_work_day">Рабочие дни</label></div>
-                            <div class="controls">
-                                <fieldset id="jform_work_day" class="checkboxes">
-                                    <?php foreach ($days as $dayValue => $dayLabel) : ?>
-                                    <label for="jform_work_day<?php echo (int) $dayValue; ?>" class="checkbox">
-                                        <input type="checkbox" id="jform_work_day<?php echo (int) $dayValue; ?>" name="jform[work_day][]" value="<?php echo (int) $dayValue; ?>" <?php echo in_array((int) $dayValue, $selectedWorkDays, true) ? 'checked' : ''; ?> />
-                                        <?php echo $dayLabel; ?>
-                                    </label>
-                                    <?php endforeach; ?>
-                                </fieldset>
-                            </div>
-                        </div>
-
-                        <div class="control-group work_from-group">
-                            <div class="control-label"><label for="jform_work_from">Работаем с</label></div>
-                            <div class="controls">
-                                <select id="jform_work_from" name="jform[work_from]">
-                                    <option value="">выбрать</option>
-                                    <?php foreach ($timeOptions as $timeOption) : ?>
-                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workFromValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="control-group work_to-group">
-                            <div class="control-label"><label for="jform_work_to">Работаем до</label></div>
-                            <div class="controls">
-                                <select id="jform_work_to" name="jform[work_to]">
-                                    <option value="">выбрать</option>
-                                    <?php foreach ($timeOptions as $timeOption) : ?>
-                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workToValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
                             </div>
                         </div>
                     </fieldset>
@@ -1183,8 +1186,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var tabsByType = {
         client: ['jsn_default', 'jsn_login'],
-        master: ['jsn_default', 'jsn_portfolio', 'jsn_spetsialnost', 'jsn_addinfo', 'jsn_courses', 'jsn_searches', 'jsn_login', 'jsn_raspisanie'],
-        zatochka_remont: ['jsn_default', 'jsn_portfolio', 'jsn_spetsialnost', 'jsn_addinfo', 'jsn_courses', 'jsn_searches', 'jsn_login', 'jsn_raspisanie']
+        master: ['jsn_default', 'jsn_portfolio', 'jsn_spetsialnost', 'jsn_raspisanie', 'jsn_addinfo', 'jsn_courses', 'jsn_searches', 'jsn_login'],
+        zatochka_remont: ['jsn_default', 'jsn_portfolio', 'jsn_spetsialnost', 'jsn_raspisanie', 'jsn_addinfo', 'jsn_courses', 'jsn_searches', 'jsn_login']
     };
 
     var masterValueByType = {
@@ -2232,11 +2235,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return true;
         }
 
-        var from = String($('#jform_work_from').val() || '');
-        var to = String($('#jform_work_to').val() || '');
+        var from = String($('#jform_work_from').val() || '').trim();
+        var to = String($('#jform_work_to').val() || '').trim();
+
+        if (!from && !to) {
+            return true;
+        }
 
         if (!from || !to) {
-            alert('Выберите время работы: с и до.');
+            alert('Если заполняете расписание, выберите время работы: с и до.');
             return false;
         }
 

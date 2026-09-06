@@ -214,10 +214,10 @@ if (!is_array($workTo)) {
 }
 $workFrom = array_values(array_map('trim', array_map('strval', $workFrom)));
 $workTo = array_values(array_map('trim', array_map('strval', $workTo)));
+$fromByDay = array_fill(1, 7, '');
+$toByDay = array_fill(1, 7, '');
 
 if ($workDays !== []) {
-	$fromByDay = array_fill(1, 7, '');
-	$toByDay = array_fill(1, 7, '');
 	if (count($workFrom) === 1) {
 		foreach ($workDays as $wd) {
 			$fromByDay[$wd] = $workFrom[0];
@@ -303,6 +303,13 @@ foreach ($workDayLabels as $wd => $label) {
 		continue;
 	}
 	$workRangeByDay[$wd] = [$fromMin, $toMin];
+}
+$hasWorkSchedule = false;
+foreach ($workRangeByDay as $range) {
+	if (is_array($range)) {
+		$hasWorkSchedule = true;
+		break;
+	}
 }
 
 $calendarDays = [];
@@ -1710,7 +1717,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
-							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
+							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1"<?php if ($hasWorkSchedule) : ?> data-toggle="modal" data-target="#zapis"<?php endif; ?> data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
 						</div>
 						<?php endforeach; ?>
@@ -1768,10 +1775,10 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 										data-booking-disabled="<?php echo $stockIsSoldOut ? '1' : '0'; ?>"
 										title="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
 										aria-label="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
-										<?php if (!$stockIsSoldOut) : ?>
+										<?php if (!$stockIsSoldOut && $hasWorkSchedule) : ?>
 										data-toggle="modal"
 										data-target="#zapis"
-										<?php else : ?>
+										<?php elseif ($stockIsSoldOut) : ?>
 										disabled="disabled"
 										aria-disabled="true"
 										<?php endif; ?>
@@ -1865,10 +1872,10 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $courseButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($courseButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($courseButtonTitle); ?>"
-									<?php if (!$courseButtonDisabled) : ?>
+									<?php if (!$courseButtonDisabled && ($hasWorkSchedule || $courseSlotUtc !== '')) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
-									<?php else : ?>
+									<?php elseif ($courseButtonDisabled) : ?>
 									disabled="disabled"
 									aria-disabled="true"
 									<?php endif; ?>
@@ -1961,10 +1968,10 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $searchButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($searchButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($searchButtonTitle); ?>"
-									<?php if (!$searchButtonDisabled) : ?>
+									<?php if (!$searchButtonDisabled && ($hasWorkSchedule || $searchSlotUtc !== '')) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
-									<?php else : ?>
+									<?php elseif ($searchButtonDisabled) : ?>
 									disabled="disabled"
 									aria-disabled="true"
 									<?php endif; ?>
@@ -2287,6 +2294,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 	var bookingForm = document.getElementById('order-form');
 	if (bookingModal && bookingForm) {
 		var isLoggedIn = <?php echo $currentUser->id > 0 ? 'true' : 'false'; ?>;
+		var hasWorkSchedule = <?php echo !empty($hasWorkSchedule) ? 'true' : 'false'; ?>;
 		var quickAuthUrl = <?php echo json_encode(Route::_('index.php?option=com_ajax&plugin=Quickauth&format=json', false)); ?>;
 		var bookingMasterName = <?php echo json_encode($displayName); ?>;
 		var bookingAddress = <?php echo json_encode($addr); ?>;
@@ -3314,14 +3322,20 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		});
 
 		document.querySelectorAll('.btn_add-master[data-booking-toggle="1"]').forEach(function (button) {
-			button.addEventListener('click', function () {
+			button.addEventListener('click', function (e) {
 				if (this.disabled || this.getAttribute('data-booking-disabled') === '1') {
+					return;
+				}
+				var fixedTimeUtc = String(this.getAttribute('data-fixed-time-utc') || '').trim();
+				if (!hasWorkSchedule && !fixedTimeUtc) {
+					e.preventDefault();
+					e.stopImmediatePropagation();
 					return;
 				}
 				activeBookingButton = this;
 				hideReservedNotice();
 				updateSummaryFromButton(this);
-			});
+			}, true);
 		});
 
 		jQuery(bookingModal).on('shown.bs.modal', function () {
