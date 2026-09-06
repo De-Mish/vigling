@@ -202,41 +202,19 @@ $workToRaw = $fieldValue($jcfields, 'work_to');
 $workDayLabels = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
 $workRows = [];
 $workDays = $parseIntList($workDayRaw);
-$workFrom = json_decode($workFromRaw, true);
-$workTo = json_decode($workToRaw, true);
-if (!is_array($workFrom)) {
-	$tmp = trim($workFromRaw);
-	$workFrom = $tmp !== '' ? [$tmp] : [];
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
 }
-if (!is_array($workTo)) {
-	$tmp = trim($workToRaw);
-	$workTo = $tmp !== '' ? [$tmp] : [];
-}
-$workFrom = array_values(array_map('trim', array_map('strval', $workFrom)));
-$workTo = array_values(array_map('trim', array_map('strval', $workTo)));
-$fromByDay = array_fill(1, 7, '');
-$toByDay = array_fill(1, 7, '');
+$parsedPublicSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
+	(string) $workDayRaw,
+	(string) $workFromRaw,
+	(string) $workToRaw
+);
+$workDays = $parsedPublicSchedule['days'] !== [] ? $parsedPublicSchedule['days'] : $workDays;
+$fromByDay = $parsedPublicSchedule['from'];
+$toByDay = $parsedPublicSchedule['to'];
 
 if ($workDays !== []) {
-	if (count($workFrom) === 1) {
-		foreach ($workDays as $wd) {
-			$fromByDay[$wd] = $workFrom[0];
-		}
-	} elseif (count($workFrom) === count($workDays)) {
-		foreach ($workDays as $idx => $wd) {
-			$fromByDay[$wd] = (string) ($workFrom[$idx] ?? '');
-		}
-	}
-	if (count($workTo) === 1) {
-		foreach ($workDays as $wd) {
-			$toByDay[$wd] = $workTo[0];
-		}
-	} elseif (count($workTo) === count($workDays)) {
-		foreach ($workDays as $idx => $wd) {
-			$toByDay[$wd] = (string) ($workTo[$idx] ?? '');
-		}
-	}
-
 	foreach ($workDayLabels as $wd => $label) {
 		if (!in_array($wd, $workDays, true)) {
 			continue;

@@ -341,6 +341,8 @@ if ($aboutMeValue === '' && isset($jcfields['o_sebe']->rawvalue) && is_scalar($j
 $scheduleWorkDays = [];
 $scheduleWorkFrom = '';
 $scheduleWorkTo = '';
+$scheduleFromByDay = array_fill(1, 7, '');
+$scheduleToByDay = array_fill(1, 7, '');
 $scheduleFieldRaw = [];
 if ($userId > 0) {
 	try {
@@ -386,14 +388,24 @@ $decodeTimeField = static function (string $raw): string {
 	}
 	return '';
 };
+$workFromRawLoad = (string) ($scheduleFieldRaw['work_from'] ?? ((isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue)) ? $jcfields['work_from']->rawvalue : ''));
+$workToRawLoad = (string) ($scheduleFieldRaw['work_to'] ?? ((isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue)) ? $jcfields['work_to']->rawvalue : ''));
+$workDayRawLoad = (string) ($scheduleFieldRaw['work_day'] ?? ((isset($jcfields['work_day']->rawvalue) && is_scalar($jcfields['work_day']->rawvalue)) ? $jcfields['work_day']->rawvalue : ''));
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+}
+$parsedSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+$scheduleWorkDays = $parsedSchedule['days'] !== [] ? $parsedSchedule['days'] : $scheduleWorkDays;
+$scheduleFromByDay = $parsedSchedule['from'];
+$scheduleToByDay = $parsedSchedule['to'];
 if (isset($scheduleFieldRaw['work_from']) || (isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue))) {
-	$v = $decodeTimeField((string) ($scheduleFieldRaw['work_from'] ?? $jcfields['work_from']->rawvalue));
+	$v = $decodeTimeField($workFromRawLoad);
 	if ($v !== '') {
 		$scheduleWorkFrom = $v;
 	}
 }
 if (isset($scheduleFieldRaw['work_to']) || (isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue))) {
-	$v = $decodeTimeField((string) ($scheduleFieldRaw['work_to'] ?? $jcfields['work_to']->rawvalue));
+	$v = $decodeTimeField($workToRawLoad);
 	if ($v !== '') {
 		$scheduleWorkTo = $v;
 	}
@@ -1061,63 +1073,103 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 										</div>
 									</div>
 								<?php elseif ($isMaster && $tabKey === 'schedule') : ?>
-									<div class="control-group work_day-group">
-										<div class="control-label"><label>Рабочие дни</label></div>
+									<div class="control-group work_day-group schedule-by-day">
 										<div class="controls">
 											<input type="hidden" name="jform[com_fields][work_day]" id="jform_work_day_json" value="<?php echo htmlspecialchars(json_encode(array_values(array_map('strval', $scheduleWorkDays))), ENT_QUOTES); ?>">
-											<fieldset class="checkboxes schedule-days">
+											<input type="hidden" name="jform[com_fields][work_from]" id="jform_work_from_json" value="">
+											<input type="hidden" name="jform[com_fields][work_to]" id="jform_work_to_json" value="">
+											<div class="schedule-day-list">
 												<?php foreach ($scheduleDayNames as $dayNum => $dayName) : ?>
-												<label class="checkbox schedule-day-label">
-													<input type="checkbox" class="schedule-day-cb" name="jform[vigling_schedule_days][]" value="<?php echo (int) $dayNum; ?>" data-day="<?php echo (int) $dayNum; ?>" <?php echo in_array($dayNum, $scheduleWorkDays, true) ? 'checked' : ''; ?> />
-													<?php echo $dayName; ?>
-												</label>
+												<?php
+													$dayChecked = in_array($dayNum, $scheduleWorkDays, true);
+													$dayFrom = (string) ($scheduleFromByDay[$dayNum] ?? '');
+													$dayTo = (string) ($scheduleToByDay[$dayNum] ?? '');
+												?>
+												<div class="schedule-day-row<?php echo $dayChecked ? ' is-active' : ''; ?>">
+													<label class="checkbox schedule-day-label">
+														<input type="checkbox" class="schedule-day-cb" name="jform[vigling_schedule_days][]" value="<?php echo (int) $dayNum; ?>" data-day="<?php echo (int) $dayNum; ?>" <?php echo $dayChecked ? 'checked' : ''; ?> />
+														<?php echo $dayName; ?>
+													</label>
+													<div class="schedule-day-times">
+														<label class="schedule-time-label">
+															<span>Начало</span>
+															<select class="schedule-time-select schedule-from" name="jform[work_from_by_day][<?php echo (int) $dayNum; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+																<option value="">— выбрать —</option>
+																<?php foreach ($scheduleTimeOptions as $t) : ?>
+																<option value="<?php echo $t; ?>" <?php echo $t === $dayFrom ? 'selected' : ''; ?>><?php echo $t; ?></option>
+																<?php endforeach; ?>
+															</select>
+														</label>
+														<label class="schedule-time-label">
+															<span>Конец</span>
+															<select class="schedule-time-select schedule-to" name="jform[work_to_by_day][<?php echo (int) $dayNum; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+																<option value="">— выбрать —</option>
+																<?php foreach ($scheduleTimeOptions as $t) : ?>
+																<option value="<?php echo $t; ?>" <?php echo $t === $dayTo ? 'selected' : ''; ?>><?php echo $t; ?></option>
+																<?php endforeach; ?>
+															</select>
+														</label>
+													</div>
+												</div>
 												<?php endforeach; ?>
-											</fieldset>
+											</div>
 										</div>
 									</div>
 									<script>
 									(function() {
-										function updateWorkDayJson() {
+										function syncSchedulePayload() {
 											var days = [];
-											document.querySelectorAll('.schedule-day-cb:checked').forEach(function(cb) {
-												days.push(cb.getAttribute('data-day') || cb.value);
+											var from = [];
+											var to = [];
+											document.querySelectorAll('.schedule-day-row').forEach(function(row) {
+												var cb = row.querySelector('.schedule-day-cb');
+												var fromSel = row.querySelector('.schedule-from');
+												var toSel = row.querySelector('.schedule-to');
+												if (!cb || !fromSel || !toSel) {
+													return;
+												}
+												fromSel.disabled = !cb.checked;
+												toSel.disabled = !cb.checked;
+												row.classList.toggle('is-active', !!cb.checked);
+												if (!cb.checked) {
+													return;
+												}
+												var f = String(fromSel.value || '').trim();
+												var t = String(toSel.value || '').trim();
+												if (f && t && f < t) {
+													days.push(cb.getAttribute('data-day') || cb.value);
+													from.push(f);
+													to.push(t);
+												}
 											});
-											var input = document.getElementById('jform_work_day_json');
-											if (input) {
-												input.value = JSON.stringify(days);
+											var dayInput = document.getElementById('jform_work_day_json');
+											var fromInput = document.getElementById('jform_work_from_json');
+											var toInput = document.getElementById('jform_work_to_json');
+											if (dayInput) {
+												dayInput.value = JSON.stringify(days);
+											}
+											if (fromInput) {
+												fromInput.value = from.length ? JSON.stringify(from) : '';
+											}
+											if (toInput) {
+												toInput.value = to.length ? JSON.stringify(to) : '';
 											}
 										}
-										document.querySelectorAll('.schedule-day-cb').forEach(function(cb) {
-											cb.addEventListener('change', updateWorkDayJson);
+										document.querySelectorAll('.schedule-day-cb, .schedule-from, .schedule-to').forEach(function(el) {
+											el.addEventListener('change', syncSchedulePayload);
 										});
 										var form = document.getElementById('member-profile');
 										if (form) {
-											form.addEventListener('submit', updateWorkDayJson);
+											form.addEventListener('submit', function() {
+												document.querySelectorAll('.schedule-from, .schedule-to').forEach(function(sel) {
+													sel.disabled = false;
+												});
+												syncSchedulePayload();
+											});
 										}
+										syncSchedulePayload();
 									})();
 									</script>
-									<div class="control-group work_from-group" style="margin-top:16px">
-										<div class="control-label"><label for="jform_work_from_edit">Начало рабочего дня</label></div>
-										<div class="controls">
-											<select id="jform_work_from_edit" name="jform[com_fields][work_from]" class="schedule-time-select">
-												<option value="">— выбрать —</option>
-												<?php foreach ($scheduleTimeOptions as $t) : ?>
-												<option value="<?php echo $t; ?>" <?php echo $t === $scheduleWorkFrom ? 'selected' : ''; ?>><?php echo $t; ?></option>
-												<?php endforeach; ?>
-											</select>
-										</div>
-									</div>
-									<div class="control-group work_to-group" style="margin-top:12px">
-										<div class="control-label"><label for="jform_work_to_edit">Конец рабочего дня</label></div>
-										<div class="controls">
-											<select id="jform_work_to_edit" name="jform[com_fields][work_to]" class="schedule-time-select">
-												<option value="">— выбрать —</option>
-												<?php foreach ($scheduleTimeOptions as $t) : ?>
-												<option value="<?php echo $t; ?>" <?php echo $t === $scheduleWorkTo ? 'selected' : ''; ?>><?php echo $t; ?></option>
-												<?php endforeach; ?>
-											</select>
-										</div>
-									</div>
 									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
 								<?php elseif ($tabKey === 'login') : ?>
 									<p class="lk-login-hint">В качестве email для входа используется почта аккаунта</p>
@@ -1178,6 +1230,58 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 <style>
 .profile-edit {
 	padding-bottom: 42px;
+}
+.profile-edit .schedule-day-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+	max-width: 520px;
+}
+.profile-edit .schedule-day-row {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 12px 14px;
+	border: 1px solid #e3e3e3;
+	border-radius: 8px;
+	background: #fafafa;
+}
+.profile-edit .schedule-day-row.is-active {
+	background: #fff;
+	border-color: #f7cc53;
+}
+.profile-edit .schedule-day-label {
+	display: block;
+	margin: 0 0 10px;
+	font-weight: 600;
+}
+.profile-edit .schedule-day-times {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 12px;
+	width: 100%;
+}
+.profile-edit .schedule-time-label {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 50%;
+	min-width: 0;
+	margin: 0;
+	font-size: 13px;
+	color: #555;
+}
+.profile-edit .schedule-time-label select {
+	width: 100%;
+	margin-top: 4px;
+	box-sizing: border-box;
+}
+@media only screen and (max-width: 1020px) {
+	.profile-edit .schedule-day-list {
+		max-width: 100%;
+	}
 }
 .profile-edit #jsn-profile-tabs.z-tabs-desktop {
 	display: flex;

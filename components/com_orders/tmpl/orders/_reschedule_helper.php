@@ -142,44 +142,15 @@ if (!function_exists('viglingOrdersLoadMasterSchedule')) {
 			$raw[$name] = trim((string) ($row['field_value'] ?? ''));
 		}
 
-		$days = viglingOrdersParseIntList($raw['work_day']);
-		if ($days === []) {
-			return [];
-		}
-		$from = viglingOrdersParseStringList($raw['work_from']);
-		$to = viglingOrdersParseStringList($raw['work_to']);
-
-		$fromByDay = array_fill(1, 7, '');
-		$toByDay = array_fill(1, 7, '');
-		if (count($from) === 1) {
-			foreach ($days as $d) {
-				$fromByDay[$d] = $from[0];
-			}
-		} elseif (count($from) === count($days)) {
-			foreach ($days as $idx => $d) {
-				$fromByDay[$d] = (string) ($from[$idx] ?? '');
-			}
-		}
-		if (count($to) === 1) {
-			foreach ($days as $d) {
-				$toByDay[$d] = $to[0];
-			}
-		} elseif (count($to) === count($days)) {
-			foreach ($days as $idx => $d) {
-				$toByDay[$d] = (string) ($to[$idx] ?? '');
-			}
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+			require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
 		}
 
-		$result = [];
-		foreach ($days as $d) {
-			$fromMin = viglingOrdersParseTimeToMinutes((string) ($fromByDay[$d] ?? ''));
-			$toMin = viglingOrdersParseTimeToMinutes((string) ($toByDay[$d] ?? ''));
-			if ($fromMin === null || $toMin === null || $toMin <= $fromMin) {
-				continue;
-			}
-			$result[$d] = [$fromMin, $toMin];
-		}
-		return $result;
+		return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
+			$raw['work_day'],
+			$raw['work_from'],
+			$raw['work_to']
+		);
 	}
 }
 

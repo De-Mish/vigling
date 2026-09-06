@@ -204,6 +204,31 @@ $selectedWorkDays = array_values(array_filter(array_map('intval', $selectedWorkD
 }));
 $workFromValue = $getValue($registrationData, 'work_from', '');
 $workToValue = $getValue($registrationData, 'work_to', '');
+$workFromByDay = array_fill(1, 7, '');
+$workToByDay = array_fill(1, 7, '');
+$postedFromByDay = $registrationData['work_from_by_day'] ?? [];
+$postedToByDay = $registrationData['work_to_by_day'] ?? [];
+if (is_array($postedFromByDay) || is_array($postedToByDay)) {
+    for ($wd = 1; $wd <= 7; $wd++) {
+        $workFromByDay[$wd] = is_array($postedFromByDay) && isset($postedFromByDay[$wd]) && is_scalar($postedFromByDay[$wd])
+            ? (string) $postedFromByDay[$wd]
+            : '';
+        $workToByDay[$wd] = is_array($postedToByDay) && isset($postedToByDay[$wd]) && is_scalar($postedToByDay[$wd])
+            ? (string) $postedToByDay[$wd]
+            : '';
+    }
+} elseif ($workFromValue !== '' || $workToValue !== '') {
+    if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+        require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+    }
+    $parsedRegSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
+        json_encode(array_map('strval', $selectedWorkDays)),
+        $workFromValue,
+        $workToValue
+    );
+    $workFromByDay = $parsedRegSchedule['from'];
+    $workToByDay = $parsedRegSchedule['to'];
+}
 
 $days = [
     1 => 'Понедельник',
@@ -389,41 +414,45 @@ $durationJson = json_encode($durationOptions);
                     <fieldset id="jsn_raspisanie" class="jsn-form-fieldset">
                         <legend style="display:none;">Расписание</legend>
                         <p class="schedule-hint" style="margin:0 0 16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
-                        <div class="control-group work_day-group">
-                            <div class="control-label"><label for="jform_work_day">Рабочие дни</label></div>
+                        <div class="control-group work_day-group schedule-by-day">
                             <div class="controls">
-                                <fieldset id="jform_work_day" class="checkboxes">
+                                <input type="hidden" name="jform[work_from]" id="jform_work_from" value="" />
+                                <input type="hidden" name="jform[work_to]" id="jform_work_to" value="" />
+                                <fieldset id="jform_work_day" class="checkboxes schedule-day-list">
                                     <?php foreach ($days as $dayValue => $dayLabel) : ?>
-                                    <label for="jform_work_day<?php echo (int) $dayValue; ?>" class="checkbox">
-                                        <input type="checkbox" id="jform_work_day<?php echo (int) $dayValue; ?>" name="jform[work_day][]" value="<?php echo (int) $dayValue; ?>" <?php echo in_array((int) $dayValue, $selectedWorkDays, true) ? 'checked' : ''; ?> />
-                                        <?php echo $dayLabel; ?>
-                                    </label>
+                                    <?php
+                                        $dayChecked = in_array((int) $dayValue, $selectedWorkDays, true);
+                                        $dayFrom = (string) ($workFromByDay[$dayValue] ?? '');
+                                        $dayTo = (string) ($workToByDay[$dayValue] ?? '');
+                                    ?>
+                                    <div class="schedule-day-row<?php echo $dayChecked ? ' is-active' : ''; ?>">
+                                        <label for="jform_work_day<?php echo (int) $dayValue; ?>" class="checkbox schedule-day-label">
+                                            <input type="checkbox" class="schedule-day-cb" id="jform_work_day<?php echo (int) $dayValue; ?>" name="jform[work_day][]" value="<?php echo (int) $dayValue; ?>" <?php echo $dayChecked ? 'checked' : ''; ?> />
+                                            <?php echo $dayLabel; ?>
+                                        </label>
+                                        <div class="schedule-day-times">
+                                            <label class="schedule-time-label">
+                                                <span>Начало</span>
+                                                <select class="schedule-from" name="jform[work_from_by_day][<?php echo (int) $dayValue; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+                                                    <option value="">выбрать</option>
+                                                    <?php foreach ($timeOptions as $timeOption) : ?>
+                                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $dayFrom ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                            <label class="schedule-time-label">
+                                                <span>Конец</span>
+                                                <select class="schedule-to" name="jform[work_to_by_day][<?php echo (int) $dayValue; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+                                                    <option value="">выбрать</option>
+                                                    <?php foreach ($timeOptions as $timeOption) : ?>
+                                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $dayTo ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                        </div>
+                                    </div>
                                     <?php endforeach; ?>
                                 </fieldset>
-                            </div>
-                        </div>
-
-                        <div class="control-group work_from-group">
-                            <div class="control-label"><label for="jform_work_from">Работаем с</label></div>
-                            <div class="controls">
-                                <select id="jform_work_from" name="jform[work_from]">
-                                    <option value="">выбрать</option>
-                                    <?php foreach ($timeOptions as $timeOption) : ?>
-                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workFromValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="control-group work_to-group">
-                            <div class="control-label"><label for="jform_work_to">Работаем до</label></div>
-                            <div class="controls">
-                                <select id="jform_work_to" name="jform[work_to]">
-                                    <option value="">выбрать</option>
-                                    <?php foreach ($timeOptions as $timeOption) : ?>
-                                    <option value="<?php echo $this->escape($timeOption); ?>" <?php echo $timeOption === $workToValue ? 'selected' : ''; ?>><?php echo $this->escape($timeOption); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
                             </div>
                         </div>
                     </fieldset>
@@ -616,6 +645,61 @@ $durationJson = json_encode($durationOptions);
     background: #bb9a3c !important;
     background-color: #bb9a3c !important;
     color: #000 !important;
+}
+#easyprofile.registration .schedule-day-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 520px;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+#easyprofile.registration .schedule-day-row {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border: 1px solid #e3e3e3;
+    border-radius: 8px;
+    background: #fafafa;
+}
+#easyprofile.registration .schedule-day-row.is-active {
+    background: #fff;
+    border-color: #f7cc53;
+}
+#easyprofile.registration .schedule-day-label {
+    display: block;
+    margin: 0 0 10px;
+    font-weight: 600;
+}
+#easyprofile.registration .schedule-day-times {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+}
+#easyprofile.registration .schedule-time-label {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 50%;
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+    color: #555;
+}
+#easyprofile.registration .schedule-time-label select {
+    width: 100%;
+    margin-top: 4px;
+    box-sizing: border-box;
+}
+@media only screen and (max-width: 1020px) {
+    #easyprofile.registration .schedule-day-list {
+        max-width: 100%;
+    }
 }
 
 #easyprofile.registration #jform_courses_servis {
@@ -2006,8 +2090,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         var selectedDays = [];
-        $('#jform_work_day input[type="checkbox"]:checked').each(function () {
-            selectedDays.push(parseInt(this.value, 10));
+        var workFromByDay = {};
+        var workToByDay = {};
+        $('#jform_work_day .schedule-day-row').each(function () {
+            var row = $(this);
+            var cb = row.find('.schedule-day-cb');
+            var day = parseInt(cb.val(), 10);
+            if (isNaN(day)) {
+                return;
+            }
+            workFromByDay[day] = String(row.find('.schedule-from').val() || '');
+            workToByDay[day] = String(row.find('.schedule-to').val() || '');
+            if (cb.prop('checked')) {
+                selectedDays.push(day);
+            }
         });
 
         return {
@@ -2028,7 +2124,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 max: $('#jform_max').val() || '',
                 aboutme: $('#jform_o_sebe').val() || '',
                 workFrom: $('#jform_work_from').val() || '',
-                workTo: $('#jform_work_to').val() || ''
+                workTo: $('#jform_work_to').val() || '',
+                workFromByDay: workFromByDay,
+                workToByDay: workToByDay
             },
             passwordFields: {
                 password1: $('#jform_password1').val() || '',
@@ -2135,6 +2233,18 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#jform_o_sebe').val(fields.aboutme || '');
         $('#jform_work_from').val(fields.workFrom || '');
         $('#jform_work_to').val(fields.workTo || '');
+        var fromByDay = fields.workFromByDay || {};
+        var toByDay = fields.workToByDay || {};
+        $('#jform_work_day .schedule-day-row').each(function () {
+            var row = $(this);
+            var day = String(row.find('.schedule-day-cb').val() || '');
+            if (fromByDay[day] || fromByDay[parseInt(day, 10)]) {
+                row.find('.schedule-from').val(fromByDay[day] || fromByDay[parseInt(day, 10)] || '');
+            }
+            if (toByDay[day] || toByDay[parseInt(day, 10)]) {
+                row.find('.schedule-to').val(toByDay[day] || toByDay[parseInt(day, 10)] || '');
+            }
+        });
 
         var passwordFields = draft.passwordFields || {};
         $('#jform_password1').val(passwordFields.password1 || '');
@@ -2161,6 +2271,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 $('#jform_work_day input[type="checkbox"][value="' + parseInt(id, 10) + '"]').prop('checked', true);
             });
         }
+        syncRegistrationScheduleRows();
 
         if (draft.locked) {
             lockTypeSelection();
@@ -2230,28 +2341,60 @@ document.addEventListener('DOMContentLoaded', function () {
         usernameInput.val(email);
     }
 
+    function syncRegistrationScheduleRows() {
+        var from = [];
+        var to = [];
+        $('#jform_work_day .schedule-day-row').each(function () {
+            var row = $(this);
+            var cb = row.find('.schedule-day-cb');
+            var fromSel = row.find('.schedule-from');
+            var toSel = row.find('.schedule-to');
+            var checked = cb.prop('checked') === true;
+            row.toggleClass('is-active', checked);
+            fromSel.prop('disabled', !checked);
+            toSel.prop('disabled', !checked);
+            if (checked && fromSel.val() && toSel.val() && String(fromSel.val()) < String(toSel.val())) {
+                from.push(String(fromSel.val()));
+                to.push(String(toSel.val()));
+            }
+        });
+        $('#jform_work_from').val(from.length ? JSON.stringify(from) : '');
+        $('#jform_work_to').val(to.length ? JSON.stringify(to) : '');
+    }
+
     function validateSchedule() {
         if (currentType === 'client') {
             return true;
         }
 
-        var from = String($('#jform_work_from').val() || '').trim();
-        var to = String($('#jform_work_to').val() || '').trim();
-
-        if (!from && !to) {
+        var ok = true;
+        var hasAny = false;
+        $('#jform_work_day .schedule-day-row').each(function () {
+            var row = $(this);
+            var cb = row.find('.schedule-day-cb');
+            if (!cb.prop('checked')) {
+                return;
+            }
+            hasAny = true;
+            var from = String(row.find('.schedule-from').val() || '').trim();
+            var to = String(row.find('.schedule-to').val() || '').trim();
+            if (!from || !to) {
+                ok = false;
+                return false;
+            }
+            if (from >= to) {
+                ok = false;
+                return false;
+            }
+        });
+        if (!hasAny) {
             return true;
         }
-
-        if (!from || !to) {
-            alert('Если заполняете расписание, выберите время работы: с и до.');
+        if (!ok) {
+            alert('Для каждого выбранного рабочего дня укажите время «с» и «до», и время окончания должно быть позже начала.');
             return false;
         }
-
-        if (from >= to) {
-            alert('Время "Работаем до" должно быть позже времени "Работаем с".');
-            return false;
-        }
-
+        syncRegistrationScheduleRows();
         return true;
     }
 
@@ -2584,6 +2727,7 @@ document.addEventListener('DOMContentLoaded', function () {
         syncUsernameWithEmail();
         syncCoursePayloadInput();
         syncSearchPayloadInput();
+        $('#jform_work_day .schedule-from, #jform_work_day .schedule-to').prop('disabled', false);
 
         if (!validateSchedule()) {
             e.preventDefault();
@@ -2662,6 +2806,11 @@ document.addEventListener('DOMContentLoaded', function () {
             controlsBar.hide();
         }
     }
+    $(document).on('change', '#jform_work_day .schedule-day-cb, #jform_work_day .schedule-from, #jform_work_day .schedule-to', function () {
+        syncRegistrationScheduleRows();
+        persistDraftState();
+    });
+    syncRegistrationScheduleRows();
     $(window).on('resize', function () {
         updateTabsContainerHeight();
     });
