@@ -846,8 +846,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 													<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
 												</div>
 											</button>
-											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept="image/*" class="lk-avatar-file-input">
-											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить</span>
+											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="lk-avatar-file-input" data-vigling-manual="1">
+											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить. JPEG, PNG или WebP, сжимается автоматически.</span>
 										</div>
 									</div>
 									<?php
@@ -917,8 +917,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 													<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
 												</div>
 											</button>
-											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept="image/*" class="lk-avatar-file-input">
-											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить</span>
+											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="lk-avatar-file-input" data-vigling-manual="1">
+											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить. JPEG, PNG или WebP, сжимается автоматически.</span>
 										</div>
 									</div>
 									<?php
@@ -1008,7 +1008,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 										<div class="control-label"><label for="jform_upload_portfolio_field">Портфолио</label></div>
 										<div class="controls lk-portfolio-edit-controls">
 											<label class="lk-portfolio-upload-btn" for="jform_upload_portfolio_field">Добавить фото</label>
-											<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept="image/*" multiple>
+											<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" multiple data-vigling-manual="1">
+											<p class="image-upload-hint" style="margin:8px 0 0;color:#888;font-size:12px;">JPEG, PNG или WebP, до 10 фото. Фото сжимается автоматически.</p>
 											<input type="hidden" name="jform[portfolio_deleted]" id="jform_portfolio_deleted" value="">
 											<?php if (!empty($portfolioImages)) : ?>
 											<div class="lk-portfolio-grid lk-edit-portfolio-grid">
@@ -2381,6 +2382,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 }
 
 </style>
+<script src="/templates/ryba/js/vigling-image-upload.js"></script>
 <script>
 (function(){
 	var isAdmin = <?php echo $isAdministrator ? 'true' : 'false'; ?>;
@@ -2809,7 +2811,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	row.innerHTML =
 		'<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
 		'<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
-		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept="image/*" class="course-media-file-input" /><span class="course-media-current">Файл не выбран</span></span></span>' +
+		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="course-media-current">Файл не выбран</span></span></span>' +
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
 		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 		'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
@@ -2866,8 +2868,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	}
 	var mediaFileInput = row.querySelector('.course-media-file-input');
 	if (mediaFileInput) {
+		mediaFileInput.setAttribute('data-vigling-manual', '1');
 		mediaFileInput.addEventListener('change', function(){
-			syncCourseMediaState(row);
+			var run = function () { syncCourseMediaState(row); };
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(mediaFileInput).then(run);
+				return;
+			}
+			run();
 		});
 	}
 }
@@ -3033,7 +3041,7 @@ function addSearchRow(categoryLabel, rowData) {
 	row.setAttribute('data-search-id', rowData && rowData.id ? String(parseInt(rowData.id, 10) || 0) : '0');
 	row.setAttribute('data-booking-count', rowData && rowData.bookingCount ? String(parseInt(rowData.bookingCount, 10) || 0) : '0');
 	row.innerHTML =
-		'<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept="image/*" class="search-media-file-input" style="max-width:100%;width:100%;" /><span class="search-media-current" style="word-break:break-all;overflow-wrap:break-word;white-space:normal;display:inline-block;max-width:100%;">Файл не выбран</span></span></span>' +
+		'<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" style="max-width:100%;width:100%;" /><span class="search-media-current" style="word-break:break-all;overflow-wrap:break-word;white-space:normal;display:inline-block;max-width:100%;">Файл не выбран</span></span></span>' +
 		'<span class="search_title"><label>Название поиска:</label><input type="text" maxlength="150" class="search-title-input" value="" style="width:100%;max-width:100%;box-sizing:border-box;" /></span>' +
 		'<span class="search_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="search-description-input" style="width:100%;max-width:100%;box-sizing:border-box;resize:vertical;"></textarea></span>' +
 		'<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" style="width:100%;max-width:200px;" /></span>' +
@@ -3072,8 +3080,15 @@ function addSearchRow(categoryLabel, rowData) {
 	}
 	var mediaFileInput = row.querySelector('.search-media-file-input');
 	if (mediaFileInput) {
+		mediaFileInput.setAttribute('data-vigling-manual', '1');
 		mediaFileInput.addEventListener('change', function(){
-			syncSearchMediaState(row);
+			var run = function () { syncSearchMediaState(row); };
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(mediaFileInput).then(run);
+				return;
+			}
+			run();
+		});
 		});
 	}
 }
@@ -3489,6 +3504,16 @@ if (searchesHolder) {
 		});
 	}
 
+	if (window.ViglingImageUpload) {
+		window.ViglingImageUpload.bind(document.getElementById('member-profile') || document);
+		var portfolioUpload = document.getElementById('jform_upload_portfolio_field');
+		if (portfolioUpload) {
+			portfolioUpload.addEventListener('change', function () {
+				window.ViglingImageUpload.prepareInput(portfolioUpload);
+			});
+		}
+	}
+
 	// Portfolio delete UX for profile edit.
 	var deletedInput = document.getElementById('jform_portfolio_deleted');
 	if (deletedInput) {
@@ -3514,10 +3539,17 @@ if (searchesHolder) {
 			avatarInput.click();
 		});
 		avatarInput.addEventListener('change', function(){
-			var file = avatarInput.files && avatarInput.files[0] ? avatarInput.files[0] : null;
-			if (!file || !avatarPreview) return;
-			var objectUrl = URL.createObjectURL(file);
-			avatarPreview.src = objectUrl;
+			var applyPreview = function () {
+				var file = avatarInput.files && avatarInput.files[0] ? avatarInput.files[0] : null;
+				if (!file || !avatarPreview) return;
+				var objectUrl = URL.createObjectURL(file);
+				avatarPreview.src = objectUrl;
+			};
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(avatarInput).then(applyPreview);
+				return;
+			}
+			applyPreview();
 		});
 	}
 	document.addEventListener('input', function(e) {

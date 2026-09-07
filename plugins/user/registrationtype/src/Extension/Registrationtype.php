@@ -4,7 +4,6 @@ namespace Joomla\Plugin\User\Registrationtype\Extension;
 
 \defined('_JEXEC') or die;
 
-use Joomla\Filesystem\Folder;
 use Joomla\CMS\Event\User\AfterSaveEvent;
 use Joomla\CMS\Event\Model\PrepareFormEvent;
 use Joomla\CMS\Form\Form;
@@ -21,7 +20,6 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
     use DatabaseAwareTrait;
 
     private const GROUP_MASTER = 3;
-    private const MAX_UPLOAD_SIZE_BYTES = 26214400; // 25MB
     private const MAX_PORTFOLIO_FILES = 10;
 
     public static function getSubscribedEvents(): array
@@ -214,9 +212,9 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
             $valuesByCfName['portfolio_field'] = $this->extractStringValue($jform, 'portfolio_field');
         }
 
-        $valuesByCfName = array_filter($valuesByCfName, static function ($v) {
-            return $v !== '';
-        });
+        $valuesByCfName = array_filter($valuesByCfName, static function ($v, $k) {
+            return $v !== '' || $k === 'portfolio_field';
+        }, ARRAY_FILTER_USE_BOTH);
         if (empty($valuesByCfName)) {
             return;
         }
@@ -249,6 +247,9 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
                         ->bind(':fid', $fieldId, ParameterType::INTEGER)
                         ->bind(':iid', $userId, ParameterType::INTEGER)
                 )->execute();
+                if ($value === '') {
+                    continue;
+                }
                 $db->setQuery(
                     $db->getQuery(true)
                         ->insert($db->quoteName('#__fields_values'))
@@ -290,42 +291,61 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
 
     private function processRegistrationUploads(int $userId, array $existingPortfolio = [], array $deletedPortfolio = []): array
     {
-        $result = [
-            'avatar' => '',
-            'portfolio_field' => '',
-        ];
+        $result = [];
+
+        $this->ensureImageHelper();
+        $helper = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class;
+
+        foreach ($deletedPortfolio as $deletedFile) {
+            $deletedFile = basename(trim((string) $deletedFile));
+            if ($deletedFile !== '') {
+                $helper::deleteStored('images/portfolio/' . $deletedFile);
+            }
+        }
 
         if (empty($_FILES['jform']) || !is_array($_FILES['jform'])) {
+            if ($existingPortfolio !== [] || $deletedPortfolio !== []) {
+                $saved = $this->keepPortfolioFiles($existingPortfolio, $deletedPortfolio);
+                $result['portfolio_field'] = $saved !== [] ? json_encode($saved, JSON_UNESCAPED_UNICODE) : '';
+            }
+
             return $result;
         }
 
         $files = $_FILES['jform'];
-        $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
         $avatarName = $this->getUploadScalar($files, 'name', 'upload_avatar');
         $avatarTmp = $this->getUploadScalar($files, 'tmp_name', 'upload_avatar');
         $avatarErr = (int) $this->getUploadScalar($files, 'error', 'upload_avatar');
         $avatarSize = (int) $this->getUploadScalar($files, 'size', 'upload_avatar');
 
-        if (
-            $avatarName !== ''
-            && $avatarTmp !== ''
-            && $avatarErr === \UPLOAD_ERR_OK
-            && $avatarSize > 0
-            && $avatarSize <= self::MAX_UPLOAD_SIZE_BYTES
-            && is_uploaded_file($avatarTmp)
-        ) {
-            $ext = strtolower(pathinfo($avatarName, \PATHINFO_EXTENSION));
-            if (in_array($ext, $allowedExt, true)) {
-                $avatarDir = JPATH_ROOT . '/images/profiler';
-                Folder::create($avatarDir);
-
-                $avatarFile = 'avatar_' . $userId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-                $avatarPath = $avatarDir . '/' . $avatarFile;
-
-                if (@move_uploaded_file($avatarTmp, $avatarPath)) {
-                    $result['avatar'] = 'images/profiler/' . $avatarFile;
+        if ($avatarName !== '' && $avatarErr !== \UPLOAD_ERR_NO_FILE) {
+            if (
+                $avatarTmp !== ''
+                && $avatarErr === \UPLOAD_ERR_OK
+                && $avatarSize > 0
+                && is_uploaded_file($avatarTmp)
+            ) {
+                $savedAvatar = $helper::saveUploaded(
+                    $avatarTmp,
+                    $avatarName,
+                    $avatarSize,
+                    'images/profiler',
+                    'avatar_' . $userId,
+                    $helper::AVATAR_MAX_EDGE,
+                    $helper::AVATAR_THUMB_EDGE
+                );
+                if (!empty($savedAvatar['ok'])) {
+                    $oldAvatar = $this->getCurrentCustomFieldValue($userId, 'avatar');
+                    $result['avatar'] = (string) $savedAvatar['path'];
+                    if ($oldAvatar !== '' && $oldAvatar !== $result['avatar']) {
+                        $helper::deleteStored($oldAvatar);
+                    }
+                } else {
+                    $helper::warn((string) ($savedAvatar['error'] ?? 'Не удалось загрузить фото профиля.'));
                 }
+            } elseif ($avatarErr !== \UPLOAD_ERR_OK) {
+                $helper::warn('Не удалось загрузить фото профиля. Проверьте размер файла (до 20 МБ).');
             }
         }
 
@@ -334,69 +354,78 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
         $portfolioErrors = $this->getUploadArray($files, 'error', 'upload_portfolio_field');
         $portfolioSizes = $this->getUploadArray($files, 'size', 'upload_portfolio_field');
 
-        if ($portfolioNames !== [] && $portfolioTmpNames !== [] && $portfolioErrors !== []) {
-            $portfolioDir = JPATH_ROOT . '/images/portfolio';
-            Folder::create($portfolioDir);
+        $hasPortfolioUpload = $portfolioNames !== [] && $portfolioTmpNames !== [] && $portfolioErrors !== [];
+        if ($hasPortfolioUpload || $existingPortfolio !== [] || $deletedPortfolio !== []) {
+            $saved = $this->keepPortfolioFiles($existingPortfolio, $deletedPortfolio);
+            if ($hasPortfolioUpload) {
+                foreach ($portfolioNames as $idx => $name) {
+                    if (count($saved) >= self::MAX_PORTFOLIO_FILES) {
+                        $helper::warn('В портфолио можно сохранить не больше 10 фотографий.');
+                        break;
+                    }
 
-            $saved = [];
-            foreach ($existingPortfolio as $existingFile) {
-                $existingFile = basename(trim((string) $existingFile));
-                if ($existingFile === '' || in_array($existingFile, $deletedPortfolio, true)) {
-                    continue;
-                }
-                $saved[] = $existingFile;
-            }
-            $saved = array_values(array_unique($saved));
-            foreach ($portfolioNames as $idx => $name) {
-                if (count($saved) >= self::MAX_PORTFOLIO_FILES) {
-                    break;
-                }
+                    $name = is_scalar($name) ? trim((string) $name) : '';
+                    $tmp = isset($portfolioTmpNames[$idx]) && is_scalar($portfolioTmpNames[$idx]) ? (string) $portfolioTmpNames[$idx] : '';
+                    $err = isset($portfolioErrors[$idx]) ? (int) $portfolioErrors[$idx] : \UPLOAD_ERR_NO_FILE;
+                    $size = isset($portfolioSizes[$idx]) ? (int) $portfolioSizes[$idx] : 0;
 
-                $name = is_scalar($name) ? trim((string) $name) : '';
-                $tmp = isset($portfolioTmpNames[$idx]) && is_scalar($portfolioTmpNames[$idx]) ? (string) $portfolioTmpNames[$idx] : '';
-                $err = isset($portfolioErrors[$idx]) ? (int) $portfolioErrors[$idx] : \UPLOAD_ERR_NO_FILE;
-                $size = isset($portfolioSizes[$idx]) ? (int) $portfolioSizes[$idx] : 0;
+                    if ($name === '' || $err === \UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    if ($tmp === '' || $err !== \UPLOAD_ERR_OK || $size <= 0 || !is_uploaded_file($tmp)) {
+                        $helper::warn('Файл «' . ($name !== '' ? $name : 'портфолио') . '» не загружен. Проверьте формат и размер (до 20 МБ).');
+                        continue;
+                    }
 
-                if (
-                    $name === ''
-                    || $tmp === ''
-                    || $err !== \UPLOAD_ERR_OK
-                    || $size <= 0
-                    || $size > self::MAX_UPLOAD_SIZE_BYTES
-                    || !is_uploaded_file($tmp)
-                ) {
-                    continue;
-                }
-
-                $ext = strtolower(pathinfo($name, \PATHINFO_EXTENSION));
-                if (!in_array($ext, $allowedExt, true)) {
-                    continue;
-                }
-
-                $portfolioFile = 'portfolio_field' . $userId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-                $portfolioPath = $portfolioDir . '/' . $portfolioFile;
-
-                if (@move_uploaded_file($tmp, $portfolioPath)) {
-                    $saved[] = $portfolioFile;
+                    $savedItem = $helper::saveUploaded(
+                        $tmp,
+                        $name,
+                        $size,
+                        'images/portfolio',
+                        'portfolio_field' . $userId,
+                        $helper::PHOTO_MAX_EDGE,
+                        $helper::PHOTO_THUMB_EDGE
+                    );
+                    if (!empty($savedItem['ok'])) {
+                        $saved[] = basename((string) $savedItem['path']);
+                    } else {
+                        $helper::warn((string) ($savedItem['error'] ?? 'Не удалось загрузить фото портфолио.'));
+                    }
                 }
             }
 
-            $saved = array_values(array_unique($saved));
-            $result['portfolio_field'] = $saved !== [] ? json_encode($saved, JSON_UNESCAPED_UNICODE) : '';
-        } elseif ($existingPortfolio !== []) {
-            $saved = [];
-            foreach ($existingPortfolio as $existingFile) {
-                $existingFile = basename(trim((string) $existingFile));
-                if ($existingFile === '' || in_array($existingFile, $deletedPortfolio, true)) {
-                    continue;
-                }
-                $saved[] = $existingFile;
-            }
             $saved = array_values(array_unique($saved));
             $result['portfolio_field'] = $saved !== [] ? json_encode($saved, JSON_UNESCAPED_UNICODE) : '';
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<int, string> $existingPortfolio
+     * @param array<int, string> $deletedPortfolio
+     * @return string[]
+     */
+    private function keepPortfolioFiles(array $existingPortfolio, array $deletedPortfolio): array
+    {
+        $saved = [];
+        foreach ($existingPortfolio as $existingFile) {
+            $existingFile = basename(trim((string) $existingFile));
+            if ($existingFile === '' || in_array($existingFile, $deletedPortfolio, true)) {
+                continue;
+            }
+            $saved[] = $existingFile;
+        }
+
+        return array_values(array_unique($saved));
+    }
+
+    private function ensureImageHelper(): void
+    {
+        if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) {
+            return;
+        }
+        require_once JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
     }
 
     private function getUploadScalar(array $files, string $bucket, string $key): string

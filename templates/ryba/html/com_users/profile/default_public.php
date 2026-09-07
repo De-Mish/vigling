@@ -715,6 +715,9 @@ $resolveProfileImage = static function (string $rawValue): string {
 	}
 	return rtrim(Uri::root(), '/') . '/images/profiler/' . $clean;
 };
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+}
 
 $parseImageList = static function (string $rawValue, callable $resolver): array {
 	$rawValue = trim($rawValue);
@@ -749,7 +752,7 @@ $defaultImg = Uri::root() . 'templates/ryba/images/master.png';
 if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 	$defaultImg = Uri::root() . 'components/com_jsn/assets/img/default.jpg';
 }
-$avatarPreviewUrl = $avatarUrl !== '' ? $avatarUrl : $defaultImg;
+$avatarPreviewUrl = $avatarUrl !== '' ? \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarUrl, true) : $defaultImg;
 
 $portfolioRaw = $fieldValue($jcfields, 'portfolio_field');
 $portfolioImages = $parseImageList($portfolioRaw, $resolveProfileImage);
@@ -1051,7 +1054,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
 				<?php foreach ($portfolioImages as $imageUrl) : ?>
-					<div style="background-image: url('<?php echo $this->escape($imageUrl); ?>'); width: 100%; display: inline-block;" class="masters__small-img-item"></div>
+					<div style="background-image: url('<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($imageUrl, true)); ?>'); width: 100%; display: inline-block;" class="masters__small-img-item"></div>
 				<?php endforeach; ?>
 			</div>
 			<div class="clearFloat"></div>
@@ -1827,7 +1830,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="stockList__item courseList__item<?php echo $courseButtonDisabled ? ' is-unavailable' : ''; ?>">
 								<?php if ($courseMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
-									<img src="<?php echo $this->escape($courseMediaUrl); ?>" alt="<?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?>" style="max-width:180px; border-radius:8px;">
+									<img src="<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($courseMediaUrl, true)); ?>" alt="<?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?></div>
@@ -1923,7 +1926,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="stockList__item courseList__item<?php echo $searchButtonDisabled ? ' is-unavailable' : ''; ?>">
 								<?php if ($searchMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
-									<img src="<?php echo $this->escape($searchMediaUrl); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;">
+									<img src="<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?></div>

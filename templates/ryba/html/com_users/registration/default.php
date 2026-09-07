@@ -285,8 +285,9 @@ $durationJson = json_encode($durationOptions);
                             <div class="control-label" style="display:none;"><label>Фото профиля</label></div>
                             <div class="controls">
                                 <img src="/templates/ryba/images/avatar_upload.png" alt="Фото профиля" class="img_avatar" style="float:left;width:50px;margin-right:10px;border-radius:2px;margin-bottom:5px;" />
-                                <input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept="image/*" />
+                                <input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" data-vigling-manual="1" />
                                 <input type="hidden" name="jform[avatar]" id="jform_avatar" value="" />
+                                <p class="image-upload-hint" style="margin:6px 0 0;color:#888;font-size:12px;">JPEG, PNG или WebP. Фото сжимается автоматически.</p>
                                 <div style="clear:both"></div>
                             </div>
                         </div>
@@ -379,8 +380,9 @@ $durationJson = json_encode($durationOptions);
                         <div class="control-group portfolio_field-group">
                             <div class="controls">
                                 <img src="/templates/ryba/images/3.png" alt="" class="img_portfolio_field" />
-                                <input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept="image/*" multiple />
+                                <input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" multiple data-vigling-manual="1" />
                                 <input type="hidden" name="jform[portfolio_field]" id="jform_portfolio_field" value="" />
+                                <p class="image-upload-hint" style="margin:6px 0 0;color:#888;font-size:12px;">JPEG, PNG или WebP, до 10 фото. Фото сжимается автоматически.</p>
                                 <div style="clear:both"></div>
                             </div>
                             <div id="portfolio-preview-list" class="portfolio-preview-list"></div>
@@ -1225,6 +1227,7 @@ $durationJson = json_encode($durationOptions);
 }
 </style>
 
+<script src="/templates/ryba/js/vigling-image-upload.js"></script>
 <script>
 window.viglingRegistrationSpecialties = <?php echo $specialtiesJson ?: '[]'; ?>;
 window.viglingRegistrationServicesByCategory = <?php echo $servicesJson ?: '{}'; ?>;
@@ -1245,6 +1248,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form.length) {
         return;
     }
+    if (window.ViglingImageUpload) {
+        window.ViglingImageUpload.bind(form[0]);
+    }
 
     var typeButtons = $('.reg-role-btn');
     var typeSwitch = $('#registration-type-switch');
@@ -1263,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var portfolioInput = $('#jform_upload_portfolio_field');
     var portfolioGroup = $('#jsn_portfolio .portfolio_field-group');
     var MAX_PORTFOLIO_FILES = 10;
-    var MAX_IMAGE_SIZE_BYTES = 25 * 1024 * 1024;
+    var MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
     var selectedPortfolioFiles = [];
     var storageKey = 'vigling_registration_state_v3';
     var storageKeys = ['vigling_registration_state_v3', 'vigling_registration_state_v2', 'vigling_registration_state_v1'];
@@ -1817,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = $('<p class="service__item">' +
             '<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
             '<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
-            '<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept="image/*" class="course-media-file-input" /><span class="course-media-current">Файл не выбран</span></span></span>' +
+            '<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="course-media-current">Файл не выбран</span></span></span>' +
             '<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
             '<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
@@ -1843,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = $('<p class="service__item">' +
             '<span class="search_title"><label>Название поиска:</label><input type="text" maxlength="150" class="search-title-input" value="" /></span>' +
             '<span class="search_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="search-description-input"></textarea></span>' +
-            '<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept="image/*" class="search-media-file-input" /><span class="search-media-current">Файл не выбран</span></span></span>' +
+            '<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" /><span class="search-media-current">Файл не выбран</span></span></span>' +
             '<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" /></span>' +
             '<span class="search_duration"><label>Длительность:</label><select class="search-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="search_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="search-capacity-input" value="1" /></span>' +
@@ -2487,15 +2493,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (avatarInput.length && avatarImage.length) {
         avatarInput.on('change', function (e) {
-            var file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-            if (!file) {
+            var input = e.target;
+            var applyPreview = function () {
+                var file = input.files && input.files[0] ? input.files[0] : null;
+                if (!file) {
+                    return;
+                }
+                var src = URL.createObjectURL(file);
+                avatarImage.one('load', function () {
+                    URL.revokeObjectURL(src);
+                });
+                avatarImage.attr('src', src);
+            };
+            if (window.ViglingImageUpload && typeof window.ViglingImageUpload.prepareInput === 'function') {
+                window.ViglingImageUpload.prepareInput(input).then(applyPreview);
                 return;
             }
-            var src = URL.createObjectURL(file);
-            avatarImage.one('load', function () {
-                URL.revokeObjectURL(src);
-            });
-            avatarImage.attr('src', src);
+            applyPreview();
         });
     }
 
@@ -2537,39 +2551,54 @@ document.addEventListener('DOMContentLoaded', function () {
     if (portfolioInput.length && portfolioGroup.length) {
         portfolioInput.attr('multiple', 'multiple');
         portfolioInput.on('change', function (e) {
-            var files = e.target.files ? Array.from(e.target.files) : [];
-            if (!files.length) {
+            var input = e.target;
+            var incoming = input.files ? Array.from(input.files) : [];
+            if (!incoming.length) {
                 return;
             }
             var existing = {};
             selectedPortfolioFiles.forEach(function (file) {
                 existing[fileKey(file)] = true;
             });
-            var added = 0;
-            files.forEach(function (file) {
-                if (!file || !String(file.type || '').match(/^image\//i)) {
-                    return;
-                }
-                if (file.size > MAX_IMAGE_SIZE_BYTES) {
-                    alert('Файл "' + file.name + '" больше 25MB и не будет добавлен.');
-                    return;
-                }
-                var key = fileKey(file);
-                if (existing[key]) {
-                    return;
-                }
-                if (selectedPortfolioFiles.length >= MAX_PORTFOLIO_FILES) {
-                    return;
-                }
-                existing[key] = true;
-                selectedPortfolioFiles.push(file);
-                added++;
+            var prepare = window.ViglingImageUpload && typeof window.ViglingImageUpload.prepareFile === 'function'
+                ? function (file) { return window.ViglingImageUpload.prepareFile(file); }
+                : function (file) { return Promise.resolve({ ok: true, file: file }); };
+            var chain = Promise.resolve();
+            var startedCount = selectedPortfolioFiles.length;
+            incoming.forEach(function (file) {
+                chain = chain.then(function () {
+                    if (selectedPortfolioFiles.length >= MAX_PORTFOLIO_FILES) {
+                        return;
+                    }
+                    return prepare(file).then(function (result) {
+                        if (!result || !result.ok) {
+                            if (result && result.error) {
+                                alert(result.error);
+                            }
+                            return;
+                        }
+                        file = result.file;
+                        var key = fileKey(file);
+                        if (existing[key]) {
+                            return;
+                        }
+                        if (selectedPortfolioFiles.length >= MAX_PORTFOLIO_FILES) {
+                            return;
+                        }
+                        existing[key] = true;
+                        selectedPortfolioFiles.push(file);
+                    });
+                });
             });
-            if (!added && selectedPortfolioFiles.length >= MAX_PORTFOLIO_FILES) {
-                alert('Можно загрузить не более 10 фотографий в портфолио.');
-            }
-            renderPortfolioPreview();
-            syncPortfolioInputWithSelectedFiles();
+            chain.then(function () {
+                if (startedCount >= MAX_PORTFOLIO_FILES || (selectedPortfolioFiles.length >= MAX_PORTFOLIO_FILES && selectedPortfolioFiles.length === startedCount)) {
+                    if (startedCount >= MAX_PORTFOLIO_FILES) {
+                        alert('Можно загрузить не более 10 фотографий в портфолио.');
+                    }
+                }
+                renderPortfolioPreview();
+                syncPortfolioInputWithSelectedFiles();
+            });
         });
     }
 
@@ -2650,8 +2679,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#jform_courses_servis').on('change', '.course-media-file-input', function () {
+        var input = this;
         var row = $(this).closest('.service__item');
-        syncCourseMediaState(row);
+        var run = function () { syncCourseMediaState(row); };
+        if (window.ViglingImageUpload) {
+            window.ViglingImageUpload.prepareInput(input).then(run);
+            return;
+        }
+        run();
     });
 
     $('#jform_searches_servis').on('click', '.stock_key', function () {
@@ -2671,8 +2706,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#jform_searches_servis').on('change', '.search-media-file-input', function () {
+        var input = this;
         var row = $(this).closest('.service__item');
-        syncSearchMediaState(row);
+        var run = function () { syncSearchMediaState(row); };
+        if (window.ViglingImageUpload) {
+            window.ViglingImageUpload.prepareInput(input).then(run);
+            return;
+        }
+        run();
     });
 
     $('#jsn_login').on('click', '.password-toggle-btn', function () {

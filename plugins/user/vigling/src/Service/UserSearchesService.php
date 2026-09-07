@@ -7,6 +7,7 @@ namespace Joomla\Plugin\User\Vigling\Service;
 use Joomla\CMS\Factory;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\DispatcherInterface;
+use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
 
 final class UserSearchesService
@@ -402,6 +403,12 @@ final class UserSearchesService
             ->where($db->quoteName('user_id') . ' = ' . $userId);
         $db->setQuery($query)->execute();
 
+        $oldMedia = trim((string) ($existing['media_path'] ?? ''));
+        $newMedia = trim((string) ($normalized['media_path'] ?? ''));
+        if ($oldMedia !== '' && $oldMedia !== $newMedia) {
+            ImageUploadHelper::deleteStored($oldMedia);
+        }
+
         $existingSlotId = (int) ($existing['slot_id'] ?? 0);
         if ($requestedMode === 'fixed') {
             $slotStartUtc = (string) $normalized['slot_start_utc'];
@@ -428,6 +435,14 @@ final class UserSearchesService
             return;
         }
 
+        $mediaQuery = $db->getQuery(true)
+            ->select($db->quoteName('media_path'))
+            ->from($db->quoteName('#__vigling_user_searches'))
+            ->where($db->quoteName('id') . ' = ' . $searchId)
+            ->where($db->quoteName('user_id') . ' = ' . $userId);
+        $db->setQuery($mediaQuery);
+        $mediaPath = trim((string) $db->loadResult());
+
         $bookingIds = self::getSearchBookingIds($db, $searchId, $userId);
         foreach ($bookingIds as $bookingId) {
             if (!$orderTable->load((int) $bookingId)) {
@@ -451,6 +466,9 @@ final class UserSearchesService
             ->where($db->quoteName('id') . ' = ' . $searchId)
             ->where($db->quoteName('user_id') . ' = ' . $userId);
         $db->setQuery($searchDelete)->execute();
+        if ($mediaPath !== '') {
+            ImageUploadHelper::deleteStored($mediaPath);
+        }
     }
 
     private static function upsertSearchSlot(
