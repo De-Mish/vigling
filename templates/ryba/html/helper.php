@@ -54,13 +54,13 @@ class JTplHelper
 
 				foreach($field->value as $img){
 					echo '<div class="controls preview" style="background-image: url('.$img.');">
-					<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept="image/*" />
+					<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" />
 					<input type="hidden" name="jform[upload_portfolio_field][]" id="jform_portfolio_field" value="'.$img.'">
 					<i></i></div>';
 				}
 			}
 			echo '<div class="controls"><img src="/templates/ryba/images/3.png" alt="" class="img_portfolio_field">
-			<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept="image/*" readonly />
+			<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" readonly />
 			<input type="hidden" name="jform[upload_portfolio_field][]" id="jform_portfolio_field_up" value="" readonly />
 			</div>';
 			echo '</div>';

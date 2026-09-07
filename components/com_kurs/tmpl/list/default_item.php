@@ -95,6 +95,11 @@ if ($courseImageUrl !== '') {
 } else {
 	$cardImage = $portfolioImage !== '' ? $portfolioImage : ($avatarImage !== '' ? $avatarImage : '/images/service4.png');
 }
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+}
+$cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardImage, true);
+$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarImage, true);
 
 $imgStyle = 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
@@ -119,9 +124,6 @@ if ($slotStartUtc !== '') {
 ?>
 <div class="category__item course-catalog__item" data-address="<?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?>">
 <div class="category__item-img" style="<?php echo $imgStyle; ?>">
-    <img src="<?php echo htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8'); ?>" 
-         alt="<?php echo htmlspecialchars($courseTitle, ENT_QUOTES, 'UTF-8'); ?>" 
-         style="display:none; width:100%; height:100%; object-fit:cover;">
 </div>
 	<div class="category__item-content">
 		<div class="category__item-content-left">

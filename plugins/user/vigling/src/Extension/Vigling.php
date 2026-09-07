@@ -12,7 +12,7 @@ use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
-use Joomla\Filesystem\Folder;
+use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
 use Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper;
 use Joomla\Plugin\User\Vigling\Service\UserCoursesService;
@@ -25,8 +25,6 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
 {
     private const ENCODED_FIELDS = ['prices', 'stock_prices', 'work_day', 'vyberite_spetsialnos'];
     private const VIGLING_MARKER = "--- Расшифровано плагином Vigling ---\n";
-    private const MAX_UPLOAD_SIZE_BYTES = 26214400; // 25MB
-    private const ALLOWED_IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
     public static function getSubscribedEvents(): array
     {
@@ -523,9 +521,6 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             return $payloadJson;
         }
 
-        $courseDir = JPATH_ROOT . '/images/course';
-        Folder::create($courseDir);
-
         foreach ($payload['items'] as $idx => &$item) {
             if (!is_array($item)) {
                 continue;
@@ -536,27 +531,31 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             $err = isset($errors[$idx]) ? (int) $errors[$idx] : \UPLOAD_ERR_NO_FILE;
             $size = isset($sizes[$idx]) ? (int) $sizes[$idx] : 0;
 
-            if (
-                $name === ''
-                || $tmp === ''
-                || $err !== \UPLOAD_ERR_OK
-                || $size <= 0
-                || $size > self::MAX_UPLOAD_SIZE_BYTES
-                || !is_uploaded_file($tmp)
-            ) {
+            if ($name === '' || $err === \UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($tmp === '' || $err !== \UPLOAD_ERR_OK || $size <= 0 || !is_uploaded_file($tmp)) {
+                ImageUploadHelper::warn('Изображение курса «' . $name . '» не загружено. Проверьте формат и размер (до 20 МБ).');
                 continue;
             }
 
-            $ext = strtolower(pathinfo($name, \PATHINFO_EXTENSION));
-            if (!in_array($ext, self::ALLOWED_IMAGE_EXT, true)) {
-                continue;
-            }
-
-            $fileName = 'course_' . $userId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-            $targetPath = $courseDir . '/' . $fileName;
-
-            if (@move_uploaded_file($tmp, $targetPath)) {
-                $item['media_path'] = 'images/course/' . $fileName;
+            $saved = ImageUploadHelper::saveUploaded(
+                $tmp,
+                $name,
+                $size,
+                'images/course',
+                'course_' . $userId,
+                ImageUploadHelper::PHOTO_MAX_EDGE,
+                ImageUploadHelper::PHOTO_THUMB_EDGE
+            );
+            if (!empty($saved['ok'])) {
+                $oldPath = trim((string) ($item['media_path'] ?? ''));
+                $item['media_path'] = (string) $saved['path'];
+                if ($oldPath !== '' && $oldPath !== $item['media_path']) {
+                    ImageUploadHelper::deleteStored($oldPath);
+                }
+            } else {
+                ImageUploadHelper::warn((string) ($saved['error'] ?? 'Не удалось загрузить изображение курса.'));
             }
         }
         unset($item);
@@ -589,9 +588,6 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             return $payloadJson;
         }
 
-        $searchDir = JPATH_ROOT . '/images/search';
-        Folder::create($searchDir);
-
         foreach ($payload['items'] as $idx => &$item) {
             if (!is_array($item)) {
                 continue;
@@ -602,27 +598,31 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             $err = isset($errors[$idx]) ? (int) $errors[$idx] : \UPLOAD_ERR_NO_FILE;
             $size = isset($sizes[$idx]) ? (int) $sizes[$idx] : 0;
 
-            if (
-                $name === ''
-                || $tmp === ''
-                || $err !== \UPLOAD_ERR_OK
-                || $size <= 0
-                || $size > self::MAX_UPLOAD_SIZE_BYTES
-                || !is_uploaded_file($tmp)
-            ) {
+            if ($name === '' || $err === \UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($tmp === '' || $err !== \UPLOAD_ERR_OK || $size <= 0 || !is_uploaded_file($tmp)) {
+                ImageUploadHelper::warn('Изображение поиска «' . $name . '» не загружено. Проверьте формат и размер (до 20 МБ).');
                 continue;
             }
 
-            $ext = strtolower(pathinfo($name, \PATHINFO_EXTENSION));
-            if (!in_array($ext, self::ALLOWED_IMAGE_EXT, true)) {
-                continue;
-            }
-
-            $fileName = 'search_' . $userId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-            $targetPath = $searchDir . '/' . $fileName;
-
-            if (@move_uploaded_file($tmp, $targetPath)) {
-                $item['media_path'] = 'images/search/' . $fileName;
+            $saved = ImageUploadHelper::saveUploaded(
+                $tmp,
+                $name,
+                $size,
+                'images/search',
+                'search_' . $userId,
+                ImageUploadHelper::PHOTO_MAX_EDGE,
+                ImageUploadHelper::PHOTO_THUMB_EDGE
+            );
+            if (!empty($saved['ok'])) {
+                $oldPath = trim((string) ($item['media_path'] ?? ''));
+                $item['media_path'] = (string) $saved['path'];
+                if ($oldPath !== '' && $oldPath !== $item['media_path']) {
+                    ImageUploadHelper::deleteStored($oldPath);
+                }
+            } else {
+                ImageUploadHelper::warn((string) ($saved['error'] ?? 'Не удалось загрузить изображение поиска.'));
             }
         }
         unset($item);
