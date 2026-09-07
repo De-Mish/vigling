@@ -261,30 +261,21 @@ class ListModel extends BaseListModel
 						. ' AND DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
 					];
 
-					$scheduleConds = [];
 					if ($fieldWorkDay > 0) {
-						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wdfv')
-							. ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = ' . $db->quoteName('u.id')
-							. ' AND ' . $db->quoteName('wdfv.field_id') . ' = ' . $fieldWorkDay
-							. ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%') . ')';
-					}
-					if ($fieldWorkFrom > 0) {
-						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wffv')
-							. ' WHERE ' . $db->quoteName('wffv.item_id') . ' = ' . $db->quoteName('u.id')
-							. ' AND ' . $db->quoteName('wffv.field_id') . ' = ' . $fieldWorkFrom
-							. ' AND ' . $db->quoteName('wffv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wffv.value') . ', ".", ":"), "%H:%i") <= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
-					}
-					if ($fieldWorkTo > 0) {
-						$scheduleConds[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'wtfv')
-							. ' WHERE ' . $db->quoteName('wtfv.item_id') . ' = ' . $db->quoteName('u.id')
-							. ' AND ' . $db->quoteName('wtfv.field_id') . ' = ' . $fieldWorkTo
-							. ' AND ' . $db->quoteName('wtfv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wtfv.value') . ', ".", ":"), "%H:%i") >= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
-					}
-					if ($scheduleConds !== []) {
+						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+							require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+						}
+						$scheduleSql = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
+							$db,
+							$db->quoteName('u.id'),
+							$fieldWorkDay,
+							$fieldWorkFrom,
+							$fieldWorkTo,
+							$weekday,
+							$timeCompare
+						);
 						$orParts[] = '(' . implode(' AND ', array_merge(
-							$scheduleConds,
+							[$scheduleSql],
 							$this->busyMasterConditions($db, $dateOnly . ' ' . $time . ':00')
 						)) . ')';
 					}

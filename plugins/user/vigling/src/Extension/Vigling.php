@@ -14,6 +14,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
 use Joomla\Filesystem\Folder;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
+use Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper;
 use Joomla\Plugin\User\Vigling\Service\UserCoursesService;
 use Joomla\Plugin\User\Vigling\Service\UserSearchesService;
 use Joomla\Plugin\User\Vigling\Service\UserServicesService;
@@ -162,15 +163,32 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             : [];
         $rawScheduleDays = isset($_POST['jform']['vigling_schedule_days']) && \is_array($_POST['jform']['vigling_schedule_days'])
             ? $_POST['jform']['vigling_schedule_days']
-            : null;
+            : (isset($_POST['jform']['work_day']) && \is_array($_POST['jform']['work_day'])
+                ? $_POST['jform']['work_day']
+                : null);
+        $rawFromByDay = isset($_POST['jform']['work_from_by_day']) && \is_array($_POST['jform']['work_from_by_day'])
+            ? $_POST['jform']['work_from_by_day']
+            : [];
+        $rawToByDay = isset($_POST['jform']['work_to_by_day']) && \is_array($_POST['jform']['work_to_by_day'])
+            ? $_POST['jform']['work_to_by_day']
+            : [];
 
-        if (empty($rawComFields) && $rawScheduleDays === null) {
+        if (empty($rawComFields) && $rawScheduleDays === null && $rawFromByDay === [] && $rawToByDay === []) {
             return;
         }
 
         $toSave = [];
 
-        if ($rawScheduleDays !== null) {
+        if ($rawFromByDay !== [] || $rawToByDay !== []) {
+            $encoded = WorkScheduleHelper::encodeChecked(
+                is_array($rawScheduleDays) ? $rawScheduleDays : [],
+                $rawFromByDay,
+                $rawToByDay
+            );
+            $toSave['work_day'] = json_encode($encoded['days']);
+            $toSave['work_from'] = $encoded['fromJson'];
+            $toSave['work_to'] = $encoded['toJson'];
+        } elseif ($rawScheduleDays !== null) {
             $clean = array_values(array_unique(array_filter(
                 array_map('intval', $rawScheduleDays),
                 static fn (int $d): bool => $d >= 1 && $d <= 7
@@ -194,11 +212,13 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             }
         }
 
-        foreach (['work_from', 'work_to'] as $fname) {
-            if (\array_key_exists($fname, $rawComFields)) {
-                $val = trim((string) ($rawComFields[$fname] ?? ''));
-                if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val)) {
-                    $toSave[$fname] = $val;
+        if (!isset($toSave['work_from']) && !isset($toSave['work_to'])) {
+            foreach (['work_from', 'work_to'] as $fname) {
+                if (\array_key_exists($fname, $rawComFields)) {
+                    $val = trim((string) ($rawComFields[$fname] ?? ''));
+                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || WorkScheduleHelper::isTimesJson($val)) {
+                        $toSave[$fname] = $val;
+                    }
                 }
             }
         }

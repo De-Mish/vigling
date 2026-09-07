@@ -840,45 +840,11 @@ final class UserSearchesService
             $raw[$name] = trim((string) ($row['field_value'] ?? ''));
         }
 
-        $workDays = self::decodeIntList($raw['work_day']);
-        if ($workDays === []) {
-            return [];
-        }
-        $workFrom = self::decodeStringList($raw['work_from']);
-        $workTo = self::decodeStringList($raw['work_to']);
-
-        $fromByDay = array_fill(1, 7, '');
-        $toByDay = array_fill(1, 7, '');
-        if (count($workFrom) === 1) {
-            foreach ($workDays as $wd) {
-                $fromByDay[$wd] = $workFrom[0];
-            }
-        } elseif (count($workFrom) === count($workDays)) {
-            foreach ($workDays as $idx => $wd) {
-                $fromByDay[$wd] = (string) ($workFrom[$idx] ?? '');
-            }
-        }
-        if (count($workTo) === 1) {
-            foreach ($workDays as $wd) {
-                $toByDay[$wd] = $workTo[0];
-            }
-        } elseif (count($workTo) === count($workDays)) {
-            foreach ($workDays as $idx => $wd) {
-                $toByDay[$wd] = (string) ($workTo[$idx] ?? '');
-            }
-        }
-
-        $result = [];
-        foreach ($workDays as $wd) {
-            $fromMin = self::parseTimeToMinutes((string) ($fromByDay[$wd] ?? ''));
-            $toMin = self::parseTimeToMinutes((string) ($toByDay[$wd] ?? ''));
-            if ($fromMin === null || $toMin === null || $toMin <= $fromMin) {
-                continue;
-            }
-            $result[$wd] = [$fromMin, $toMin];
-        }
-
-        return $result;
+        return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
+            $raw['work_day'],
+            $raw['work_from'],
+            $raw['work_to']
+        );
     }
 
     /**

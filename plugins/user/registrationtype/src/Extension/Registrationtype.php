@@ -181,14 +181,28 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
         if (isset($jform['vyberite_spetsialnos'])) {
             $valuesByCfName['vyberite_spetsialnos'] = $this->encodeJsonValue($jform['vyberite_spetsialnos']);
         }
-        if (isset($jform['work_day'])) {
-            $valuesByCfName['work_day'] = $this->encodeJsonValue($jform['work_day']);
-        }
-        if (isset($jform['work_from'])) {
-            $valuesByCfName['work_from'] = $this->extractStringValue($jform, 'work_from');
-        }
-        if (isset($jform['work_to'])) {
-            $valuesByCfName['work_to'] = $this->extractStringValue($jform, 'work_to');
+        if (isset($jform['work_from_by_day']) || isset($jform['work_to_by_day'])) {
+            if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+                require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+            }
+            $encoded = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::encodeChecked(
+                isset($jform['work_day']) && is_array($jform['work_day']) ? $jform['work_day'] : [],
+                isset($jform['work_from_by_day']) && is_array($jform['work_from_by_day']) ? $jform['work_from_by_day'] : [],
+                isset($jform['work_to_by_day']) && is_array($jform['work_to_by_day']) ? $jform['work_to_by_day'] : []
+            );
+            $valuesByCfName['work_day'] = json_encode($encoded['days']);
+            $valuesByCfName['work_from'] = $encoded['fromJson'];
+            $valuesByCfName['work_to'] = $encoded['toJson'];
+        } else {
+            if (isset($jform['work_day'])) {
+                $valuesByCfName['work_day'] = $this->encodeJsonValue($jform['work_day']);
+            }
+            if (isset($jform['work_from'])) {
+                $valuesByCfName['work_from'] = $this->extractStringValue($jform, 'work_from');
+            }
+            if (isset($jform['work_to'])) {
+                $valuesByCfName['work_to'] = $this->extractStringValue($jform, 'work_to');
+            }
         }
         if (isset($jform['prices'])) {
             $valuesByCfName['prices'] = $this->extractStringValue($jform, 'prices');

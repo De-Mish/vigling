@@ -272,37 +272,20 @@ class ListModel extends BaseListModel
 					$weekday = (int) $dt->format('N');
 					$timeCompare = $time . ':00';
 					
-					$conditions = array();
-					$hasWorkData = false;
-					
 					if ($fieldWorkDay > 0) {
-						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wdfv')
-							. ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
-							. ' AND ' . $db->quoteName('wdfv.field_id') . ' = ' . $fieldWorkDay
-							. ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%') . ')';
-						$hasWorkData = true;
-					}
-					
-					if ($fieldWorkFrom > 0) {
-						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wffv')
-							. ' WHERE ' . $db->quoteName('wffv.item_id') . ' = ' . $this->userIdAsFieldItemId()
-							. ' AND ' . $db->quoteName('wffv.field_id') . ' = ' . $fieldWorkFrom
-							. ' AND ' . $db->quoteName('wffv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wffv.value') . ', ".", ":"), "%H:%i") <= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
-						$hasWorkData = true;
-					}
-					
-					if ($fieldWorkTo > 0) {
-						$conditions[] = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'wtfv')
-							. ' WHERE ' . $db->quoteName('wtfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
-							. ' AND ' . $db->quoteName('wtfv.field_id') . ' = ' . $fieldWorkTo
-							. ' AND ' . $db->quoteName('wtfv.value') . ' <> ' . $db->quote('')
-							. ' AND STR_TO_DATE(REPLACE(' . $db->quoteName('wtfv.value') . ', ".", ":"), "%H:%i") >= STR_TO_DATE(' . $db->quote($timeCompare) . ', "%H:%i:%s"))';
-						$hasWorkData = true;
-					}
-					
-					if ($hasWorkData) {
-						$q->where('(' . implode(' AND ', $conditions) . ')');
+						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
+							require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+						}
+						$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
+							$db,
+							$this->userIdAsFieldItemId(),
+							$fieldWorkDay,
+							$fieldWorkFrom,
+							$fieldWorkTo,
+							$weekday,
+							$timeCompare,
+							$prefix . 'fields_values'
+						));
 					}
 					
 				} catch (\Throwable $e) {
