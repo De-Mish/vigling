@@ -43,10 +43,10 @@ class HtmlView extends BaseHtmlView
 				require_once JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
 				$tzName = viglingOrdersGetUserTimezone($db, (int) $user->id, (string) $app->get('offset', 'UTC'));
 				$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
-				$fromUtc = (new \DateTimeImmutable('today', $tz))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+				$fromUtc = (new \DateTimeImmutable('today', $tz))->modify('-21 days')->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
 				$model->setState('journal.from_utc', $fromUtc);
 			} catch (\Throwable $e) {
-				$model->setState('journal.from_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'));
+				$model->setState('journal.from_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('-21 days')->format('Y-m-d H:i:s'));
 			}
 		}
 		$this->items = $model->getItems();

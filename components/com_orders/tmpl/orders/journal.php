@@ -35,9 +35,12 @@ $nowUtc = new \DateTimeImmutable('now', $utc);
 $todayLocal = new \DateTimeImmutable('today', $journalTz);
 $monthShort = [1 => 'янв', 2 => 'фев', 3 => 'мар', 4 => 'апр', 5 => 'май', 6 => 'июн', 7 => 'июл', 8 => 'авг', 9 => 'сен', 10 => 'окт', 11 => 'ноя', 12 => 'дек'];
 $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
-$dayCount = 21;
-$pxPerMin = 1.2;
+$pastDays = 21;
+$futureDays = 21;
+$dayCount = $pastDays + $futureDays;
+$pxPerMin = 1.35;
 $scheduleByDay = $masterId > 0 ? viglingOrdersLoadMasterSchedule($db, $masterId) : [];
+$boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
 
 $formatMinutes = static function (int $minutes): string {
 	$minutes = max(0, min(24 * 60, $minutes));
@@ -66,8 +69,8 @@ $parseJournalLabel = static function (string $label): array {
 		$label = trim((string) ($labelParts[0] ?? ''));
 		$comment = trim((string) ($labelParts[1] ?? ''));
 	}
-	if ($label === '') {
-		$label = 'Блок времени';
+	if ($label === '' || $label === 'Блок времени') {
+		$label = 'Забронировать время';
 	}
 	return [$label, $comment];
 };
@@ -217,15 +220,16 @@ foreach ($items as $item) {
 
 $boardDays = [];
 for ($offset = 0; $offset < $dayCount; $offset++) {
-	$day = $todayLocal->modify('+' . $offset . ' day');
-	$boardDays[$day->format('Y-m-d')] = [
-		'date' => $day->format('Y-m-d'),
+	$day = $boardStartLocal->modify('+' . $offset . ' day');
+	$dateKey = $day->format('Y-m-d');
+	$boardDays[$dateKey] = [
+		'date' => $dateKey,
 		'dow' => (int) $day->format('N'),
 		'dow_label' => $dowShort[(int) $day->format('N')] ?? '',
 		'day_num' => (int) $day->format('j'),
 		'month_label' => $monthShort[(int) $day->format('n')] ?? '',
 		'date_view' => $day->format('d.m.Y'),
-		'is_today' => $offset === 0,
+		'is_today' => $dateKey === $todayLocal->format('Y-m-d'),
 		'events' => [],
 	];
 }
@@ -409,14 +413,27 @@ $kindClass = static function (string $kind): string {
 		max-height: calc(100vh - 210px);
 		-webkit-overflow-scrolling: touch;
 		overscroll-behavior: contain;
+		scrollbar-width: thin;
+		scrollbar-color: #888 #e6e6e6;
+	}
+	.com_orders.orders-journal .journal-board__scroll::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+	.com_orders.orders-journal .journal-board__scroll::-webkit-scrollbar-track {
+		background: #e6e6e6;
+	}
+	.com_orders.orders-journal .journal-board__scroll::-webkit-scrollbar-thumb {
+		background: #888;
+		border-radius: 8px;
 	}
 	.com_orders.orders-journal .journal-board__inner {
-		min-width: max(100%, calc(64px + 21 * 168px));
+		min-width: max(100%, calc(64px + <?php echo (int) $dayCount; ?> * 168px));
 	}
 	.com_orders.orders-journal .journal-board__head,
 	.com_orders.orders-journal .journal-board__body {
 		display: grid;
-		grid-template-columns: 64px repeat(21, minmax(168px, 1fr));
+		grid-template-columns: 64px repeat(<?php echo (int) $dayCount; ?>, minmax(168px, 1fr));
 	}
 	.com_orders.orders-journal .journal-board__head {
 		position: sticky;
@@ -426,7 +443,14 @@ $kindClass = static function (string $kind): string {
 		border-bottom: 1px solid #ececec;
 	}
 	.com_orders.orders-journal .journal-day-head {
-		padding: 10px 8px 12px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0;
+		min-height: 0;
+		padding: 2px 4px 1px;
+		line-height: 1.05;
 		text-align: center;
 		border-right: 1px solid #f0f0f0;
 	}
@@ -435,27 +459,34 @@ $kindClass = static function (string $kind): string {
 	}
 	.com_orders.orders-journal .journal-day-head .dow {
 		display: block;
-		font-size: 12px;
+		font-size: 11px;
 		color: #888;
 		text-transform: lowercase;
+		line-height: 1.05;
 	}
 	.com_orders.orders-journal .journal-day-head .date {
 		display: block;
-		margin-top: 2px;
-		font-size: 18px;
+		margin-top: 0;
+		font-size: 14px;
 		font-weight: 700;
-		line-height: 1.1;
+		line-height: 1.05;
 	}
 	.com_orders.orders-journal .journal-day-head.is-today .date {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 34px;
-		height: 34px;
-		margin-top: 4px;
+		min-width: 22px;
+		height: 22px;
+		margin-top: 0;
 		border-radius: 50%;
 		background: #ffc107;
 		color: #111;
+	}
+	.com_orders.orders-journal .journal-day-head .month {
+		display: block;
+		font-size: 11px;
+		color: #999;
+		line-height: 1.05;
 	}
 	.com_orders.orders-journal .journal-board__body {
 		position: relative;
@@ -483,7 +514,8 @@ $kindClass = static function (string $kind): string {
 		position: absolute;
 		z-index: 2;
 		box-sizing: border-box;
-		padding: 6px 8px;
+		padding: 1px 6px 3px;
+		min-height: 46px;
 		border: 0;
 		border-radius: 8px;
 		color: #123;
@@ -501,12 +533,12 @@ $kindClass = static function (string $kind): string {
 	.com_orders.orders-journal .journal-event__service {
 		display: block;
 		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		line-height: 1.2;
+		white-space: normal;
 	}
 	.com_orders.orders-journal .journal-event__time { font-size: 11px; opacity: .85; }
 	.com_orders.orders-journal .journal-event__title { font-size: 13px; font-weight: 700; }
-	.com_orders.orders-journal .journal-event__service { font-size: 11px; opacity: .9; }
+	.com_orders.orders-journal .journal-event__service { margin-top: 1px; font-size: 11px; opacity: .9; }
 	.com_orders.orders-journal .journal-now {
 		position: absolute;
 		left: 0;
@@ -528,11 +560,11 @@ $kindClass = static function (string $kind): string {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 12px;
-		align-items: end;
+		align-items: flex-start;
 		margin-bottom: 16px;
 	}
 	.com_orders.orders-journal .journal-field { flex: 0 1 220px; }
-	.com_orders.orders-journal .journal-field label { display: block; font-weight: 600; margin-bottom: 6px; }
+	.com_orders.orders-journal .journal-field label { display: block; font-weight: 600; margin-bottom: 6px; line-height: 1.2; }
 	.com_orders.orders-journal .journal-field input,
 	.com_orders.orders-journal .journal-field textarea {
 		width: 100%;
@@ -564,8 +596,15 @@ $kindClass = static function (string $kind): string {
 	.com_orders.orders-journal .journal-overlay {
 		display: none;
 		position: fixed;
-		inset: 4px;
+		top: 50%;
+		left: 50%;
+		right: auto;
+		bottom: auto;
+		transform: translate(-50%, -50%);
 		z-index: 1050;
+		width: min(560px, calc(100% - 24px));
+		max-height: calc(100vh - 24px);
+		height: auto;
 		background: #fff;
 		border-radius: 12px;
 		box-shadow: 0 10px 40px rgba(0,0,0,.22);
@@ -578,17 +617,17 @@ $kindClass = static function (string $kind): string {
 		top: 8px;
 		float: right;
 		z-index: 2;
-		width: 40px;
-		height: 40px;
+		width: 36px;
+		height: 36px;
 		margin: 8px 8px 0 0;
 		border: 0;
 		border-radius: 50%;
 		background: #f3f3f3;
-		font-size: 28px;
+		font-size: 26px;
 		line-height: 1;
 		cursor: pointer;
 	}
-	.com_orders.orders-journal .journal-detail { display: none; padding: 24px 28px 36px; }
+	.com_orders.orders-journal .journal-detail { display: none; padding: 16px 20px 20px; }
 	.com_orders.orders-journal .journal-detail.is-active { display: block; }
 	.com_orders.orders-journal .journal-detail h2 { margin: 0 48px 16px 0; }
 	.com_orders.orders-journal .journal-detail__grid {
@@ -608,10 +647,38 @@ $kindClass = static function (string $kind): string {
 	#zapis-reschedule #reschedule-calendar.preload { visibility: hidden; }
 	#zapis-reschedule .error-msg { color: #a94442; margin-top: 10px; display: none; }
 	@media (max-width: 768px) {
-		.com_orders.orders-journal .journal-board__inner { min-width: calc(52px + 21 * 148px); }
+		html {
+			scrollbar-width: thin;
+			scrollbar-color: #888 #e6e6e6;
+			overflow-y: scroll;
+		}
+		html::-webkit-scrollbar,
+		body::-webkit-scrollbar {
+			width: 10px;
+			height: 10px;
+		}
+		html::-webkit-scrollbar-track,
+		body::-webkit-scrollbar-track {
+			background: #e6e6e6;
+		}
+		html::-webkit-scrollbar-thumb,
+		body::-webkit-scrollbar-thumb {
+			background: #888;
+			border-radius: 8px;
+		}
+		.com_orders.orders-journal .journal-board {
+			overflow: visible;
+		}
+		.com_orders.orders-journal .journal-board__scroll {
+			max-height: none;
+			overflow-x: auto;
+			overflow-y: visible;
+			overscroll-behavior-x: contain;
+		}
+		.com_orders.orders-journal .journal-board__inner { min-width: calc(52px + <?php echo (int) $dayCount; ?> * 148px); }
 		.com_orders.orders-journal .journal-board__head,
-		.com_orders.orders-journal .journal-board__body { grid-template-columns: 52px repeat(21, minmax(148px, 1fr)); }
-		.com_orders.orders-journal .journal-detail { padding: 16px; }
+		.com_orders.orders-journal .journal-board__body { grid-template-columns: 52px repeat(<?php echo (int) $dayCount; ?>, minmax(148px, 1fr)); }
+		.com_orders.orders-journal .journal-detail { padding: 14px 16px 16px; }
 		.com_orders.orders-journal .journal-detail__grid { grid-template-columns: 1fr; gap: 4px; }
 		.com_orders.orders-journal .journal-controls,
 		.com_orders.orders-journal .journal-submit-wrap { display: grid; width: 100%; }
@@ -622,7 +689,7 @@ $kindClass = static function (string $kind): string {
 	<div class="journal-toolbar">
 		<div>
 			<h1 class="page-title">Журнал</h1>
-			<p class="journal-meta">Часовой пояс: <strong><?php echo $this->escape($journalTimezone); ?></strong>. Листайте вправо к следующим дням. Назад — только до сегодня.</p>
+			<p class="journal-meta">Часовой пояс: <strong><?php echo $this->escape($journalTimezone); ?></strong>. Листайте влево к прошедшим дням и вправо к следующим.</p>
 		</div>
 		<div class="journal-nav">
 			<button type="button" id="journal-scroll-prev" aria-label="Назад">‹</button>
@@ -631,7 +698,7 @@ $kindClass = static function (string $kind): string {
 	</div>
 
 	<div class="journal-board">
-		<div class="journal-board__scroll" id="journal-board-scroll">
+		<div class="journal-board__scroll" id="journal-board-scroll" data-today-index="<?php echo (int) $pastDays; ?>">
 			<div class="journal-board__inner">
 				<div class="journal-board__head">
 					<div class="journal-time-gutter"></div>
@@ -639,7 +706,7 @@ $kindClass = static function (string $kind): string {
 						<div class="journal-day-head<?php echo !empty($day['is_today']) ? ' is-today' : ''; ?>">
 							<span class="dow"><?php echo $this->escape((string) $day['dow_label']); ?></span>
 							<span class="date"><?php echo (int) $day['day_num']; ?></span>
-							<span class="dow"><?php echo $this->escape((string) $day['month_label']); ?></span>
+							<span class="month"><?php echo $this->escape((string) $day['month_label']); ?></span>
 						</div>
 					<?php endforeach; ?>
 				</div>
@@ -665,7 +732,7 @@ $kindClass = static function (string $kind): string {
 								$cols = max(1, (int) ($event['cols'] ?? 1));
 								$col = (int) ($event['col'] ?? 0);
 								$top = (int) round(($event['startMin'] - $gridStart) * $pxPerMin);
-								$height = max(28, (int) round(($event['endMin'] - $event['startMin']) * $pxPerMin));
+								$height = max(46, (int) round(($event['endMin'] - $event['startMin']) * $pxPerMin));
 								$width = 'calc(' . (100 / $cols) . '% - 6px)';
 								$left = 'calc(' . (($col / $cols) * 100) . '% + 3px)';
 								$timeLabel = $formatMinutes((int) $event['startMin']) . '–' . $formatMinutes((int) $event['endMin']);
@@ -689,7 +756,7 @@ $kindClass = static function (string $kind): string {
 	</div>
 
 	<div class="journal-card journal-card--calendar">
-		<h2>Заблокировать время</h2>
+		<h2>Забронировать время</h2>
 		<form id="journal-form" method="post" action="<?php echo $addAction; ?>">
 			<input type="hidden" name="<?php echo $token; ?>" value="1">
 			<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
@@ -704,11 +771,11 @@ $kindClass = static function (string $kind): string {
 					<textarea id="journal-comment" name="comment" rows="3" placeholder="Причина блокировки времени"></textarea>
 				</div>
 				<div class="journal-selected" id="journal-selected">
-					<strong>Слот не выбран</strong>
+					<strong>Выберите время</strong>
 					<span>Нажмите на свободное время в календаре ниже.</span>
 				</div>
 				<div class="journal-submit-wrap">
-					<button type="submit" class="btn btn-primary journal-submit" id="journal-submit" disabled>Заблокировать время</button>
+					<button type="submit" class="btn btn-primary journal-submit" id="journal-submit" disabled>Забронировать время</button>
 				</div>
 			</div>
 			<div class="calc__body">
@@ -765,7 +832,7 @@ $kindClass = static function (string $kind): string {
 					<h2><?php echo $this->escape((string) $event['title']); ?></h2>
 					<div class="journal-detail__grid">
 						<div class="journal-detail__label">Услуга</div>
-						<div>Блок времени</div>
+						<div>Забронировать время</div>
 						<div class="journal-detail__label">Дата и время</div>
 						<div><?php echo $this->escape($timeText); ?></div>
 						<div class="journal-detail__label">Комментарий</div>
@@ -930,6 +997,12 @@ $kindClass = static function (string $kind): string {
 	}
 	if (scroller) {
 		scroller.addEventListener('scroll', syncNav);
+		var todayCol = scroller.querySelector('.journal-day-col.is-today');
+		if (todayCol) {
+			var gutter = scroller.querySelector('.journal-time-gutter');
+			var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
+			scroller.scrollLeft = Math.max(0, todayCol.offsetLeft - gutterW);
+		}
 		syncNav();
 	}
 

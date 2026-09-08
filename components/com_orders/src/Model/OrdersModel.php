@@ -38,7 +38,7 @@ class OrdersModel extends ListModel
 		if ($layout === 'journal') {
 			$fromUtc = trim((string) $this->getState('journal.from_utc', ''));
 			if ($fromUtc === '') {
-				$fromUtc = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
+				$fromUtc = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('-21 days')->format('Y-m-d H:i:s');
 			}
 			$query = $db->getQuery(true)
 				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')

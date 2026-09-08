@@ -825,7 +825,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
 					<?php foreach ($tabs as $index => $tabKey) : ?>
 					<li data-index="<?php echo (int) $index; ?>" data-link="profile-tab<?php echo (int) $index; ?>" class="z-tab<?php echo $index === 0 ? ' z-first z-active' : ''; ?><?php echo $index === (count($tabs) - 1) ? ' z-last' : ''; ?>" style="width: <?php echo (100 / max(1, count($tabs))); ?>%;">
-						<a class="z-link" style="min-height: 18px;"><?php echo $this->escape($tabTitles[$tabKey]); ?><span></span></a>
+						<a class="z-link" href="#profile-tab<?php echo (int) $index; ?>" style="min-height: 18px;"><?php echo $this->escape($tabTitles[$tabKey]); ?><span></span></a>
 					</li>
 					<?php endforeach; ?>
 				</ul>
@@ -1307,6 +1307,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 		max-width: 100%;
 	}
 }
+.profile-edit .z-dropdown-arrow {
+	display: none !important;
+}
 .profile-edit #jsn-profile-tabs.z-tabs-desktop {
 	display: flex;
 	flex-wrap: wrap;
@@ -1323,6 +1326,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	width: auto !important;
 	margin: 0;
 	padding: 0;
+	pointer-events: auto !important;
+	cursor: pointer !important;
 }
 .profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link {
 	display: inline-block;
@@ -1341,6 +1346,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	text-align: center;
 	text-decoration: none !important;
 	box-shadow: none !important;
+	pointer-events: auto !important;
+	cursor: pointer !important;
+	position: relative;
+	z-index: 2;
 }
 .profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link,
 .profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:hover,
@@ -1408,7 +1417,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	width: 100% !important;
 }
 .profile-edit #jsn-form .lk-edit-tab-panels > .z-content,
-.profile-edit #jsn-form .lk-edit-tab-panels > .z-content.z-active,
 .profile-edit #jsn-form .lk-edit-tab-panel {
 	position: static !important;
 	left: auto !important;
@@ -1417,10 +1425,11 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	width: 100% !important;
 	height: auto !important;
 	overflow: visible !important;
-	display: none;
+	display: none !important;
 }
-.profile-edit #jsn-form .lk-edit-tab-panels > .z-content.z-active {
-	display: block;
+.profile-edit #jsn-form .lk-edit-tab-panels > .z-content.z-active,
+.profile-edit #jsn-form .lk-edit-tab-panel.z-active {
+	display: block !important;
 }
 .profile-edit #jsn-form .z-content-inner,
 .profile-edit #jsn-form .jsn-form-fieldset {
@@ -2400,32 +2409,36 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	var pendingSearchRows = Array.isArray(initialSearchRows) ? initialSearchRows.slice() : [];
 	var tabs = document.querySelectorAll('#jsn-profile-tabs .z-tab');
 	var contents = document.querySelectorAll('#jsn-form .z-container.lk-edit-tab-panels > .z-content');
-	if (!tabs.length || !contents.length) return;
 
 	function activateTab(idx){
+		if (!tabs.length || !contents.length) return;
+		idx = parseInt(idx, 10);
+		if (isNaN(idx) || idx < 0 || idx >= contents.length) return;
 		tabs.forEach(function(t, i){
 			t.classList.toggle('z-active', i === idx);
 		});
 		contents.forEach(function(c, i){
-			c.classList.toggle('z-active', i === idx);
-			c.style.display = i === idx ? 'block' : 'none';
+			var on = i === idx;
+			c.classList.toggle('z-active', on);
+			c.style.setProperty('display', on ? 'block' : 'none', 'important');
 		});
 	}
 
-	tabs.forEach(function(tab, idx){
-		tab.addEventListener('click', function(e){
+	var tabsNav = document.getElementById('jsn-profile-tabs');
+	if (tabsNav && tabs.length && contents.length) {
+		tabsNav.addEventListener('click', function(e){
+			var tab = e.target && e.target.closest ? e.target.closest('.z-tab') : null;
+			if (!tab || !tabsNav.contains(tab)) return;
 			e.preventDefault();
+			e.stopPropagation();
+			var idx = Array.prototype.indexOf.call(tabs, tab);
+			if (idx < 0) {
+				idx = parseInt(tab.getAttribute('data-index') || '-1', 10);
+			}
 			activateTab(idx);
-		});
-		var link = tab.querySelector('.z-link');
-		if (link) {
-			link.addEventListener('click', function(e){
-				e.preventDefault();
-				activateTab(idx);
-			});
-		}
-	});
-	activateTab(0);
+		}, true);
+		activateTab(0);
+	}
 
 	// If placeholders are empty, mirror from label text for better readability.
 	document.querySelectorAll('.profile-edit #jsn-form .control-group').forEach(function(group){

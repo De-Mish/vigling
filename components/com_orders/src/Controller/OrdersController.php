@@ -933,7 +933,7 @@ class OrdersController extends BaseController
 				$comment = substr($comment, 0, 500);
 			}
 
-			$serviceName = '[journal] Блок времени';
+			$serviceName = '[journal] Забронировать время';
 			if ($comment !== '') {
 				$serviceName .= ' | Комментарий: ' . $comment;
 			}
