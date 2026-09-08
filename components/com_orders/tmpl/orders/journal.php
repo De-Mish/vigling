@@ -372,10 +372,22 @@ $kindClass = static function (string $kind): string {
 	.com_orders.orders-journal .journal-nav button {
 		min-width: 40px;
 		height: 36px;
-		border: 1px solid #d9d9d9;
+		border: 1px solid #bbb;
 		border-radius: 8px;
 		background: #fff;
+		font-size: 22px;
+		line-height: 1;
 		cursor: pointer;
+	}
+	.com_orders.orders-journal .journal-time-gutter {
+		position: sticky;
+		left: 0;
+		z-index: 5;
+		background: #fff;
+		border-right: 1px solid #ececec;
+	}
+	.com_orders.orders-journal .journal-board__head .journal-time-gutter {
+		z-index: 6;
 	}
 	.com_orders.orders-journal .journal-nav button:disabled {
 		opacity: .4;
@@ -396,6 +408,7 @@ $kindClass = static function (string $kind): string {
 		overflow: auto;
 		max-height: calc(100vh - 210px);
 		-webkit-overflow-scrolling: touch;
+		overscroll-behavior: contain;
 	}
 	.com_orders.orders-journal .journal-board__inner {
 		min-width: max(100%, calc(64px + 21 * 168px));
@@ -411,13 +424,6 @@ $kindClass = static function (string $kind): string {
 		z-index: 4;
 		background: #fff;
 		border-bottom: 1px solid #ececec;
-	}
-	.com_orders.orders-journal .journal-time-gutter {
-		position: sticky;
-		left: 0;
-		z-index: 5;
-		background: #fff;
-		border-right: 1px solid #ececec;
 	}
 	.com_orders.orders-journal .journal-day-head {
 		padding: 10px 8px 12px;
@@ -460,9 +466,9 @@ $kindClass = static function (string $kind): string {
 	.com_orders.orders-journal .journal-hour {
 		position: absolute;
 		right: 8px;
-		transform: translateY(-50%);
 		font-size: 11px;
 		color: #9a9a9a;
+		line-height: 1;
 	}
 	.com_orders.orders-journal .journal-day-col {
 		position: relative;
