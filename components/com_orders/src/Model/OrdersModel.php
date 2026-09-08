@@ -15,6 +15,13 @@ class OrdersModel extends ListModel
 	protected function populateState($ordering = null, $direction = null): void
 	{
 		$app = Factory::getApplication();
+		$layout = $app->getInput()->getCmd('layout', 'default');
+		$this->setState('layout', $layout);
+		if ($layout === 'journal') {
+			$this->setState('list.limit', 500);
+			$this->setState('list.start', 0);
+			return;
+		}
 		$this->setState('list.limit', $app->getInput()->getUint('limit', 50));
 		$this->setState('list.start', $app->getInput()->getUint('limitstart', 0));
 	}
@@ -29,13 +36,25 @@ class OrdersModel extends ListModel
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 		if ($layout === 'journal') {
+			$fromUtc = trim((string) $this->getState('journal.from_utc', ''));
+			if ($fromUtc === '') {
+				$fromUtc = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
+			}
 			$query = $db->getQuery(true)
 				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')
 				->from($db->quoteName('#__vigling_bookings', 'o'))
 				->where($db->quoteName('o.master_id') . ' = ' . (int) $user->id)
-				->where($db->quoteName('o.user_id') . ' = 0')
-				->where($db->quoteName('o.time_to') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc))
 				->order($db->quoteName('o.time') . ' ASC');
+			if (isset($tableColumns['comment'])) {
+				$query->select($db->quoteName('o.comment'));
+			}
+			if (isset($tableColumns['contact_name'])) {
+				$query->select($db->quoteName('o.contact_name'));
+			}
+			if (isset($tableColumns['contact_phone'])) {
+				$query->select($db->quoteName('o.contact_phone'));
+			}
 			if ($hasCourseColumns) {
 				$query->select([
 					$db->quoteName('o.booking_kind'),
@@ -93,10 +112,8 @@ class OrdersModel extends ListModel
 		if (empty($items)) {
 			return [];
 		}
-		if ((string) $this->getState('layout', 'default') === 'journal') {
-			return $items;
-		}
-		$asMaster = (int) $this->getState('as_master', 0) === 1;
+		$asMaster = (int) $this->getState('as_master', 0) === 1
+			|| (string) $this->getState('layout', 'default') === 'journal';
 		$tableColumns = array_change_key_case($this->getDatabase()->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);

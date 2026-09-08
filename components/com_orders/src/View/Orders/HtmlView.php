@@ -34,7 +34,21 @@ class HtmlView extends BaseHtmlView
 		/** @var \Viglin\Component\Orders\Site\Model\OrdersModel $model */
 		$model = $this->getModel();
 		$model->setState('layout', $layout);
-		$model->setState('as_master', $layout === 'clients' ? 1 : 0);
+		$model->setState('as_master', ($layout === 'clients' || $layout === 'journal') ? 1 : 0);
+		if ($layout === 'journal') {
+			$model->setState('list.limit', 500);
+			$model->setState('list.start', 0);
+			try {
+				$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+				require_once JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
+				$tzName = viglingOrdersGetUserTimezone($db, (int) $user->id, (string) $app->get('offset', 'UTC'));
+				$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
+				$fromUtc = (new \DateTimeImmutable('today', $tz))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+				$model->setState('journal.from_utc', $fromUtc);
+			} catch (\Throwable $e) {
+				$model->setState('journal.from_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'));
+			}
+		}
 		$this->items = $model->getItems();
 		return parent::display($tpl);
 	}
