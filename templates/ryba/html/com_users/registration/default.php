@@ -847,9 +847,27 @@ $durationJson = json_encode($durationOptions);
     max-width: 90px !important;
     width: 90px !important;
 }
+#easyprofile.registration .fixed-slot-fields {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 255px;
+    max-width: 255px;
+}
+#easyprofile.registration .fixed-slot-fields input[type="date"] {
+    flex: 1 1 140px;
+    min-width: 130px;
+    max-width: 150px !important;
+    width: 150px !important;
+}
+#easyprofile.registration .fixed-slot-fields select {
+    flex: 0 0 96px;
+    width: 96px !important;
+    max-width: 96px !important;
+}
 #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
-#easyprofile.registration #jform_courses_servis .service__item .course_title input,
-#easyprofile.registration #jform_courses_servis .service__item .course_slot input {
+#easyprofile.registration #jform_courses_servis .service__item .course_title input {
     max-width: 255px !important;
     width: 255px !important;
 }
@@ -1126,6 +1144,10 @@ $durationJson = json_encode($durationOptions);
         min-width: 0 !important;
         width: 100% !important;
         padding-right: 0 !important;
+    }
+    #easyprofile.registration .fixed-slot-fields {
+        width: 100% !important;
+        max-width: 100% !important;
     }
     #easyprofile.registration #jform_courses_servis .service__item .course_media .course-media-field,
     #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
@@ -1680,7 +1702,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return '';
         }
         if (raw.indexOf('T') !== -1 && raw.indexOf(' ') === -1) {
-            return raw.slice(0, 16);
+            return snapDatetimeLocalMinutes(raw.slice(0, 16));
         }
         var iso = raw.replace(' ', 'T');
         if (iso.length === 16) {
@@ -1688,24 +1710,286 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         var date = new Date(iso + 'Z');
         if (Number.isNaN(date.getTime())) {
-            return raw.replace(' ', 'T').slice(0, 16);
+            return snapDatetimeLocalMinutes(raw.replace(' ', 'T').slice(0, 16));
         }
         var y = date.getFullYear();
         var m = String(date.getMonth() + 1).padStart(2, '0');
         var d = String(date.getDate()).padStart(2, '0');
         var h = String(date.getHours()).padStart(2, '0');
         var i = String(date.getMinutes()).padStart(2, '0');
-        return y + '-' + m + '-' + d + 'T' + h + ':' + i;
+        return snapDatetimeLocalMinutes(y + '-' + m + '-' + d + 'T' + h + ':' + i);
     }
-
-    function normalizeDatetimeFromLocal(value) {
+    function snapDatetimeLocalMinutes(value) {
         var raw = String(value || '').trim();
         if (!raw) {
             return '';
         }
-        var date = new Date(raw);
-        if (Number.isNaN(date.getTime())) {
-            return raw.replace('T', ' ') + ':00';
+        var match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+        if (!match) {
+            return raw.slice(0, 16);
+        }
+        var day = match[1];
+        var hour = parseInt(match[2], 10);
+        var minute = parseInt(match[3], 10);
+        if (isNaN(hour) || isNaN(minute)) {
+            return raw.slice(0, 16);
+        }
+        var snapped = Math.round(minute / 15) * 15;
+        if (snapped === 60) {
+            snapped = 0;
+            hour += 1;
+        }
+        if (hour >= 24) {
+            hour = 0;
+            var next = new Date(parseInt(day.slice(0, 4), 10), parseInt(day.slice(5, 7), 10) - 1, parseInt(day.slice(8, 10), 10));
+            if (!Number.isNaN(next.getTime())) {
+                next.setDate(next.getDate() + 1);
+                day = next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0') + '-' + String(next.getDate()).padStart(2, '0');
+            }
+        }
+        return day + 'T' + String(hour).padStart(2, '0') + ':' + String(snapped).padStart(2, '0');
+    }
+    function parseLocalDateTime(value) {
+        var raw = snapDatetimeLocalMinutes(value);
+        var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+        if (!match) {
+            return null;
+        }
+        var date = new Date(
+            parseInt(match[1], 10),
+            parseInt(match[2], 10) - 1,
+            parseInt(match[3], 10),
+            parseInt(match[4], 10),
+            parseInt(match[5], 10),
+            0
+        );
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+    function quarterHourTimeOptionsHtml(selected) {
+        var html = '<option value="">Время</option>';
+        var hour;
+        var minute;
+        var value;
+        for (hour = 0; hour < 24; hour += 1) {
+            for (minute = 0; minute < 60; minute += 15) {
+                value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                html += '<option value="' + value + '"' + (selected === value ? ' selected' : '') + '>' + value + '</option>';
+            }
+        }
+        return html;
+    }
+    function fixedSlotFieldsHtml(kind) {
+        var isSearch = kind === 'search';
+        return '<span class="fixed-slot-fields">' +
+            '<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
+            '<select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select>' +
+            '<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
+            '</span>';
+    }
+    function fillFixedSlotParts(input, datetimeLocal) {
+        if (!input) {
+            return;
+        }
+        var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+        var snapped = snapDatetimeLocalMinutes(datetimeLocal);
+        var dateInput = wrap ? wrap.querySelector('.course-slot-date, .search-slot-date') : null;
+        var timeSelect = wrap ? wrap.querySelector('.course-slot-time, .search-slot-time') : null;
+        var parts = snapped.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/);
+        if (dateInput) {
+            dateInput.value = parts ? parts[1] : '';
+        }
+        if (timeSelect) {
+            timeSelect.value = parts ? parts[2] : '';
+        }
+        input.value = parts ? (parts[1] + 'T' + parts[2]) : '';
+    }
+    function syncFixedSlotHidden(input) {
+        if (!input) {
+            return;
+        }
+        var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+        var dateInput = wrap ? wrap.querySelector('.course-slot-date, .search-slot-date') : null;
+        var timeSelect = wrap ? wrap.querySelector('.course-slot-time, .search-slot-time') : null;
+        var day = dateInput ? String(dateInput.value || '').trim() : '';
+        var time = timeSelect ? String(timeSelect.value || '').trim() : '';
+        input.value = (day && time) ? (day + 'T' + time) : '';
+    }
+    function bindFixedSlotInput(input) {
+        if (!input) {
+            return;
+        }
+        var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+        if (!wrap) {
+            return;
+        }
+        var isSearch = input.classList.contains('search-slot-input');
+        var dateClass = isSearch ? 'search-slot-date' : 'course-slot-date';
+        var timeClass = isSearch ? 'search-slot-time' : 'course-slot-time';
+        var dateInput = wrap.querySelector('.' + dateClass);
+        var timeSelect = wrap.querySelector('.' + timeClass);
+        var fields = wrap.querySelector('.fixed-slot-fields');
+        if (!fields) {
+            fields = document.createElement('span');
+            fields.className = 'fixed-slot-fields';
+            input.parentNode.insertBefore(fields, input);
+        }
+        if (input.getAttribute('type') === 'datetime-local' || input.getAttribute('type') === 'text') {
+            input.type = 'hidden';
+            input.removeAttribute('step');
+        }
+        if (!dateInput) {
+            dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.className = dateClass;
+            fields.appendChild(dateInput);
+        } else if (dateInput.parentNode !== fields) {
+            fields.appendChild(dateInput);
+        }
+        if (!timeSelect) {
+            timeSelect = document.createElement('select');
+            timeSelect.className = timeClass;
+            timeSelect.innerHTML = quarterHourTimeOptionsHtml();
+            fields.appendChild(timeSelect);
+        } else if (timeSelect.parentNode !== fields) {
+            fields.appendChild(timeSelect);
+        }
+        if (input.parentNode !== fields) {
+            fields.appendChild(input);
+        }
+        if (input.getAttribute('data-slot-bound') !== '1') {
+            input.setAttribute('data-slot-bound', '1');
+            dateInput.addEventListener('change', function(){
+                syncFixedSlotHidden(input);
+            });
+            timeSelect.addEventListener('change', function(){
+                syncFixedSlotHidden(input);
+            });
+        }
+        if (input.value) {
+            fillFixedSlotParts(input, input.value);
+        } else {
+            syncFixedSlotHidden(input);
+        }
+    }
+    function bindAllFixedSlotInputs() {
+        document.querySelectorAll('.course-slot-input, .search-slot-input').forEach(bindFixedSlotInput);
+    }
+    function parseClockMinutes(value) {
+        var parts = String(value || '').split(':');
+        if (parts.length < 2) {
+            return null;
+        }
+        var hour = parseInt(parts[0], 10);
+        var minute = parseInt(parts[1], 10);
+        if (isNaN(hour) || isNaN(minute)) {
+            return null;
+        }
+        return hour * 60 + minute;
+    }
+    function currentScheduleByDay() {
+        var map = {};
+        document.querySelectorAll('.schedule-day-row').forEach(function(row){
+            var cb = row.querySelector('.schedule-day-cb');
+            var fromSel = row.querySelector('.schedule-from');
+            var toSel = row.querySelector('.schedule-to');
+            if (!cb || !cb.checked || !fromSel || !toSel) {
+                return;
+            }
+            var fromMin = parseClockMinutes(fromSel.value);
+            var toMin = parseClockMinutes(toSel.value);
+            var day = parseInt(cb.getAttribute('data-day') || cb.value, 10);
+            if (day >= 1 && day <= 7 && fromMin !== null && toMin !== null && toMin > fromMin) {
+                map[day] = [fromMin, toMin];
+            }
+        });
+        return map;
+    }
+    function describeFixedSlotIssue(localValue, durationMin, schedule, kindLabel) {
+        var raw = snapDatetimeLocalMinutes(localValue);
+        if (!raw) {
+            return 'Для ' + kindLabel + ' с фиксированной датой выберите дату и время.';
+        }
+        var start = parseLocalDateTime(raw);
+        if (!start) {
+            return 'Для ' + kindLabel + ' указана некорректная дата и время.';
+        }
+        if (start.getTime() <= Date.now()) {
+            return 'Нельзя сохранить ' + kindLabel + ' на прошедшее время.';
+        }
+        var days = Object.keys(schedule);
+        if (!days.length) {
+            return null;
+        }
+        var duration = Math.max(15, parseInt(durationMin, 10) || 0);
+        var end = new Date(start.getTime() + duration * 60000);
+        var jsDay = start.getDay();
+        var isoDay = jsDay === 0 ? 7 : jsDay;
+        var startMin = start.getHours() * 60 + start.getMinutes();
+        var endMin = end.getHours() * 60 + end.getMinutes();
+        var outside = start.toDateString() !== end.toDateString()
+            || !schedule[isoDay]
+            || startMin < schedule[isoDay][0]
+            || endMin > schedule[isoDay][1];
+        if (!outside) {
+            return null;
+        }
+        return 'Выбранные дата и время не входят в расписание. Измените фиксированную дату и время.';
+    }
+    function findFixedSlotScheduleIssue() {
+        var schedule = currentScheduleByDay();
+        var issue = null;
+        document.querySelectorAll('#jform_courses_servis .service__item').forEach(function(row){
+            if (issue) {
+                return;
+            }
+            var mode = row.querySelector('.course-mode-select');
+            if (!mode || String(mode.value || 'free') !== 'fixed') {
+                return;
+            }
+            var slot = row.querySelector('.course-slot-input');
+            var duration = row.querySelector('.course-duration-select');
+            var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'курс');
+            if (msg) {
+                issue = { message: msg, kind: 'course' };
+            }
+        });
+        if (issue) {
+            return issue;
+        }
+        document.querySelectorAll('#jform_searches_servis .service__item').forEach(function(row){
+            if (issue) {
+                return;
+            }
+            var mode = row.querySelector('.search-mode-select');
+            if (!mode || String(mode.value || 'free') !== 'fixed') {
+                return;
+            }
+            var slot = row.querySelector('.search-slot-input');
+            var duration = row.querySelector('.search-duration-select');
+            var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'поиск моделей');
+            if (msg) {
+                issue = { message: msg, kind: 'search' };
+            }
+        });
+        return issue;
+    }
+    function showFixedSlotNotice(message, kind) {
+        if (kind === 'course') {
+            setTab('jsn_courses');
+        } else if (kind === 'search') {
+            setTab('jsn_searches');
+        }
+        if (window.ViglingNotify && typeof window.ViglingNotify.warning === 'function') {
+            window.ViglingNotify.warning(message, { timeout: 0 });
+            return;
+        }
+        window.alert(message);
+    }
+
+    function normalizeDatetimeFromLocal(value) {
+        var date = parseLocalDateTime(value);
+        if (!date) {
+            return '';
         }
         var y = date.getUTCFullYear();
         var m = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -1731,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.toggleClass('is-free-mode', mode !== 'fixed');
         row.toggleClass('has-capacity', capacity >= 1);
         if (mode !== 'fixed') {
-            slotInput.val('');
+            fillFixedSlotParts(slotInput.get(0), '');
         }
         if (concurrentInput.length) {
             var maxConcurrent = Math.max(1, capacity);
@@ -1773,7 +2057,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var mode = String(modeSelect.val() || 'free');
         modeWrap.toggleClass('is-free', mode !== 'fixed');
         if (mode !== 'fixed') {
-            slotInput.val('');
+            fillFixedSlotParts(slotInput.get(0), '');
         }
     }
 
@@ -1828,7 +2112,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
             '<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
-            '<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label><input type="datetime-local" class="course-slot-input" value="" /></span></span>' +
+            '<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span></span>' +
             '<i class="stock-remove" title="Удалить"></i>' +
         '</p>');
 
@@ -1836,6 +2120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         categoryLabel.find('.service_list').append(row);
         syncCourseModeState(row);
         syncCourseMediaState(row);
+        bindFixedSlotInput(row.find('.course-slot-input').get(0));
         updateTabsContainerHeight();
         persistDraftState();
     }
@@ -1853,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" /></span>' +
             '<span class="search_duration"><label>Длительность:</label><select class="search-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="search_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="search-capacity-input" value="1" /></span>' +
-            '<span class="search_mode"><label>Режим записи:</label><select class="search-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="search_slot"><label>Дата и время:</label><input type="datetime-local" class="search-slot-input" value="" /></span></span>' +
+            '<span class="search_mode"><label>Режим записи:</label><select class="search-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="search_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('search') + '</span></span>' +
             '<i class="stock-remove" title="Удалить"></i>' +
         '</p>');
 
@@ -1861,6 +2146,7 @@ document.addEventListener('DOMContentLoaded', function () {
         categoryLabel.find('.service_list').append(row);
         syncSearchModeState(row);
         syncSearchMediaState(row);
+        bindFixedSlotInput(row.find('.search-slot-input').get(0));
         updateTabsContainerHeight();
         persistDraftState();
     }
@@ -2050,6 +2336,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.find('.course-concurrent-input').val(String(Math.max(1, parseInt(item.concurrentParticipants || '1', 10) || 1)));
             row.find('.course-mode-select').val(String(item.bookingMode || 'free'));
             row.find('.course-slot-input').val(formatDatetimeLocal(String(item.slotStartUtc || '')));
+            bindFixedSlotInput(row.find('.course-slot-input').get(0));
             syncCourseModeState(row);
             syncCourseMediaState(row);
         });
@@ -2083,6 +2370,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.find('.search-capacity-input').val(String(Math.max(1, parseInt(item.capacity || '1', 10) || 1)));
             row.find('.search-mode-select').val(String(item.bookingMode || 'free'));
             row.find('.search-slot-input').val(formatDatetimeLocal(String(item.slotStartUtc || '')));
+            bindFixedSlotInput(row.find('.search-slot-input').get(0));
             syncSearchModeState(row);
             syncSearchMediaState(row);
         });
@@ -2604,6 +2892,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     emailInput.on('input change', syncUsernameWithEmail);
     form.on('input change', 'input, select, textarea', persistDraftState);
+    form.on('change', '.course-slot-input, .search-slot-input, .course-slot-date, .search-slot-date, .course-slot-time, .search-slot-time', function () {
+        var wrap = this.closest ? this.closest('.course_slot, .search_slot') : null;
+        var hidden = wrap ? wrap.querySelector('.course-slot-input, .search-slot-input') : this;
+        bindFixedSlotInput(hidden);
+        persistDraftState();
+    });
 
     tabsNav.on('click', 'li a', function (e) {
         e.preventDefault();
@@ -2743,6 +3037,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#reg-submit').on('click', function (e) {
+        bindAllFixedSlotInputs();
+        var slotIssue = findFixedSlotScheduleIssue();
+        if (slotIssue) {
+            e.preventDefault();
+            showFixedSlotNotice(slotIssue.message, slotIssue.kind);
+            persistDraftState();
+            return false;
+        }
         if (!isFinalRegistrationStep() || !validatePrivacyConsent()) {
             e.preventDefault();
             return false;
@@ -2772,6 +3074,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!validateSchedule()) {
             e.preventDefault();
+            return false;
+        }
+
+        bindAllFixedSlotInputs();
+        var slotIssue = findFixedSlotScheduleIssue();
+        if (slotIssue) {
+            e.preventDefault();
+            recaptchaSubmitBypass = false;
+            showFixedSlotNotice(slotIssue.message, slotIssue.kind);
+            persistDraftState();
             return false;
         }
 

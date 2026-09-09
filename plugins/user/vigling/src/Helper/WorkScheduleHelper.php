@@ -291,6 +291,36 @@ final class WorkScheduleHelper
         return '';
     }
 
+    /**
+     * Snap a datetime to the nearest 15-minute mark used by bookings and the schedule.
+     */
+    public static function snapToQuarterHour(string $value): string
+    {
+        $value = trim(str_replace('T', ' ', $value));
+        if ($value === '' || !preg_match('/^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})(?::(\d{2}))?$/', $value, $m)) {
+            return '';
+        }
+
+        try {
+            $dt = new \DateTimeImmutable($m[1] . ' ' . $m[2] . ':' . $m[3] . ':00', new \DateTimeZone('UTC'));
+        } catch (\Throwable $e) {
+            return '';
+        }
+
+        return self::snapDateTimeToQuarterHour($dt)->format('Y-m-d H:i:s');
+    }
+
+    public static function snapDateTimeToQuarterHour(\DateTimeImmutable $dt): \DateTimeImmutable
+    {
+        $totalMin = ((int) $dt->format('H')) * 60 + (int) $dt->format('i');
+        $snapped = (int) round($totalMin / 15) * 15;
+        if ($snapped >= 24 * 60) {
+            return $dt->modify('+1 day')->setTime(0, 0, 0);
+        }
+
+        return $dt->setTime(intdiv($snapped, 60), $snapped % 60, 0);
+    }
+
     public static function parseTimeToMinutes(string $raw): ?int
     {
         $raw = trim($raw);
