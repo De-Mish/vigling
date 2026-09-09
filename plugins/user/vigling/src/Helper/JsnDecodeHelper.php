@@ -562,11 +562,11 @@ final class JsnDecodeHelper
             $db->setQuery($query);
             $rows = $db->loadAssocList() ?: [];
         } catch (\Throwable $e) {
-            return [];
+            return self::getLegacyFieldCatalogFallback($userId, $userServicesTable === '#__vigling_user_stock_services');
         }
 
         if ($rows === []) {
-            return [];
+            return self::getLegacyFieldCatalogFallback($userId, $userServicesTable === '#__vigling_user_stock_services');
         }
 
         $grouped = [];
@@ -1094,6 +1094,38 @@ final class JsnDecodeHelper
         return $result;
     }
 
+    /**
+     * If normalized catalog tables were emptied by a blank profile-save payload,
+     * fall back to the legacy custom field JSON so existing listings still show.
+     *
+     * @return array<int, array{cat_id: string, title: string, items: array<int, array<string, mixed>>}>
+     */
+    private static function getLegacyFieldCatalogFallback(int $userId, bool $isStock): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+        $fieldName = $isStock ? 'stock_prices' : 'prices';
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $query = $db->getQuery(true)
+                ->select($db->quoteName('fv.value'))
+                ->from($db->quoteName('#__fields_values', 'fv'))
+                ->join('INNER', $db->quoteName('#__fields', 'f') . ' ON ' . $db->quoteName('f.id') . ' = ' . $db->quoteName('fv.field_id'))
+                ->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('f.name') . ' = ' . $db->quote($fieldName))
+                ->where($db->quoteName('fv.item_id') . ' = ' . (int) $userId)
+                ->order($db->quoteName('fv.field_id') . ' DESC');
+            $raw = trim((string) $db->setQuery($query, 0, 1)->loadResult());
+        } catch (\Throwable $e) {
+            return [];
+        }
+        if ($raw === '' || $raw === '{}' || $raw === '[]') {
+            return [];
+        }
+        return self::getPricesStructuredWithIds($raw);
+    }
+
     public static function decodeFieldValue(string $fieldName, string $value): ?string
     {
         $value = trim($value);
@@ -1194,7 +1226,18 @@ final class JsnDecodeHelper
                     continue;
                 }
                 $price = (int) $triple[0];
-                $duration = (int) $triple[1];
+                $durationRaw = $triple[1];
+                $duration = (int) $durationRaw;
+                $pauseMin = 0;
+                if (is_numeric($durationRaw) && !is_int($durationRaw) && strpos((string) $durationRaw, '.') !== false) {
+                    $durationBits = explode('.', (string) $durationRaw, 2);
+                    $duration = (int) ($durationBits[0] ?? 0);
+                    $pauseMin = (int) ($durationBits[1] ?? 0);
+                } elseif (is_string($durationRaw) && strpos($durationRaw, '.') !== false) {
+                    $durationBits = explode('.', $durationRaw, 2);
+                    $duration = (int) ($durationBits[0] ?? 0);
+                    $pauseMin = (int) ($durationBits[1] ?? 0);
+                }
                 $svcId = (string) $triple[2];
                 $tagId = 0;
                 $lookupId = $svcId;
@@ -1209,13 +1252,24 @@ final class JsnDecodeHelper
                     $svcName = $svc[$catIdStr] ?? ($cats[$catIdStr]['title'] ?? $svcName);
                     $lookupId = $catIdStr;
                 }
-                $parts[] = [
+                $part = [
                     'name' => $svcName,
                     'price' => $price,
                     'duration' => $duration,
+                    'pause_min' => $pauseMin,
                     'svc_id' => $lookupId,
                     'tag_id' => $tagId,
                 ];
+                if (isset($triple[3])) {
+                    $part['old_price'] = (int) $triple[3];
+                }
+                if (isset($triple[4])) {
+                    $part['about_stock'] = is_scalar($triple[4]) ? (string) $triple[4] : '';
+                }
+                if (isset($triple[5])) {
+                    $part['count_stock'] = (int) $triple[5];
+                }
+                $parts[] = $part;
             }
             if ($parts !== []) {
                 $result[] = ['cat_id' => (string) $catId, 'title' => $catTitle, 'items' => $parts];

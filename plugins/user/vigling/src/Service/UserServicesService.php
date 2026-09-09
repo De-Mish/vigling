@@ -93,12 +93,6 @@ final class UserServicesService
         string $targetTable
     ): void {
         $payloadJson = trim($payloadJson);
-
-        $query = $db->getQuery(true)
-            ->delete($db->quoteName($targetTable))
-            ->where($db->quoteName('user_id') . ' = ' . (int) $userId);
-        $db->setQuery($query)->execute();
-
         if ($payloadJson === '') {
             return;
         }
@@ -112,6 +106,11 @@ final class UserServicesService
             );
             return;
         }
+
+        $query = $db->getQuery(true)
+            ->delete($db->quoteName($targetTable))
+            ->where($db->quoteName('user_id') . ' = ' . (int) $userId);
+        $db->setQuery($query)->execute();
 
         $map = self::getLegacyServiceMap();
         $sourcePriority = ['content', 'vigling_services', 'tag'];
