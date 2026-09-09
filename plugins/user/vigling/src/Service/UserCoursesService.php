@@ -223,20 +223,7 @@ final class UserCoursesService
 
     private static function normalizeLocalDateTime(string $value): string
     {
-        $value = trim($value);
-        if ($value === '') {
-            return '';
-        }
-
-        $value = str_replace('T', ' ', $value);
-        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
-            return $value . ':00';
-        }
-        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
-            return $value;
-        }
-
-        return '';
+        return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapToQuarterHour($value);
     }
 
     /**
@@ -1097,7 +1084,9 @@ final class UserCoursesService
 
         try {
             $date = new \DateTimeImmutable($value, new \DateTimeZone('UTC'));
-            return $date->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapDateTimeToQuarterHour(
+                $date->setTimezone(new \DateTimeZone('UTC'))
+            )->format('Y-m-d H:i:s');
         } catch (\Throwable $e) {
             return '';
         }
