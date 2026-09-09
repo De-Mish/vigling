@@ -788,13 +788,14 @@ try {
 	$existingSearchRows = [];
 }
 
-$missingServiceOptionsJson = json_encode(array_map('array_values', $missingServiceOptionsByCategory), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$servicesJson = json_encode($servicesByCategory, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$durationJson = json_encode($durationOptions);
-$existingServiceRowsJson = json_encode($existingServiceRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$existingStockRowsJson = json_encode($existingStockRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$existingCourseRowsJson = json_encode($existingCourseRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$jsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
+$missingServiceOptionsJson = json_encode(array_map('array_values', $missingServiceOptionsByCategory), $jsJsonFlags) ?: '{}';
+$servicesJson = json_encode($servicesByCategory, $jsJsonFlags) ?: '{}';
+$durationJson = json_encode($durationOptions, $jsJsonFlags) ?: '[]';
+$existingServiceRowsJson = json_encode($existingServiceRows, $jsJsonFlags) ?: '[]';
+$existingStockRowsJson = json_encode($existingStockRows, $jsJsonFlags) ?: '[]';
+$existingCourseRowsJson = json_encode($existingCourseRows, $jsJsonFlags) ?: '[]';
+$existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]';
 ?>
 <div id="easyprofile" class="view_profile profile-edit legacy-registration">
 	<div class="jsn-p">
@@ -832,7 +833,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 
 				<div class="z-container lk-edit-tab-panels">
 					<?php foreach ($tabs as $index => $tabKey) : ?>
-					<div class="lk-edit-tab-panel z-content<?php echo $index === 0 ? ' z-active' : ''; ?>" data-index="<?php echo (int) $index; ?>" data-name="profile-tab<?php echo (int) $index; ?>" style="<?php echo $index === 0 ? 'display:block;' : 'display:none;'; ?>">
+					<div id="profile-tab<?php echo (int) $index; ?>" class="lk-edit-tab-panel z-content<?php echo $index === 0 ? ' z-active' : ''; ?>" data-index="<?php echo (int) $index; ?>" data-name="profile-tab<?php echo (int) $index; ?>" style="<?php echo $index === 0 ? 'display:block;' : 'display:none;'; ?>">
 						<div class="z-content-inner">
 							<fieldset class="jsn-form-fieldset" data-index="<?php echo (int) $index; ?>" data-name="profile-tab<?php echo (int) $index; ?>">
 								<legend style="display:none;"><?php echo $this->escape($tabTitles[$tabKey]); ?></legend>
@@ -1044,12 +1045,12 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 										<div class="control-label"><label for="jform_vyberite_usl">Услуги и цены</label></div>
 										<div class="controls">
 											<fieldset id="jform_vyberite_usl">Выберите специальность, чтобы добавить услугу</fieldset>
-											<input type="hidden" name="jform[prices]" id="jform_prices" value="">
-											<input type="hidden" name="jform[stock_prices]" id="jform_stock_prices" value="">
-											<input type="hidden" name="jform[vigling_services_payload]" id="jform_vigling_services_payload" value="">
-											<input type="hidden" name="jform[vigling_stock_services_payload]" id="jform_vigling_stock_services_payload" value="">
-											<input type="hidden" name="jform[vigling_courses_payload]" id="jform_vigling_courses_payload" value="">
-											<input type="hidden" name="jform[vigling_searches_payload]" id="jform_vigling_searches_payload" value="">
+											<input type="hidden" name="jform[prices]" id="jform_prices" value="" disabled>
+											<input type="hidden" name="jform[stock_prices]" id="jform_stock_prices" value="" disabled>
+											<input type="hidden" name="jform[vigling_services_payload]" id="jform_vigling_services_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_stock_services_payload]" id="jform_vigling_stock_services_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_courses_payload]" id="jform_vigling_courses_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_searches_payload]" id="jform_vigling_searches_payload" value="" disabled>
 										</div>
 									</div>
 								<?php elseif ($isMaster && $tabKey === 'stocks') : ?>
@@ -1428,8 +1429,12 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	display: none !important;
 }
 .profile-edit #jsn-form .lk-edit-tab-panels > .z-content.z-active,
-.profile-edit #jsn-form .lk-edit-tab-panel.z-active {
+.profile-edit #jsn-form .lk-edit-tab-panel.z-active,
+.profile-edit #jsn-form .lk-edit-tab-panels:has(> .z-content:target) > .z-content:target {
 	display: block !important;
+}
+.profile-edit #jsn-form .lk-edit-tab-panels:has(> .z-content:target) > .z-content:not(:target) {
+	display: none !important;
 }
 .profile-edit #jsn-form .z-content-inner,
 .profile-edit #jsn-form .jsn-form-fieldset {
@@ -1510,6 +1515,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	height: 2px;
 	bottom: -5px;
 }
+.profile-edit #jform_vyberite_usl,
 .profile-edit #jform_stocks_servis,
 .profile-edit #jform_courses_servis,
 .profile-edit #jform_searches_servis {
@@ -2394,6 +2400,50 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 <script src="/templates/ryba/js/vigling-image-upload.js"></script>
 <script>
 (function(){
+	function editTabs(){
+		return document.querySelectorAll('#easyprofile.profile-edit #jsn-profile-tabs > li.z-tab');
+	}
+	function editPanels(){
+		return document.querySelectorAll('#easyprofile.profile-edit #jsn-form .lk-edit-tab-panels > .z-content');
+	}
+	function activateEditTab(idx){
+		var tabs = editTabs();
+		var panels = editPanels();
+		if (!tabs.length || !panels.length) {
+			return;
+		}
+		idx = parseInt(idx, 10);
+		if (isNaN(idx) || idx < 0 || idx >= panels.length) {
+			return;
+		}
+		tabs.forEach(function(tab, i){
+			tab.classList.toggle('z-active', i === idx);
+		});
+		panels.forEach(function(panel, i){
+			var on = i === idx;
+			panel.classList.toggle('z-active', on);
+			panel.style.setProperty('display', on ? 'block' : 'none', 'important');
+		});
+	}
+	document.addEventListener('click', function(e){
+		var tab = e.target && e.target.closest ? e.target.closest('#easyprofile.profile-edit #jsn-profile-tabs > li.z-tab') : null;
+		if (!tab) {
+			return;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		var idx = parseInt(tab.getAttribute('data-index') || '-1', 10);
+		if (idx < 0) {
+			idx = Array.prototype.indexOf.call(editTabs(), tab);
+		}
+		activateEditTab(idx);
+	}, true);
+	activateEditTab(0);
+	window.viglingActivateProfileEditTab = activateEditTab;
+})();
+</script>
+<script>
+(function(){
 	var isAdmin = <?php echo $isAdministrator ? 'true' : 'false'; ?>;
 	var isMaster = <?php echo $isMaster ? 'true' : 'false'; ?>;
 	var servicesByCategory = <?php echo $servicesJson ?: '{}'; ?>;
@@ -2407,38 +2457,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 	var pendingStockRows = Array.isArray(initialStockRows) ? initialStockRows.slice() : [];
 	var pendingCourseRows = Array.isArray(initialCourseRows) ? initialCourseRows.slice() : [];
 	var pendingSearchRows = Array.isArray(initialSearchRows) ? initialSearchRows.slice() : [];
-	var tabs = document.querySelectorAll('#jsn-profile-tabs .z-tab');
-	var contents = document.querySelectorAll('#jsn-form .z-container.lk-edit-tab-panels > .z-content');
-
-	function activateTab(idx){
-		if (!tabs.length || !contents.length) return;
-		idx = parseInt(idx, 10);
-		if (isNaN(idx) || idx < 0 || idx >= contents.length) return;
-		tabs.forEach(function(t, i){
-			t.classList.toggle('z-active', i === idx);
-		});
-		contents.forEach(function(c, i){
-			var on = i === idx;
-			c.classList.toggle('z-active', on);
-			c.style.setProperty('display', on ? 'block' : 'none', 'important');
-		});
-	}
-
-	var tabsNav = document.getElementById('jsn-profile-tabs');
-	if (tabsNav && tabs.length && contents.length) {
-		tabsNav.addEventListener('click', function(e){
-			var tab = e.target && e.target.closest ? e.target.closest('.z-tab') : null;
-			if (!tab || !tabsNav.contains(tab)) return;
-			e.preventDefault();
-			e.stopPropagation();
-			var idx = Array.prototype.indexOf.call(tabs, tab);
-			if (idx < 0) {
-				idx = parseInt(tab.getAttribute('data-index') || '-1', 10);
-			}
-			activateTab(idx);
-		}, true);
-		activateTab(0);
-	}
 
 	// If placeholders are empty, mirror from label text for better readability.
 	document.querySelectorAll('.profile-edit #jsn-form .control-group').forEach(function(group){
@@ -2484,13 +2502,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, JSON_UNESCAPED_UNICOD
 			var type = label.getAttribute('data-type') || '';
 			var shouldShow = isRepairProfile ? type === 'repair' : type === 'beauty';
 			label.style.display = shouldShow ? '' : 'none';
-			if (!shouldShow) {
-				var checkbox = label.querySelector('input[type="checkbox"]');
-				if (checkbox) {
-					checkbox.checked = false;
-				}
-				label.classList.remove('active');
-			}
 		});
 	}
 	function selectedSpecialtyIds() {
@@ -3102,7 +3113,6 @@ function addSearchRow(categoryLabel, rowData) {
 			}
 			run();
 		});
-		});
 	}
 }
 	function collectSearchRows() {
@@ -3418,6 +3428,7 @@ function addStockRow(categoryLabel, rowData) {
 				var row = removeButton.closest('.service__item');
 				if (row) {
 					row.remove();
+					pendingServiceRows = collectServiceRows();
 				}
 			}
 			});
@@ -3441,6 +3452,7 @@ if (stocksHolder) {
 			var row = removeButton.closest('.service__item');
 			if (row) {
 				row.remove();
+				pendingStockRows = collectStockRows();
 			}
 		}
 	});
@@ -3463,6 +3475,7 @@ if (coursesHolder) {
 			var row = removeButton.closest('.service__item');
 			if (row) {
 				row.remove();
+				pendingCourseRows = collectCourseRows();
 			}
 		}
 	});
@@ -3485,35 +3498,71 @@ if (searchesHolder) {
 			var row = removeButton.closest('.service__item');
 			if (row) {
 				row.remove();
+				pendingSearchRows = collectSearchRows();
 			}
 		}
 	});
 }
 	var profileForm = document.getElementById('member-profile');
+	function catalogHasBuilders(holderId) {
+		var holder = document.getElementById(holderId);
+		return !!(holder && holder.querySelector('.btn-add-service, .stock_key, .search-add-btn'));
+	}
+	function resolveCatalogRows(collected, pending) {
+		if (collected.length) {
+			return collected;
+		}
+		if (pending && pending.length) {
+			return pending.slice();
+		}
+		return [];
+	}
+	function writeCatalogPayload(input, payload) {
+		if (!input) {
+			return;
+		}
+		if (payload === null) {
+			input.disabled = true;
+			input.value = '';
+			return;
+		}
+		input.disabled = false;
+		input.value = JSON.stringify(payload);
+	}
+	function rebuildCatalogPayloads() {
+		var serviceRows = resolveCatalogRows(collectServiceRows(), pendingServiceRows);
+		var stockRows = resolveCatalogRows(collectStockRows(), pendingStockRows);
+		var courseRows = resolveCatalogRows(collectCourseRows(), pendingCourseRows);
+		var searchRows = resolveCatalogRows(collectSearchRows(), pendingSearchRows);
+		writeCatalogPayload(
+			document.getElementById('jform_prices'),
+			catalogHasBuilders('jform_vyberite_usl') || serviceRows.length ? buildLegacyPricesFromRows(serviceRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_stock_prices'),
+			catalogHasBuilders('jform_stocks_servis') || stockRows.length ? buildLegacyStockPricesFromRows(stockRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_services_payload'),
+			catalogHasBuilders('jform_vyberite_usl') || serviceRows.length ? buildViglingPayload(serviceRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_stock_services_payload'),
+			catalogHasBuilders('jform_stocks_servis') || stockRows.length ? buildViglingStockPayload(stockRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_courses_payload'),
+			catalogHasBuilders('jform_courses_servis') || courseRows.length ? buildViglingCoursesPayload(courseRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_searches_payload'),
+			catalogHasBuilders('jform_searches_servis') || searchRows.length ? buildViglingSearchesPayload(searchRows) : null
+		);
+	}
+	window.viglingRebuildServicePayloads = rebuildCatalogPayloads;
 	if (profileForm) {
 		profileForm.addEventListener('submit', function(){
-			var serviceRows = collectServiceRows();
-			var stockRows = collectStockRows();
-			var courseRows = collectCourseRows();
-			var searchRows = collectSearchRows();
-			var legacy = buildLegacyPricesFromRows(serviceRows);
-			var stockLegacy = buildLegacyStockPricesFromRows(stockRows);
-			var payload = buildViglingPayload(serviceRows);
-			var stockPayload = buildViglingStockPayload(stockRows);
-			var coursesPayload = buildViglingCoursesPayload(courseRows);
-			var searchesPayload = buildViglingSearchesPayload(searchRows);
-			var pricesInput = document.getElementById('jform_prices');
-			var stockPricesInput = document.getElementById('jform_stock_prices');
-			var servicesPayloadInput = document.getElementById('jform_vigling_services_payload');
-			var stockPayloadInput = document.getElementById('jform_vigling_stock_services_payload');
-			var coursesPayloadInput = document.getElementById('jform_vigling_courses_payload');
-			var searchesPayloadInput = document.getElementById('jform_vigling_searches_payload');
-			if (pricesInput) pricesInput.value = JSON.stringify(legacy);
-			if (stockPricesInput) stockPricesInput.value = JSON.stringify(stockLegacy);
-			if (servicesPayloadInput) servicesPayloadInput.value = JSON.stringify(payload);
-			if (stockPayloadInput) stockPayloadInput.value = JSON.stringify(stockPayload);
-			if (coursesPayloadInput) coursesPayloadInput.value = JSON.stringify(coursesPayload);
-			if (searchesPayloadInput) searchesPayloadInput.value = JSON.stringify(searchesPayload);
+			rebuildCatalogPayloads();
 		});
 	}
 

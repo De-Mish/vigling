@@ -119,13 +119,14 @@ final class UserCoursesService
         self::ensureConcurrentParticipantsColumn($db);
 
         $payloadJson = trim($payloadJson);
-        $payload = [];
-        if ($payloadJson !== '') {
-            $decoded = json_decode($payloadJson, true);
-            if (is_array($decoded) && isset($decoded['items']) && is_array($decoded['items'])) {
-                $payload = $decoded['items'];
-            }
+        if ($payloadJson === '') {
+            return;
         }
+        $decoded = json_decode($payloadJson, true);
+        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+            return;
+        }
+        $payload = $decoded['items'];
 
         $existingCourses = self::loadExistingCoursesForSync($db, $userId);
         $dispatcher = Factory::getContainer()->get(DispatcherInterface::class);

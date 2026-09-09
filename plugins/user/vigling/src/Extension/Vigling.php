@@ -89,10 +89,10 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $this->validateVkProfileWebsite($userId);
 
         $jform = $this->getPostedJform();
-        $newPricesPayload = $this->getJformString($jform, 'vigling_services_payload');
-        $newStockPayload = $this->getJformString($jform, 'vigling_stock_services_payload');
-        $newCoursesPayload = $this->getJformString($jform, 'vigling_courses_payload');
-        $newSearchesPayload = $this->getJformString($jform, 'vigling_searches_payload');
+        $newPricesPayload = $this->getCatalogPayloadJson($jform, 'vigling_services_payload');
+        $newStockPayload = $this->getCatalogPayloadJson($jform, 'vigling_stock_services_payload');
+        $newCoursesPayload = $this->getCatalogPayloadJson($jform, 'vigling_courses_payload');
+        $newSearchesPayload = $this->getCatalogPayloadJson($jform, 'vigling_searches_payload');
         if ($newPricesPayload === null && $newStockPayload === null && $newCoursesPayload === null && $newSearchesPayload === null) {
             return;
         }
@@ -101,9 +101,6 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $hasStockPrices = $newStockPayload !== null;
         $hasCourses = $newCoursesPayload !== null;
         $hasSearches = $newSearchesPayload !== null;
-        if (!$hasPrices && !$hasStockPrices && !$hasCourses && !$hasSearches) {
-            return;
-        }
 
         $db = null;
         try {
@@ -493,7 +490,29 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             return null;
         }
 
-        return (string) $jform[$key];
+        $value = trim((string) $jform[$key]);
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Ignore blank or invalid catalog payloads so a profile save cannot wipe
+     * existing services, stocks, courses, or model searches.
+     *
+     * @param array<string,mixed> $jform
+     */
+    private function getCatalogPayloadJson(array $jform, string $key): ?string
+    {
+        $value = $this->getJformString($jform, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        $decoded = json_decode($value, true);
+        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+            return null;
+        }
+
+        return $value;
     }
 
     private function mergeCourseMediaUploads(int $userId, string $payloadJson): string
