@@ -931,10 +931,12 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<?php endif; ?>
 	<script>
 		if ('serviceWorker' in navigator) {
-			window.addEventListener('load', function () {
-				var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js'; ?>';
+			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js'; ?>';
+			var registerSw = function () {
 				navigator.serviceWorker.register(u, { scope: '/' }).catch(function () {});
-			});
+			};
+			registerSw();
+			window.addEventListener('load', registerSw);
 		}
 		(function(){
 			function formatTimeUtc(el) {
@@ -1129,22 +1131,81 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 				}
 
 				function setStatus(text) { statusEl.textContent = text || ''; }
-				function tryInstall() {
-				if (!window.ViglingPwaInstall || !window.ViglingPwaInstall.isReady()) {
-					setStatus('Установка недоступна. Откройте сайт по HTTPS и попробуйте в Chrome/Edge на Android или Desktop.');
-					return;
+				function isStandalone() {
+					return (window.matchMedia && (
+							window.matchMedia('(display-mode: standalone)').matches
+							|| window.matchMedia('(display-mode: fullscreen)').matches
+							|| window.matchMedia('(display-mode: minimal-ui)').matches
+						))
+						|| window.navigator.standalone === true;
 				}
-				setStatus('Ожидаем подтверждение установки...');
-				window.ViglingPwaInstall.requestInstall().then(function(res) {
-					if (res && res.success) {
-						setStatus('Приложение установлено.');
-					} else {
-						setStatus('Установка отменена.');
+				function isIos() {
+					var ua = String(navigator.userAgent || '');
+					return /iPhone|iPad|iPod/i.test(ua)
+						|| (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+				}
+				function waitForPrompt(timeoutMs) {
+					if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+						return Promise.resolve(true);
 					}
-				}).catch(function() {
-					setStatus('Не удалось запустить установку.');
-				});
-			}
+					return new Promise(function(resolve) {
+						var done = false;
+						function finish(ok) {
+							if (done) return;
+							done = true;
+							window.removeEventListener('vigling:pwa-ready', onReady);
+							resolve(!!ok);
+						}
+						function onReady() { finish(true); }
+						window.addEventListener('vigling:pwa-ready', onReady);
+						window.setTimeout(function() {
+							finish(window.ViglingPwaInstall && window.ViglingPwaInstall.isReady());
+						}, timeoutMs);
+					});
+				}
+				function unavailableMessage() {
+					if (isStandalone()) {
+						return 'Приложение уже установлено. Откройте его с экрана «Домой».';
+					}
+					if (isIos()) {
+						return 'На iPhone/iPad: откройте сайт в Safari → Поделиться → На экран «Домой».';
+					}
+					return 'Если окно установки не появилось: меню Chrome (⋮) → «Установить приложение» или «Добавить на главный экран». Если ярлык уже есть, удалите его и установите снова. Chrome предлагает установку после нескольких секунд на сайте.';
+				}
+				function tryInstall() {
+					if (isStandalone()) {
+						setStatus(unavailableMessage());
+						return;
+					}
+					if (isIos()) {
+						setStatus(unavailableMessage());
+						return;
+					}
+					function runPrompt() {
+						setStatus('Ожидаем подтверждение установки...');
+						window.ViglingPwaInstall.requestInstall().then(function(res) {
+							if (res && res.success) {
+								setStatus('Приложение установлено.');
+							} else {
+								setStatus('Установка отменена.');
+							}
+						}).catch(function() {
+							setStatus('Не удалось запустить установку. Попробуйте меню браузера (⋮) → «Установить приложение».');
+						});
+					}
+					if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+						runPrompt();
+						return;
+					}
+					setStatus('Подготовка установки, подождите несколько секунд…');
+					waitForPrompt(20000).then(function(ready) {
+						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+							runPrompt();
+							return;
+						}
+						setStatus(unavailableMessage());
+					});
+				}
 
 				btn.addEventListener('click', function() { tryInstall(); });
 				overlay.querySelectorAll('[data-close-pwa-install="1"]').forEach(function(el) {
@@ -1158,10 +1219,19 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 				window.addEventListener('vigling:pwa-ready', function() {
 					setStatus('Установка доступна. Нажмите кнопку.');
 				});
-				if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+				if (isStandalone()) {
+					setStatus('Приложение уже установлено.');
+				} else if (isIos()) {
+					setStatus('На iPhone откройте этот сайт в Safari и добавьте на экран «Домой» через Поделиться.');
+				} else if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
 					setStatus('Установка доступна. Нажмите кнопку.');
 				} else {
-					setStatus('Ожидание готовности установки...');
+					setStatus('Подготовка установки… Если кнопка не сработает сразу, подождите 10–20 секунд или используйте меню Chrome (⋮).');
+					waitForPrompt(25000).then(function(ready) {
+						if (ready) {
+							setStatus('Установка доступна. Нажмите кнопку.');
+						}
+					});
 				}
 		}
 

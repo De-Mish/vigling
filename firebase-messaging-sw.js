@@ -1,14 +1,12 @@
 importScripts('/index.php?option=com_pushnotify&task=display.sw');
 
-const CACHE_VERSION = 'v2026-09-10';
+const CACHE_VERSION = 'v2026-09-10b';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-1024.png',
   '/icons/apple-touch-icon.png'
 ];
 
