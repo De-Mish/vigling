@@ -1,13 +1,10 @@
 importScripts('/index.php?option=com_pushnotify&task=display.sw');
 
-const CACHE_VERSION = 'v2026-09-10d';
+const CACHE_VERSION = 'v2026-09-10e';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
-  '/manifest.json',
-  '/icons/vigling-pwa-192.png',
-  '/icons/vigling-pwa-512.png',
-  '/icons/vigling-pwa-apple.png'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,6 +45,19 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/api') ||
     url.searchParams.get('option') === 'com_ajax'
   ) {
+    return;
+  }
+
+  if (url.pathname === '/manifest.json' || url.pathname.startsWith('/icons/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined);
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 

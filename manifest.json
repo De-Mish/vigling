@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "https://vigling.ru/pwa-v2",
   "name": "VIGLING.RU - Онлайн запись к мастерам красоты",
   "short_name": "VIGLING",
   "description": "Поиск мастеров и онлайн запись на услуги красоты и сервиса.",
@@ -18,40 +18,22 @@
   ],
   "icons": [
     {
-      "src": "/icons/vigling-pwa-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/vigling-pwa-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/vigling-pwa-1024.png",
+      "src": "/icons/vigling-launch-1024.png?v=20260910e",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/vigling-pwa-192-maskable.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/vigling-pwa-512-maskable.png",
+      "src": "/icons/vigling-launch-512.png?v=20260910e",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icons/vigling-pwa-1024-maskable.png",
-      "sizes": "1024x1024",
+      "src": "/icons/vigling-launch-192.png?v=20260910e",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ],
   "screenshots": [
