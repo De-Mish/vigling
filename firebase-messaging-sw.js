@@ -1,6 +1,6 @@
 importScripts('/index.php?option=com_pushnotify&task=display.sw');
 
-const CACHE_VERSION = 'v2026-09-10g';
+const CACHE_VERSION = 'v2026-09-10h';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
@@ -48,7 +48,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname === '/manifest.json' || url.pathname.startsWith('/icons/')) {
+  if (url.pathname === '/manifest.json' || url.pathname.startsWith('/icons/') || url.pathname === '/images/logo.png') {
     event.respondWith(
       fetch(request)
         .then((response) => {
