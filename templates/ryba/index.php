@@ -65,14 +65,14 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 <head>
 	<meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport">
 	<meta content="IE=edge" http-equiv="X-UA-Compatible">
-	<link rel="icon" type="image/png" sizes="192x192" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-launch-192.png?v=20260910e">
-	<link rel="apple-touch-icon" sizes="180x180" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-launch-apple.png?v=20260910e">
+	<link rel="icon" type="image/png" sizes="192x192" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-launch-192.png?v=20260910f">
+	<link rel="apple-touch-icon" sizes="180x180" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-launch-apple.png?v=20260910f">
 	<meta name="theme-color" content="#111111">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
-	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260910e">
+	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260910f">
 	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
