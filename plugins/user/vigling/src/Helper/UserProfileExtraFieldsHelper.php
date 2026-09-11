@@ -38,6 +38,24 @@ final class UserProfileExtraFieldsHelper
 		];
 	}
 
+	public static function loadClass(string $shortName): bool
+	{
+		$class = __NAMESPACE__ . '\\' . $shortName;
+		if (class_exists($class, false)) {
+			return true;
+		}
+		if (!preg_match('/^[A-Za-z][A-Za-z0-9_]*$/', $shortName)) {
+			return false;
+		}
+		$path = __DIR__ . '/' . $shortName . '.php';
+		if (!is_file($path)) {
+			return false;
+		}
+		require_once $path;
+
+		return class_exists($class, false);
+	}
+
 	public static function decodeText(string $raw): string
 	{
 		$raw = trim($raw);

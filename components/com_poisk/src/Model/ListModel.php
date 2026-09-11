@@ -313,19 +313,24 @@ class ListModel extends BaseListModel
 					$timeCompare = $time . ':00';
 					
 					if ($fieldWorkDay > 0) {
-						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-							require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+							$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+							if (is_file($vgWorkScheduleFile)) {
+								require_once $vgWorkScheduleFile;
+							}
 						}
-						$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
-							$db,
-							$this->userIdAsFieldItemId(),
-							$fieldWorkDay,
-							$fieldWorkFrom,
-							$fieldWorkTo,
-							$weekday,
-							$timeCompare,
-							$prefix . 'fields_values'
-						));
+						if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+							$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
+								$db,
+								$this->userIdAsFieldItemId(),
+								$fieldWorkDay,
+								$fieldWorkFrom,
+								$fieldWorkTo,
+								$weekday,
+								$timeCompare,
+								$prefix . 'fields_values'
+							));
+						}
 					}
 					
 				} catch (\Throwable $e) {

@@ -218,16 +218,21 @@ if (is_array($postedFromByDay) || is_array($postedToByDay)) {
             : '';
     }
 } elseif ($workFromValue !== '' || $workToValue !== '') {
-    if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-        require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+    if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+        $vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+        if (is_file($vgWorkScheduleFile)) {
+            require_once $vgWorkScheduleFile;
+        }
     }
-    $parsedRegSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
-        json_encode(array_map('strval', $selectedWorkDays)),
-        $workFromValue,
-        $workToValue
-    );
-    $workFromByDay = $parsedRegSchedule['from'];
-    $workToByDay = $parsedRegSchedule['to'];
+    if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+        $parsedRegSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
+            json_encode(array_map('strval', $selectedWorkDays)),
+            $workFromValue,
+            $workToValue
+        );
+        $workFromByDay = $parsedRegSchedule['from'];
+        $workToByDay = $parsedRegSchedule['to'];
+    }
 }
 
 $days = [

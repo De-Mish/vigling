@@ -205,17 +205,22 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
             $valuesByCfName['vyberite_spetsialnos'] = $this->encodeJsonValue($jform['vyberite_spetsialnos']);
         }
         if (isset($jform['work_from_by_day']) || isset($jform['work_to_by_day'])) {
-            if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-                require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+            if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+                $workScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+                if (is_file($workScheduleFile)) {
+                    require_once $workScheduleFile;
+                }
             }
-            $encoded = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::encodeChecked(
-                isset($jform['work_day']) && is_array($jform['work_day']) ? $jform['work_day'] : [],
-                isset($jform['work_from_by_day']) && is_array($jform['work_from_by_day']) ? $jform['work_from_by_day'] : [],
-                isset($jform['work_to_by_day']) && is_array($jform['work_to_by_day']) ? $jform['work_to_by_day'] : []
-            );
-            $valuesByCfName['work_day'] = json_encode($encoded['days']);
-            $valuesByCfName['work_from'] = $encoded['fromJson'];
-            $valuesByCfName['work_to'] = $encoded['toJson'];
+            if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+                $encoded = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::encodeChecked(
+                    isset($jform['work_day']) && is_array($jform['work_day']) ? $jform['work_day'] : [],
+                    isset($jform['work_from_by_day']) && is_array($jform['work_from_by_day']) ? $jform['work_from_by_day'] : [],
+                    isset($jform['work_to_by_day']) && is_array($jform['work_to_by_day']) ? $jform['work_to_by_day'] : []
+                );
+                $valuesByCfName['work_day'] = json_encode($encoded['days']);
+                $valuesByCfName['work_from'] = $encoded['fromJson'];
+                $valuesByCfName['work_to'] = $encoded['toJson'];
+            }
         } else {
             if (isset($jform['work_day'])) {
                 $valuesByCfName['work_day'] = $this->encodeJsonValue($jform['work_day']);
@@ -447,10 +452,13 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
 
     private function ensureImageHelper(): void
     {
-        if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) {
+        if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
             return;
         }
-        require_once JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+        $imageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+        if (is_file($imageHelperFile)) {
+            require_once $imageHelperFile;
+        }
     }
 
     private function getUploadScalar(array $files, string $bucket, string $key): string

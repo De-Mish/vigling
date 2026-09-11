@@ -173,19 +173,26 @@ if ($mapAddressCandidates === []) {
 	$mapAddressCandidates = ['Москва'];
 }
 
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+	if (is_file($vgExtraHelperFile)) {
+		require_once $vgExtraHelperFile;
+	}
 }
-$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'doorway'));
-$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'floor'));
-$apartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'apartment'));
-$extraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::extraAddressLine($doorway, $floor, $apartment);
-$canSeeExtraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::clientHasBookingWithMaster((int) ($currentUser->id ?? 0), $profileOwnerId);
-if ($canSeeExtraAddress && $extraAddress !== '') {
-	$addr = $addr !== '' ? $addr . ', ' . $extraAddress : $extraAddress;
+$paymentDisplay = '';
+$childrenYes = false;
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'doorway'));
+	$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'floor'));
+	$apartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'apartment'));
+	$extraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::extraAddressLine($doorway, $floor, $apartment);
+	$canSeeExtraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::clientHasBookingWithMaster((int) ($currentUser->id ?? 0), $profileOwnerId);
+	if ($canSeeExtraAddress && $extraAddress !== '') {
+		$addr = $addr !== '' ? $addr . ', ' . $extraAddress : $extraAddress;
+	}
+	$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($fieldValue($jcfields, 'payment_method'));
+	$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($fieldValue($jcfields, 'suitable_for_children'));
 }
-$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($fieldValue($jcfields, 'payment_method'));
-$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($fieldValue($jcfields, 'suitable_for_children'));
 
 $homeText = $fieldValue($jcfields, 'home');
 $homeParts = [];
@@ -216,14 +223,20 @@ $workToRaw = $fieldValue($jcfields, 'work_to');
 $workDayLabels = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
 $workRows = [];
 $workDays = $parseIntList($workDayRaw);
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+	if (is_file($vgWorkScheduleFile)) {
+		require_once $vgWorkScheduleFile;
+	}
 }
-$parsedPublicSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
-	(string) $workDayRaw,
-	(string) $workFromRaw,
-	(string) $workToRaw
-);
+$parsedPublicSchedule = ['days' => [], 'from' => [], 'to' => []];
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$parsedPublicSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
+		(string) $workDayRaw,
+		(string) $workFromRaw,
+		(string) $workToRaw
+	);
+}
 $workDays = $parsedPublicSchedule['days'] !== [] ? $parsedPublicSchedule['days'] : $workDays;
 $fromByDay = $parsedPublicSchedule['from'];
 $toByDay = $parsedPublicSchedule['to'];
@@ -729,8 +742,11 @@ $resolveProfileImage = static function (string $rawValue): string {
 	}
 	return rtrim(Uri::root(), '/') . '/images/profiler/' . $clean;
 };
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+	if (is_file($vgImageHelperFile)) {
+		require_once $vgImageHelperFile;
+	}
 }
 
 $parseImageList = static function (string $rawValue, callable $resolver): array {
@@ -766,7 +782,13 @@ $defaultImg = Uri::root() . 'templates/ryba/images/master.png';
 if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 	$defaultImg = Uri::root() . 'components/com_jsn/assets/img/default.jpg';
 }
-$avatarPreviewUrl = $avatarUrl !== '' ? \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarUrl, true) : $defaultImg;
+$vgImageUrl = static function (string $url, bool $thumb = true): string {
+	if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+		return \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($url, $thumb);
+	}
+	return $url;
+};
+$avatarPreviewUrl = $avatarUrl !== '' ? $vgImageUrl($avatarUrl, true) : $defaultImg;
 
 $portfolioRaw = $fieldValue($jcfields, 'portfolio_field');
 $portfolioImages = $parseImageList($portfolioRaw, $resolveProfileImage);
@@ -1070,7 +1092,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
 				<?php foreach ($portfolioImages as $imageUrl) : ?>
-					<div style="background-image: url('<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($imageUrl, true)); ?>'); width: 100%; display: inline-block;" class="masters__small-img-item"></div>
+					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 100%; display: inline-block;" class="masters__small-img-item"></div>
 				<?php endforeach; ?>
 			</div>
 			<div class="clearFloat"></div>
@@ -1846,7 +1868,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="stockList__item courseList__item<?php echo $courseButtonDisabled ? ' is-unavailable' : ''; ?>">
 								<?php if ($courseMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
-									<img src="<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($courseMediaUrl, true)); ?>" alt="<?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
+									<img src="<?php echo $this->escape($vgImageUrl($courseMediaUrl, true)); ?>" alt="<?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?></div>
@@ -1942,7 +1964,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="stockList__item courseList__item<?php echo $searchButtonDisabled ? ' is-unavailable' : ''; ?>">
 								<?php if ($searchMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
-									<img src="<?php echo $this->escape(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
+									<img src="<?php echo $this->escape($vgImageUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?></div>
