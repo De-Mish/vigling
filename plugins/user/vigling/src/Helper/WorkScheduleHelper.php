@@ -4,6 +4,10 @@ namespace Joomla\Plugin\User\Vigling\Helper;
 
 \defined('_JEXEC') or die;
 
+/**
+ * Parses specialist work days and hours from custom-field JSON.
+ * This file must stay on the live server in plugins/user/vigling/src/Helper/.
+ */
 final class WorkScheduleHelper
 {
     /**

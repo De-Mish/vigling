@@ -7,6 +7,10 @@ namespace Joomla\Plugin\User\Vigling\Helper;
 use Joomla\CMS\Factory;
 use Joomla\Filesystem\Folder;
 
+/**
+ * Compresses and stores profile and portfolio image uploads.
+ * This file must stay on the live server in plugins/user/vigling/src/Helper/.
+ */
 final class ImageUploadHelper
 {
     public const MAX_BYTES = 20971520;

@@ -7,6 +7,10 @@ namespace Joomla\Plugin\User\Vigling\Helper;
 use Joomla\CMS\Factory;
 use Joomla\Database\DatabaseInterface;
 
+/**
+ * Decodes legacy JSN custom-field JSON for admin profile views.
+ * This file must stay on the live server in plugins/user/vigling/src/Helper/.
+ */
 final class JsnDecodeHelper
 {
     private const ENCODED_FIELDS = ['prices', 'stock_prices', 'work_day', 'vyberite_spetsialnos'];
