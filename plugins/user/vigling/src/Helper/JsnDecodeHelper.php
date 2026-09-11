@@ -9,7 +9,8 @@ use Joomla\Database\DatabaseInterface;
 
 /**
  * Decodes legacy JSN custom-field JSON for admin profile views.
- * This file must stay on the live server in plugins/user/vigling/src/Helper/.
+ * Upload this whole file to public_html/plugins/user/vigling/src/Helper/JsnDecodeHelper.php
+ * (not a line patch).
  */
 final class JsnDecodeHelper
 {
