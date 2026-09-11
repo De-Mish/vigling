@@ -302,22 +302,27 @@ class ListModel extends BaseListModel
 					];
 
 					if ($fieldWorkDay > 0) {
-						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-							require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+							$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+							if (is_file($vgWorkScheduleFile)) {
+								require_once $vgWorkScheduleFile;
+							}
 						}
-						$scheduleSql = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
-							$db,
-							$db->quoteName('u.id'),
-							$fieldWorkDay,
-							$fieldWorkFrom,
-							$fieldWorkTo,
-							$weekday,
-							$timeCompare
-						);
-						$orParts[] = '(' . implode(' AND ', array_merge(
-							[$scheduleSql],
-							$this->busyMasterConditions($db, $dateOnly . ' ' . $time . ':00')
-						)) . ')';
+						if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+							$scheduleSql = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
+								$db,
+								$db->quoteName('u.id'),
+								$fieldWorkDay,
+								$fieldWorkFrom,
+								$fieldWorkTo,
+								$weekday,
+								$timeCompare
+							);
+							$orParts[] = '(' . implode(' AND ', array_merge(
+								[$scheduleSql],
+								$this->busyMasterConditions($db, $dateOnly . ' ' . $time . ':00')
+							)) . ')';
+						}
 					}
 
 					$query->where('(' . implode(' OR ', $orParts) . ')');
