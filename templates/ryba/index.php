@@ -72,7 +72,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
-	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260910h">
+	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260911a">
 	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
@@ -1198,7 +1198,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 						return;
 					}
 					setStatus('Подготовка установки, подождите несколько секунд…');
-					waitForPrompt(20000).then(function(ready) {
+					waitForPrompt(8000).then(function(ready) {
 						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
 							runPrompt();
 							return;
@@ -1227,7 +1227,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					setStatus('Установка доступна. Нажмите кнопку.');
 				} else {
 					setStatus('Подготовка установки… Если кнопка не сработает сразу, подождите 10–20 секунд или используйте меню Chrome (⋮).');
-					waitForPrompt(25000).then(function(ready) {
+					waitForPrompt(8000).then(function(ready) {
 						if (ready) {
 							setStatus('Установка доступна. Нажмите кнопку.');
 						}
