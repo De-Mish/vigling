@@ -609,7 +609,10 @@ dt.no-title+dd {
 #jform_sity,
 #jform_area,
 #jform_street,
-#jform_house_number {
+#jform_house_number,
+#jform_doorway,
+#jform_floor,
+#jform_apartment {
   min-width: 180px;
   margin-right: 10px
 }
@@ -2069,7 +2072,10 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   #jform_sity,
   #jform_area,
   #jform_street,
-  #jform_house_number {
+  #jform_house_number,
+  #jform_doorway,
+  #jform_floor,
+  #jform_apartment {
     max-width: 100%;
     margin-right: 10px
   }
@@ -3281,7 +3287,10 @@ div[role="tooltip"][id^="tip-"] {
   #easyprofile.registration #jform_sity,
   #easyprofile.registration #jform_area,
   #easyprofile.registration #jform_street,
-  #easyprofile.registration #jform_house_number {
+  #easyprofile.registration #jform_house_number,
+  #easyprofile.registration #jform_doorway,
+  #easyprofile.registration #jform_floor,
+  #easyprofile.registration #jform_apartment {
     min-width: 0;
     width: 100%;
   }
@@ -4537,4 +4546,62 @@ body#home .home-search-links a.homepage-link-btn:focus {
     color: #000;
     text-decoration: none;
   }
+}
+
+.vg-profile-extra-group {
+  width: 100%;
+  margin: 8px 0 14px;
+}
+.vg-profile-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.vg-profile-checkboxes .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.vg-profile-checkboxes input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 16px;
+}
+.vg-list-extra-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  width: 100%;
+}
+.vg-list-filter-label {
+  font-weight: 600;
+  color: #222;
+  margin-top: 4px;
+}
+.vg-list-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+}
+.vg-list-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.vg-list-check-children {
+  margin-top: 8px;
+  font-weight: 600;
 }

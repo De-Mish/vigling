@@ -4,6 +4,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Access\Access;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
+use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
 
 $jcfields = [];
 if (!empty($this->data->jcfields)) {
@@ -50,6 +51,8 @@ if ($profileIsClient) {
 	$rows = [
 		'firstname' => 'Имя', 'lastname' => 'Фамилия', 'telefon' => 'Телефон',
 		'email' => 'E-mail', 'sity' => 'Город', 'area' => 'Район', 'street' => 'Улица', 'house_number' => 'Номер дома',
+		'doorway' => 'Подъезд', 'floor' => 'Этаж', 'apartment' => 'Квартира',
+		'home' => 'Форма работы', 'payment_method' => 'Способ оплаты', 'suitable_for_children' => 'Подходит для детей',
 		'link' => 'Vk', 'telegram' => 'Телеграм', 'max' => 'Макс', 'o_sebe' => 'О себе',
 	];
 }
@@ -64,6 +67,9 @@ $notFound = 'Нет информации';
 				$val = isset($this->data->email) ? trim((string) $this->data->email) : '';
 			} else {
 				$val = isset($jcfields[$fieldName]) && strlen(trim((string) $jcfields[$fieldName]->value)) > 0 ? trim((string) $jcfields[$fieldName]->value) : '';
+				if ($val === '' && isset($jcfields[$fieldName]->rawvalue) && is_scalar($jcfields[$fieldName]->rawvalue)) {
+					$val = trim((string) $jcfields[$fieldName]->rawvalue);
+				}
 				if ($val === '' && isset($profileFallback[$fieldName])) {
 					$cfg = $profileFallback[$fieldName];
 					if (!empty($cfg['user']) && isset($this->data->{$cfg['user']})) {
@@ -71,6 +77,18 @@ $notFound = 'Нет информации';
 					} elseif (!empty($cfg['profile']) && isset($profile[$cfg['profile']])) {
 						$val = is_scalar($profile[$cfg['profile']]) ? trim((string) $profile[$cfg['profile']]) : '';
 					}
+				}
+				if (!class_exists(UserProfileExtraFieldsHelper::class)) {
+					require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+				}
+				if (in_array($fieldName, ['doorway', 'floor', 'apartment'], true)) {
+					$val = UserProfileExtraFieldsHelper::decodeText($val);
+				} elseif ($fieldName === 'home') {
+					$val = UserProfileExtraFieldsHelper::homeDisplay($val);
+				} elseif ($fieldName === 'payment_method') {
+					$val = UserProfileExtraFieldsHelper::paymentDisplay($val);
+				} elseif ($fieldName === 'suitable_for_children') {
+					$val = UserProfileExtraFieldsHelper::isChildrenYes($val) ? 'Да' : '';
 				}
 			}
 			$defaultLabel = Text::_('COM_USERS_PROFILE_VALUE_NOT_FOUND');

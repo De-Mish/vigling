@@ -32,7 +32,7 @@ if (isset($fieldsets['actionlogs']))
 
 $tmp          = isset($this->data->jcfields) ? $this->data->jcfields : array();
 $customFields = array();
-$profileMainNames = array('firstname', 'lastname', 'telefon', 'sity', 'area', 'street', 'house_number', 'link', 'o_sebe', 'about');
+$profileMainNames = array('firstname', 'lastname', 'telefon', 'sity', 'area', 'street', 'house_number', 'doorway', 'floor', 'apartment', 'home', 'payment_method', 'suitable_for_children', 'link', 'o_sebe', 'about');
 
 foreach ($tmp as $customField)
 {

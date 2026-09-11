@@ -14,6 +14,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
 use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
+use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
 use Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper;
 use Joomla\Plugin\User\Vigling\Service\UserCoursesService;
 use Joomla\Plugin\User\Vigling\Service\UserSearchesService;
@@ -86,6 +87,7 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $this->saveScheduleFieldsFromPost($userId);
         $this->saveSocialLinkFieldsFromPost($userId);
         $this->saveProfileCityFromPost($userId);
+        UserProfileExtraFieldsHelper::saveFromPost($userId);
         $this->validateVkProfileWebsite($userId);
 
         $jform = $this->getPostedJform();

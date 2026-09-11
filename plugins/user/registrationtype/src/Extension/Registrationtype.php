@@ -172,6 +172,31 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
             'link' => $this->extractStringValue($profile, 'website'),
             'o_sebe' => $this->extractStringValue($profile, 'aboutme'),
         ];
+        $comFields = isset($jform['com_fields']) && is_array($jform['com_fields']) ? $jform['com_fields'] : [];
+        foreach (['doorway', 'floor', 'apartment'] as $extraName) {
+            $extraVal = $this->extractStringValue($comFields, $extraName);
+            if ($extraVal === '') {
+                $extraVal = $this->extractStringValue($jform, $extraName);
+            }
+            if ($extraVal !== '') {
+                $valuesByCfName[$extraName] = $extraVal;
+            }
+        }
+        if (isset($comFields['home']) || isset($jform['home'])) {
+            $valuesByCfName['home'] = $this->encodeJsonValue($comFields['home'] ?? $jform['home']);
+        }
+        if (isset($comFields['payment_method']) || isset($jform['payment_method'])) {
+            $valuesByCfName['payment_method'] = $this->encodeJsonValue($comFields['payment_method'] ?? $jform['payment_method']);
+        }
+        if (isset($comFields['suitable_for_children']) || isset($jform['suitable_for_children'])) {
+            $childRaw = $comFields['suitable_for_children'] ?? $jform['suitable_for_children'];
+            if (is_array($childRaw)) {
+                $childRaw = reset($childRaw);
+            }
+            if (in_array(strtolower(trim((string) $childRaw)), ['1', 'yes', 'true', 'on', 'да'], true)) {
+                $valuesByCfName['suitable_for_children'] = '1';
+            }
+        }
         if ($isMasterValue !== '') {
             $valuesByCfName['is_master'] = $isMasterValue;
         }

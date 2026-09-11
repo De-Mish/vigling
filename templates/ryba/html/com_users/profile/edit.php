@@ -283,6 +283,22 @@ if ($address1Value === '' && isset($jcfields['street']->rawvalue) && is_scalar($
 if ($address2Value === '' && isset($jcfields['house_number']->rawvalue) && is_scalar($jcfields['house_number']->rawvalue)) {
 	$address2Value = trim((string) $jcfields['house_number']->rawvalue);
 }
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+}
+$vgFieldRaw = static function (array $fields, string $name): string {
+	if (!isset($fields[$name])) {
+		return '';
+	}
+	$raw = $fields[$name]->rawvalue ?? $fields[$name]->value ?? '';
+	return is_scalar($raw) ? trim((string) $raw) : '';
+};
+$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'doorway'));
+$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'floor'));
+$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'apartment'));
+$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgFieldRaw($jcfields, 'home'));
+$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgFieldRaw($jcfields, 'payment_method'));
+$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgFieldRaw($jcfields, 'suitable_for_children'));
 if ($websiteValue === '' && isset($jcfields['link']->rawvalue) && is_scalar($jcfields['link']->rawvalue)) {
 	$websiteValue = trim((string) $jcfields['link']->rawvalue);
 }
@@ -984,7 +1000,19 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 											<div class="control-label"><label for="jform_house_number">Номер дома</label></div>
 											<div class="controls"><input type="text" name="jform[profile][address2]" id="jform_house_number" value="<?php echo $this->escape($address2Value); ?>" placeholder="Дом"></div>
 										</div>
+										<?php
+										$vgShowLabels = true;
+										$vgExtraMasterOnly = false;
+										$vgExtraFieldsPart = 'address';
+										include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+										?>
 									</div>
+									<?php
+									$vgShowLabels = true;
+									$vgExtraMasterOnly = false;
+									$vgExtraFieldsPart = 'options';
+									include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+									?>
 
 									<div class="control-group form-row social-links-group">
 										<div class="control-group social-link-row">
@@ -2026,6 +2054,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 }
 .profile-edit #jsn-form .address-group { display: flex; flex-wrap: wrap; gap: 12px; }
 .profile-edit #jsn-form .address-group .control-group { flex: 1 1 220px; min-width: 200px; }
+.profile-edit #jsn-form .vg-profile-extra-group { width: 100%; margin: 8px 0 12px; }
+.profile-edit #jsn-form .vg-profile-checkboxes { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; }
+.profile-edit #jsn-form .vg-profile-checkboxes .checkbox { display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; font-weight: 500; }
+.profile-edit #jsn-form .vg-profile-checkboxes input { width: 16px; height: 16px; margin: 0; }
 .profile-edit #jsn-form .name-group,
 .profile-edit #jsn-form .mail-group,
 .profile-edit #jsn-form .links-group,

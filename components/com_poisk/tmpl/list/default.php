@@ -35,6 +35,15 @@ $currentCity = $input->get('city', '', 'STRING');
 $currentArea = $input->get('area', '', 'STRING');
 $currentMasterName = $input->get('master_name', '', 'STRING');
 $currentHome = array_map('intval', (array) $input->get('home', [], 'ARRAY'));
+$currentPayment = [];
+foreach ((array) $input->get('payment', [], 'ARRAY') as $payKey) {
+	$payKey = strtolower(trim((string) $payKey));
+	if (in_array($payKey, ['card', 'cash', 'transfer'], true)) {
+		$currentPayment[] = $payKey;
+	}
+}
+$currentPayment = array_values(array_unique($currentPayment));
+$currentChildren = in_array(strtolower(trim((string) $input->get('children', '', 'STRING'))), ['1', 'yes', 'on', 'true', 'да'], true);
 $limit = (int) $input->getUint('limit', 20);
 $currentAvailDate = $input->get('avail_date', '', 'STRING');
 if ($currentAvailDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?$/', $currentAvailDate)) {
@@ -61,6 +70,12 @@ if ($requestPath === 'zatochka-remont' || str_starts_with($requestPath, 'zatochk
 }
 foreach ($currentHome as $homeId) {
 	$vgMapQuery['home'][] = (int) $homeId;
+}
+foreach ($currentPayment as $payKey) {
+	$vgMapQuery['payment'][] = $payKey;
+}
+if ($currentChildren) {
+	$vgMapQuery['children'] = 1;
 }
 \Viglin\Component\Poisk\Site\Helper\ListMapHelper::applyViewerCity($vgMapCity, $vgMapCityLocked, $vgMapQuery);
 $vgMapPinsUrl = rtrim(Uri::root(true), '/') . '/index.php?' . http_build_query($vgMapQuery);
@@ -108,6 +123,12 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 			<?php foreach ($currentHome as $h) : ?>
 				<input type="hidden" name="home[]" value="<?php echo (int) $h; ?>">
 			<?php endforeach; ?>
+			<?php foreach ($currentPayment as $payKey) : ?>
+				<input type="hidden" name="payment[]" value="<?php echo htmlspecialchars($payKey, ENT_QUOTES, 'UTF-8'); ?>">
+			<?php endforeach; ?>
+			<?php if ($currentChildren) : ?>
+				<input type="hidden" name="children" value="1">
+			<?php endif; ?>
 			<input type="hidden" name="avail_date" value="<?php echo htmlspecialchars($currentAvailDate); ?>">
 		</form>
 	</div>
@@ -180,6 +201,7 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 							<option value="3"<?php echo in_array(3, $currentHome, true) ? ' selected' : ''; ?>>Мастер на дому</option>
 						</select>
 					</span>
+					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
 					<span class="clearable<?php echo ($currentCity !== '' || $currentCatId > 0) ? '' : ' hidden'; ?>" id="poisk-avail-date-wrap">
 						<input type="text" name="avail_date" class="filed__master vg-datetime-picker" value="<?php echo htmlspecialchars($currentAvailDate); ?>" placeholder="Дата и время записи" autocomplete="off">
 					</span>
