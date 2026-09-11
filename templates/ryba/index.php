@@ -72,7 +72,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
-	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260911a">
+	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260911b">
 	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
