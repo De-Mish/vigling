@@ -1,19 +1,11 @@
 importScripts('/index.php?option=com_pushnotify&task=display.sw');
 
-const CACHE_VERSION = 'v2026-09-10h';
+const CACHE_VERSION = 'v2026-09-11a';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
-const STATIC_ASSETS = [
-  '/manifest.json'
-];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .catch(() => undefined)
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
@@ -43,21 +35,11 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/administrator') ||
     url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/images/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname === '/manifest.json' ||
     url.searchParams.get('option') === 'com_ajax'
   ) {
-    return;
-  }
-
-  if (url.pathname === '/manifest.json' || url.pathname.startsWith('/icons/') || url.pathname === '/images/logo.png') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined);
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
     return;
   }
 
@@ -74,7 +56,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isStaticAsset = ['style', 'script', 'image', 'font'].includes(request.destination);
+  const isStaticAsset = ['style', 'script', 'font'].includes(request.destination);
 
   if (!isStaticAsset) {
     return;
