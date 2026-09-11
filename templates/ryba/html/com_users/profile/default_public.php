@@ -173,6 +173,20 @@ if ($mapAddressCandidates === []) {
 	$mapAddressCandidates = ['Москва'];
 }
 
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class)) {
+	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+}
+$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'doorway'));
+$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'floor'));
+$apartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'apartment'));
+$extraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::extraAddressLine($doorway, $floor, $apartment);
+$canSeeExtraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::clientHasBookingWithMaster((int) ($currentUser->id ?? 0), $profileOwnerId);
+if ($canSeeExtraAddress && $extraAddress !== '') {
+	$addr = $addr !== '' ? $addr . ', ' . $extraAddress : $extraAddress;
+}
+$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($fieldValue($jcfields, 'payment_method'));
+$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($fieldValue($jcfields, 'suitable_for_children'));
+
 $homeText = $fieldValue($jcfields, 'home');
 $homeParts = [];
 if ($homeText !== '') {
@@ -1033,6 +1047,8 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 				<?php if ($profileShortText !== '') : ?><span class="attr_left1"><?php echo $this->escape($profileShortText); ?></span><?php endif; ?>
 				<?php if ($addr !== '') : ?><span class="attr_left2"><i class="fa fa-map-marker" aria-hidden="true"></i><?php echo $this->escape($addr); ?></span><?php endif; ?>
 				<?php if ($homeDisplay !== '') : ?><span class="attr_left3">Форма работы: <b><?php echo $this->escape($homeDisplay); ?></b></span><?php endif; ?>
+				<?php if ($paymentDisplay !== '') : ?><span class="attr_left3">Способ оплаты: <b><?php echo $this->escape($paymentDisplay); ?></b></span><?php endif; ?>
+				<?php if (!empty($childrenYes)) : ?><span class="attr_left3">Подходит для детей</span><?php endif; ?>
 			</div>
 			<div class="masters__attr-right">
 				<span class="attr-rating">5.0</span>

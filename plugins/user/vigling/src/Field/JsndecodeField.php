@@ -24,6 +24,12 @@ class JsndecodeField extends NoteField
         'area' => 'Район',
         'street' => 'Улица',
         'house_number' => 'Номер дома',
+        'doorway' => 'Подъезд',
+        'floor' => 'Этаж',
+        'apartment' => 'Квартира',
+        'home' => 'Форма работы',
+        'payment_method' => 'Способ оплаты',
+        'suitable_for_children' => 'Подходит для детей',
         'link' => 'Vk',
         'o_sebe' => 'О себе',
     ];
@@ -41,7 +47,7 @@ class JsndecodeField extends NoteField
         'o_sebe' => ['profile' => 'aboutme'],
     ];
 
-    private const PROFILE_MAIN_NAMES = ['firstname', 'lastname', 'telefon', 'sity', 'area', 'street', 'house_number', 'link', 'o_sebe', 'about'];
+    private const PROFILE_MAIN_NAMES = ['firstname', 'lastname', 'telefon', 'sity', 'area', 'street', 'house_number', 'doorway', 'floor', 'apartment', 'home', 'payment_method', 'suitable_for_children', 'link', 'o_sebe', 'about'];
 
     private const HOME_LABELS = [
         '1' => 'Салон',
@@ -82,6 +88,47 @@ class JsndecodeField extends NoteField
                         $val = is_scalar($v) ? trim((string) $v) : '';
                     }
                 }
+            }
+            if ($fieldName === 'doorway' || $fieldName === 'floor' || $fieldName === 'apartment') {
+                $decoded = json_decode($val, true);
+                if (is_string($decoded)) {
+                    $val = trim($decoded);
+                }
+            } elseif ($fieldName === 'home') {
+                $arr = json_decode($val, true);
+                $labels = [];
+                if (is_array($arr)) {
+                    foreach ($arr as $id) {
+                        $key = (string) $id;
+                        if (isset(self::HOME_LABELS[$key])) {
+                            $labels[] = self::HOME_LABELS[$key];
+                        }
+                    }
+                }
+                $val = implode(', ', $labels);
+            } elseif ($fieldName === 'payment_method') {
+                $arr = json_decode($val, true);
+                $labelsMap = [
+                    'card' => 'Банковская карта',
+                    'cash' => 'Наличные',
+                    'transfer' => 'Банковский перевод',
+                ];
+                $labels = [];
+                $values = is_array($arr) ? $arr : (preg_split('/[,\s]+/', $val) ?: []);
+                foreach ($values as $item) {
+                    $key = strtolower(trim((string) $item));
+                    if (isset($labelsMap[$key])) {
+                        $labels[] = $labelsMap[$key];
+                    }
+                }
+                $val = implode(', ', $labels);
+            } elseif ($fieldName === 'suitable_for_children') {
+                $raw = strtolower(trim($val));
+                $decoded = json_decode($val, true);
+                if (is_array($decoded)) {
+                    $raw = strtolower(trim((string) reset($decoded)));
+                }
+                $val = in_array($raw, ['1', 'yes', 'true', 'on', 'да'], true) ? 'Да' : '';
             }
             $isEmpty = ($val === '');
             $out[] = '<dt class="col-sm-4 text-muted">' . htmlspecialchars($label) . '</dt>';
@@ -274,15 +321,43 @@ class JsndecodeField extends NoteField
         }
         if ($name === 'home') {
             $arr = json_decode($value, true);
-            if (!is_array($arr) || $arr === []) {
-                return htmlspecialchars($value);
+            if (is_array($arr) && $arr !== []) {
+                $labels = [];
+                foreach ($arr as $id) {
+                    $key = (string) $id;
+                    $labels[] = self::HOME_LABELS[$key] ?? $key;
+                }
+                return $labels === [] ? $notFound : htmlspecialchars(implode(', ', $labels));
             }
+            return $value !== '' ? htmlspecialchars($value) : $notFound;
+        }
+        if ($name === 'payment_method') {
+            $arr = json_decode($value, true);
+            $labelsMap = [
+                'card' => 'Банковская карта',
+                'cash' => 'Наличные',
+                'transfer' => 'Банковский перевод',
+            ];
             $labels = [];
-            foreach ($arr as $id) {
-                $key = (string) $id;
-                $labels[] = self::HOME_LABELS[$key] ?? $key;
+            $values = is_array($arr) ? $arr : (preg_split('/[,\s]+/', $value) ?: []);
+            foreach ($values as $item) {
+                $key = strtolower(trim((string) $item));
+                if (isset($labelsMap[$key])) {
+                    $labels[] = $labelsMap[$key];
+                }
             }
-            return $labels === [] ? $notFound : htmlspecialchars(implode(', ', $labels));
+            return $labels === [] ? ($notFound === '' ? '' : $notFound) : htmlspecialchars(implode(', ', $labels));
+        }
+        if ($name === 'suitable_for_children') {
+            $raw = strtolower(trim($value));
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $raw = strtolower(trim((string) reset($decoded)));
+            }
+            if (in_array($raw, ['1', 'yes', 'true', 'on', 'да'], true)) {
+                return 'Да';
+            }
+            return $notFound === '' ? '' : $notFound;
         }
         return htmlspecialchars($value);
     }

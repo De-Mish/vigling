@@ -136,6 +136,10 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				<?php if ($homeParts !== []) : ?>
 					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></b></span>
 				<?php endif; ?>
+				<?php
+				$listExtraFields = $fields;
+				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
+				?>
 				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 			</div>
 			

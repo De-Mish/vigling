@@ -154,6 +154,10 @@ if ($slotStartUtc !== '') {
 				<?php if ($homeParts !== []) : ?>
 					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts), ENT_QUOTES, 'UTF-8'); ?></b></span>
 				<?php endif; ?>
+				<?php
+				$listExtraFields = $masterFields;
+				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
+				?>
 			</div>
 		</div>
 		<div class="category__item-content-right">

@@ -81,7 +81,7 @@ class HtmlView extends BaseHtmlView
 
 		if (!empty($userIds)) {
 			$this->fieldsByUser = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getFieldsForUserIds($userIds, [
-				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'vyberite_spetsialnos'
+				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'
 			]);
 			$this->stocksByUser = $this->loadStocksForUsers($userIds);
 			$this->categoryByUser = $this->loadCategoryByUser($userIds);

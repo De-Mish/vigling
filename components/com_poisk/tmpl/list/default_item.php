@@ -153,6 +153,10 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
 				<?php if ($homeParts !== []) : ?>
 					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></b></span>
 				<?php endif; ?>
+				<?php
+				$listExtraFields = $fields;
+				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
+				?>
 				<?php if ($servicePriceLabel !== '') : ?>
 					<div class="service-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></div>
 				<?php endif; ?>

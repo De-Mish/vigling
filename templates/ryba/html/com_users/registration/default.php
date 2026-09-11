@@ -340,7 +340,25 @@ $durationJson = json_encode($durationOptions);
                                     <input type="text" name="jform[profile][address2]" id="jform_house_number" value="<?php echo $this->escape($address2Value); ?>" placeholder="Дом" />
                                 </div>
                             </div>
+                            <?php
+                            $vgShowLabels = false;
+                            $vgExtraMasterOnly = true;
+                            $vgExtraFieldsPart = 'address';
+                            $vgDoorway = '';
+                            $vgFloor = '';
+                            $vgApartment = '';
+                            $vgHomeSelected = [];
+                            $vgPaymentSelected = [];
+                            $vgChildren = false;
+                            include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+                            ?>
                         </div>
+                        <?php
+                        $vgShowLabels = true;
+                        $vgExtraMasterOnly = true;
+                        $vgExtraFieldsPart = 'options';
+                        include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+                        ?>
 
                         <div class="form-row master-only-field social-links-group">
                             <div class="control-group social-link-row">
@@ -2413,6 +2431,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 region: $('#jform_area').val() || '',
                 address1: $('#jform_street').val() || '',
                 address2: $('#jform_house_number').val() || '',
+                doorway: $('#jform_doorway').val() || '',
+                floor: $('#jform_floor').val() || '',
+                apartment: $('#jform_apartment').val() || '',
+                home: $('#jform_home input:checked').map(function () { return $(this).val(); }).get(),
+                payment: $('#jform_payment_method input:checked').map(function () { return $(this).val(); }).get(),
+                children: $('#jform_suitable_for_children').prop('checked') === true,
                 website: $('#jform_link').val() || '',
                 telegram: $('#jform_telegram').val() || '',
                 max: $('#jform_max').val() || '',
@@ -2521,6 +2545,22 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#jform_area').val(fields.region || '');
         $('#jform_street').val(fields.address1 || '');
         $('#jform_house_number').val(fields.address2 || '');
+        $('#jform_doorway').val(fields.doorway || '');
+        $('#jform_floor').val(fields.floor || '');
+        $('#jform_apartment').val(fields.apartment || '');
+        var homeVals = Array.isArray(fields.home) ? fields.home.map(String) : [];
+        $('#jform_home input[type="checkbox"]').each(function () {
+            var on = homeVals.indexOf(String($(this).val())) !== -1;
+            $(this).prop('checked', on);
+            $(this).closest('label').toggleClass('active', on);
+        });
+        var payVals = Array.isArray(fields.payment) ? fields.payment.map(String) : [];
+        $('#jform_payment_method input[type="checkbox"]').each(function () {
+            var on = payVals.indexOf(String($(this).val())) !== -1;
+            $(this).prop('checked', on);
+            $(this).closest('label').toggleClass('active', on);
+        });
+        $('#jform_suitable_for_children').prop('checked', !!fields.children).closest('label').toggleClass('active', !!fields.children);
         $('#jform_link').val(fields.website || '');
         $('#jform_telegram').val(fields.telegram || '');
         $('#jform_max').val(fields.max || '');

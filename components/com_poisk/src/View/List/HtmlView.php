@@ -120,7 +120,7 @@ class HtmlView extends BaseHtmlView
 		}, $this->items);
 		if (!empty($userIds)) {
 			$this->fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIds($userIds, [
-				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'vyberite_spetsialnos'
+				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'
 			]);
 		}
 		$this->pricesByUser = [];

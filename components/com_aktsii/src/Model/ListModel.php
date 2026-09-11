@@ -24,6 +24,8 @@ class ListModel extends BaseListModel
 		$id .= ':' . $this->getState('city');
 		$id .= ':' . $this->getState('area');
 		$id .= ':' . serialize($this->getState('home'));
+		$id .= ':' . serialize($this->getState('payment'));
+		$id .= ':' . (int) $this->getState('children');
 		$id .= ':' . $this->getState('avail_date');
 		$id .= ':' . $this->getState('list.ordering');
 		$id .= ':' . $this->getState('list.direction');
@@ -149,6 +151,8 @@ class ListModel extends BaseListModel
 		$fieldCity = (int) ($fieldIds['sity'] ?? 0);
 		$fieldArea = (int) ($fieldIds['area'] ?? 0);
 		$fieldHome = (int) ($fieldIds['home'] ?? 0);
+		$fieldPayment = (int) ($fieldIds['payment_method'] ?? 0);
+		$fieldChildren = (int) ($fieldIds['suitable_for_children'] ?? 0);
 		$fieldWorkDay = (int) ($fieldIds['work_day'] ?? 0);
 		$fieldWorkFrom = (int) ($fieldIds['work_from'] ?? 0);
 		$fieldWorkTo = (int) ($fieldIds['work_to'] ?? 0);
@@ -235,6 +239,42 @@ class ListModel extends BaseListModel
 					. ' AND ' . $db->quoteName('homefv.field_id') . ' = ' . $fieldHome
 					. ' AND (' . implode(' OR ', $conds) . '))'
 				);
+			}
+		}
+
+		$payArr = $this->getState('payment');
+		if (!empty($payArr) && is_array($payArr)) {
+			$conds = [];
+			foreach ($payArr as $payKey) {
+				$payKey = strtolower(trim((string) $payKey));
+				if (in_array($payKey, ['card', 'cash', 'transfer'], true)) {
+					$conds[] = 'payfv.value LIKE ' . $db->quote('%"' . $payKey . '"%');
+				}
+			}
+			if ($conds !== [] && $fieldPayment > 0) {
+				$q->where(
+					'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'payfv')
+					. ' WHERE ' . $db->quoteName('payfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
+					. ' AND ' . $db->quoteName('payfv.field_id') . ' = ' . $fieldPayment
+					. ' AND (' . implode(' OR ', $conds) . '))'
+				);
+			} elseif ($conds !== []) {
+				$q->where('1 = 0');
+			}
+		}
+
+		if ((int) $this->getState('children') === 1) {
+			if ($fieldChildren > 0) {
+				$q->where(
+					'EXISTS (SELECT 1 FROM ' . $db->quoteName($prefix . 'fields_values', 'childfv')
+					. ' WHERE ' . $db->quoteName('childfv.item_id') . ' = ' . $this->userIdAsFieldItemId()
+					. ' AND ' . $db->quoteName('childfv.field_id') . ' = ' . $fieldChildren
+					. ' AND (' . $db->quoteName('childfv.value') . ' = ' . $db->quote('1')
+					. ' OR ' . $db->quoteName('childfv.value') . ' = ' . $db->quote('"1"')
+					. ' OR ' . $db->quoteName('childfv.value') . ' LIKE ' . $db->quote('%"1"%') . '))'
+				);
+			} else {
+				$q->where('1 = 0');
 			}
 		}
 
@@ -326,7 +366,7 @@ class ListModel extends BaseListModel
 			return $this->fieldIdsCache;
 		}
 
-		$names = ['vyberite_spetsialnos', 'sity', 'area', 'home', 'work_day', 'work_from', 'work_to'];
+		$names = ['vyberite_spetsialnos', 'sity', 'area', 'home', 'payment_method', 'suitable_for_children', 'work_day', 'work_from', 'work_to'];
 		$q = $db->getQuery(true)
 			->select([$db->quoteName('name'), $db->quoteName('id')])
 			->from($db->quoteName($prefix . 'fields'))
@@ -353,6 +393,16 @@ class ListModel extends BaseListModel
 		$this->setState('area', $input->getString('area', $input->getString('filter_area')));
 		$home = $input->get('home', $input->get('filter_home', []), 'array');
 		$this->setState('home', array_map('intval', array_filter($home)));
+		$payment = [];
+		foreach ((array) $input->get('payment', $input->get('filter_payment', []), 'array') as $payKey) {
+			$payKey = strtolower(trim((string) $payKey));
+			if (in_array($payKey, ['card', 'cash', 'transfer'], true)) {
+				$payment[] = $payKey;
+			}
+		}
+		$this->setState('payment', array_values(array_unique($payment)));
+		$childrenRaw = strtolower(trim((string) $input->get('children', $input->get('filter_children', ''), 'string')));
+		$this->setState('children', in_array($childrenRaw, ['1', 'yes', 'on', 'true', 'да'], true) ? 1 : 0);
 		$availDate = $input->getString('avail_date', '');
 		if ($availDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T+]\d{2}:\d{2})?$/', $availDate)) {
 			$availDate = '';

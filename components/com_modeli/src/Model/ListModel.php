@@ -22,6 +22,8 @@ class ListModel extends BaseListModel
 		$id .= ':' . $this->getState('city');
 		$id .= ':' . $this->getState('area');
 		$id .= ':' . serialize($this->getState('home'));
+		$id .= ':' . serialize($this->getState('payment'));
+		$id .= ':' . (int) $this->getState('children');
 		$id .= ':' . $this->getState('booking_mode');
 		$id .= ':' . $this->getState('avail_date');
 		$id .= ':' . $this->getState('list.ordering');
@@ -199,6 +201,8 @@ class ListModel extends BaseListModel
 		$fieldCity = (int) ($fieldIds['sity'] ?? 0);
 		$fieldArea = (int) ($fieldIds['area'] ?? 0);
 		$fieldHome = (int) ($fieldIds['home'] ?? 0);
+		$fieldPayment = (int) ($fieldIds['payment_method'] ?? 0);
+		$fieldChildren = (int) ($fieldIds['suitable_for_children'] ?? 0);
 		$fieldWorkDay = (int) ($fieldIds['work_day'] ?? 0);
 		$fieldWorkFrom = (int) ($fieldIds['work_from'] ?? 0);
 		$fieldWorkTo = (int) ($fieldIds['work_to'] ?? 0);
@@ -240,6 +244,42 @@ class ListModel extends BaseListModel
 					->where('fv.field_id = ' . $fieldHome)
 					->where('(' . implode(' OR ', $conds) . ')');
 				$query->join('INNER', '(' . (string) $homeSub . ') AS homefilter ON homefilter.item_id = u.id');
+			}
+		}
+
+		$payArr = $this->getState('payment');
+		if (!empty($payArr) && is_array($payArr)) {
+			$conds = [];
+			foreach ($payArr as $payKey) {
+				$payKey = strtolower(trim((string) $payKey));
+				if (in_array($payKey, ['card', 'cash', 'transfer'], true)) {
+					$conds[] = 'fv.value LIKE ' . $db->quote('%"' . $payKey . '"%');
+				}
+			}
+			if ($conds !== [] && $fieldPayment > 0) {
+				$paySub = $db->getQuery(true)
+					->select('DISTINCT fv.item_id')
+					->from($db->quoteName('#__fields_values', 'fv'))
+					->where('fv.field_id = ' . $fieldPayment)
+					->where('(' . implode(' OR ', $conds) . ')');
+				$query->join('INNER', '(' . (string) $paySub . ') AS payfilter ON payfilter.item_id = u.id');
+			} elseif ($conds !== []) {
+				$query->where('1 = 0');
+			}
+		}
+
+		if ((int) $this->getState('children') === 1) {
+			if ($fieldChildren > 0) {
+				$childSub = $db->getQuery(true)
+					->select('DISTINCT fv.item_id')
+					->from($db->quoteName('#__fields_values', 'fv'))
+					->where('fv.field_id = ' . $fieldChildren)
+					->where('(' . $db->quoteName('fv.value') . ' = ' . $db->quote('1')
+						. ' OR ' . $db->quoteName('fv.value') . ' = ' . $db->quote('"1"')
+						. ' OR ' . $db->quoteName('fv.value') . ' LIKE ' . $db->quote('%"1"%') . ')');
+				$query->join('INNER', '(' . (string) $childSub . ') AS childfilter ON childfilter.item_id = u.id');
+			} else {
+				$query->where('1 = 0');
 			}
 		}
 
@@ -334,7 +374,7 @@ class ListModel extends BaseListModel
 			return $this->fieldIdsCache;
 		}
 
-		$names = ['sity', 'area', 'home', 'work_day', 'work_from', 'work_to'];
+		$names = ['sity', 'area', 'home', 'payment_method', 'suitable_for_children', 'work_day', 'work_from', 'work_to'];
 		$query = $db->getQuery(true)
 			->select([$db->quoteName('name'), $db->quoteName('id')])
 			->from($db->quoteName('#__fields'))
@@ -360,6 +400,16 @@ class ListModel extends BaseListModel
 		$this->setState('city', trim((string) $input->getString('city', '')));
 		$this->setState('area', trim((string) $input->getString('area', '')));
 		$this->setState('home', array_map('intval', (array) $input->get('home', [], 'array')));
+		$payment = [];
+		foreach ((array) $input->get('payment', [], 'array') as $payKey) {
+			$payKey = strtolower(trim((string) $payKey));
+			if (in_array($payKey, ['card', 'cash', 'transfer'], true)) {
+				$payment[] = $payKey;
+			}
+		}
+		$this->setState('payment', array_values(array_unique($payment)));
+		$childrenRaw = strtolower(trim((string) $input->get('children', '', 'string')));
+		$this->setState('children', in_array($childrenRaw, ['1', 'yes', 'on', 'true', 'да'], true) ? 1 : 0);
 		$this->setState('booking_mode', trim((string) $input->getString('booking_mode', '')));
 		$availDate = $input->getString('avail_date', '');
 		if ($availDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T+]\d{2}:\d{2})?$/', $availDate)) {
