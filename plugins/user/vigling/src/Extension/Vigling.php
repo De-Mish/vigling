@@ -153,6 +153,38 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         }
     }
 
+    private function requireScheduleTimes(): void
+    {
+        if (function_exists('vigling_profile_encode_checked')) {
+            return;
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        $file = $themes . '/ryba/html/com_users/profile/schedule_times.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    private function loadWorkScheduleHelper(): bool
+    {
+        $class = WorkScheduleHelper::class;
+        if (class_exists($class, false)) {
+            return true;
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/WorkScheduleHelper.php',
+        ] as $file) {
+            if (is_file($file)) {
+                require_once $file;
+                break;
+            }
+        }
+
+        return class_exists($class, false);
+    }
+
     private function saveScheduleFieldsFromPost(int $userId): void
     {
         $rawComFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
@@ -177,11 +209,22 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $toSave = [];
 
         if ($rawFromByDay !== [] || $rawToByDay !== []) {
-            $encoded = WorkScheduleHelper::encodeChecked(
-                is_array($rawScheduleDays) ? $rawScheduleDays : [],
-                $rawFromByDay,
-                $rawToByDay
-            );
+            $this->requireScheduleTimes();
+            if ($this->loadWorkScheduleHelper()) {
+                $encoded = WorkScheduleHelper::encodeChecked(
+                    is_array($rawScheduleDays) ? $rawScheduleDays : [],
+                    $rawFromByDay,
+                    $rawToByDay
+                );
+            } elseif (function_exists('vigling_profile_encode_checked')) {
+                $encoded = vigling_profile_encode_checked(
+                    is_array($rawScheduleDays) ? $rawScheduleDays : [],
+                    $rawFromByDay,
+                    $rawToByDay
+                );
+            } else {
+                return;
+            }
             $toSave['work_day'] = json_encode($encoded['days']);
             $toSave['work_from'] = $encoded['fromJson'];
             $toSave['work_to'] = $encoded['toJson'];
@@ -213,7 +256,11 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             foreach (['work_from', 'work_to'] as $fname) {
                 if (\array_key_exists($fname, $rawComFields)) {
                     $val = trim((string) ($rawComFields[$fname] ?? ''));
-                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || WorkScheduleHelper::isTimesJson($val)) {
+                    $this->requireScheduleTimes();
+                    $isTimesJson = $this->loadWorkScheduleHelper()
+                        ? WorkScheduleHelper::isTimesJson($val)
+                        : (function_exists('vigling_profile_is_times_json') && vigling_profile_is_times_json($val));
+                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || $isTimesJson) {
                         $toSave[$fname] = $val;
                     }
                 }
