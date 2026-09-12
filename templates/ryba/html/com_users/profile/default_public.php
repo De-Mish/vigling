@@ -2483,6 +2483,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			});
 		}
 		var activeBookingButton = null;
+		var lastPickedSlot = null;
 		var authMode = 'register';
 		var redirectAfterClose = false;
 		var redirectAfterCloseUrl = '';
@@ -3478,6 +3479,13 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			}
 		}
 
+		bookingForm.addEventListener('change', function (e) {
+			var target = e.target;
+			if (target && target.name === 'time' && target.type === 'radio') {
+				lastPickedSlot = target;
+			}
+		});
+
 		bookingModal.addEventListener('click', function (e) {
 			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
 			if (!label || !bookingModal.contains(label)) {
@@ -3511,6 +3519,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 			hideErrors();
 			hideReservedNotice();
 			showScreen('screen1');
+			lastPickedSlot = null;
 			bookingForm.reset();
 			resetPasswordToggles();
 			updateSummaryFromButton(activeBookingButton);
@@ -3562,7 +3571,14 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					return;
 				}
 				if (screen.classList.contains('screen1')) {
-					var selected = bookingForm.querySelector('input[name="time"]:checked');
+					var selected = null;
+					if (lastPickedSlot && lastPickedSlot.checked && !lastPickedSlot.disabled && !lastPickedSlot.closest('.slick-cloned')) {
+						selected = lastPickedSlot;
+					}
+					if (!selected) {
+						selected = bookingForm.querySelector('.slick-slide:not(.slick-cloned) input[name="time"]:checked')
+							|| bookingForm.querySelector('input[name="time"]:checked');
+					}
 					if (selected && reservedKindOf(selected)) {
 						selected.checked = false;
 						showReservedNotice(reservedKindOf(selected));
