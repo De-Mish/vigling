@@ -162,6 +162,37 @@ final class UserSearchesService
         }
     }
 
+    private static function requireScheduleTimes(): void
+    {
+        if (function_exists('vigling_profile_times_by_day')) {
+            return;
+        }
+        $file = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/html/com_users/profile/schedule_times.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    private static function loadWorkScheduleHelper(): bool
+    {
+        $class = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class;
+        if (class_exists($class, false)) {
+            return true;
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/WorkScheduleHelper.php',
+        ] as $file) {
+            if (is_file($file)) {
+                require_once $file;
+                break;
+            }
+        }
+
+        return class_exists($class, false);
+    }
+
     private static function normalizeBookingMode(string $mode): string
     {
         $mode = trim($mode);
@@ -170,7 +201,15 @@ final class UserSearchesService
 
     private static function normalizeLocalDateTime(string $value): string
     {
-        return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapToQuarterHour($value);
+        self::requireScheduleTimes();
+        if (self::loadWorkScheduleHelper()) {
+            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapToQuarterHour($value);
+        }
+        if (function_exists('vigling_profile_snap_to_quarter_hour')) {
+            return vigling_profile_snap_to_quarter_hour($value);
+        }
+
+        return trim(str_replace('T', ' ', $value));
     }
 
     /**
@@ -846,11 +885,23 @@ final class UserSearchesService
             $raw[$name] = trim((string) ($row['field_value'] ?? ''));
         }
 
-        return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
-            $raw['work_day'],
-            $raw['work_from'],
-            $raw['work_to']
-        );
+        self::requireScheduleTimes();
+        if (self::loadWorkScheduleHelper()) {
+            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
+                $raw['work_day'],
+                $raw['work_from'],
+                $raw['work_to']
+            );
+        }
+        if (function_exists('vigling_profile_ranges_by_day')) {
+            return vigling_profile_ranges_by_day(
+                $raw['work_day'],
+                $raw['work_from'],
+                $raw['work_to']
+            );
+        }
+
+        return [];
     }
 
     /**
@@ -1026,9 +1077,16 @@ final class UserSearchesService
 
         try {
             $date = new \DateTimeImmutable($value, new \DateTimeZone('UTC'));
-            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapDateTimeToQuarterHour(
-                $date->setTimezone(new \DateTimeZone('UTC'))
-            )->format('Y-m-d H:i:s');
+            $date = $date->setTimezone(new \DateTimeZone('UTC'));
+            self::requireScheduleTimes();
+            if (self::loadWorkScheduleHelper()) {
+                return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapDateTimeToQuarterHour($date)->format('Y-m-d H:i:s');
+            }
+            if (function_exists('vigling_profile_snap_to_quarter_hour')) {
+                return vigling_profile_snap_to_quarter_hour($date->format('Y-m-d H:i:s'));
+            }
+
+            return $date->format('Y-m-d H:i:s');
         } catch (\Throwable $e) {
             return '';
         }

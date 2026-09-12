@@ -1435,21 +1435,39 @@ class OrdersController extends BaseController
 		}
 
 		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-			$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-			if (is_file($vgWorkScheduleFile)) {
-				require_once $vgWorkScheduleFile;
+			foreach ([
+				JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+				(defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/WorkScheduleHelper.php',
+			] as $vgWorkScheduleFile) {
+				if (is_file($vgWorkScheduleFile)) {
+					require_once $vgWorkScheduleFile;
+					break;
+				}
+			}
+		}
+		if (!function_exists('vigling_profile_ranges_by_day')) {
+			$vgScheduleTimes = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/html/com_users/profile/schedule_times.php';
+			if (is_file($vgScheduleTimes)) {
+				require_once $vgScheduleTimes;
 			}
 		}
 
-		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-			return [];
+		if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
+				$raw['work_day'],
+				$raw['work_from'],
+				$raw['work_to']
+			);
+		}
+		if (function_exists('vigling_profile_ranges_by_day')) {
+			return vigling_profile_ranges_by_day(
+				$raw['work_day'],
+				$raw['work_from'],
+				$raw['work_to']
+			);
 		}
 
-		return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
-			$raw['work_day'],
-			$raw['work_from'],
-			$raw['work_to']
-		);
+		return [];
 	}
 
 	/**

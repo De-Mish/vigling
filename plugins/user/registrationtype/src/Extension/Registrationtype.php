@@ -206,17 +206,37 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
         }
         if (isset($jform['work_from_by_day']) || isset($jform['work_to_by_day'])) {
             if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-                $workScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-                if (is_file($workScheduleFile)) {
-                    require_once $workScheduleFile;
+                foreach ([
+                    JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+                    (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/WorkScheduleHelper.php',
+                ] as $workScheduleFile) {
+                    if (is_file($workScheduleFile)) {
+                        require_once $workScheduleFile;
+                        break;
+                    }
                 }
             }
+            if (!function_exists('vigling_profile_encode_checked')) {
+                $vgScheduleTimes = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/html/com_users/profile/schedule_times.php';
+                if (is_file($vgScheduleTimes)) {
+                    require_once $vgScheduleTimes;
+                }
+            }
+            $encoded = null;
             if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
                 $encoded = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::encodeChecked(
                     isset($jform['work_day']) && is_array($jform['work_day']) ? $jform['work_day'] : [],
                     isset($jform['work_from_by_day']) && is_array($jform['work_from_by_day']) ? $jform['work_from_by_day'] : [],
                     isset($jform['work_to_by_day']) && is_array($jform['work_to_by_day']) ? $jform['work_to_by_day'] : []
                 );
+            } elseif (function_exists('vigling_profile_encode_checked')) {
+                $encoded = vigling_profile_encode_checked(
+                    isset($jform['work_day']) && is_array($jform['work_day']) ? $jform['work_day'] : [],
+                    isset($jform['work_from_by_day']) && is_array($jform['work_from_by_day']) ? $jform['work_from_by_day'] : [],
+                    isset($jform['work_to_by_day']) && is_array($jform['work_to_by_day']) ? $jform['work_to_by_day'] : []
+                );
+            }
+            if (is_array($encoded)) {
                 $valuesByCfName['work_day'] = json_encode($encoded['days']);
                 $valuesByCfName['work_from'] = $encoded['fromJson'];
                 $valuesByCfName['work_to'] = $encoded['toJson'];
