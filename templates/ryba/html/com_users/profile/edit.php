@@ -424,9 +424,17 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, 
 		require_once $vgWorkScheduleFile;
 	}
 }
+if (!function_exists('vigling_profile_times_by_day')) {
+	$vgInlineSchedule = __DIR__ . '/schedule_times.php';
+	if (is_file($vgInlineSchedule)) {
+		require_once $vgInlineSchedule;
+	}
+}
 $parsedSchedule = ['days' => [], 'from' => [], 'to' => []];
 if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
 	$parsedSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+} elseif (function_exists('vigling_profile_times_by_day')) {
+	$parsedSchedule = vigling_profile_times_by_day($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
 }
 $scheduleWorkDays = $parsedSchedule['days'] !== [] ? $parsedSchedule['days'] : $scheduleWorkDays;
 $scheduleFromByDay = $parsedSchedule['from'];

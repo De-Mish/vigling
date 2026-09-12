@@ -217,21 +217,177 @@ if ($homeText !== '') {
 }
 $homeDisplay = $homeParts !== [] ? implode(', ', $homeParts) : '';
 
-$workDayRaw = $fieldValue($jcfields, 'work_day');
-$workFromRaw = $fieldValue($jcfields, 'work_from');
-$workToRaw = $fieldValue($jcfields, 'work_to');
+$encodeScheduleRaw = static function ($raw): string {
+	if (is_array($raw) || is_object($raw)) {
+		return json_encode($raw, JSON_UNESCAPED_UNICODE);
+	}
+	if (is_scalar($raw)) {
+		return trim((string) $raw);
+	}
+	return '';
+};
+$fieldScheduleRaw = static function (array $fields, string $name) use ($encodeScheduleRaw, $fieldValue): string {
+	if (isset($fields[$name]->rawvalue) && !is_scalar($fields[$name]->rawvalue)) {
+		$encoded = $encodeScheduleRaw($fields[$name]->rawvalue);
+		if ($encoded !== '') {
+			return $encoded;
+		}
+	}
+	return $fieldValue($fields, $name);
+};
+$scheduleFieldRaw = [];
+if ($profileOwnerId > 0) {
+	try {
+		$dbSchedule = Factory::getContainer()->get(DatabaseInterface::class);
+		$scheduleQuery = $dbSchedule->getQuery(true)
+			->select([$dbSchedule->quoteName('f.name'), $dbSchedule->quoteName('fv.value')])
+			->from($dbSchedule->quoteName('#__fields', 'f'))
+			->join('INNER', $dbSchedule->quoteName('#__fields_values', 'fv') . ' ON ' . $dbSchedule->quoteName('fv.field_id') . ' = ' . $dbSchedule->quoteName('f.id'))
+			->where($dbSchedule->quoteName('f.context') . ' = ' . $dbSchedule->quote('com_users.user'))
+			->where($dbSchedule->quoteName('fv.item_id') . ' = ' . (int) $profileOwnerId)
+			->where($dbSchedule->quoteName('f.name') . ' IN (' . implode(',', array_map([$dbSchedule, 'quote'], ['work_day', 'work_from', 'work_to'])) . ')');
+		$dbSchedule->setQuery($scheduleQuery);
+		foreach (($dbSchedule->loadObjectList() ?: []) as $scheduleRow) {
+			if (isset($scheduleRow->name) && is_scalar($scheduleRow->value)) {
+				$scheduleFieldRaw[(string) $scheduleRow->name] = trim((string) $scheduleRow->value);
+			}
+		}
+	} catch (\Throwable $e) {
+		$scheduleFieldRaw = [];
+	}
+}
+$workDayRaw = $scheduleFieldRaw['work_day'] ?? $fieldScheduleRaw($jcfields, 'work_day');
+$workFromRaw = $scheduleFieldRaw['work_from'] ?? $fieldScheduleRaw($jcfields, 'work_from');
+$workToRaw = $scheduleFieldRaw['work_to'] ?? $fieldScheduleRaw($jcfields, 'work_to');
 $workDayLabels = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
 $workRows = [];
 $workDays = $parseIntList($workDayRaw);
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-	if (is_file($vgWorkScheduleFile)) {
-		require_once $vgWorkScheduleFile;
+$vgInlineSchedule = __DIR__ . '/schedule_times.php';
+if (is_file($vgInlineSchedule)) {
+	require_once $vgInlineSchedule;
+}
+if (!function_exists('vigling_profile_times_by_day')) {
+	function vigling_profile_normalize_clock(string $raw): string
+	{
+		$raw = trim(str_replace('.', ':', $raw));
+		if ($raw !== '' && preg_match('/^(\d{1,2}):(\d{2})$/', $raw, $m)) {
+			return sprintf('%02d:%s', (int) $m[1], $m[2]);
+		}
+		return '';
+	}
+	function vigling_profile_is_day_map(array $decoded): bool
+	{
+		if ($decoded === []) {
+			return false;
+		}
+		foreach (array_keys($decoded) as $key) {
+			if (!is_scalar($key) || !preg_match('/^[1-7]$/', (string) $key)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	function vigling_profile_assign_times(array &$target, array $days, string $raw): void
+	{
+		$raw = trim($raw);
+		if ($raw === '') {
+			return;
+		}
+		$decoded = json_decode($raw, true);
+		if (is_array($decoded)) {
+			if (vigling_profile_is_day_map($decoded)) {
+				foreach ($decoded as $key => $val) {
+					$wd = (int) $key;
+					if ($wd >= 1 && $wd <= 7 && is_scalar($val)) {
+						$target[$wd] = vigling_profile_normalize_clock((string) $val);
+					}
+				}
+				return;
+			}
+			$list = [];
+			foreach ($decoded as $item) {
+				if (!is_scalar($item)) {
+					continue;
+				}
+				$val = vigling_profile_normalize_clock((string) $item);
+				if ($val !== '') {
+					$list[] = $val;
+				}
+			}
+			if (count($list) === 1) {
+				foreach ($days as $wd) {
+					$target[(int) $wd] = $list[0];
+				}
+				return;
+			}
+			if (count($list) === count($days)) {
+				foreach (array_values($days) as $idx => $wd) {
+					$target[(int) $wd] = (string) ($list[$idx] ?? '');
+				}
+			}
+			return;
+		}
+		$single = vigling_profile_normalize_clock($raw);
+		if ($single === '') {
+			return;
+		}
+		foreach ($days as $wd) {
+			$target[(int) $wd] = $single;
+		}
+	}
+	function vigling_profile_times_by_day(string $workDayRaw, string $workFromRaw, string $workToRaw): array
+	{
+		$days = [];
+		$decodedDays = json_decode(trim($workDayRaw), true);
+		$vals = [];
+		if (is_array($decodedDays)) {
+			$iter = new RecursiveIteratorIterator(new RecursiveArrayIterator($decodedDays));
+			foreach ($iter as $v) {
+				if (is_scalar($v) && preg_match('/^\d+$/', (string) $v)) {
+					$vals[] = (int) $v;
+				}
+			}
+		} else {
+			preg_match_all('/\d+/', $workDayRaw, $m);
+			foreach (($m[0] ?? []) as $num) {
+				$vals[] = (int) $num;
+			}
+		}
+		$days = array_values(array_unique(array_filter($vals, static function ($v) {
+			return $v >= 1 && $v <= 7;
+		})));
+		sort($days);
+		$fromByDay = array_fill(1, 7, '');
+		$toByDay = array_fill(1, 7, '');
+		vigling_profile_assign_times($fromByDay, $days, $workFromRaw);
+		vigling_profile_assign_times($toByDay, $days, $workToRaw);
+		return [
+			'days' => $days,
+			'from' => $fromByDay,
+			'to' => $toByDay,
+		];
 	}
 }
-$parsedPublicSchedule = ['days' => [], 'from' => [], 'to' => []];
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	foreach ([
+		JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+		dirname(__DIR__, 3) . '/helpers/WorkScheduleHelper.php',
+	] as $vgWorkScheduleFile) {
+		if (is_file($vgWorkScheduleFile)) {
+			require_once $vgWorkScheduleFile;
+			break;
+		}
+	}
+}
+$parsedPublicSchedule = ['days' => [], 'from' => array_fill(1, 7, ''), 'to' => array_fill(1, 7, '')];
 if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
 	$parsedPublicSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay(
+		(string) $workDayRaw,
+		(string) $workFromRaw,
+		(string) $workToRaw
+	);
+} else {
+	$parsedPublicSchedule = vigling_profile_times_by_day(
 		(string) $workDayRaw,
 		(string) $workFromRaw,
 		(string) $workToRaw
@@ -1736,7 +1892,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
-							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1"<?php if ($hasWorkSchedule) : ?> data-toggle="modal" data-target="#zapis"<?php endif; ?> data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
+							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
 						</div>
 						<?php endforeach; ?>
@@ -1794,7 +1950,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 										data-booking-disabled="<?php echo $stockIsSoldOut ? '1' : '0'; ?>"
 										title="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
 										aria-label="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
-										<?php if (!$stockIsSoldOut && $hasWorkSchedule) : ?>
+										<?php if (!$stockIsSoldOut) : ?>
 										data-toggle="modal"
 										data-target="#zapis"
 										<?php elseif ($stockIsSoldOut) : ?>
@@ -1891,7 +2047,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $courseButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($courseButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($courseButtonTitle); ?>"
-									<?php if (!$courseButtonDisabled && ($hasWorkSchedule || $courseSlotUtc !== '')) : ?>
+									<?php if (!$courseButtonDisabled) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
 									<?php elseif ($courseButtonDisabled) : ?>
@@ -1987,7 +2143,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $searchButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($searchButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($searchButtonTitle); ?>"
-									<?php if (!$searchButtonDisabled && ($hasWorkSchedule || $searchSlotUtc !== '')) : ?>
+									<?php if (!$searchButtonDisabled) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
 									<?php elseif ($searchButtonDisabled) : ?>
@@ -3343,12 +3499,6 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		document.querySelectorAll('.btn_add-master[data-booking-toggle="1"]').forEach(function (button) {
 			button.addEventListener('click', function (e) {
 				if (this.disabled || this.getAttribute('data-booking-disabled') === '1') {
-					return;
-				}
-				var fixedTimeUtc = String(this.getAttribute('data-fixed-time-utc') || '').trim();
-				if (!hasWorkSchedule && !fixedTimeUtc) {
-					e.preventDefault();
-					e.stopImmediatePropagation();
 					return;
 				}
 				activeBookingButton = this;
