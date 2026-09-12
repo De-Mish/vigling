@@ -3,8 +3,12 @@ defined('_JEXEC') or die;
 
 use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
 
-if (!class_exists(UserProfileExtraFieldsHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+if (!class_exists(UserProfileExtraFieldsHelper::class, false) && is_file($vgExtraHelperFile)) {
+	require_once $vgExtraHelperFile;
+}
+if (!class_exists(UserProfileExtraFieldsHelper::class, false)) {
+	return;
 }
 
 $vgShowLabels = $vgShowLabels ?? true;

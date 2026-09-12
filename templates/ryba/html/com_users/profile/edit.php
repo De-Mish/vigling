@@ -283,22 +283,33 @@ if ($address1Value === '' && isset($jcfields['street']->rawvalue) && is_scalar($
 if ($address2Value === '' && isset($jcfields['house_number']->rawvalue) && is_scalar($jcfields['house_number']->rawvalue)) {
 	$address2Value = trim((string) $jcfields['house_number']->rawvalue);
 }
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
-}
-$vgFieldRaw = static function (array $fields, string $name): string {
-	if (!isset($fields[$name])) {
-		return '';
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+	if (is_file($vgExtraHelperFile)) {
+		require_once $vgExtraHelperFile;
 	}
-	$raw = $fields[$name]->rawvalue ?? $fields[$name]->value ?? '';
-	return is_scalar($raw) ? trim((string) $raw) : '';
-};
-$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'doorway'));
-$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'floor'));
-$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'apartment'));
-$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgFieldRaw($jcfields, 'home'));
-$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgFieldRaw($jcfields, 'payment_method'));
-$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgFieldRaw($jcfields, 'suitable_for_children'));
+}
+$vgDoorway = '';
+$vgFloor = '';
+$vgApartment = '';
+$vgHomeSelected = [];
+$vgPaymentSelected = [];
+$vgChildren = false;
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgFieldRaw = static function (array $fields, string $name): string {
+		if (!isset($fields[$name])) {
+			return '';
+		}
+		$raw = $fields[$name]->rawvalue ?? $fields[$name]->value ?? '';
+		return is_scalar($raw) ? trim((string) $raw) : '';
+	};
+	$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'doorway'));
+	$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'floor'));
+	$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'apartment'));
+	$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgFieldRaw($jcfields, 'home'));
+	$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgFieldRaw($jcfields, 'payment_method'));
+	$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgFieldRaw($jcfields, 'suitable_for_children'));
+}
 if ($websiteValue === '' && isset($jcfields['link']->rawvalue) && is_scalar($jcfields['link']->rawvalue)) {
 	$websiteValue = trim((string) $jcfields['link']->rawvalue);
 }
@@ -407,10 +418,16 @@ $decodeTimeField = static function (string $raw): string {
 $workFromRawLoad = (string) ($scheduleFieldRaw['work_from'] ?? ((isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue)) ? $jcfields['work_from']->rawvalue : ''));
 $workToRawLoad = (string) ($scheduleFieldRaw['work_to'] ?? ((isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue)) ? $jcfields['work_to']->rawvalue : ''));
 $workDayRawLoad = (string) ($scheduleFieldRaw['work_day'] ?? ((isset($jcfields['work_day']->rawvalue) && is_scalar($jcfields['work_day']->rawvalue)) ? $jcfields['work_day']->rawvalue : ''));
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-	require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+	if (is_file($vgWorkScheduleFile)) {
+		require_once $vgWorkScheduleFile;
+	}
 }
-$parsedSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+$parsedSchedule = ['days' => [], 'from' => [], 'to' => []];
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$parsedSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+}
 $scheduleWorkDays = $parsedSchedule['days'] !== [] ? $parsedSchedule['days'] : $scheduleWorkDays;
 $scheduleFromByDay = $parsedSchedule['from'];
 $scheduleToByDay = $parsedSchedule['to'];

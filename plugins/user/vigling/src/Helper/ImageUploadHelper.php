@@ -9,7 +9,8 @@ use Joomla\Filesystem\Folder;
 
 /**
  * Compresses and stores profile and portfolio image uploads.
- * This file must stay on the live server in plugins/user/vigling/src/Helper/.
+ * Upload this whole file to public_html/plugins/user/vigling/src/Helper/ImageUploadHelper.php
+ * (not a line patch).
  */
 final class ImageUploadHelper
 {

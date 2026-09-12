@@ -1005,8 +1005,15 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$raw[$name] = trim((string) ($row['field_value'] ?? ''));
 		}
 
-		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class)) {
-			require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+			if (is_file($vgWorkScheduleFile)) {
+				require_once $vgWorkScheduleFile;
+			}
+		}
+
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			return [];
 		}
 
 		return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(

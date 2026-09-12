@@ -78,17 +78,22 @@ $notFound = 'Нет информации';
 						$val = is_scalar($profile[$cfg['profile']]) ? trim((string) $profile[$cfg['profile']]) : '';
 					}
 				}
-				if (!class_exists(UserProfileExtraFieldsHelper::class)) {
-					require_once JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+				if (!class_exists(UserProfileExtraFieldsHelper::class, false)) {
+					$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+					if (is_file($vgExtraHelperFile)) {
+						require_once $vgExtraHelperFile;
+					}
 				}
-				if (in_array($fieldName, ['doorway', 'floor', 'apartment'], true)) {
-					$val = UserProfileExtraFieldsHelper::decodeText($val);
-				} elseif ($fieldName === 'home') {
-					$val = UserProfileExtraFieldsHelper::homeDisplay($val);
-				} elseif ($fieldName === 'payment_method') {
-					$val = UserProfileExtraFieldsHelper::paymentDisplay($val);
-				} elseif ($fieldName === 'suitable_for_children') {
-					$val = UserProfileExtraFieldsHelper::isChildrenYes($val) ? 'Да' : '';
+				if (class_exists(UserProfileExtraFieldsHelper::class, false)) {
+					if (in_array($fieldName, ['doorway', 'floor', 'apartment'], true)) {
+						$val = UserProfileExtraFieldsHelper::decodeText($val);
+					} elseif ($fieldName === 'home') {
+						$val = UserProfileExtraFieldsHelper::homeDisplay($val);
+					} elseif ($fieldName === 'payment_method') {
+						$val = UserProfileExtraFieldsHelper::paymentDisplay($val);
+					} elseif ($fieldName === 'suitable_for_children') {
+						$val = UserProfileExtraFieldsHelper::isChildrenYes($val) ? 'Да' : '';
+					}
 				}
 			}
 			$defaultLabel = Text::_('COM_USERS_PROFILE_VALUE_NOT_FOUND');
