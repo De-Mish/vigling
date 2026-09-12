@@ -218,10 +218,21 @@ if (is_array($postedFromByDay) || is_array($postedToByDay)) {
             : '';
     }
 } elseif ($workFromValue !== '' || $workToValue !== '') {
-    if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-        $vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-        if (is_file($vgWorkScheduleFile)) {
-            require_once $vgWorkScheduleFile;
+    $vgWorkScheduleLoader = dirname(__DIR__, 3) . '/helpers/vigling_work_schedule.php';
+    if (is_file($vgWorkScheduleLoader)) {
+        require_once $vgWorkScheduleLoader;
+    }
+    if (function_exists('vigling_load_work_schedule_helper')) {
+        vigling_load_work_schedule_helper();
+    } elseif (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            dirname(__DIR__, 3) . '/helpers/WorkScheduleHelper.php',
+        ] as $vgWorkScheduleFile) {
+            if (is_file($vgWorkScheduleFile)) {
+                require_once $vgWorkScheduleFile;
+                break;
+            }
         }
     }
     if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {

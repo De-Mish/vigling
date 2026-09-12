@@ -303,9 +303,22 @@ class ListModel extends BaseListModel
 
 					if ($fieldWorkDay > 0) {
 						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-							$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-							if (is_file($vgWorkScheduleFile)) {
-								require_once $vgWorkScheduleFile;
+							$vgWorkScheduleLoader = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/vigling_work_schedule.php';
+							if (is_file($vgWorkScheduleLoader)) {
+								require_once $vgWorkScheduleLoader;
+							}
+							if (function_exists('vigling_load_work_schedule_helper')) {
+								vigling_load_work_schedule_helper();
+							} else {
+								foreach ([
+									JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+									(defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/WorkScheduleHelper.php',
+								] as $vgWorkScheduleFile) {
+									if (is_file($vgWorkScheduleFile)) {
+										require_once $vgWorkScheduleFile;
+										break;
+									}
+								}
 							}
 						}
 						if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {

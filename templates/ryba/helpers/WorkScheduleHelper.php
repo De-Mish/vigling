@@ -6,8 +6,9 @@ namespace Joomla\Plugin\User\Vigling\Helper;
 
 /**
  * Parses specialist work days and hours from custom-field JSON.
- * Upload this whole file to public_html/plugins/user/vigling/src/Helper/WorkScheduleHelper.php
- * and also keep the copy in templates/ryba/helpers/WorkScheduleHelper.php.
+ * Keep a copy here so FTP of the template still restores the class when
+ * public_html/plugins/user/vigling/src/Helper/ was replaced by a single new file.
+ * Also upload this whole file to plugins/user/vigling/src/Helper/WorkScheduleHelper.php.
  */
 final class WorkScheduleHelper
 {

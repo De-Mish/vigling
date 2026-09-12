@@ -418,10 +418,21 @@ $decodeTimeField = static function (string $raw): string {
 $workFromRawLoad = (string) ($scheduleFieldRaw['work_from'] ?? ((isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue)) ? $jcfields['work_from']->rawvalue : ''));
 $workToRawLoad = (string) ($scheduleFieldRaw['work_to'] ?? ((isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue)) ? $jcfields['work_to']->rawvalue : ''));
 $workDayRawLoad = (string) ($scheduleFieldRaw['work_day'] ?? ((isset($jcfields['work_day']->rawvalue) && is_scalar($jcfields['work_day']->rawvalue)) ? $jcfields['work_day']->rawvalue : ''));
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-	if (is_file($vgWorkScheduleFile)) {
-		require_once $vgWorkScheduleFile;
+$vgWorkScheduleLoader = dirname(__DIR__, 3) . '/helpers/vigling_work_schedule.php';
+if (is_file($vgWorkScheduleLoader)) {
+	require_once $vgWorkScheduleLoader;
+}
+if (function_exists('vigling_load_work_schedule_helper')) {
+	vigling_load_work_schedule_helper();
+} elseif (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	foreach ([
+		JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+		dirname(__DIR__, 3) . '/helpers/WorkScheduleHelper.php',
+	] as $vgWorkScheduleFile) {
+		if (is_file($vgWorkScheduleFile)) {
+			require_once $vgWorkScheduleFile;
+			break;
+		}
 	}
 }
 $parsedSchedule = ['days' => [], 'from' => [], 'to' => []];

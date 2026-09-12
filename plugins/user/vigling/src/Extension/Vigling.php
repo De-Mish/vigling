@@ -153,6 +153,33 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         }
     }
 
+    private function loadWorkScheduleHelper(): bool
+    {
+        $class = WorkScheduleHelper::class;
+        if (class_exists($class, false)) {
+            return true;
+        }
+        $loader = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/vigling_work_schedule.php';
+        if (is_file($loader)) {
+            require_once $loader;
+            if (function_exists('vigling_load_work_schedule_helper') && vigling_load_work_schedule_helper()) {
+                return true;
+            }
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/WorkScheduleHelper.php',
+        ] as $file) {
+            if (is_file($file)) {
+                require_once $file;
+                break;
+            }
+        }
+
+        return class_exists($class, false);
+    }
+
     private function saveScheduleFieldsFromPost(int $userId): void
     {
         $rawComFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
@@ -176,7 +203,7 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
 
         $toSave = [];
 
-        if ($rawFromByDay !== [] || $rawToByDay !== []) {
+        if (($rawFromByDay !== [] || $rawToByDay !== []) && $this->loadWorkScheduleHelper()) {
             $encoded = WorkScheduleHelper::encodeChecked(
                 is_array($rawScheduleDays) ? $rawScheduleDays : [],
                 $rawFromByDay,
@@ -213,7 +240,7 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             foreach (['work_from', 'work_to'] as $fname) {
                 if (\array_key_exists($fname, $rawComFields)) {
                     $val = trim((string) ($rawComFields[$fname] ?? ''));
-                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || WorkScheduleHelper::isTimesJson($val)) {
+                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || ($this->loadWorkScheduleHelper() && WorkScheduleHelper::isTimesJson($val))) {
                         $toSave[$fname] = $val;
                     }
                 }
