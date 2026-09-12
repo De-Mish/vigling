@@ -206,9 +206,22 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
         }
         if (isset($jform['work_from_by_day']) || isset($jform['work_to_by_day'])) {
             if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-                $workScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-                if (is_file($workScheduleFile)) {
-                    require_once $workScheduleFile;
+                $workScheduleLoader = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/vigling_work_schedule.php';
+                if (is_file($workScheduleLoader)) {
+                    require_once $workScheduleLoader;
+                }
+                if (function_exists('vigling_load_work_schedule_helper')) {
+                    vigling_load_work_schedule_helper();
+                } else {
+                    foreach ([
+                        JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+                        (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/WorkScheduleHelper.php',
+                    ] as $workScheduleFile) {
+                        if (is_file($workScheduleFile)) {
+                            require_once $workScheduleFile;
+                            break;
+                        }
+                    }
                 }
             }
             if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {

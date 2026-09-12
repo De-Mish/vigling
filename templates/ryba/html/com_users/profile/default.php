@@ -893,6 +893,13 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 		</form>
 		<?php if ($showMasterPublicCard) : ?>
 			<?php
+			$vgWorkScheduleLoader = dirname(__DIR__, 3) . '/helpers/vigling_work_schedule.php';
+			if (is_file($vgWorkScheduleLoader)) {
+				require_once $vgWorkScheduleLoader;
+			}
+			if (function_exists('vigling_load_work_schedule_helper')) {
+				vigling_load_work_schedule_helper();
+			}
 			$this->lkEmbed = true;
 			echo $this->loadTemplate('public');
 			?>

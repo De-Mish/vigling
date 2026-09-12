@@ -223,10 +223,21 @@ $workToRaw = $fieldValue($jcfields, 'work_to');
 $workDayLabels = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
 $workRows = [];
 $workDays = $parseIntList($workDayRaw);
-if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-	if (is_file($vgWorkScheduleFile)) {
-		require_once $vgWorkScheduleFile;
+$vgWorkScheduleLoader = dirname(__DIR__, 3) . '/helpers/vigling_work_schedule.php';
+if (is_file($vgWorkScheduleLoader)) {
+	require_once $vgWorkScheduleLoader;
+}
+if (function_exists('vigling_load_work_schedule_helper')) {
+	vigling_load_work_schedule_helper();
+} elseif (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	foreach ([
+		JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+		dirname(__DIR__, 3) . '/helpers/WorkScheduleHelper.php',
+	] as $vgWorkScheduleFile) {
+		if (is_file($vgWorkScheduleFile)) {
+			require_once $vgWorkScheduleFile;
+			break;
+		}
 	}
 }
 $parsedPublicSchedule = ['days' => [], 'from' => [], 'to' => []];
@@ -240,6 +251,36 @@ if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, f
 $workDays = $parsedPublicSchedule['days'] !== [] ? $parsedPublicSchedule['days'] : $workDays;
 $fromByDay = $parsedPublicSchedule['from'];
 $toByDay = $parsedPublicSchedule['to'];
+$clockFromRaw = static function (string $raw): string {
+	$raw = trim(str_replace('.', ':', $raw));
+	if (preg_match('/^(\d{1,2}):(\d{2})$/', $raw, $m)) {
+		return sprintf('%02d:%s', (int) $m[1], $m[2]);
+	}
+	$decoded = json_decode($raw, true);
+	if (!is_array($decoded)) {
+		return '';
+	}
+	foreach ($decoded as $value) {
+		if (!is_scalar($value)) {
+			continue;
+		}
+		$clock = trim(str_replace('.', ':', (string) $value));
+		if (preg_match('/^(\d{1,2}):(\d{2})$/', $clock, $m)) {
+			return sprintf('%02d:%s', (int) $m[1], $m[2]);
+		}
+	}
+	return '';
+};
+if ($workDays !== [] && !array_filter($fromByDay) && !array_filter($toByDay)) {
+	$oneFrom = $clockFromRaw((string) $workFromRaw);
+	$oneTo = $clockFromRaw((string) $workToRaw);
+	if ($oneFrom !== '' && $oneTo !== '') {
+		foreach ($workDays as $wd) {
+			$fromByDay[(int) $wd] = $oneFrom;
+			$toByDay[(int) $wd] = $oneTo;
+		}
+	}
+}
 
 if ($workDays !== []) {
 	foreach ($workDayLabels as $wd => $label) {
@@ -1736,7 +1777,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
-							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1"<?php if ($hasWorkSchedule) : ?> data-toggle="modal" data-target="#zapis"<?php endif; ?> data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
+							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
 						</div>
 						<?php endforeach; ?>
@@ -1794,7 +1835,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 										data-booking-disabled="<?php echo $stockIsSoldOut ? '1' : '0'; ?>"
 										title="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
 										aria-label="<?php echo $stockIsSoldOut ? 'Акция закончилась' : 'Записаться на акцию'; ?>"
-										<?php if (!$stockIsSoldOut && $hasWorkSchedule) : ?>
+										<?php if (!$stockIsSoldOut) : ?>
 										data-toggle="modal"
 										data-target="#zapis"
 										<?php elseif ($stockIsSoldOut) : ?>
@@ -1891,7 +1932,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $courseButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($courseButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($courseButtonTitle); ?>"
-									<?php if (!$courseButtonDisabled && ($hasWorkSchedule || $courseSlotUtc !== '')) : ?>
+									<?php if (!$courseButtonDisabled) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
 									<?php elseif ($courseButtonDisabled) : ?>
@@ -1987,7 +2028,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 									data-booking-disabled="<?php echo $searchButtonDisabled ? '1' : '0'; ?>"
 									title="<?php echo $this->escape($searchButtonTitle); ?>"
 									aria-label="<?php echo $this->escape($searchButtonTitle); ?>"
-									<?php if (!$searchButtonDisabled && ($hasWorkSchedule || $searchSlotUtc !== '')) : ?>
+									<?php if (!$searchButtonDisabled) : ?>
 									data-toggle="modal"
 									data-target="#zapis"
 									<?php elseif ($searchButtonDisabled) : ?>
@@ -3343,12 +3384,6 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		document.querySelectorAll('.btn_add-master[data-booking-toggle="1"]').forEach(function (button) {
 			button.addEventListener('click', function (e) {
 				if (this.disabled || this.getAttribute('data-booking-disabled') === '1') {
-					return;
-				}
-				var fixedTimeUtc = String(this.getAttribute('data-fixed-time-utc') || '').trim();
-				if (!hasWorkSchedule && !fixedTimeUtc) {
-					e.preventDefault();
-					e.stopImmediatePropagation();
 					return;
 				}
 				activeBookingButton = this;

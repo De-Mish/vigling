@@ -162,6 +162,33 @@ final class UserSearchesService
         }
     }
 
+    private static function loadWorkScheduleHelper(): bool
+    {
+        $class = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class;
+        if (class_exists($class, false)) {
+            return true;
+        }
+        $loader = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/vigling_work_schedule.php';
+        if (is_file($loader)) {
+            require_once $loader;
+            if (function_exists('vigling_load_work_schedule_helper') && vigling_load_work_schedule_helper()) {
+                return true;
+            }
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/WorkScheduleHelper.php',
+        ] as $file) {
+            if (is_file($file)) {
+                require_once $file;
+                break;
+            }
+        }
+
+        return class_exists($class, false);
+    }
+
     private static function normalizeBookingMode(string $mode): string
     {
         $mode = trim($mode);
@@ -170,6 +197,10 @@ final class UserSearchesService
 
     private static function normalizeLocalDateTime(string $value): string
     {
+        if (!self::loadWorkScheduleHelper()) {
+            return trim(str_replace('T', ' ', $value));
+        }
+
         return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapToQuarterHour($value);
     }
 
@@ -846,6 +877,10 @@ final class UserSearchesService
             $raw[$name] = trim((string) ($row['field_value'] ?? ''));
         }
 
+        if (!self::loadWorkScheduleHelper()) {
+            return [];
+        }
+
         return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
             $raw['work_day'],
             $raw['work_from'],
@@ -1026,9 +1061,11 @@ final class UserSearchesService
 
         try {
             $date = new \DateTimeImmutable($value, new \DateTimeZone('UTC'));
-            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapDateTimeToQuarterHour(
-                $date->setTimezone(new \DateTimeZone('UTC'))
-            )->format('Y-m-d H:i:s');
+            $date = $date->setTimezone(new \DateTimeZone('UTC'));
+            if (!self::loadWorkScheduleHelper()) {
+                return $date->format('Y-m-d H:i:s');
+            }
+            return \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::snapDateTimeToQuarterHour($date)->format('Y-m-d H:i:s');
         } catch (\Throwable $e) {
             return '';
         }
