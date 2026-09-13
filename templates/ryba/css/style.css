@@ -3316,7 +3316,7 @@ input[type=text] {
 }
 
 #bookmarkme.active {
-  background-image: none;
+  background-image: url(../images/uzor.png);
   background-color: #f7cc53;
   opacity: 1;
   -webkit-mask-image: url(../images/uzor.png);
