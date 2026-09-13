@@ -6,6 +6,14 @@
 
 use Joomla\CMS\Factory;
 
+if (PHP_SAPI !== 'cli') {
+	http_response_code(403);
+	header('Content-Type: text/plain; charset=UTF-8');
+	header('X-Robots-Tag: noindex, nofollow');
+	echo 'Forbidden';
+	exit;
+}
+
 // Инициализация Joomla
 define('_JEXEC', 1);
 define('JPATH_BASE', __DIR__);
