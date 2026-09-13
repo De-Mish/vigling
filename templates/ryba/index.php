@@ -399,6 +399,16 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 							<?php else : ?>
 								<p>Контент страницы контактов пока не заполнен.</p>
 							<?php endif; ?>
+							<div class="contacts-hover-tabs">
+								<a class="contacts-hover-tab" href="https://t.me/vigling" target="_blank" rel="noopener noreferrer">
+									<span class="contacts-hover-tab__label">Telegram</span>
+									<span class="contacts-hover-tab__panel">Написать в Telegram: @vigling</span>
+								</a>
+								<a class="contacts-hover-tab" href="https://vk.com/vigling" target="_blank" rel="noopener noreferrer">
+									<span class="contacts-hover-tab__label">Vkontakte</span>
+									<span class="contacts-hover-tab__panel">Открыть страницу Vkontakte</span>
+								</a>
+							</div>
 						</section>
 						<?php elseif ($isPrivacyPolicyPage) : ?>
 						<?php include __DIR__ . '/html/privacy-policy.php'; ?>
@@ -1252,6 +1262,58 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 		font-size: 36px;
 		line-height: 1.2;
 		font-family: "GothamPro-Bold";
+	}
+	.contacts-hover-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin: 18px 0 0;
+	}
+	.contacts-hover-tab {
+		display: block;
+		box-sizing: border-box;
+		min-width: 168px;
+		max-width: 280px;
+		padding: 0 18px;
+		border: 1px solid #f9ce54;
+		border-radius: 22px;
+		background: #fff;
+		color: #111;
+		text-decoration: none;
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+		overflow: hidden;
+	}
+	.contacts-hover-tab:hover,
+	.contacts-hover-tab:focus {
+		background: #fff;
+		color: #111;
+		text-decoration: none;
+		outline: none;
+	}
+	.contacts-hover-tab__label {
+		display: flex;
+		align-items: center;
+		height: 44px;
+		font-family: "GothamPro-Bold", sans-serif;
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: 0.3px;
+	}
+	.contacts-hover-tab__panel {
+		max-height: 0;
+		opacity: 0;
+		overflow: hidden;
+		font-size: 13px;
+		line-height: 1.4;
+		color: #444;
+		transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+	}
+	.contacts-hover-tab:hover .contacts-hover-tab__panel,
+	.contacts-hover-tab:focus .contacts-hover-tab__panel,
+	.contacts-hover-tab:focus-within .contacts-hover-tab__panel {
+		max-height: 72px;
+		opacity: 1;
+		margin-bottom: 12px;
 	}
 	@media (max-width: 991px) {
 		.contacts-settings-page h1 {
