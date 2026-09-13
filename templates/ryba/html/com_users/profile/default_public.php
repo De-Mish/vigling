@@ -181,6 +181,7 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelpe
 }
 $paymentDisplay = '';
 $childrenYes = false;
+$addrExtraDisplay = '';
 if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
 	$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'doorway'));
 	$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'floor'));
@@ -188,7 +189,7 @@ if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper
 	$extraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::extraAddressLine($doorway, $floor, $apartment);
 	$canSeeExtraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::clientHasBookingWithMaster((int) ($currentUser->id ?? 0), $profileOwnerId);
 	if ($canSeeExtraAddress && $extraAddress !== '') {
-		$addr = $addr !== '' ? $addr . ', ' . $extraAddress : $extraAddress;
+		$addrExtraDisplay = $extraAddress;
 	}
 	$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($fieldValue($jcfields, 'payment_method'));
 	$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($fieldValue($jcfields, 'suitable_for_children'));
@@ -2404,6 +2405,11 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 				<?php echo $this->escape($addr); ?>
 			</div>
 			<?php endif; ?>
+			<?php if ($addrExtraDisplay !== '') : ?>
+			<div class="master__about-address-extra">
+				<?php echo $this->escape($addrExtraDisplay); ?>
+			</div>
+			<?php endif; ?>
 			<div class="master__about-time">
 				<img src="/templates/ryba/images/timet.png" alt="">
 				<ul class="category__content-info-list">
@@ -2472,7 +2478,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		var hasWorkSchedule = <?php echo !empty($hasWorkSchedule) ? 'true' : 'false'; ?>;
 		var quickAuthUrl = <?php echo json_encode(Route::_('index.php?option=com_ajax&plugin=Quickauth&format=json', false)); ?>;
 		var bookingMasterName = <?php echo json_encode($displayName); ?>;
-		var bookingAddress = <?php echo json_encode($addr); ?>;
+		var bookingAddress = <?php echo json_encode($addrExtraDisplay !== '' ? trim($addr . ', ' . $addrExtraDisplay, ', ') : $addr); ?>;
 		var bookingCalendarDays = <?php echo $calendarDaysJson ?: '[]'; ?>;
 		var bookingCalendarByDate = {};
 		if (Array.isArray(bookingCalendarDays)) {
