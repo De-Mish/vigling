@@ -353,6 +353,7 @@ jQuery(document).ready(function() {
                         </ul>
                         <input type="hidden" name="foto_service" value="<?php echo htmlspecialchars($url); ?>">
                         <input type="hidden" name="user_id" value="<?php echo $userID; ?>">
+                        <?php echo HTMLHelper::_('form.token'); ?>
                     </div>
 
                     <!-- Кнопка отправки -->
