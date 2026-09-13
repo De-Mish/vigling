@@ -5,8 +5,9 @@
  */
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Language\Text;
 use Joomla\CMS\Filter\OutputFilter;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Session\Session;
 
 define('_JEXEC', 1);
 define('JPATH_BASE', $_SERVER['DOCUMENT_ROOT']);
@@ -16,6 +17,47 @@ require_once JPATH_BASE . DS . 'includes' . DS . 'defines.php';
 require_once JPATH_BASE . DS . 'includes' . DS . 'framework.php';
 
 try {
+    $container = Factory::getContainer();
+    $container->alias('session.web', 'session.web.site')
+        ->alias('session', 'session.web.site')
+        ->alias('JSession', 'session.web.site')
+        ->alias(Session::class, 'session.web.site')
+        ->alias(\Joomla\Session\Session::class, 'session.web.site')
+        ->alias(\Joomla\Session\SessionInterface::class, 'session.web.site');
+
+    $app = $container->get(\Joomla\CMS\Application\SiteApplication::class);
+    Factory::$application = $app;
+
+    $session = $app->getSession();
+    if (method_exists($session, 'isStarted') && !$session->isStarted()) {
+        $session->start();
+    }
+
+    $user = $app->getIdentity();
+    if ((!$user || $user->guest) && $session->has('user')) {
+        $app->loadIdentity($session->get('user'));
+        $user = $app->getIdentity();
+    }
+
+    $deny = static function (string $message): void {
+        http_response_code(403);
+        header('Content-Type: text/html; charset=UTF-8');
+        echo '<div class="message"><h2>Ошибка</h2><p>' . htmlspecialchars($message) . '</p></div>';
+        exit;
+    };
+
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        $deny('Недействительный запрос');
+    }
+
+    if (!Session::checkToken('post')) {
+        $deny('Недействительный запрос. Обновите страницу и попробуйте снова.');
+    }
+
+    if (!$user || $user->guest || (int) $user->id <= 0) {
+        $deny('Нужно войти в аккаунт');
+    }
+
     $db = Factory::getContainer()->get('DatabaseDriver');
     $prefix = $db->getPrefix();
 
@@ -33,7 +75,7 @@ try {
 
     // Получить POST параметры с очисткой
     $category = isset($_POST['category']) ? (int)$_POST['category'] : 0;
-    $user_id = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+    $user_id = (int) $user->id;
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
     $specialisation = isset($_POST['specialisation']) ? (int)$_POST['specialisation'] : 0;
     $type = isset($_POST['type']) ? trim($_POST['type']) : '';
