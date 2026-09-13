@@ -1306,6 +1306,8 @@ dd #jform_about {
   float: none;
   width: 100%;
   max-width: 890px;
+  /* 2px right of the shared .jsn_list -4px shift so the left edge is not clipped. */
+  margin-left: -2px;
 }
 
 #easyprofile .lk-favorites-empty {
@@ -1326,6 +1328,9 @@ dd #jform_about {
 #easyprofile .lk-fav-comment-wrap {
   clear: both;
   padding: 10px 0 0;
+  /* Same used width as the card (.category.jsn_list .category__item uses margin-left: -4px). */
+  margin-left: -4px;
+  box-sizing: border-box;
 }
 
 #easyprofile .lk-fav-comment-label {
@@ -1338,8 +1343,8 @@ dd #jform_about {
 
 #easyprofile .lk-fav-comment {
   display: block;
-  width: 360px;
-  max-width: 360px;
+  width: 100%;
+  max-width: 100%;
   min-height: 42px;
   height: auto;
   overflow: hidden;
@@ -1356,13 +1361,6 @@ dd #jform_about {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
-}
-
-@media only screen and (max-width: 767px) {
-  #easyprofile .lk-fav-comment {
-    width: 72%;
-    max-width: 260px;
-  }
 }
 
 /* search module*/
