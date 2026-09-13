@@ -1279,6 +1279,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 		border-radius: 22px;
 		background: #fff;
 		color: #111;
+		text-align: center;
 		text-decoration: none;
 		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 		overflow: hidden;
@@ -1293,19 +1294,25 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	.contacts-hover-tab__label {
 		display: flex;
 		align-items: center;
+		justify-content: center;
+		width: 100%;
 		height: 44px;
 		font-family: "GothamPro-Bold", sans-serif;
 		font-size: 14px;
 		font-weight: 500;
 		letter-spacing: 0.3px;
+		text-align: center;
 	}
 	.contacts-hover-tab__panel {
+		display: block;
+		width: 100%;
 		max-height: 0;
 		opacity: 0;
 		overflow: hidden;
 		font-size: 13px;
 		line-height: 1.4;
 		color: #444;
+		text-align: center;
 		transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
 	}
 	.contacts-hover-tab:hover .contacts-hover-tab__panel,
