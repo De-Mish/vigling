@@ -1306,6 +1306,8 @@ dd #jform_about {
   float: none;
   width: 100%;
   max-width: 890px;
+  /* Whole Favorites block: 2px right of the specialist-list -4px shift. */
+  margin-left: -2px;
 }
 
 #easyprofile .lk-favorites-empty {
@@ -1321,19 +1323,20 @@ dd #jform_about {
 
 #easyprofile .lk-fav-item .category__item {
   margin-bottom: 0;
+  margin-left: -2px;
 }
 
 #easyprofile .lk-fav-comment-wrap {
   clear: both;
   padding: 10px 0 0;
-  /* Same used width as .category.jsn_list .category__item (auto + margin-left -4px). */
-  margin-left: -4px;
+  /* Keep the comment the same used width/left edge as the card. */
+  margin-left: -2px;
   box-sizing: border-box;
 }
 
 #easyprofile .lk-fav-comment-label {
   display: block;
-  margin: 0 0 6px 2px;
+  margin: 0 0 6px;
   font-size: 13px;
   font-weight: 700;
   color: #000;
