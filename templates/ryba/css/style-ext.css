@@ -1326,11 +1326,14 @@ dd #jform_about {
 #easyprofile .lk-fav-comment-wrap {
   clear: both;
   padding: 10px 0 0;
+  /* Same used width as .category.jsn_list .category__item (auto + margin-left -4px). */
+  margin-left: -4px;
+  box-sizing: border-box;
 }
 
 #easyprofile .lk-fav-comment-label {
   display: block;
-  margin: 0 0 6px;
+  margin: 0 0 6px 2px;
   font-size: 13px;
   font-weight: 700;
   color: #000;
@@ -1338,8 +1341,8 @@ dd #jform_about {
 
 #easyprofile .lk-fav-comment {
   display: block;
-  width: 360px;
-  max-width: 360px;
+  width: 100%;
+  max-width: 100%;
   min-height: 42px;
   height: auto;
   overflow: hidden;
@@ -1356,13 +1359,6 @@ dd #jform_about {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
-}
-
-@media only screen and (max-width: 767px) {
-  #easyprofile .lk-fav-comment {
-    width: 72%;
-    max-width: 260px;
-  }
 }
 
 /* search module*/
