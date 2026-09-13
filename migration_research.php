@@ -4,6 +4,14 @@
  * Запустить: php migration_research.php
  */
 
+if (PHP_SAPI !== 'cli') {
+	http_response_code(403);
+	header('Content-Type: text/plain; charset=UTF-8');
+	header('X-Robots-Tag: noindex, nofollow');
+	echo 'Forbidden';
+	exit;
+}
+
 // Подключение к Joomla
 define( '_JEXEC', 1 );
 define('JPATH_BASE', __DIR__ . '/public_html');
