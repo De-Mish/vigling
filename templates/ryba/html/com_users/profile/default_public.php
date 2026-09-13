@@ -2436,7 +2436,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 <script>
 (function () {
 	var bookmarkEl = document.getElementById('bookmarkme');
-	var quickAuthTitle = 'Авторизуйтесь, чтобы добавить мастера в избранное';
+	var quickAuthTitle = 'Авторизуйтесь, чтобы добавить профиль в избранное';
 	if (bookmarkEl) {
 		bookmarkEl.addEventListener('click', function (e) {
 			e.preventDefault();

@@ -436,11 +436,44 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 	echo $this->loadTemplate('public');
 	return;
 }
+
+$lkFavorites = [];
+if ($isOwn && $profileOwnerId > 0) {
+	try {
+		$favHelperFile = JPATH_PLUGINS . '/ajax/quickauth/src/Helper/FavoritesHelper.php';
+		if (is_file($favHelperFile) && !class_exists(\Viglin\Plugin\Ajax\Quickauth\Helper\FavoritesHelper::class, false)) {
+			require_once $favHelperFile;
+		}
+		if (class_exists(\Viglin\Plugin\Ajax\Quickauth\Helper\FavoritesHelper::class)) {
+			$favDb = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$lkFavorites = \Viglin\Plugin\Ajax\Quickauth\Helper\FavoritesHelper::listForUser($favDb, $profileOwnerId);
+		}
+	} catch (\Throwable $e) {
+		$lkFavorites = [];
+	}
+}
+$this->lkFavorites = $lkFavorites;
+$this->lkFavoritesAjax = Route::_('index.php?option=com_ajax&group=ajax&plugin=quickauth&format=json', false);
+$this->lkFavoritesTokenName = $pushnotifyTokenName;
+$this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 ?>
 <style>
 .lk-notify-btn { position: relative; }
 .lk-notify-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px; font-size: 11px; text-align: center; background: #c00; color: #fff; border-radius: 8px; }
 .lk-notify-item-read { color: #777; }
+/* Gap between the last profile field ("Аккаунт подтвержден") and the public
+   name matches reviews → about: 30px bottom + 40px top. */
+#easyprofile.view_profile > .jsn-p > form.jsn-p-fields {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+#easyprofile.view_profile .view_profile-public--embed {
+  margin-top: 70px;
+}
+#content.view-profile .view_profile-public--embed .masters__big-info,
+#content.view_profile .view_profile-public--embed .masters__big-info {
+  padding-top: 0;
+}
 </style>
 <div id="easyprofile" class="view_profile">
 	<div class="jsn-p">
@@ -554,21 +587,23 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 				<i class="z-dropdown-arrow"></i>
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
 					<?php if ($profileIsClient) : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 25%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 25%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 25%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 25%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
 					<?php else : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
-					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
-					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
-					<li data-index="4" data-link="profile-tab4" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="9" data-link="profile-tab9" class="z-tab z-last" style="width: 10%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
+					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
+					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
+					<li data-index="4" data-link="profile-tab4" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
+					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
 					<?php endif; ?>
 				</ul>
 				<div class="z-container">
@@ -829,6 +864,9 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 							</fieldset>
 						</div>
 					</div>
+					<?php if ($profileIsClient) : ?>
+						<?php echo $this->loadTemplate('favorites'); ?>
+					<?php endif; ?>
 					<?php if (!$profileIsClient) : ?>
 					<div class="z-content" data-index="8" data-name="profile-tab8" style="display: none;">
 						<div class="z-content-inner">
@@ -888,6 +926,9 @@ if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
 							</fieldset>
 						</div>
 					</div>
+					<?php if (!$profileIsClient) : ?>
+						<?php echo $this->loadTemplate('favorites'); ?>
+					<?php endif; ?>
 				</div>
 			</div>
 		</form>
