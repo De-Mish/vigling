@@ -16,6 +16,7 @@ use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
+use Viglin\Plugin\Ajax\Quickauth\Helper\FavoritesHelper;
 
 final class Quickauth extends CMSPlugin implements SubscriberInterface
 {
@@ -50,6 +51,10 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		}
 		if ($action === 'toggle_favorite') {
 			$this->toggleFavorite($event, $app, $input);
+			return;
+		}
+		if ($action === 'save_favorite_comment') {
+			$this->saveFavoriteComment($event, $app, $input);
 			return;
 		}
 		if ($action === 'resend_verification') {
@@ -373,6 +378,16 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		return (string) $value;
 	}
 
+	private function resolveFavoriteProfileId($input): int
+	{
+		$profileId = (int) $input->post->getInt('profile_id', $input->getInt('profile_id', 0));
+		if ($profileId <= 0) {
+			$profileId = (int) $input->post->getInt('master_id', $input->getInt('master_id', 0));
+		}
+
+		return $profileId;
+	}
+
 	private function toggleFavorite(AjaxEvent $event, $app, $input): void
 	{
 		$user = $app->getIdentity();
@@ -381,26 +396,37 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 
-		$masterId = (int) $input->post->getInt('master_id', $input->getInt('master_id', 0));
-		if ($masterId <= 0) {
-			$event->updateEventResult(['success' => false, 'message' => 'Не указан мастер']);
+		$profileId = $this->resolveFavoriteProfileId($input);
+		if ($profileId <= 0) {
+			$event->updateEventResult(['success' => false, 'message' => 'Не указан профиль']);
 			return;
 		}
-		if ($masterId === (int) $user->id) {
+		if ($profileId === (int) $user->id) {
 			$event->updateEventResult(['success' => false, 'message' => 'Нельзя добавить себя в избранное']);
 			return;
 		}
 
 		try {
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
-			$table = $db->replacePrefix('#__vigling_user_favorites');
-			$this->ensureFavoritesTable($db, $table);
+			FavoritesHelper::ensureTable($db);
+
+			$target = $db->getQuery(true)
+				->select($db->quoteName('id'))
+				->from($db->quoteName('#__users'))
+				->where($db->quoteName('id') . ' = ' . $profileId)
+				->where($db->quoteName('block') . ' = 0')
+				->setLimit(1);
+			$db->setQuery($target);
+			if (!(int) $db->loadResult()) {
+				$event->updateEventResult(['success' => false, 'message' => 'Профиль не найден']);
+				return;
+			}
 
 			$query = $db->getQuery(true)
 				->select('1')
 				->from($db->quoteName('#__vigling_user_favorites'))
 				->where($db->quoteName('user_id') . ' = ' . (int) $user->id)
-				->where($db->quoteName('master_id') . ' = ' . $masterId);
+				->where($db->quoteName('master_id') . ' = ' . $profileId);
 			$db->setQuery($query);
 			$exists = (bool) $db->loadResult();
 
@@ -408,7 +434,7 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 				$delete = $db->getQuery(true)
 					->delete($db->quoteName('#__vigling_user_favorites'))
 					->where($db->quoteName('user_id') . ' = ' . (int) $user->id)
-					->where($db->quoteName('master_id') . ' = ' . $masterId);
+					->where($db->quoteName('master_id') . ' = ' . $profileId);
 				$db->setQuery($delete)->execute();
 				$event->updateEventResult(['success' => true, 'active' => false, 'message' => 'Удалено из избранного']);
 				return;
@@ -416,8 +442,18 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 
 			$insert = $db->getQuery(true)
 				->insert($db->quoteName('#__vigling_user_favorites'))
-				->columns([$db->quoteName('user_id'), $db->quoteName('master_id'), $db->quoteName('created_at')])
-				->values((int) $user->id . ', ' . $masterId . ', ' . $db->quote((new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')));
+				->columns([
+					$db->quoteName('user_id'),
+					$db->quoteName('master_id'),
+					$db->quoteName('comment'),
+					$db->quoteName('created_at'),
+				])
+				->values(
+					(int) $user->id . ', '
+					. $profileId . ', '
+					. $db->quote('') . ', '
+					. $db->quote((new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'))
+				);
 			$db->setQuery($insert)->execute();
 			$event->updateEventResult(['success' => true, 'active' => true, 'message' => 'Добавлено в избранное']);
 		} catch (\Throwable $e) {
@@ -425,23 +461,46 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		}
 	}
 
-	private function ensureFavoritesTable(DatabaseInterface $db, string $tableName): void
+	private function saveFavoriteComment(AjaxEvent $event, $app, $input): void
 	{
-		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($tableName));
-		if ($db->loadResult()) {
+		$user = $app->getIdentity();
+		if (!$user || (int) $user->id <= 0) {
+			$event->updateEventResult(['success' => false, 'message' => 'Нужна авторизация']);
 			return;
 		}
 
-		$db->setQuery(
-			'CREATE TABLE IF NOT EXISTS ' . $db->quoteName('#__vigling_user_favorites') . " (
-				`id` int unsigned NOT NULL AUTO_INCREMENT,
-				`user_id` int NOT NULL,
-				`master_id` int NOT NULL,
-				`created_at` datetime NOT NULL,
-				PRIMARY KEY (`id`),
-				UNIQUE KEY `uniq_user_master` (`user_id`,`master_id`),
-				KEY `idx_master_id` (`master_id`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-		)->execute();
+		$profileId = $this->resolveFavoriteProfileId($input);
+		if ($profileId <= 0) {
+			$event->updateEventResult(['success' => false, 'message' => 'Не указан профиль']);
+			return;
+		}
+
+		$comment = FavoritesHelper::normalizeComment((string) $input->post->get('comment', $input->get('comment', '', 'RAW'), 'RAW'));
+
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			FavoritesHelper::ensureTable($db);
+
+			$existsQuery = $db->getQuery(true)
+				->select('1')
+				->from($db->quoteName('#__vigling_user_favorites'))
+				->where($db->quoteName('user_id') . ' = ' . (int) $user->id)
+				->where($db->quoteName('master_id') . ' = ' . $profileId);
+			$db->setQuery($existsQuery);
+			if (!(bool) $db->loadResult()) {
+				$event->updateEventResult(['success' => false, 'message' => 'Сначала добавьте профиль в избранное']);
+				return;
+			}
+
+			$update = $db->getQuery(true)
+				->update($db->quoteName('#__vigling_user_favorites'))
+				->set($db->quoteName('comment') . ' = ' . $db->quote($comment))
+				->where($db->quoteName('user_id') . ' = ' . (int) $user->id)
+				->where($db->quoteName('master_id') . ' = ' . $profileId);
+			$db->setQuery($update)->execute();
+			$event->updateEventResult(['success' => true, 'comment' => $comment]);
+		} catch (\Throwable $e) {
+			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения']);
+		}
 	}
 }

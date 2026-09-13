@@ -3308,13 +3308,23 @@ input[type=text] {
   width: 16px;
   height: 20px;
   background-image: url(../images/uzor-d.png);
+  background-repeat: no-repeat;
+  background-size: 16px 20px;
   display: block;
-  opacity: .5
+  cursor: pointer;
+  opacity: 1
 }
 
 #bookmarkme.active {
   background-image: url(../images/uzor.png);
-  opacity: 1
+  background-color: #f7cc53;
+  opacity: 1;
+  -webkit-mask-image: url(../images/uzor.png);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 16px 20px;
+  mask-image: url(../images/uzor.png);
+  mask-repeat: no-repeat;
+  mask-size: 16px 20px
 }
 
 .uzor-yellow1 {
