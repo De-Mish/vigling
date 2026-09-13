@@ -4605,3 +4605,126 @@ body#home .home-search-links a.homepage-link-btn:focus {
   margin-top: 8px;
   font-weight: 600;
 }
+
+/* Desktop catalog «Записаться»: 35% taller oval, same width/position. */
+@media (min-width: 769px) {
+  .category a.btn__time-zapis {
+    box-sizing: border-box !important;
+    height: calc((13px * 1.4 + 12px) * 1.35) !important;
+    line-height: calc((13px * 1.4 + 12px) * 1.35) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-radius: calc((13px * 1.4 + 12px) * 1.35 / 2) !important;
+  }
+}
+
+/* Profile extras sit under the street address, before work days. */
+.master__about-address:has(+ .master__about-address-extra) {
+  margin-bottom: 8px;
+}
+.master__about-address-extra {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  color: #000;
+  margin-bottom: 25px;
+}
+@media (max-width: 767px) {
+  .master__about-address:has(+ .master__about-address-extra) {
+    margin-bottom: 4px;
+  }
+  .master__about-address-extra {
+    margin-bottom: 7px;
+  }
+}
+
+/* System notices: keep markup, refresh the chrome. */
+#system-message-container #system-message > .alert,
+#system-message-container > .alert {
+  position: relative;
+  padding: 16px 48px 16px 18px;
+  margin: 0 0 14px;
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(59, 54, 54, 0.1);
+  text-shadow: none;
+  background: #fff8df;
+  color: #3b3636;
+}
+#system-message-container .alert h4.alert-heading,
+#system-message-container .alert-heading {
+  margin: 0 0 6px;
+  font-family: "GothamPro-Bold", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3b3636;
+  line-height: 1.3;
+}
+#system-message-container .alert .alert-message,
+#system-message-container .alert-message {
+  font-size: 15px;
+  line-height: 1.45;
+  color: #3b3636;
+}
+#system-message-container .alert .close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(59, 54, 54, 0.08);
+  color: #3b3636;
+  font-size: 18px;
+  line-height: 26px;
+  text-align: center;
+  text-decoration: none;
+  opacity: 0.75;
+}
+#system-message-container .alert .close:hover,
+#system-message-container .alert .close:focus {
+  opacity: 1;
+  background: rgba(59, 54, 54, 0.14);
+  color: #3b3636;
+}
+#system-message-container .alert-success,
+#system-message-container .alert-success h4.alert-heading {
+  background-color: #fff4c7;
+  color: #3b3636;
+}
+#system-message-container .alert-info,
+#system-message-container .alert-info h4.alert-heading {
+  background-color: #eef6ff;
+  color: #3b3636;
+}
+#system-message-container .alert-warning,
+#system-message-container .alert-warning h4.alert-heading {
+  background-color: #fff1cc;
+  color: #3b3636;
+}
+#system-message-container .alert-error,
+#system-message-container .alert-danger,
+#system-message-container .alert-error h4.alert-heading,
+#system-message-container .alert-danger h4.alert-heading {
+  background-color: #fdecea;
+  color: #3b3636;
+}
+#system-message-container joomla-alert {
+  border: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(59, 54, 54, 0.1);
+  background: #fff8df;
+  color: #3b3636;
+}
+#system-message-container joomla-alert .alert-heading {
+  background: #f9ce54;
+  color: #3b3636;
+  font-family: "GothamPro-Bold", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

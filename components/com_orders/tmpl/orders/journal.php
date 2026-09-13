@@ -583,6 +583,29 @@ $kindClass = static function (string $kind): string {
 		color: #444;
 	}
 	.com_orders.orders-journal .journal-submit-wrap { margin-left: auto; }
+	.com_orders.orders-journal .journal-submit,
+	.com_orders.orders-journal #journal-submit,
+	.com_orders.orders-journal #journal-submit.btn-primary {
+		background: #f9ce54 !important;
+		background-color: #f9ce54 !important;
+		color: #3b3636 !important;
+		border-color: #f9ce54 !important;
+	}
+	.com_orders.orders-journal .journal-submit:hover,
+	.com_orders.orders-journal .journal-submit:focus,
+	.com_orders.orders-journal .journal-submit:active,
+	.com_orders.orders-journal .journal-submit:disabled,
+	.com_orders.orders-journal .journal-submit.disabled,
+	.com_orders.orders-journal #journal-submit:hover,
+	.com_orders.orders-journal #journal-submit:focus,
+	.com_orders.orders-journal #journal-submit:active,
+	.com_orders.orders-journal #journal-submit:disabled,
+	.com_orders.orders-journal #journal-submit.disabled {
+		background: #f9ce54 !important;
+		background-color: #f9ce54 !important;
+		color: #3b3636 !important;
+		border-color: #f9ce54 !important;
+	}
 	.com_orders.orders-journal #journal-calendar { width: 100% !important; max-width: 800px; margin: 0 auto !important; }
 	.com_orders.orders-journal #journal-calendar.preload { visibility: hidden; }
 	.com_orders.orders-journal .error-msg { display: none; margin-top: 12px; color: #a94442; }
