@@ -37,14 +37,19 @@ class OrdersModel extends ListModel
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 		if ($layout === 'journal') {
 			$fromUtc = trim((string) $this->getState('journal.from_utc', ''));
+			$toUtc = trim((string) $this->getState('journal.to_utc', ''));
 			if ($fromUtc === '') {
 				$fromUtc = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('-21 days')->format('Y-m-d H:i:s');
+			}
+			if ($toUtc === '') {
+				$toUtc = (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('+22 days')->format('Y-m-d H:i:s');
 			}
 			$query = $db->getQuery(true)
 				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')
 				->from($db->quoteName('#__vigling_bookings', 'o'))
 				->where($db->quoteName('o.master_id') . ' = ' . (int) $user->id)
 				->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc))
+				->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc))
 				->order($db->quoteName('o.time') . ' ASC');
 			if (isset($tableColumns['comment'])) {
 				$query->select($db->quoteName('o.comment'));

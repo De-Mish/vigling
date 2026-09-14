@@ -1013,6 +1013,92 @@ class OrdersController extends BaseController
 		$this->setRedirectAndExit();
 	}
 
+	public function rescheduleSlots()
+	{
+		$app = Factory::getApplication();
+		if (!Session::checkToken('request')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверный токен']);
+			return;
+		}
+		$user = $app->getIdentity();
+		if (!$user->id) {
+			$this->jsonResponse(['success' => false, 'message' => 'Нужна авторизация']);
+			return;
+		}
+		$groups = $user->getAuthorisedGroups();
+		if (!in_array(3, $groups, true) && !in_array(8, $groups, true)) {
+			$this->jsonResponse(['success' => false, 'message' => 'Доступ только для мастеров']);
+			return;
+		}
+
+		$orderId = (int) $this->input->getInt('id', 0);
+		$courseSlotId = (int) $this->input->getInt('course_slot_id', 0);
+		$searchSlotId = (int) $this->input->getInt('search_slot_id', 0);
+		$durationMin = (int) $this->input->getInt('duration', 60);
+		if ($durationMin <= 0) {
+			$durationMin = 60;
+		}
+		$durationMin = max(15, min(480, $durationMin));
+		if ($orderId <= 0 && $courseSlotId <= 0 && $searchSlotId <= 0) {
+			$this->jsonResponse(['success' => false, 'message' => 'Укажите запись']);
+			return;
+		}
+
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$masterId = (int) $user->id;
+		$excludeOrderId = 0;
+		$excludeCourseSlotId = 0;
+		$excludeSearchSlotId = 0;
+
+		if ($orderId > 0) {
+			$table = new OrderTable($db, Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class));
+			if (!$table->load($orderId) || (int) $table->master_id !== $masterId) {
+				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этой записи']);
+				return;
+			}
+			$excludeOrderId = $orderId;
+		} elseif ($courseSlotId > 0) {
+			$courseContext = self::loadCourseSlotContext($db, $courseSlotId);
+			if ($courseContext === null || (int) $courseContext['master_id'] !== $masterId) {
+				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этого курса']);
+				return;
+			}
+			$excludeCourseSlotId = $courseSlotId;
+		} elseif ($searchSlotId > 0) {
+			$searchContext = self::loadSearchSlotContext($db, $searchSlotId);
+			if ($searchContext === null || (int) $searchContext['master_id'] !== $masterId) {
+				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этого поиска']);
+				return;
+			}
+			$excludeSearchSlotId = $searchSlotId;
+		}
+
+		$helper = JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
+		if (is_file($helper)) {
+			require_once $helper;
+		}
+		if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Не удалось загрузить свободное время']);
+			return;
+		}
+
+		$payload = viglingOrdersBuildRescheduleSlots($db, $masterId, $durationMin, $excludeOrderId, $excludeCourseSlotId, 45, $excludeSearchSlotId);
+		$this->jsonResponse([
+			'success' => true,
+			'days' => $payload['days'] ?? [],
+			'timezone' => $payload['timezone'] ?? 'UTC',
+		]);
+	}
+
+	private function jsonResponse(array $data): void
+	{
+		$app = Factory::getApplication();
+		$app->setHeader('Content-Type', 'application/json; charset=utf-8');
+		$app->sendHeaders();
+		echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		$app->close();
+	}
+
 	private function setRedirectAndExit()
 	{
 		$return = $this->input->get('return', '', 'base64');

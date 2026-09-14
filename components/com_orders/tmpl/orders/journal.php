@@ -24,6 +24,7 @@ $deleteAction = Route::_('index.php?option=com_orders&task=orders.journalDelete'
 $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.rescheduleByMaster');
 $rescheduleCourseAction = Route::_('index.php?option=com_orders&task=orders.rescheduleCourseSlotByMaster');
 $rescheduleSearchAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSearchSlotByMaster');
+$rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSlots');
 
 $utc = new \DateTimeZone('UTC');
 try {
@@ -75,7 +76,7 @@ $parseJournalLabel = static function (string $label): array {
 	return [$label, $comment];
 };
 
-$renderOrderActions = static function ($item, bool $isPast, bool $completed, string $token, string $returnEncoded, string $timeIso) use ($db): string {
+$renderOrderActions = static function ($item, bool $isPast, bool $completed, string $token, string $returnEncoded, string $timeIso): string {
 	$durationMin = 60;
 	$isFixedCourse = trim((string) ($item->booking_kind ?? 'service')) === 'course' && (int) ($item->course_slot_id ?? 0) > 0;
 	$isFixedSearch = trim((string) ($item->booking_kind ?? 'service')) === 'search' && (int) ($item->search_slot_id ?? 0) > 0;
@@ -87,8 +88,6 @@ $renderOrderActions = static function ($item, bool $isPast, bool $completed, str
 			$durationMin = max(15, min(480, $diff));
 		}
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, (int) $item->id, 0, 45);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	ob_start();
 	?>
 	<?php if ($isPast) : ?>
@@ -116,12 +115,11 @@ $renderOrderActions = static function ($item, bool $isPast, bool $completed, str
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('<?php echo ($isFixedCourse || $isFixedSearch) ? 'Отменить участие этого клиента? Ему придёт уведомление.' : 'Отменить запись? Клиенту придёт уведомление.'; ?>');">Отменить</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-slots-<?php echo (int) $item->id; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
 
-$renderCourseSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleCourseAction) use ($db): string {
+$renderCourseSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleCourseAction): string {
 	$courseSlotId = (int) ($item->course_slot_id ?? 0);
 	$durationMin = (int) ($item->course_slot_end_utc && $item->course_slot_start_utc
 		? max(15, min(480, (int) floor((strtotime((string) $item->course_slot_end_utc) - strtotime((string) $item->course_slot_start_utc)) / 60)))
@@ -129,8 +127,6 @@ $renderCourseSlotActions = static function ($item, bool $isPast, string $token, 
 	if ($durationMin <= 0) {
 		$durationMin = 60;
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, $courseSlotId, 45);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	$timeIso = '';
 	if (!empty($item->time)) {
 		try {
@@ -150,12 +146,11 @@ $renderCourseSlotActions = static function ($item, bool $isPast, string $token, 
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить курс для всех участников? Всем придёт уведомление.');">Отменить</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-course-slot-<?php echo $courseSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
 
-$renderSearchSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleSearchAction) use ($db): string {
+$renderSearchSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleSearchAction): string {
 	$searchSlotId = (int) ($item->search_slot_id ?? 0);
 	$durationMin = (int) ($item->search_slot_end_utc && $item->search_slot_start_utc
 		? max(15, min(480, (int) floor((strtotime((string) $item->search_slot_end_utc) - strtotime((string) $item->search_slot_start_utc)) / 60)))
@@ -163,8 +158,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	if ($durationMin <= 0) {
 		$durationMin = 60;
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, 0, 45, $searchSlotId);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	$timeIso = '';
 	if (!empty($item->time)) {
 		try {
@@ -184,7 +177,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить поиск для всех участников? Всем придёт уведомление.');">Отменить</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-search-slot-<?php echo $searchSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
@@ -1136,6 +1128,9 @@ $kindClass = static function (string $kind): string {
 	var rError = document.getElementById('reschedule-modal-error');
 	var rSubmit = document.getElementById('reschedule-modal-submit');
 	var defaultAction = rForm ? (rForm.getAttribute('action') || '') : '';
+	var slotsUrl = <?php echo json_encode($rescheduleSlotsAction); ?>;
+	var slotsToken = <?php echo json_encode($token); ?>;
+	var slotsRequestId = 0;
 	function destroySlider(){
 		if (!window.jQuery || !rCal) return;
 		var jqCal = jQuery(rCal);
@@ -1147,9 +1142,12 @@ $kindClass = static function (string $kind): string {
 		if (!window.jQuery || !rCal) return;
 		var jqCal = jQuery(rCal);
 		setTimeout(function(){
+			if (!rCal.querySelector('.calendar__master-item')) {
+				return;
+			}
 			if (jqCal.hasClass('slick-initialized')) {
 				jqCal.slick('setPosition');
-			} else if (rCal.querySelector('.calendar__master-item')) {
+			} else {
 				jqCal.slick({
 					infinite: false,
 					slidesToShow: 5,
@@ -1166,13 +1164,38 @@ $kindClass = static function (string $kind): string {
 			jqCal.removeClass('preload');
 		}, 0);
 	}
-	function readJson(id){
-		var node = document.getElementById(id);
-		if (!node) return [];
-		try {
-			var parsed = JSON.parse(node.textContent || '[]');
-			return Array.isArray(parsed) ? parsed : [];
-		} catch (e) { return []; }
+	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
+		if (!rCal) return;
+		rCal.classList.add('preload');
+		rCal.innerHTML = '';
+		var requestId = ++slotsRequestId;
+		if (rError) { rError.style.display = 'none'; rError.textContent = ''; }
+		var fd = new FormData();
+		fd.append(slotsToken, '1');
+		fd.append('id', String(orderId || 0));
+		fd.append('course_slot_id', String(courseSlotId || 0));
+		fd.append('search_slot_id', String(searchSlotId || 0));
+		fd.append('duration', String(duration || 60));
+		fetch(slotsUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(response){ return response.json(); })
+			.then(function(data){
+				if (requestId !== slotsRequestId) return;
+				var days = (data && data.success && Array.isArray(data.days)) ? data.days : [];
+				renderCalendar(days, currentUtc);
+				initRescheduleSlider();
+				if ((!data || !data.success) && rError) {
+					rError.style.display = 'block';
+					rError.textContent = (data && data.message) ? data.message : 'Не удалось загрузить свободное время';
+				}
+			})
+			.catch(function(){
+				if (requestId !== slotsRequestId) return;
+				renderCalendar([], currentUtc);
+				if (rError) {
+					rError.style.display = 'block';
+					rError.textContent = 'Не удалось загрузить свободное время';
+				}
+			});
 	}
 	function renderCalendar(days, currentUtc){
 		destroySlider();
@@ -1231,16 +1254,15 @@ $kindClass = static function (string $kind): string {
 			timeUtcInp.value = '';
 			rForm.setAttribute('action', (courseSlotId > 0 || searchSlotId > 0) ? (this.getAttribute('data-reschedule-action') || defaultAction) : defaultAction);
 			rCal.classList.add('preload');
-			renderCalendar(
-				searchSlotId > 0 ? readJson('reschedule-search-slot-' + searchSlotId) : (courseSlotId > 0 ? readJson('reschedule-course-slot-' + courseSlotId) : readJson('reschedule-slots-' + orderId)),
-				currentUtc
-			);
+			if (rCal) rCal.innerHTML = '';
 			jQuery(modal).modal('show');
+			loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
 		});
 	});
 	if (window.jQuery && modal) {
 		jQuery(modal).on('shown.bs.modal', initRescheduleSlider);
 		jQuery(modal).on('hidden.bs.modal', function () {
+			slotsRequestId++;
 			timeUtcInp.value = '';
 			idInp.value = '0';
 			courseSlotInp.value = '0';
