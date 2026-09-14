@@ -962,12 +962,23 @@ $vgImageUrl = static function (string $url, bool $thumb = true): string {
 	}
 	return $url;
 };
-$avatarPreviewUrl = $avatarUrl !== '' ? $vgImageUrl($avatarUrl, true) : $defaultImg;
+$avatarPreviewUrl = $avatarUrl !== '' ? $vgImageUrl($avatarUrl, true) : '';
+if ($avatarPreviewUrl === '') {
+	$avatarPreviewUrl = $defaultImg;
+}
 
 $portfolioRaw = $fieldValue($jcfields, 'portfolio_field');
 $portfolioImages = $parseImageList($portfolioRaw, $resolveProfileImage);
+$portfolioImages = array_values(array_filter(array_map(static function (string $url) use ($vgImageUrl): string {
+	return $vgImageUrl($url, true);
+}, $portfolioImages), static function (string $url): bool {
+	return $url !== '';
+}));
 if ($portfolioImages === [] && $avatarUrl !== '') {
-	$portfolioImages[] = $avatarUrl;
+	$avatarExisting = $vgImageUrl($avatarUrl, true);
+	if ($avatarExisting !== '') {
+		$portfolioImages[] = $avatarExisting;
+	}
 }
 if ($portfolioImages === []) {
 	$portfolioImages[] = $defaultImg;

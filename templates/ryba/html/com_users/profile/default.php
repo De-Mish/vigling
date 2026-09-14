@@ -143,6 +143,15 @@ if ($avatarRaw !== '') {
 		$avatarUrl = preg_replace('#^/?(images/profiler/?)?#i', '', str_replace('\\', '/', $avatarUrl));
 		$avatarUrl = rtrim(Uri::root(), '/') . '/images/profiler/' . $avatarUrl;
 	}
+	if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+		$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+		if (is_file($vgImageHelperFile)) {
+			require_once $vgImageHelperFile;
+		}
+	}
+	if ($avatarUrl !== '' && class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+		$avatarUrl = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarUrl, true);
+	}
 }
 
 // Получить услуги из #__content (статьи мастера по категориям из field_id=29)
@@ -345,6 +354,19 @@ if ($portfolioField && isset($portfolioField->rawvalue) && is_scalar($portfolioF
 			$portfolioImages[] = $url;
 		}
 	}
+}
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+	if (is_file($vgImageHelperFile)) {
+		require_once $vgImageHelperFile;
+	}
+}
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$portfolioImages = array_values(array_filter(array_map(static function (string $url): string {
+		return \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($url, true);
+	}, $portfolioImages), static function (string $url): bool {
+		return $url !== '';
+	}));
 }
 $portfolioImages = array_values(array_unique($portfolioImages));
 

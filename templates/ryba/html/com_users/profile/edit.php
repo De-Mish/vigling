@@ -95,6 +95,15 @@ if ($profileImage !== '' && strpos($profileImage, 'http') !== 0) {
 	$clean = preg_replace('#^/?(images/profiler/?)?#i', '', str_replace('\\', '/', $profileImage));
 	$profileImage = rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/images/profiler/' . $clean;
 }
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+	if (is_file($vgImageHelperFile)) {
+		require_once $vgImageHelperFile;
+	}
+}
+if ($profileImage !== '' && class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$profileImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($profileImage, true);
+}
 
 $defaultImg = \Joomla\CMS\Uri\Uri::root() . 'templates/ryba/images/master.png';
 if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
