@@ -144,6 +144,49 @@ final class UserProfileExtraFieldsHelper
 		return implode(', ', $parts);
 	}
 
+	/**
+	 * @param list<string> $names
+	 * @return array<string,string>
+	 */
+	public static function loadFieldValues(int $userId, array $names): array
+	{
+		$values = [];
+		if ($userId <= 0 || $names === []) {
+			return $values;
+		}
+		$clean = [];
+		foreach ($names as $name) {
+			$name = trim((string) $name);
+			if ($name !== '' && preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+				$clean[] = $name;
+			}
+		}
+		if ($clean === []) {
+			return $values;
+		}
+
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$query = $db->getQuery(true)
+				->select([$db->quoteName('f.name'), $db->quoteName('fv.value')])
+				->from($db->quoteName('#__fields_values', 'fv'))
+				->innerJoin($db->quoteName('#__fields', 'f') . ' ON ' . $db->quoteName('f.id') . ' = ' . $db->quoteName('fv.field_id'))
+				->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+				->where($db->quoteName('f.name') . ' IN (' . implode(',', array_map([$db, 'quote'], $clean)) . ')')
+				->where($db->quoteName('fv.item_id') . ' = ' . (int) $userId);
+			$db->setQuery($query);
+			foreach ($db->loadObjectList() ?: [] as $row) {
+				if (!isset($row->name) || !is_scalar($row->value)) {
+					continue;
+				}
+				$values[(string) $row->name] = trim((string) $row->value);
+			}
+		} catch (\Throwable $e) {
+		}
+
+		return $values;
+	}
+
 	public static function isChildrenYes(string $raw): bool
 	{
 		$raw = strtolower(trim($raw));

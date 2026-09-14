@@ -120,6 +120,54 @@ final class ImageUploadHelper
         }
     }
 
+    /**
+     * Newest stored file in an allowed directory for a prefix such as avatar_123.
+     * Thumbs (*_t.jpg) are skipped.
+     */
+    public static function latestRelative(string $relativeDir, string $filePrefix): string
+    {
+        $relativeDir = self::normalizeDir($relativeDir);
+        if ($relativeDir === '' || !self::isAllowedDir($relativeDir)) {
+            return '';
+        }
+        $filePrefix = trim($filePrefix);
+        if ($filePrefix === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $filePrefix)) {
+            return '';
+        }
+        $absDir = self::root() . '/' . $relativeDir;
+        if (!is_dir($absDir)) {
+            return '';
+        }
+        $best = '';
+        $bestMtime = -1;
+        foreach (glob($absDir . '/' . $filePrefix . '_*.jpg') ?: [] as $abs) {
+            $base = basename((string) $abs);
+            if (preg_match('/_t\.jpg$/i', $base)) {
+                continue;
+            }
+            $mtime = (int) @filemtime($abs);
+            if ($mtime >= $bestMtime) {
+                $bestMtime = $mtime;
+                $best = $relativeDir . '/' . $base;
+            }
+        }
+
+        return $best;
+    }
+
+    public static function avatarWebUrl(string $stored, int $userId, bool $preferThumb = true): string
+    {
+        $url = self::webUrl($stored, $preferThumb);
+        if ($url !== '') {
+            return $url;
+        }
+        if ($userId <= 0) {
+            return '';
+        }
+
+        return self::webUrl(self::latestRelative('images/profiler', 'avatar_' . $userId), $preferThumb);
+    }
+
     public static function webUrl(string $urlOrPath, bool $preferThumb = false): string
     {
         $raw = trim($urlOrPath);

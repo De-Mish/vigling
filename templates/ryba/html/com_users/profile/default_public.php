@@ -148,6 +148,29 @@ $city = $city !== '' ? $city : $profileValue($profileData, 'city');
 $area = $area !== '' ? $area : $profileValue($profileData, 'region');
 $street = $street !== '' ? $street : $profileValue($profileData, 'address1');
 $house = $house !== '' ? $house : $profileValue($profileData, 'address2');
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+	if (is_file($vgExtraHelperFile)) {
+		require_once $vgExtraHelperFile;
+	}
+}
+if ($profileOwnerId > 0 && class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgStoredAddr = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues($profileOwnerId, [
+		'area', 'street', 'house_number', 'sity',
+	]);
+	if ($city === '' && isset($vgStoredAddr['sity'])) {
+		$city = trim((string) $vgStoredAddr['sity']);
+	}
+	if ($area === '' && isset($vgStoredAddr['area'])) {
+		$area = trim((string) $vgStoredAddr['area']);
+	}
+	if ($street === '' && isset($vgStoredAddr['street'])) {
+		$street = trim((string) $vgStoredAddr['street']);
+	}
+	if ($house === '' && isset($vgStoredAddr['house_number'])) {
+		$house = trim((string) $vgStoredAddr['house_number']);
+	}
+}
 $phone = $phone !== '' ? $phone : $profileValue($profileData, 'phone');
 $vk = $vk !== '' ? $vk : $profileValue($profileData, 'website');
 $socialLinks = [];
@@ -197,20 +220,50 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelpe
 $paymentDisplay = '';
 $childrenYes = false;
 $addrExtraDisplay = '';
+$homeRaw = '';
 if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
 	$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'doorway'));
 	$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'floor'));
 	$apartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($fieldValue($jcfields, 'apartment'));
+	$homeRaw = $fieldValue($jcfields, 'home');
+	$paymentRaw = $fieldValue($jcfields, 'payment_method');
+	$childrenRaw = $fieldValue($jcfields, 'suitable_for_children');
+	if ($profileOwnerId > 0) {
+		$vgStoredExtra = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues($profileOwnerId, [
+			'doorway', 'floor', 'apartment', 'home', 'payment_method', 'suitable_for_children',
+		]);
+		if ($doorway === '' && isset($vgStoredExtra['doorway'])) {
+			$doorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStoredExtra['doorway']);
+		}
+		if ($floor === '' && isset($vgStoredExtra['floor'])) {
+			$floor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStoredExtra['floor']);
+		}
+		if ($apartment === '' && isset($vgStoredExtra['apartment'])) {
+			$apartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStoredExtra['apartment']);
+		}
+		if ($homeRaw === '' && isset($vgStoredExtra['home'])) {
+			$homeRaw = $vgStoredExtra['home'];
+		}
+		if ($paymentRaw === '' && isset($vgStoredExtra['payment_method'])) {
+			$paymentRaw = $vgStoredExtra['payment_method'];
+		}
+		if ($childrenRaw === '' && isset($vgStoredExtra['suitable_for_children'])) {
+			$childrenRaw = $vgStoredExtra['suitable_for_children'];
+		}
+	}
 	$extraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::extraAddressLine($doorway, $floor, $apartment);
 	$canSeeExtraAddress = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::clientHasBookingWithMaster((int) ($currentUser->id ?? 0), $profileOwnerId);
 	if ($canSeeExtraAddress && $extraAddress !== '') {
 		$addrExtraDisplay = $extraAddress;
 	}
-	$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($fieldValue($jcfields, 'payment_method'));
-	$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($fieldValue($jcfields, 'suitable_for_children'));
+	$paymentDisplay = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::paymentDisplay($paymentRaw);
+	$childrenYes = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($childrenRaw);
 }
 
 $homeText = $fieldValue($jcfields, 'home');
+if ($homeText === '' && $homeRaw !== '') {
+	$homeText = $homeRaw;
+}
 $homeParts = [];
 if ($homeText !== '') {
 	$decoded = json_decode($homeText, true);
@@ -962,7 +1015,9 @@ $vgImageUrl = static function (string $url, bool $thumb = true): string {
 	}
 	return $url;
 };
-$avatarPreviewUrl = $avatarUrl !== '' ? $vgImageUrl($avatarUrl, true) : '';
+$avatarPreviewUrl = class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($avatarUrl, $profileOwnerId, true)
+	: ($avatarUrl !== '' ? $vgImageUrl($avatarUrl, true) : '');
 if ($avatarPreviewUrl === '') {
 	$avatarPreviewUrl = $defaultImg;
 }

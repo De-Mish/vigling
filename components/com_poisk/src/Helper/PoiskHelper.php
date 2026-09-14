@@ -269,7 +269,43 @@ class PoiskHelper
 			}
 			$byUser[$r->item_id][$fieldIdsByName[$fieldId]] = $r->value;
 		}
+		if (\in_array('avatar', $fieldNames, true)) {
+			self::fillMissingAvatarsFromDisk($byUser, $ids);
+		}
+
 		return $byUser;
+	}
+
+	/**
+	 * @param array<int|string,array<string,mixed>> $byUser
+	 * @param list<int> $ids
+	 */
+	public static function fillMissingAvatarsFromDisk(array &$byUser, array $ids): void
+	{
+		$helperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false) && is_file($helperFile)) {
+			require_once $helperFile;
+		}
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+			return;
+		}
+		$helper = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class;
+		foreach ($ids as $userId) {
+			$userId = (int) $userId;
+			if ($userId <= 0) {
+				continue;
+			}
+			$stored = isset($byUser[$userId]['avatar']) && is_scalar($byUser[$userId]['avatar'])
+				? trim((string) $byUser[$userId]['avatar'])
+				: '';
+			if ($stored !== '' && $helper::webUrl($stored) !== '') {
+				continue;
+			}
+			$found = $helper::latestRelative('images/profiler', 'avatar_' . $userId);
+			if ($found !== '') {
+				$byUser[$userId]['avatar'] = $found;
+			}
+		}
 	}
 
 	public static function getCities(): array

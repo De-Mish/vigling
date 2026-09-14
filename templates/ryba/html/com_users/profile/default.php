@@ -143,15 +143,15 @@ if ($avatarRaw !== '') {
 		$avatarUrl = preg_replace('#^/?(images/profiler/?)?#i', '', str_replace('\\', '/', $avatarUrl));
 		$avatarUrl = rtrim(Uri::root(), '/') . '/images/profiler/' . $avatarUrl;
 	}
-	if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
-		$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
-		if (is_file($vgImageHelperFile)) {
-			require_once $vgImageHelperFile;
-		}
+}
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+	if (is_file($vgImageHelperFile)) {
+		require_once $vgImageHelperFile;
 	}
-	if ($avatarUrl !== '' && class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
-		$avatarUrl = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarUrl, true);
-	}
+}
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$avatarUrl = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($avatarUrl, $profileOwnerId, true);
 }
 
 // Получить услуги из #__content (статьи мастера по категориям из field_id=29)

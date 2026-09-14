@@ -2,6 +2,7 @@
 
 namespace Joomla\Plugin\User\Vigling\Extension;
 
+use Joomla\CMS\Event\Model\NormaliseRequestDataEvent;
 use Joomla\CMS\Event\Model\PrepareFormEvent;
 use Joomla\CMS\Event\User\AfterSaveEvent;
 use Joomla\CMS\Event\User\BeforeSaveEvent;
@@ -27,10 +28,44 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
     private const ENCODED_FIELDS = ['prices', 'stock_prices', 'work_day', 'vyberite_spetsialnos'];
     private const VIGLING_MARKER = "--- Расшифровано плагином Vigling ---\n";
 
+    /**
+     * Custom fields the frontend profile template posts under other names
+     * (or as files). Joomla Fields would otherwise set them to false and delete
+     * stored values on every save.
+     *
+     * @var list<string>
+     */
+    private const FRONTEND_MANAGED_COM_FIELDS = [
+        'avatar',
+        'portfolio_field',
+        'area',
+        'street',
+        'house_number',
+        'sity',
+        'firstname',
+        'lastname',
+        'secondname',
+        'telefon',
+        'o_sebe',
+        'link',
+        'is_master',
+        'vyberite_spetsialnos',
+        'prices',
+        'stock_prices',
+        'doorway',
+        'floor',
+        'apartment',
+        'home',
+        'payment_method',
+        'suitable_for_children',
+    ];
+
     public static function getSubscribedEvents(): array
     {
         return [
-            'onContentPrepareForm' => ['onContentPrepareForm', 100],
+            // After plg_system_fields adds com_fields to the frontend profile form.
+            'onContentPrepareForm' => ['onContentPrepareForm', -50],
+            'onContentNormaliseRequestData' => ['onContentNormaliseRequestData', -50],
             'onUserBeforeSave' => ['onUserBeforeSave', 50],
             // Run after Joomla's custom-fields save path, then persist schedule from the raw profile POST.
             'onUserAfterSave' => ['onUserAfterSave', -100],
@@ -87,7 +122,9 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $this->saveScheduleFieldsFromPost($userId);
         $this->saveSocialLinkFieldsFromPost($userId);
         $this->saveProfileCityFromPost($userId);
+        $this->saveProfileAddressFromPost($userId);
         UserProfileExtraFieldsHelper::saveFromPost($userId);
+        $this->restoreOrphanedAvatar($userId);
         $this->validateVkProfileWebsite($userId);
 
         $jform = $this->getPostedJform();
@@ -369,6 +406,160 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         } catch (\Throwable $e) {
             Log::add(
                 'Vigling profile city save failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveProfileAddressFromPost(int $userId): void
+    {
+        $profile = isset($_POST['jform']['profile']) && \is_array($_POST['jform']['profile'])
+            ? $_POST['jform']['profile']
+            : [];
+        $comFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+
+        if (!\array_key_exists('region', $profile)
+            && !\array_key_exists('address1', $profile)
+            && !\array_key_exists('address2', $profile)
+            && !\array_key_exists('area', $comFields)
+            && !\array_key_exists('street', $comFields)
+            && !\array_key_exists('house_number', $comFields)
+        ) {
+            return;
+        }
+
+        $toSave = [];
+        $map = [
+            'area' => ['profile' => 'region', 'field' => 'area'],
+            'street' => ['profile' => 'address1', 'field' => 'street'],
+            'house_number' => ['profile' => 'address2', 'field' => 'house_number'],
+        ];
+        foreach ($map as $cfName => $keys) {
+            $value = '';
+            if (\array_key_exists($keys['profile'], $profile) && \is_scalar($profile[$keys['profile']])) {
+                $value = trim((string) $profile[$keys['profile']]);
+            } elseif (\array_key_exists($keys['field'], $comFields) && \is_scalar($comFields[$keys['field']])) {
+                $value = trim((string) $comFields[$keys['field']]);
+            } else {
+                continue;
+            }
+            $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+            $value = trim($value, ' ,');
+            if (mb_strlen($value) > 120) {
+                $value = mb_substr($value, 0, 120);
+            }
+            $toSave[$cfName] = $value;
+        }
+
+        if ($toSave === []) {
+            return;
+        }
+
+        $this->writeCustomFieldValues($userId, $toSave, 'Vigling profile address save failed for user_id=');
+    }
+
+    private function restoreOrphanedAvatar(int $userId): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+        $this->ensureImageHelper();
+        if (!class_exists(ImageUploadHelper::class, false)) {
+            return;
+        }
+        $current = $this->readCustomFieldValue($userId, 'avatar');
+        if ($current !== '' && ImageUploadHelper::webUrl($current) !== '') {
+            return;
+        }
+        $found = ImageUploadHelper::latestRelative('images/profiler', 'avatar_' . $userId);
+        if ($found === '') {
+            return;
+        }
+
+        $this->writeCustomFieldValues($userId, ['avatar' => $found], 'Vigling avatar restore failed for user_id=');
+    }
+
+    private function ensureImageHelper(): void
+    {
+        if (class_exists(ImageUploadHelper::class, false)) {
+            return;
+        }
+        $file = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    private function readCustomFieldValue(int $userId, string $fieldName): string
+    {
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->select($db->quoteName('fv.value'))
+                    ->from($db->quoteName('#__fields_values', 'fv'))
+                    ->innerJoin($db->quoteName('#__fields', 'f') . ' ON ' . $db->quoteName('f.id') . ' = ' . $db->quoteName('fv.field_id'))
+                    ->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+                    ->where($db->quoteName('f.name') . ' = ' . $db->quote($fieldName))
+                    ->where($db->quoteName('fv.item_id') . ' = ' . $userId)
+                    ->setLimit(1)
+            );
+            $value = $db->loadResult();
+
+            return \is_scalar($value) ? trim((string) $value) : '';
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * @param array<string,string> $toSave
+     */
+    private function writeCustomFieldValues(int $userId, array $toSave, string $logPrefix): void
+    {
+        if ($toSave === []) {
+            return;
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $q = $db->getQuery(true)
+                ->select([$db->quoteName('id'), $db->quoteName('name')])
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' IN (' . implode(',', array_map([$db, 'quote'], array_keys($toSave))) . ')');
+            $db->setQuery($q);
+            $fieldRows = $db->loadObjectList('name') ?: [];
+
+            foreach ($toSave as $fieldName => $fieldValue) {
+                if (!isset($fieldRows[$fieldName])) {
+                    continue;
+                }
+                $fieldId = (int) $fieldRows[$fieldName]->id;
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->delete($db->quoteName('#__fields_values'))
+                        ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                        ->where($db->quoteName('item_id') . ' = ' . $userId)
+                )->execute();
+
+                if ($fieldValue === '') {
+                    continue;
+                }
+
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->insert($db->quoteName('#__fields_values'))
+                        ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                        ->values($fieldId . ', ' . $userId . ', ' . $db->quote($fieldValue))
+                )->execute();
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                $logPrefix . $userId . ': ' . $e->getMessage(),
                 Log::ERROR,
                 'plg_user_vigling'
             );
@@ -714,7 +905,16 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             return;
         }
 
-        if ($form->getName() !== 'com_users.user') {
+        $formName = $form->getName();
+        if ($formName === 'com_users.profile') {
+            foreach (self::FRONTEND_MANAGED_COM_FIELDS as $name) {
+                $form->removeField($name, 'com_fields');
+            }
+
+            return;
+        }
+
+        if ($formName !== 'com_users.user') {
             return;
         }
 
@@ -724,6 +924,45 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $form->loadFile('user', true);
 
         $this->normalizeComFieldsOnForm($form);
+    }
+
+    public function onContentNormaliseRequestData(NormaliseRequestDataEvent $event): void
+    {
+        $context = $event->getContext();
+        if (!\in_array($context, ['com_users.user', 'com_users.profile'], true)) {
+            return;
+        }
+
+        $data = $event->getData();
+        if (!\is_object($data)) {
+            return;
+        }
+
+        $comFields = isset($data->com_fields) && \is_array($data->com_fields) ? $data->com_fields : [];
+        $profile = isset($data->profile) && \is_array($data->profile) ? $data->profile : [];
+
+        $fromProfile = [
+            'area' => isset($profile['region']) && \is_scalar($profile['region']) ? trim((string) $profile['region']) : '',
+            'street' => isset($profile['address1']) && \is_scalar($profile['address1']) ? trim((string) $profile['address1']) : '',
+            'house_number' => isset($profile['address2']) && \is_scalar($profile['address2']) ? trim((string) $profile['address2']) : '',
+            'sity' => isset($profile['city']) && \is_scalar($profile['city']) ? trim((string) $profile['city']) : '',
+        ];
+        foreach ($fromProfile as $cfName => $value) {
+            if ($value === '') {
+                continue;
+            }
+            if (!\array_key_exists($cfName, $comFields) || $comFields[$cfName] === false || $comFields[$cfName] === null || $comFields[$cfName] === '') {
+                $comFields[$cfName] = $value;
+            }
+        }
+
+        foreach (self::FRONTEND_MANAGED_COM_FIELDS as $name) {
+            if (\array_key_exists($name, $comFields) && $comFields[$name] === false) {
+                unset($comFields[$name]);
+            }
+        }
+
+        $data->com_fields = $comFields;
     }
 
     private function normalizeComFieldsOnForm(Form $form): void

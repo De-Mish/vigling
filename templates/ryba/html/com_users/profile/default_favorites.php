@@ -150,7 +150,7 @@ $defaultImg = '/templates/ryba/images/master.png';
 							$avatarImage = $resolveImageUrl($avatar, false);
 							if (class_exists(ImageUploadHelper::class)) {
 								$portfolioImage = ImageUploadHelper::webUrl($portfolioImage, true);
-								$avatarImage = ImageUploadHelper::webUrl($avatarImage, true);
+								$avatarImage = ImageUploadHelper::avatarWebUrl($avatarImage, $itemId, true);
 							}
 							$cardImage = $portfolioImage !== '' ? $portfolioImage : $avatarImage;
 							$imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
