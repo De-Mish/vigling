@@ -170,6 +170,10 @@ class AktsiiHelper
             }
         }
 
+        if (in_array('avatar', $fieldNames, true)) {
+            PoiskHelper::fillMissingAvatarsFromDisk($byUser, $ids);
+        }
+
         return $byUser;
     }
 

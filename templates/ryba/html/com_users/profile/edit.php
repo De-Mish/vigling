@@ -101,8 +101,8 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, f
 		require_once $vgImageHelperFile;
 	}
 }
-if ($profileImage !== '' && class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
-	$profileImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($profileImage, true);
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$profileImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($profileImage, (int) $userId, true);
 }
 
 $defaultImg = \Joomla\CMS\Uri\Uri::root() . 'templates/ryba/images/master.png';
@@ -318,6 +318,38 @@ if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper
 	$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgFieldRaw($jcfields, 'home'));
 	$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgFieldRaw($jcfields, 'payment_method'));
 	$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgFieldRaw($jcfields, 'suitable_for_children'));
+	if ((int) $userId > 0) {
+		$vgStored = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues((int) $userId, [
+			'doorway', 'floor', 'apartment', 'home', 'payment_method', 'suitable_for_children', 'area', 'street', 'house_number',
+		]);
+		if ($vgDoorway === '' && isset($vgStored['doorway'])) {
+			$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['doorway']);
+		}
+		if ($vgFloor === '' && isset($vgStored['floor'])) {
+			$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['floor']);
+		}
+		if ($vgApartment === '' && isset($vgStored['apartment'])) {
+			$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['apartment']);
+		}
+		if ($vgHomeSelected === [] && isset($vgStored['home'])) {
+			$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgStored['home']);
+		}
+		if ($vgPaymentSelected === [] && isset($vgStored['payment_method'])) {
+			$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgStored['payment_method']);
+		}
+		if (!$vgChildren && isset($vgStored['suitable_for_children'])) {
+			$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgStored['suitable_for_children']);
+		}
+		if ($regionValue === '' && isset($vgStored['area'])) {
+			$regionValue = trim((string) $vgStored['area']);
+		}
+		if ($address1Value === '' && isset($vgStored['street'])) {
+			$address1Value = trim((string) $vgStored['street']);
+		}
+		if ($address2Value === '' && isset($vgStored['house_number'])) {
+			$address2Value = trim((string) $vgStored['house_number']);
+		}
+	}
 }
 if ($websiteValue === '' && isset($jcfields['link']->rawvalue) && is_scalar($jcfields['link']->rawvalue)) {
 	$websiteValue = trim((string) $jcfields['link']->rawvalue);

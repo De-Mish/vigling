@@ -58,6 +58,18 @@ if ($profileIsClient) {
 }
 $profile = isset($this->data->profile) && is_array($this->data->profile) ? $this->data->profile : [];
 $notFound = 'Нет информации';
+$vgStoredMain = [];
+if ($profileOwnerId > 0) {
+	if (!class_exists(UserProfileExtraFieldsHelper::class, false)) {
+		$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+		if (is_file($vgExtraHelperFile)) {
+			require_once $vgExtraHelperFile;
+		}
+	}
+	if (class_exists(UserProfileExtraFieldsHelper::class, false)) {
+		$vgStoredMain = UserProfileExtraFieldsHelper::loadFieldValues($profileOwnerId, array_keys($rows));
+	}
+}
 ?>
 <fieldset id="users-profile-main" class="users-profile-main">
 	<dl class="dl-horizontal">
@@ -77,6 +89,9 @@ $notFound = 'Нет информации';
 					} elseif (!empty($cfg['profile']) && isset($profile[$cfg['profile']])) {
 						$val = is_scalar($profile[$cfg['profile']]) ? trim((string) $profile[$cfg['profile']]) : '';
 					}
+				}
+				if ($val === '' && isset($vgStoredMain[$fieldName])) {
+					$val = trim((string) $vgStoredMain[$fieldName]);
 				}
 				if (!class_exists(UserProfileExtraFieldsHelper::class, false)) {
 					$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';

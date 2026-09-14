@@ -26,7 +26,9 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
     {
         return [
             'onContentPrepareForm' => 'onContentPrepareForm',
-            'onUserAfterSave'      => ['onUserAfterSave', 100],
+            // After Joomla Fields (priority 0), which otherwise deletes values
+            // that the frontend profile form does not post as jform[com_fields].
+            'onUserAfterSave'      => ['onUserAfterSave', -50],
         ];
     }
 
@@ -77,6 +79,18 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
         }
 
         $jform = $input->post->get('jform', [], 'array');
+        if (!\is_array($jform)) {
+            $jform = [];
+        }
+        $rawJform = $_POST['jform'] ?? [];
+        if (\is_array($rawJform)) {
+            foreach (['profile', 'com_fields'] as $nestedKey) {
+                if (isset($rawJform[$nestedKey]) && \is_array($rawJform[$nestedKey])) {
+                    $existing = isset($jform[$nestedKey]) && \is_array($jform[$nestedKey]) ? $jform[$nestedKey] : [];
+                    $jform[$nestedKey] = array_merge($existing, $rawJform[$nestedKey]);
+                }
+            }
+        }
         $registrationType = isset($jform['registration_type']) ? (string) $jform['registration_type'] : 'client';
         $deletedPortfolio = [];
         if ($isProfileSave && isset($jform['portfolio_deleted']) && is_scalar($jform['portfolio_deleted'])) {
@@ -159,6 +173,19 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
     private function saveRegistrationToCustomFields(int $userId, array $jform, array $profile): void
     {
         $isMasterValue = $this->resolveMasterTypeForSave($userId, $jform);
+        $comFields = isset($jform['com_fields']) && is_array($jform['com_fields']) ? $jform['com_fields'] : [];
+        $area = $this->extractStringValue($profile, 'region');
+        if ($area === '') {
+            $area = $this->extractStringValue($comFields, 'area');
+        }
+        $street = $this->extractStringValue($profile, 'address1');
+        if ($street === '') {
+            $street = $this->extractStringValue($comFields, 'street');
+        }
+        $houseNumber = $this->extractStringValue($profile, 'address2');
+        if ($houseNumber === '') {
+            $houseNumber = $this->extractStringValue($comFields, 'house_number');
+        }
         $valuesByCfName = [
             'firstname' => $this->extractStringValue($jform, 'name'),
             'lastname' => $this->extractStringValue($profile, 'lastname'),
@@ -166,13 +193,12 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
             'telefon' => $this->extractStringValue($profile, 'phone'),
             'avatar' => $this->extractStringValue($jform, 'avatar'),
             'sity' => $this->extractStringValue($profile, 'city'),
-            'area' => $this->extractStringValue($profile, 'region'),
-            'street' => $this->extractStringValue($profile, 'address1'),
-            'house_number' => $this->extractStringValue($profile, 'address2'),
+            'area' => $area,
+            'street' => $street,
+            'house_number' => $houseNumber,
             'link' => $this->extractStringValue($profile, 'website'),
             'o_sebe' => $this->extractStringValue($profile, 'aboutme'),
         ];
-        $comFields = isset($jform['com_fields']) && is_array($jform['com_fields']) ? $jform['com_fields'] : [];
         foreach (['doorway', 'floor', 'apartment'] as $extraName) {
             $extraVal = $this->extractStringValue($comFields, $extraName);
             if ($extraVal === '') {
