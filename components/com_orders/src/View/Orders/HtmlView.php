@@ -44,9 +44,12 @@ class HtmlView extends BaseHtmlView
 				$tzName = viglingOrdersGetUserTimezone($db, (int) $user->id, (string) $app->get('offset', 'UTC'));
 				$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
 				$fromUtc = (new \DateTimeImmutable('today', $tz))->modify('-21 days')->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+				$toUtc = (new \DateTimeImmutable('today', $tz))->modify('+22 days')->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
 				$model->setState('journal.from_utc', $fromUtc);
+				$model->setState('journal.to_utc', $toUtc);
 			} catch (\Throwable $e) {
 				$model->setState('journal.from_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('-21 days')->format('Y-m-d H:i:s'));
+				$model->setState('journal.to_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('+22 days')->format('Y-m-d H:i:s'));
 			}
 		}
 		$this->items = $model->getItems();

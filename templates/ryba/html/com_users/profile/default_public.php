@@ -172,6 +172,21 @@ $mapAddressCandidates = array_values(array_unique(array_filter([
 if ($mapAddressCandidates === []) {
 	$mapAddressCandidates = ['Москва'];
 }
+$mapCenter = null;
+$mapCenterAddress = '';
+$yandexMapsKey = '705d45a1-9138-4d99-afd4-dc261c612036';
+$geocodeHelperFile = (defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates') . '/ryba/helpers/ProfileMapGeocodeHelper.php';
+if (is_file($geocodeHelperFile)) {
+	require_once $geocodeHelperFile;
+}
+if (class_exists(\Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::class)) {
+	$yandexMapsKey = \Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::API_KEY;
+	$resolvedCenter = \Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::resolveCenter($mapAddressCandidates, empty($isLkEmbed));
+	if (is_array($resolvedCenter) && isset($resolvedCenter['lat'], $resolvedCenter['lon'])) {
+		$mapCenter = [(float) $resolvedCenter['lat'], (float) $resolvedCenter['lon']];
+		$mapCenterAddress = trim((string) ($resolvedCenter['address'] ?? ''));
+	}
+}
 
 if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
 	$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
@@ -607,14 +622,12 @@ if ($profileOwnerId > 0) {
 				}
 			}
 		}
-		$table = $db->replacePrefix('#__vigling_bookings');
-		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
-		if ($db->loadResult()) {
-			$tableColumns = [];
-			try {
-				$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			} catch (\Throwable $ignore) {
-			}
+		$calendarUntilUtc = (new \DateTimeImmutable('today', $masterTz))
+			->modify('+46 days')
+			->setTimezone($utcTz)
+			->format('Y-m-d H:i:s');
+		try {
+			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 			$hasBookingKind = isset($tableColumns['booking_kind']);
 			$hasCourseId = isset($tableColumns['course_id']);
 			$hasCourseSlotId = isset($tableColumns['course_slot_id']);
@@ -632,7 +645,8 @@ if ($profileOwnerId > 0) {
 				->select($selectCols)
 				->from($db->quoteName('#__vigling_bookings'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
-				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
+				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('time') . ' < ' . $db->quote($calendarUntilUtc));
 			$db->setQuery($query);
 			$rows = $db->loadAssocList() ?: [];
 			$anytimeGroupsRaw = [];
@@ -724,6 +738,7 @@ if ($profileOwnerId > 0) {
 					);
 				}
 			}
+		} catch (\Throwable $ignore) {
 		}
 
 		try {
@@ -732,7 +747,8 @@ if ($profileOwnerId > 0) {
 				->from($db->quoteName('#__vigling_course_slots'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
 				->where($db->quoteName('is_active') . ' = 1')
-				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()');
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($calendarUntilUtc));
 			$db->setQuery($courseSlotQuery);
 			$courseSlotRows = $db->loadAssocList() ?: [];
 			foreach ($courseSlotRows as $slotRow) {
@@ -754,7 +770,8 @@ if ($profileOwnerId > 0) {
 				->from($db->quoteName('#__vigling_search_slots'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
 				->where($db->quoteName('is_active') . ' = 1')
-				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()');
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($calendarUntilUtc));
 			$db->setQuery($searchSlotQuery);
 			$searchSlotRows = $db->loadAssocList() ?: [];
 			foreach ($searchSlotRows as $slotRow) {
@@ -3677,6 +3694,9 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 	}
 
 	var mapAddresses = <?php echo json_encode($mapAddressCandidates, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+	var mapCenter = <?php echo json_encode($mapCenter, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+	var mapCenterAddress = <?php echo json_encode($mapCenterAddress, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+	var yandexMapsKey = <?php echo json_encode($yandexMapsKey); ?>;
 	var mapEl = document.getElementById('map');
 	if (!mapEl) {
 		return;
@@ -3688,19 +3708,46 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		window.ymaps.ready(function () {
 			var fallbackCenter = [55.751244, 37.618423];
 			var map = null;
+			var geoStorePrefix = 'vigling_geocode_v1:';
 
-			function buildMap(center, placemarkGeoObject) {
-				map = new window.ymaps.Map('map', { center: center, zoom: placemarkGeoObject ? 14 : 11, controls: [] });
-				if (placemarkGeoObject) {
+			function buildMap(center, balloonText) {
+				map = new window.ymaps.Map('map', { center: center, zoom: balloonText ? 14 : 11, controls: [] });
+				if (balloonText) {
 					map.geoObjects.add(new window.ymaps.Placemark(center, {
-						balloonContent: placemarkGeoObject.getAddressLine ? placemarkGeoObject.getAddressLine() : ''
+						balloonContent: balloonText
 					}));
 				}
+			}
+
+			function readStoredCoords(address) {
+				try {
+					var raw = window.localStorage.getItem(geoStorePrefix + address);
+					if (!raw) {
+						return null;
+					}
+					var parsed = JSON.parse(raw);
+					if (parsed && typeof parsed.lat === 'number' && typeof parsed.lon === 'number') {
+						return [parsed.lat, parsed.lon];
+					}
+				} catch (e) {}
+				return null;
+			}
+
+			function storeCoords(address, center) {
+				try {
+					window.localStorage.setItem(geoStorePrefix + address, JSON.stringify({ lat: center[0], lon: center[1] }));
+				} catch (e) {}
 			}
 
 			function geocodeNext(index) {
 				if (index >= mapAddresses.length) {
 					buildMap(fallbackCenter, null);
+					return;
+				}
+
+				var stored = readStoredCoords(mapAddresses[index]);
+				if (stored) {
+					buildMap(stored, mapAddresses[index]);
 					return;
 				}
 
@@ -3717,10 +3764,16 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 						return;
 					}
 
-					buildMap(center, first);
+					storeCoords(mapAddresses[index], center);
+					buildMap(center, first.getAddressLine ? first.getAddressLine() : mapAddresses[index]);
 				}).catch(function () {
 					geocodeNext(index + 1);
 				});
+			}
+
+			if (Array.isArray(mapCenter) && mapCenter.length >= 2) {
+				buildMap(mapCenter, mapCenterAddress || (mapAddresses[0] || ''));
+				return;
 			}
 
 			geocodeNext(0);
@@ -3730,7 +3783,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		initMap();
 	} else {
 		var script = document.createElement('script');
-		script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=705d45a1-9138-4d99-afd4-dc261c612036';
+		script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=' + encodeURIComponent(yandexMapsKey);
 		script.async = true;
 		script.defer = true;
 		script.onload = initMap;

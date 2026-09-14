@@ -200,6 +200,10 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 			$timezoneId = 'UTC';
 		}
 		$utcTz = new \DateTimeZone('UTC');
+		$untilUtc = (new \DateTimeImmutable('today', $masterTz))
+			->modify('+' . max(1, $daysLimit + 1) . ' days')
+			->setTimezone($utcTz)
+			->format('Y-m-d H:i:s');
 
 		$schedule = viglingOrdersLoadMasterSchedule($db, $masterId);
 		if ($schedule === []) {
@@ -210,7 +214,8 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 			->select([$db->quoteName('id'), $db->quoteName('time'), $db->quoteName('time_to')])
 			->from($db->quoteName('#__vigling_bookings'))
 			->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
-			->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
+			->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()')
+			->where($db->quoteName('time') . ' < ' . $db->quote($untilUtc));
 		if ($excludeOrderId > 0) {
 			$query->where($db->quoteName('id') . ' <> ' . (int) $excludeOrderId);
 		}
@@ -250,7 +255,9 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 				])
 				->from($db->quoteName('#__vigling_course_slots'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
-				->where($db->quoteName('is_active') . ' = 1');
+				->where($db->quoteName('is_active') . ' = 1')
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($untilUtc));
 			if ($excludeCourseSlotId > 0) {
 				$slotQuery->where($db->quoteName('id') . ' <> ' . (int) $excludeCourseSlotId);
 			}
@@ -274,7 +281,9 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 				])
 				->from($db->quoteName('#__vigling_search_slots'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
-				->where($db->quoteName('is_active') . ' = 1');
+				->where($db->quoteName('is_active') . ' = 1')
+				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
+				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($untilUtc));
 			if ($excludeSearchSlotId > 0) {
 				$searchSlotQuery->where($db->quoteName('id') . ' <> ' . (int) $excludeSearchSlotId);
 			}

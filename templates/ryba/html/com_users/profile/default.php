@@ -14,6 +14,10 @@ $isOwn = $user->id == $this->data->id;
 $userGroups = $user->id ? $user->getAuthorisedGroups() : [];
 $isMaster = in_array(3, $userGroups) || in_array(8, $userGroups);
 $profileOwnerId = (int) ($this->data->id ?? 0);
+if (!$isOwn && $profileOwnerId > 0) {
+	echo $this->loadTemplate('public');
+	return;
+}
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
 $profileIsMaster = in_array(3, $profileGroups) || in_array(8, $profileGroups);
 $profileIsAdministrator = in_array(8, $profileGroups, true) || in_array(7, $profileGroups, true) || in_array(6, $profileGroups, true);
@@ -429,12 +433,6 @@ if ($selectedSpecialtyIds !== []) {
 }
 if ($specialityList === [] && $specialityText !== '' && $specialityText !== Text::_('COM_USERS_PROFILE_VALUE_NOT_FOUND')) {
 	$specialityList = array_values(array_filter(array_map('trim', explode(',', $specialityText))));
-}
-
-// Public card for foreign profile: separate from private LK view.
-if (!$isOwn && (int) ($this->data->id ?? 0) > 0) {
-	echo $this->loadTemplate('public');
-	return;
 }
 
 $lkFavorites = [];
