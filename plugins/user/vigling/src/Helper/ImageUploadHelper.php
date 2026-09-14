@@ -135,17 +135,20 @@ final class ImageUploadHelper
         if ($relative === '') {
             return $raw;
         }
+        $relative = self::normalizeImageRelative($relative);
         if (!self::isAllowedRelative($relative)) {
-            return $raw[0] === '/' || stripos($raw, 'http') === 0 ? $raw : '/' . $relative;
-        }
-        if ($preferThumb) {
-            $thumb = self::thumbRelative($relative);
-            if (is_file(self::root() . '/' . $thumb)) {
-                return '/' . $thumb;
+            $found = self::storedToRelative($relative);
+            if ($found === '') {
+                return $raw[0] === '/' || stripos($raw, 'http') === 0 ? $raw : '/' . $relative;
             }
+            $relative = $found;
+        }
+        $existing = self::existingWebRelative($relative, $preferThumb);
+        if ($existing === '') {
+            return '';
         }
 
-        return '/' . $relative;
+        return '/' . $existing;
     }
 
     public static function warn(string $message): void
@@ -418,6 +421,47 @@ final class ImageUploadHelper
         return false;
     }
 
+    private static function normalizeImageRelative(string $relative): string
+    {
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        if (preg_match('#^images/profile/#i', $relative) && !preg_match('#^images/profiler/#i', $relative)) {
+            $relative = 'images/profiler/' . substr($relative, strlen('images/profile/'));
+        }
+        $relative = preg_replace('#^(images/profiler/)+#i', 'images/profiler/', $relative) ?: $relative;
+        $relative = preg_replace('#^(images/portfolio/)+#i', 'images/portfolio/', $relative) ?: $relative;
+
+        return $relative;
+    }
+
+    private static function existingWebRelative(string $relative, bool $preferThumb): string
+    {
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        $root = self::root();
+        $candidates = [];
+        if ($preferThumb) {
+            $candidates[] = self::thumbRelative($relative);
+        }
+        $candidates[] = $relative;
+        $candidates[] = self::thumbRelative($relative);
+        $candidates[] = self::mainRelativeFromThumb($relative);
+        $seen = [];
+        foreach ($candidates as $candidate) {
+            $candidate = ltrim(str_replace('\\', '/', (string) $candidate), '/');
+            if ($candidate === '' || isset($seen[$candidate])) {
+                continue;
+            }
+            $seen[$candidate] = true;
+            if (!self::isAllowedRelative($candidate)) {
+                continue;
+            }
+            if (is_file($root . '/' . $candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
+    }
+
     public static function thumbRelative(string $relative): string
     {
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
@@ -448,6 +492,7 @@ final class ImageUploadHelper
             $storedPath = (string) (parse_url($storedPath, PHP_URL_PATH) ?: '');
         }
         $relative = ltrim(str_replace('\\', '/', $storedPath), '/');
+        $relative = self::normalizeImageRelative($relative);
         if (self::isAllowedRelative($relative)) {
             return $relative;
         }
