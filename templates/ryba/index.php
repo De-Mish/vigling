@@ -112,6 +112,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style-ext.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
 	<jdoc:include type="styles" />
 	<?php if ($isHome) :
 		require_once __DIR__ . '/helpers/schema_ld.php';
