@@ -27,3 +27,12 @@ Disallow: /logs/
 Disallow: /modules/
 Disallow: /plugins/
 Disallow: /tmp/
+Disallow: /login
+Disallow: /login/
+Disallow: /lk/
+Disallow: /component/users/
+Disallow: /component/orders/
+Disallow: /index.php?option=com_users
+Disallow: /index.php?option=com_orders
+Disallow: /index.php?option=com_ajax
+Disallow: /templates/ryba/client-error.php

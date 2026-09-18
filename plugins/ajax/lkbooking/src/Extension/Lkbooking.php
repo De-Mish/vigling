@@ -139,6 +139,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		if (class_exists(OrderTable::class) && OrderTable::ensureBookingCommentColumns($db)) {
 			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		}
+		if (class_exists(OrderTable::class) && OrderTable::ensureSourceColumn($db)) {
+			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		}
+		$bookingSource = strtolower(trim((string) $input->post->get('source', 'profile', 'string')));
+		if (!in_array($bookingSource, ['profile', 'catalog', 'map', 'widget', 'share'], true)) {
+			$bookingSource = 'profile';
+		}
 		$bookingExtras = self::bookingExtrasFromInput($input);
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
@@ -337,6 +344,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$columns[] = $columnName;
 				$values[] = $db->quote($columnValue);
 			}
+		}
+		if (isset($tableColumns['source'])) {
+			$columns[] = 'source';
+			$values[] = $db->quote($bookingSource);
 		}
 		$optionalColumnValues = [
 			'svc_id' => $catalogSvcId,

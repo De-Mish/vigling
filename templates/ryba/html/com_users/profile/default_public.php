@@ -1241,7 +1241,29 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 	}
 }
 ?>
-
+<?php
+if (empty($isLkEmbed)) {
+	$schemaFile = JPATH_ROOT . '/templates/ryba/helpers/schema_ld.php';
+	if (is_file($schemaFile)) {
+		require_once $schemaFile;
+		$schemaProfileUrl = rtrim(Uri::root(), '/') . '/' . $profileOwnerId;
+		$schemaImage = $avatarPreviewUrl;
+		if ($schemaImage !== '' && strpos($schemaImage, 'http') !== 0) {
+			$schemaImage = rtrim(Uri::root(), '/') . '/' . ltrim($schemaImage, '/');
+		}
+		vigling_print_person_json_ld(
+			$displayName,
+			$schemaProfileUrl,
+			$schemaImage,
+			$city,
+			$area,
+			trim($street . ($house !== '' ? ' ' . $house : '')),
+			$aboutText,
+			is_array($pricesStructuredWithIds) ? $pricesStructuredWithIds : []
+		);
+	}
+}
+?>
 <div<?php echo $isLkEmbed ? '' : ' id="easyprofile"'; ?> class="view_profile view_profile-public<?php echo $isLkEmbed ? ' view_profile-public--embed' : ''; ?>">
 	<?php if (empty($isLkEmbed)) : ?>
 	<p class="vg-profile-back-wrap">
@@ -2443,6 +2465,7 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 					<input id="zapis__booking-time" type="hidden" name="booking_time" value="">
 					<input id="zapis__booking-time-utc" type="hidden" name="booking_time_utc" value="">
 					<input id="zapis__time-combined" type="hidden" name="time" value="">
+					<input id="zapis__source" type="hidden" name="source" value="profile">
 					<input type="hidden" name="<?php echo $this->escape($pushnotifyTokenName); ?>" value="<?php echo $this->escape($pushnotifyTokenValue); ?>">
 				</form>
 			</div>
@@ -2557,6 +2580,21 @@ if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id 
 		var bookingModal = document.getElementById('zapis');
 	var bookingForm = document.getElementById('order-form');
 	if (bookingModal && bookingForm) {
+		(function applyBookingSource() {
+			var allowed = { catalog: 1, map: 1, profile: 1, widget: 1, share: 1 };
+			var src = 'profile';
+			try {
+				var params = new URLSearchParams(window.location.search);
+				var fromUrl = String(params.get('source') || '').toLowerCase();
+				if (allowed[fromUrl]) {
+					src = fromUrl;
+				}
+			} catch (e) {}
+			var sourceInput = document.getElementById('zapis__source');
+			if (sourceInput) {
+				sourceInput.value = src;
+			}
+		})();
 		var isLoggedIn = <?php echo $currentUser->id > 0 ? 'true' : 'false'; ?>;
 		var hasWorkSchedule = <?php echo !empty($hasWorkSchedule) ? 'true' : 'false'; ?>;
 		var quickAuthUrl = <?php echo json_encode(Route::_('index.php?option=com_ajax&plugin=Quickauth&format=json', false)); ?>;

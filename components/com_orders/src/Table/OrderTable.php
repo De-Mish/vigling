@@ -112,6 +112,31 @@ class OrderTable extends Table
 		}
 	}
 
+	public static function ensureSourceColumn(DatabaseInterface $db): bool
+	{
+		try {
+			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			if (isset($columns['source'])) {
+				return true;
+			}
+			$after = 'service_name';
+			if (isset($columns['contact_phone'])) {
+				$after = 'contact_phone';
+			} elseif (isset($columns['comment'])) {
+				$after = 'comment';
+			}
+			$db->setQuery(
+				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+				. ' ADD COLUMN ' . $db->quoteName('source') . ' VARCHAR(32) NULL DEFAULT NULL'
+				. ' AFTER ' . $db->quoteName($after)
+			)->execute();
+
+			return true;
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	public static function restoreStockOffer(DatabaseInterface $db, int $stockServiceId, int $masterId): void
 	{
 		if ($stockServiceId <= 0 || $masterId <= 0) {
