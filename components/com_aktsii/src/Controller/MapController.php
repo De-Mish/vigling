@@ -6,14 +6,15 @@ namespace Viglin\Component\Aktsii\Site\Controller;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Controller\BaseController;
-use Viglin\Component\Aktsii\Site\Helper\AktsiiHelper;
 use Viglin\Component\Poisk\Site\Helper\ListMapHelper;
+use Viglin\Component\Poisk\Site\Helper\PoiskHelper;
 
 class MapController extends BaseController
 {
 	public function pins()
 	{
 		try {
+			self::ensurePoiskHelpersLoaded();
 			$app = Factory::getApplication();
 			$model = $app->bootComponent('com_aktsii')->getMVCFactory()->createModel('List', 'Site');
 			$model->populateState();
@@ -22,7 +23,7 @@ class MapController extends BaseController
 				return (int) ($item->id ?? 0);
 			}, $items)));
 			$fieldsByUser = $userIds !== []
-				? AktsiiHelper::getFieldsForUserIds($userIds, ['sity', 'area', 'street', 'house_number'])
+				? PoiskHelper::getFieldsForUserIds($userIds, ['sity', 'area', 'street', 'house_number'])
 				: [];
 
 			$pins = [];
@@ -43,6 +44,19 @@ class MapController extends BaseController
 			ListMapHelper::jsonResponse(['ok' => true, 'pins' => $pins, 'total' => count($pins)]);
 		} catch (\Throwable $e) {
 			ListMapHelper::jsonResponse(['ok' => false, 'pins' => [], 'error' => 'map_failed']);
+		}
+	}
+
+	private static function ensurePoiskHelpersLoaded(): void
+	{
+		$files = [
+			JPATH_SITE . '/components/com_poisk/src/Helper/PoiskHelper.php',
+			JPATH_SITE . '/components/com_poisk/src/Helper/ListMapHelper.php',
+		];
+		foreach ($files as $file) {
+			if (is_file($file)) {
+				require_once $file;
+			}
 		}
 	}
 }
