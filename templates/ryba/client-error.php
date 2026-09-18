@@ -29,7 +29,7 @@ if (!is_array($data)) {
 
 $redact = static function (string $value): string {
 	$value = preg_replace('/password[^=\s]*=[^\s&]*/i', 'password=***', $value) ?? $value;
-	$value = preg_replace('/\+7[\d\s\-()]{8,}/', '+7***', $value) ?? $value;
+	$value = preg_replace('/\+\d{1,4}[\d\s\-()]{6,}/', '+***', $value) ?? $value;
 	return substr($value, 0, 2000);
 };
 
