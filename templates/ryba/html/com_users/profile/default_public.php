@@ -1513,6 +1513,7 @@ if (empty($isLkEmbed)) {
 			border-color: #f9ce54;
 		}
 		#zapis .screen3 .js-auth-tab input[type="text"],
+		#zapis .screen3 .js-auth-tab input[type="tel"],
 		#zapis .screen3 .js-auth-tab input[type="email"],
 		#zapis .screen3 .js-auth-tab input[type="password"] {
 			width: 100%;
@@ -1570,28 +1571,15 @@ if (empty($isLkEmbed)) {
 			background: #fff;
 			box-sizing: border-box;
 		}
-		#zapis .screen3 .phone-prefix-wrap span {
-			display: flex;
-			align-items: center;
-			justify-content: flex-start;
-			line-height: 1;
-			white-space: nowrap;
-			flex: 0 0 74px;
-			min-width: 74px;
-			margin-top: 0 !important;
-		}
 		#zapis .screen3 .phone-prefix-wrap {
 			display: flex;
 			align-items: center;
-			gap: 18px;
+			gap: 12px;
 		}
 		#zapis .screen3 .phone-prefix-wrap input {
 			flex: 1 1 auto;
 			min-width: 0;
 			width: auto !important;
-		}
-		#zapis .screen3 .phone-prefix-wrap span img {
-			margin-left: 6px;
 		}
 		#zapis .screen3 .email-note {
 			margin-top: 8px;
@@ -2382,8 +2370,7 @@ if (empty($isLkEmbed)) {
 									</div>
 									<div class="clearFloat"></div>
 									<div class="form__finish-right controls phone-prefix-wrap">
-										<span>+7<img src="/templates/ryba/images/rus.png" alt=""></span>
-										<input type="text" name="qa_phone" placeholder="Телефон" data-required="register" required>
+										<input type="tel" name="qa_phone" class="js-phone-mask" placeholder="Телефон" data-required="register" required autocomplete="tel">
 									</div>
 									<div class="form__finish-left controls email-control">
 										<input type="email" name="qa_email" placeholder="Email *" data-required="register" required>
@@ -3570,30 +3557,6 @@ if (empty($isLkEmbed)) {
 				hideErrors();
 			});
 		});
-
-		var guestPhoneInput = bookingForm.querySelector('input[name="qa_phone"]');
-		if (guestPhoneInput) {
-			guestPhoneInput.addEventListener('input', function () {
-				var digits = this.value.replace(/\D/g, '');
-				if (digits.charAt(0) === '8') {
-					digits = '7' + digits.slice(1);
-				}
-				if (digits.charAt(0) !== '7' && digits.length > 0) {
-					digits = '7' + digits;
-				}
-				digits = digits.slice(0, 11);
-				if (!digits.length) {
-					this.value = '';
-					return;
-				}
-				var formatted = '+7';
-				if (digits.length > 1) formatted += ' (' + digits.slice(1, 4);
-				if (digits.length >= 4) formatted += ') ' + digits.slice(4, 7);
-				if (digits.length >= 7) formatted += '-' + digits.slice(7, 9);
-				if (digits.length >= 9) formatted += '-' + digits.slice(9, 11);
-				this.value = formatted;
-			});
-		}
 
 		var reservedNotice = document.getElementById('zapis__reserved-notice');
 		if (reservedNotice) {

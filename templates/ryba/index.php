@@ -86,6 +86,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
 	<script src="<?php echo $rybaAsset('js/client-error.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/phone-mask.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/jquery.min.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/slick.min.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/scripts.js'); ?>"></script>
@@ -109,6 +110,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/font-awesome.min.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style-ext.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
 	<jdoc:include type="styles" />
 	<?php if ($isHome) :
 		require_once __DIR__ . '/helpers/schema_ld.php';
@@ -1563,7 +1565,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 					</div>
 					<div class="quick-auth-field">
 						<label for="quick-auth-phone">Номер телефона</label>
-						<input type="tel" id="quick-auth-phone" class="js-phone-mask" name="jform[profile][phone]" placeholder="+7 (___) ___-__-__">
+						<input type="tel" id="quick-auth-phone" class="js-phone-mask" name="jform[profile][phone]" placeholder="Телефон" autocomplete="tel">
 					</div>
 					<div class="quick-auth-field">
 						<label for="quick-auth-email">Email *</label>
@@ -1672,37 +1674,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 		document.getElementById('quick-auth-email').addEventListener('input', function() {
 			document.getElementById('quick-auth-username').value = this.value.trim();
 		});
-		var phoneInput = document.getElementById('quick-auth-phone');
-		if (phoneInput) {
-			function formatPhone(val) {
-				var digits = val.replace(/\D/g, '');
-				if (digits.charAt(0) === '8') digits = '7' + digits.slice(1);
-				if (digits.charAt(0) !== '7') digits = '7' + digits;
-				digits = digits.slice(0, 11);
-				if (digits.length <= 1) return digits ? '+' + digits : '';
-				var s = '+7';
-				if (digits.length > 1) s += ' (' + digits.slice(1, 4);
-				if (digits.length >= 4) s += ') ' + digits.slice(4, 7);
-				if (digits.length >= 7) s += '-' + digits.slice(7, 9);
-				if (digits.length >= 9) s += '-' + digits.slice(9, 11);
-				return s;
-			}
-			phoneInput.addEventListener('keydown', function(e) {
-				if (e.key !== 'Backspace') return;
-				var pos = this.selectionStart, val = this.value;
-				if (pos <= 0) return;
-				var prev = val.charAt(pos - 1);
-				if (prev >= '0' && prev <= '9') return;
-				e.preventDefault();
-				var digits = val.replace(/\D/g, '');
-				if (digits.length <= 1) { this.value = ''; return; }
-				this.value = formatPhone(digits.slice(0, -1));
-				this.setSelectionRange(this.value.length, this.value.length);
-			});
-			phoneInput.addEventListener('input', function() { this.value = formatPhone(this.value); });
-			phoneInput.addEventListener('focus', function() { if (this.value === '') this.value = '+7'; });
-			phoneInput.addEventListener('blur', function() { if (this.value === '+7') this.value = ''; });
-		}
 		function submitForm(form, msgEl) {
 			msgEl.textContent = '';
 			var fd = new FormData(form);

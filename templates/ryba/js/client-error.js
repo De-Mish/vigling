@@ -5,7 +5,7 @@
 	function redact(value) {
 		var text = String(value || '');
 		text = text.replace(/password[^=\s]*=[^\s&]*/gi, 'password=***');
-		text = text.replace(/\+7[\d\s\-()]{8,}/g, '+7***');
+		text = text.replace(/\+\d{1,4}[\d\s\-()]{6,}/g, '+***');
 		text = text.replace(/\b\d{11,}\b/g, '***');
 		return text.slice(0, 2000);
 	}

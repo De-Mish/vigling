@@ -2545,6 +2545,9 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#jform_name').val(fields.name || '');
         $('#jform_lastname').val(fields.lastname || '');
         $('#jform_telefon').val(fields.phone || '');
+        if (window.ViglingPhoneMask && phoneInput[0]) {
+            window.ViglingPhoneMask.sync(phoneInput[0]);
+        }
         $('#jform_email1').val(fields.email || '');
         $('#jform_sity').val(fields.city || '');
         $('#jform_area').val(fields.region || '');
@@ -2776,52 +2779,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         showPrivacyConsentError();
         return false;
-    }
-
-    function formatPhone(digits) {
-        digits = String(digits || '').replace(/\D/g, '');
-        if (digits.charAt(0) === '8') {
-            digits = '7' + digits.slice(1);
-        }
-        if (digits.charAt(0) !== '7') {
-            digits = '7' + digits;
-        }
-        digits = digits.slice(0, 11);
-
-        if (digits.length <= 1) {
-            return digits ? '+' + digits : '';
-        }
-
-        var s = '+7';
-        if (digits.length > 1) {
-            s += ' (' + digits.slice(1, 4);
-        }
-        if (digits.length >= 4) {
-            s += ') ' + digits.slice(4, 7);
-        }
-        if (digits.length >= 7) {
-            s += '-' + digits.slice(7, 9);
-        }
-        if (digits.length >= 9) {
-            s += '-' + digits.slice(9, 11);
-        }
-        return s;
-    }
-
-    if (phoneInput.length) {
-        phoneInput.on('input', function () {
-            this.value = formatPhone(this.value);
-        });
-        phoneInput.on('focus', function () {
-            if (this.value === '') {
-                this.value = '+7';
-            }
-        });
-        phoneInput.on('blur', function () {
-            if (this.value === '+7') {
-                this.value = '';
-            }
-        });
     }
 
     if (avatarInput.length && avatarImage.length) {

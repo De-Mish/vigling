@@ -5,7 +5,7 @@
     </fieldset>
     <fields name="profile">
         <fieldset name="profile">
-            <field name="phone" type="tel" label="PLG_USER_REGISTRATIONTYPE_PHONE_LABEL" hint="+7 (___) ___-__-__" class="js-phone-mask" filter="string" size="30" />
+            <field name="phone" type="tel" label="PLG_USER_REGISTRATIONTYPE_PHONE_LABEL" hint="Телефон" class="js-phone-mask" filter="string" size="30" />
             <field name="lastname" type="text" label="PLG_USER_REGISTRATIONTYPE_LASTNAME_LABEL" filter="string" size="30" />
             <field name="city" type="text" label="PLG_USER_REGISTRATIONTYPE_CITY_LABEL" filter="string" size="30" />
             <field name="region" type="text" label="PLG_USER_REGISTRATIONTYPE_REGION_LABEL" filter="string" size="30" />
