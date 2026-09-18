@@ -11,6 +11,17 @@ class AktsiiHelper
 {
     private static $fieldMapCache = null;
 
+    private static function ensurePoiskHelperLoaded(): void
+    {
+        if (class_exists(PoiskHelper::class, false)) {
+            return;
+        }
+        $file = JPATH_SITE . '/components/com_poisk/src/Helper/PoiskHelper.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
     private static function getUserFieldMap(): array
     {
         if (is_array(self::$fieldMapCache)) {
@@ -115,11 +126,13 @@ class AktsiiHelper
 
     public static function getCategories(): array
     {
+        self::ensurePoiskHelperLoaded();
         return PoiskHelper::getCategories();
     }
 
     public static function getServiceHierarchy(): array
     {
+        self::ensurePoiskHelperLoaded();
         return PoiskHelper::getServiceHierarchy();
     }
 
@@ -179,11 +192,13 @@ class AktsiiHelper
 
     public static function getCities(): array
     {
+        self::ensurePoiskHelperLoaded();
         return PoiskHelper::getCities();
     }
 
     public static function getAreas(): array
     {
+        self::ensurePoiskHelperLoaded();
         return PoiskHelper::getAreas();
     }
 }

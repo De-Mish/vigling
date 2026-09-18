@@ -7,6 +7,7 @@ namespace Viglin\Component\Aktsii\Site\View\List;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Pagination\Pagination;
+use Viglin\Component\Poisk\Site\Helper\PoiskHelper;
 
 class HtmlView extends BaseHtmlView
 {
@@ -35,6 +36,8 @@ class HtmlView extends BaseHtmlView
 
 	public function display($tpl = null)
 	{
+		self::ensurePoiskHelperLoaded();
+
 		/** @var \Viglin\Component\Aktsii\Site\Model\ListModel $model */
 		$model = $this->getModel();
 		$model->populateState();
@@ -47,10 +50,10 @@ class HtmlView extends BaseHtmlView
 		$start = (int) $model->getState('list.start');
 		$this->pagination = new Pagination($total, $start, $limit);
 
-		$this->categories = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getCategories();
-		$this->serviceHierarchy = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getServiceHierarchy();
-		$this->cities = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getCities();
-		$this->areas = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getAreas();
+		$this->categories = PoiskHelper::getCategories();
+		$this->serviceHierarchy = PoiskHelper::getServiceHierarchy();
+		$this->cities = PoiskHelper::getCities();
+		$this->areas = PoiskHelper::getAreas();
 
 		$this->allCategories = $this->loadAllCategories();
 		$this->allServices = $this->loadAllServices();
@@ -80,7 +83,7 @@ class HtmlView extends BaseHtmlView
 		}, $this->items);
 
 		if (!empty($userIds)) {
-			$this->fieldsByUser = \Viglin\Component\Aktsii\Site\Helper\AktsiiHelper::getFieldsForUserIds($userIds, [
+			$this->fieldsByUser = PoiskHelper::getFieldsForUserIds($userIds, [
 				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'
 			]);
 			$this->stocksByUser = $this->loadStocksForUsers($userIds);
@@ -90,6 +93,17 @@ class HtmlView extends BaseHtmlView
 		$this->mapFieldsByUser = $this->fieldsByUser;
 
 		return parent::display($tpl);
+	}
+
+	private static function ensurePoiskHelperLoaded(): void
+	{
+		if (class_exists(PoiskHelper::class, false)) {
+			return;
+		}
+		$file = JPATH_SITE . '/components/com_poisk/src/Helper/PoiskHelper.php';
+		if (is_file($file)) {
+			require_once $file;
+		}
 	}
 
 	private function loadStocksForUsers(array $userIds): array
