@@ -877,6 +877,10 @@ $durationJson = json_encode($durationOptions);
     gap: 8px !important;
     width: 255px;
     max-width: 255px;
+    position: relative;
+}
+#easyprofile.registration .fixed-slot-fields.is-time-open {
+    z-index: 6;
 }
 #easyprofile.registration .fixed-slot-fields input[type="date"] {
     flex: 1 1 140px;
@@ -888,6 +892,52 @@ $durationJson = json_encode($durationOptions);
     flex: 0 0 96px;
     width: 96px !important;
     max-width: 96px !important;
+}
+#easyprofile.registration .fixed-slot-time-grid {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 40;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 255px;
+    max-width: 100%;
+    max-height: 248px;
+    overflow-y: auto;
+    padding: 8px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+#easyprofile.registration .fixed-slot-time-grid.is-open {
+    display: grid;
+}
+#easyprofile.registration .fixed-slot-time-btn {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    margin: 0;
+    padding: 0 2px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    color: #000;
+    font-family: "GothamPro-Medium", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+}
+#easyprofile.registration .fixed-slot-time-btn.is-selected {
+    background: #f3d378;
+    border-color: #f7cc53;
+    box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3);
 }
 #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
 #easyprofile.registration #jform_courses_servis .service__item .course_title input {
@@ -1801,11 +1851,149 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return html;
     }
+    function quarterHourTimeGridHtml(selected) {
+        var html = '<span class="fixed-slot-time-grid" role="listbox" aria-label="Время">';
+        var hour;
+        var minute;
+        var value;
+        var on;
+        for (hour = 0; hour < 24; hour += 1) {
+            for (minute = 0; minute < 60; minute += 15) {
+                value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                on = selected === value;
+                html += '<button type="button" class="fixed-slot-time-btn' + (on ? ' is-selected' : '') + '" data-time="' + value + '" role="option" aria-selected="' + (on ? 'true' : 'false') + '">' + value + '</button>';
+            }
+        }
+        html += '</span>';
+        return html;
+    }
+    function syncFixedSlotTimeGrid(wrap, time) {
+        if (!wrap) {
+            return;
+        }
+        var selected = String(time || '');
+        wrap.querySelectorAll('.fixed-slot-time-btn').forEach(function (btn) {
+            var on = btn.getAttribute('data-time') === selected;
+            btn.classList.toggle('is-selected', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+    }
+    function closeFixedSlotTimeGrids(except) {
+        document.querySelectorAll('.fixed-slot-time-grid.is-open').forEach(function (grid) {
+            if (grid === except) {
+                return;
+            }
+            grid.classList.remove('is-open');
+            var fields = grid.closest('.fixed-slot-fields');
+            if (fields) {
+                fields.classList.remove('is-time-open');
+            }
+            var sel = fields ? fields.querySelector('.course-slot-time, .search-slot-time') : null;
+            if (sel) {
+                sel.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+    function openFixedSlotTimeGrid(wrap, timeSelect, grid) {
+        if (!grid) {
+            return;
+        }
+        closeFixedSlotTimeGrids(grid);
+        var fields = grid.closest('.fixed-slot-fields');
+        grid.classList.add('is-open');
+        if (fields) {
+            fields.classList.add('is-time-open');
+        }
+        if (timeSelect) {
+            timeSelect.setAttribute('aria-expanded', 'true');
+        }
+        syncFixedSlotTimeGrid(wrap, timeSelect ? timeSelect.value : '');
+        var on = grid.querySelector('.fixed-slot-time-btn.is-selected');
+        if (on && on.scrollIntoView) {
+            on.scrollIntoView({ block: 'nearest' });
+        }
+    }
+    function bindFixedSlotTimeGridDocument() {
+        if (document.documentElement.getAttribute('data-fixed-slot-grid-bound') === '1') {
+            return;
+        }
+        document.documentElement.setAttribute('data-fixed-slot-grid-bound', '1');
+        document.addEventListener('mousedown', function (e) {
+            var t = e.target;
+            if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
+                return;
+            }
+            closeFixedSlotTimeGrids();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeFixedSlotTimeGrids();
+            }
+        });
+    }
+    function ensureFixedSlotTimeGrid(wrap, timeSelect) {
+        if (!wrap || !timeSelect) {
+            return;
+        }
+        bindFixedSlotTimeGridDocument();
+        var fields = wrap.querySelector('.fixed-slot-fields') || timeSelect.parentNode;
+        var grid = wrap.querySelector('.fixed-slot-time-grid');
+        var holder;
+        if (!grid) {
+            holder = document.createElement('span');
+            holder.innerHTML = quarterHourTimeGridHtml(timeSelect.value);
+            grid = holder.firstChild;
+            if (fields) {
+                fields.appendChild(grid);
+            }
+        } else if (fields && grid.parentNode !== fields) {
+            fields.appendChild(grid);
+        }
+        timeSelect.setAttribute('aria-haspopup', 'listbox');
+        if (timeSelect.getAttribute('aria-expanded') !== 'true') {
+            timeSelect.setAttribute('aria-expanded', 'false');
+        }
+        if (grid.getAttribute('data-grid-bound') !== '1') {
+            grid.setAttribute('data-grid-bound', '1');
+            grid.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('.fixed-slot-time-btn') : null;
+                if (!btn || !grid.contains(btn)) {
+                    return;
+                }
+                e.preventDefault();
+                timeSelect.value = btn.getAttribute('data-time') || '';
+                timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                syncFixedSlotTimeGrid(wrap, timeSelect.value);
+                closeFixedSlotTimeGrids();
+            });
+        }
+        if (timeSelect.getAttribute('data-grid-select-bound') !== '1') {
+            timeSelect.setAttribute('data-grid-select-bound', '1');
+            timeSelect.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                if (grid.classList.contains('is-open')) {
+                    closeFixedSlotTimeGrids();
+                } else {
+                    openFixedSlotTimeGrid(wrap, timeSelect, grid);
+                }
+            });
+            timeSelect.addEventListener('keydown', function (e) {
+                if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!grid.classList.contains('is-open')) {
+                        openFixedSlotTimeGrid(wrap, timeSelect, grid);
+                    }
+                }
+            });
+        }
+        syncFixedSlotTimeGrid(wrap, timeSelect.value);
+    }
     function fixedSlotFieldsHtml(kind) {
         var isSearch = kind === 'search';
         return '<span class="fixed-slot-fields">' +
             '<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
             '<select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select>' +
+            quarterHourTimeGridHtml() +
             '<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
             '</span>';
     }
@@ -1824,6 +2012,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (timeSelect) {
             timeSelect.value = parts ? parts[2] : '';
         }
+        syncFixedSlotTimeGrid(wrap, parts ? parts[2] : '');
         input.value = parts ? (parts[1] + 'T' + parts[2]) : '';
     }
     function syncFixedSlotHidden(input) {
@@ -1879,6 +2068,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (input.parentNode !== fields) {
             fields.appendChild(input);
         }
+        ensureFixedSlotTimeGrid(wrap, timeSelect);
         if (input.getAttribute('data-slot-bound') !== '1') {
             input.setAttribute('data-slot-bound', '1');
             dateInput.addEventListener('change', function(){
