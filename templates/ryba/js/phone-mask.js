@@ -66,18 +66,77 @@
 		return null;
 	}
 
-	function detectCountry(digits, selectedIso) {
+	function nsnLooksValid(country, nsn) {
+		var first;
+		if (!nsn) {
+			return true;
+		}
+		first = nsn.charAt(0);
+		if (country.iso === 'KZ') {
+			return first === '6' || first === '7';
+		}
+		if (country.iso === 'RU') {
+			return first !== '0' && first !== '6' && first !== '7';
+		}
+		return true;
+	}
+
+	function parse(value, selectedIso) {
 		var selected = countryByIso(selectedIso || DEFAULT_ISO);
+		var digits = digitsOnly(value);
+		var country;
+		var nsn;
 		var matched;
+		var nested;
+		if (!digits) {
+			return {
+				country: selected,
+				nsn: '',
+				formatted: '',
+				digits: ''
+			};
+		}
 		digits = applyTrunk(digits, selected);
 		matched = matchDial(digits);
-		if (matched) {
-			if (matched.dial === '7') {
-				return plus7Country(digits.slice(1), selected.dial === '7' ? selected.iso : DEFAULT_ISO);
+
+		if (digits.indexOf(selected.dial) === 0) {
+			nsn = digits.slice(selected.dial.length);
+			if (selected.dial === '7') {
+				country = plus7Country(nsn, selected.iso);
+				if (!nsnLooksValid(country, nsn) && nsnLooksValid(selected, digits.slice(0, selected.nsn))) {
+					country = selected;
+					nsn = digits.slice(0, selected.nsn);
+				}
+			} else {
+				country = selected;
 			}
-			return matched;
+		} else if (matched) {
+			country = matched.dial === '7'
+				? plus7Country(digits.slice(1), selected.dial === '7' ? selected.iso : DEFAULT_ISO)
+				: matched;
+			nsn = digits.slice(country.dial.length);
+		} else {
+			country = selected;
+			nsn = digits;
 		}
-		return selected;
+
+		nested = matchDial(nsn);
+		if (nested && nested.dial.length >= 2 && nsn.indexOf(nested.dial) === 0) {
+			country = nested;
+			nsn = nsn.slice(nested.dial.length);
+		}
+		nsn = nsn.slice(0, country.nsn);
+
+		return {
+			country: country,
+			nsn: nsn,
+			formatted: formatPhone(country, nsn),
+			digits: country.dial + nsn
+		};
+	}
+
+	function detectCountry(digits, selectedIso) {
+		return parse(digits, selectedIso).country;
 	}
 
 	function formatPhone(country, nsn) {
@@ -122,34 +181,6 @@
 			nsn += '_';
 		}
 		return formatPhone(country, nsn);
-	}
-
-	function parse(value, selectedIso) {
-		var selected = countryByIso(selectedIso || DEFAULT_ISO);
-		var digits = digitsOnly(value);
-		var country;
-		var nsn;
-		if (!digits) {
-			return {
-				country: selected,
-				nsn: '',
-				formatted: '',
-				digits: ''
-			};
-		}
-		digits = applyTrunk(digits, selected);
-		country = detectCountry(digits, selected.iso);
-		if (digits.indexOf(country.dial) === 0) {
-			nsn = digits.slice(country.dial.length, country.dial.length + country.nsn);
-		} else {
-			nsn = digits.slice(0, country.nsn);
-		}
-		return {
-			country: country,
-			nsn: nsn,
-			formatted: formatPhone(country, nsn),
-			digits: country.dial + nsn
-		};
 	}
 
 	function prefixOf(country) {
