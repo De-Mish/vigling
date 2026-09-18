@@ -5,6 +5,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Uri\Uri;
 
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) ($item->master_id ?? 0);
+$profileUrl .= (strpos($profileUrl, '?') === false ? '?' : '&') . 'source=catalog';
 
 $masterFields = $fieldsByUser[(int) ($item->master_id ?? 0)] ?? [];
 $sity = trim((string) ($masterFields['sity'] ?? ''));

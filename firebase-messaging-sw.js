@@ -1,6 +1,6 @@
 importScripts('/index.php?option=com_pushnotify&task=display.sw');
 
-const CACHE_VERSION = 'v2026-09-11a';
+const CACHE_VERSION = 'v2026-09-18a';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 

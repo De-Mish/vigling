@@ -9,6 +9,7 @@ $app = Factory::getApplication();
 $currentUser = $app->getIdentity();
 $isGuest = $currentUser->guest;
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
+$profileUrl .= (strpos($profileUrl, '?') === false ? '?' : '&') . 'source=catalog';
 
 $sity = trim($fields['sity'] ?? '');
 $area = trim($fields['area'] ?? '');

@@ -11,6 +11,15 @@ $app   = Factory::getApplication();
 $input = $app->getInput();
 $tpl   = $this->template;
 $tplPath = rtrim(Uri::root(), '/') . '/templates/' . $tpl . '/';
+$rybaAsset = static function (string $relative) use ($tplPath): string {
+	$relative = ltrim($relative, '/');
+	$full = __DIR__ . '/' . $relative;
+	$v = is_file($full) ? (string) filemtime($full) : '1';
+
+	return $tplPath . $relative . '?v=' . $v;
+};
+$manifestFile = JPATH_ROOT . '/manifest.json';
+$manifestVer = is_file($manifestFile) ? (string) filemtime($manifestFile) : '1';
 $templateParams = $app->getTemplate(true)->params;
 
 $option   = $input->getCmd('option', '');
@@ -72,14 +81,15 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
-	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=20260911b">
+	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=<?php echo htmlspecialchars($manifestVer, ENT_QUOTES, 'UTF-8'); ?>">
 	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
-	<script src="<?php echo $tplPath; ?>js/jquery.min.js"></script>
-	<script src="<?php echo $tplPath; ?>js/slick.min.js"></script>
-	<script src="<?php echo $tplPath; ?>js/scripts.js"></script>
-	<script src="<?php echo $tplPath; ?>js/custom.js"></script>
+	<script src="<?php echo $rybaAsset('js/client-error.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/jquery.min.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/slick.min.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/scripts.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/custom.js'); ?>"></script>
 	<script src="https://code.jquery.com/jquery-migrate-1.4.1.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -93,13 +103,17 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 <?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
 <?php endif; ?>
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/slick.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/slick-theme.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/tabs.min.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/font-awesome.min.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/style.css">
-	<link rel="stylesheet" href="<?php echo $tplPath; ?>css/style-ext.css?v=<?php echo is_file(__DIR__ . '/css/style-ext.css') ? filemtime(__DIR__ . '/css/style-ext.css') : '1'; ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/slick.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/slick-theme.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/tabs.min.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/font-awesome.min.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style-ext.css'); ?>">
 	<jdoc:include type="styles" />
+	<?php if ($isHome) :
+		require_once __DIR__ . '/helpers/schema_ld.php';
+		vigling_print_website_json_ld((string) $app->get('sitename'));
+	endif; ?>
 </head>
 <body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
 	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
@@ -1774,6 +1788,23 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<script>
 	(function () {
 		try { sessionStorage.removeItem('vigling_registration_state_v3'); } catch (e) {}
+	})();
+	</script>
+	<?php endif; ?>
+	<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
+	<script>
+	(function () {
+		document.querySelectorAll('a.btn__time-zapis, a.category_cinfo-name').forEach(function (a) {
+			var href = a.getAttribute('href') || '';
+			if (!href || href.charAt(0) === '#') return;
+			try {
+				var u = new URL(href, window.location.origin);
+				if (!u.searchParams.get('source')) {
+					u.searchParams.set('source', 'catalog');
+					a.setAttribute('href', u.pathname + u.search + u.hash);
+				}
+			} catch (e) {}
+		});
 	})();
 	</script>
 	<?php endif; ?>

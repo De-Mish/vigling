@@ -142,6 +142,10 @@ class ListMapHelper
 		$addrLocal = implode(', ', $localParts);
 		$queryParts = array_values(array_unique(array_filter($parts)));
 		$query = count($queryParts) >= 2 ? implode(', ', $queryParts) : ($sity !== '' ? $sity : '');
+		$href = $profileHref;
+		if ($href !== '' && strpos($href, 'source=') === false) {
+			$href .= (strpos($href, '?') === false ? '?' : '&') . 'source=map';
+		}
 
 		return array_merge([
 			'id' => $userId,
@@ -149,7 +153,7 @@ class ListMapHelper
 			'city' => $sity,
 			'area' => $area,
 			'query' => $query,
-			'href' => $profileHref,
+			'href' => $href,
 			'line' => $servicesText,
 			'addr' => $addr !== '' ? $addr : ($sity !== '' ? $sity : 'Адрес не указан'),
 			'addr_local' => $addrLocal !== '' ? $addrLocal : 'Адрес не указан',
