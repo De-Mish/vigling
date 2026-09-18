@@ -889,46 +889,6 @@ $durationJson = json_encode($durationOptions);
     width: 96px !important;
     max-width: 96px !important;
 }
-#easyprofile.registration .fixed-slot-fields > select.course-slot-time,
-#easyprofile.registration .fixed-slot-fields > select.search-slot-time {
-    display: none !important;
-}
-#easyprofile.registration .fixed-slot-time-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    flex: 1 1 100%;
-    width: 100%;
-    max-width: 255px;
-    max-height: 248px;
-    overflow-y: auto;
-    padding: 2px 0;
-    box-sizing: border-box;
-}
-#easyprofile.registration .fixed-slot-time-btn {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    height: 32px;
-    margin: 0;
-    padding: 0 2px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    color: #000;
-    font-family: "GothamPro-Medium", sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 30px;
-    text-align: center;
-    cursor: pointer;
-}
-#easyprofile.registration .fixed-slot-time-btn.is-selected {
-    background: #f3d378;
-    border-color: #f7cc53;
-    box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3);
-}
 #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
 #easyprofile.registration #jform_courses_servis .service__item .course_title input {
     max-width: 255px !important;
@@ -1841,74 +1801,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return html;
     }
-    function quarterHourTimeGridHtml(selected) {
-        var html = '<span class="fixed-slot-time-grid" role="listbox" aria-label="Время">';
-        var hour;
-        var minute;
-        var value;
-        var on;
-        for (hour = 0; hour < 24; hour += 1) {
-            for (minute = 0; minute < 60; minute += 15) {
-                value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
-                on = selected === value;
-                html += '<button type="button" class="fixed-slot-time-btn' + (on ? ' is-selected' : '') + '" data-time="' + value + '" role="option" aria-selected="' + (on ? 'true' : 'false') + '">' + value + '</button>';
-            }
-        }
-        html += '</span>';
-        return html;
-    }
-    function syncFixedSlotTimeGrid(wrap, time) {
-        if (!wrap) {
-            return;
-        }
-        var selected = String(time || '');
-        wrap.querySelectorAll('.fixed-slot-time-btn').forEach(function (btn) {
-            var on = btn.getAttribute('data-time') === selected;
-            btn.classList.toggle('is-selected', on);
-            btn.setAttribute('aria-selected', on ? 'true' : 'false');
-        });
-    }
-    function ensureFixedSlotTimeGrid(wrap, timeSelect) {
-        if (!wrap || !timeSelect) {
-            return;
-        }
-        var grid = wrap.querySelector('.fixed-slot-time-grid');
-        var holder;
-        if (!grid) {
-            holder = document.createElement('span');
-            holder.innerHTML = quarterHourTimeGridHtml(timeSelect.value);
-            grid = holder.firstChild;
-            if (timeSelect.parentNode) {
-                if (timeSelect.nextSibling) {
-                    timeSelect.parentNode.insertBefore(grid, timeSelect.nextSibling);
-                } else {
-                    timeSelect.parentNode.appendChild(grid);
-                }
-            }
-        }
-        if (!grid || grid.getAttribute('data-grid-bound') === '1') {
-            syncFixedSlotTimeGrid(wrap, timeSelect.value);
-            return;
-        }
-        grid.setAttribute('data-grid-bound', '1');
-        grid.addEventListener('click', function (e) {
-            var btn = e.target && e.target.closest ? e.target.closest('.fixed-slot-time-btn') : null;
-            if (!btn || !grid.contains(btn)) {
-                return;
-            }
-            e.preventDefault();
-            timeSelect.value = btn.getAttribute('data-time') || '';
-            timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            syncFixedSlotTimeGrid(wrap, timeSelect.value);
-        });
-        syncFixedSlotTimeGrid(wrap, timeSelect.value);
-    }
     function fixedSlotFieldsHtml(kind) {
         var isSearch = kind === 'search';
         return '<span class="fixed-slot-fields">' +
             '<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
             '<select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select>' +
-            quarterHourTimeGridHtml() +
             '<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
             '</span>';
     }
@@ -1927,7 +1824,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (timeSelect) {
             timeSelect.value = parts ? parts[2] : '';
         }
-        syncFixedSlotTimeGrid(wrap, parts ? parts[2] : '');
         input.value = parts ? (parts[1] + 'T' + parts[2]) : '';
     }
     function syncFixedSlotHidden(input) {
@@ -1983,7 +1879,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (input.parentNode !== fields) {
             fields.appendChild(input);
         }
-        ensureFixedSlotTimeGrid(wrap, timeSelect);
         if (input.getAttribute('data-slot-bound') !== '1') {
             input.setAttribute('data-slot-bound', '1');
             dateInput.addEventListener('change', function(){
