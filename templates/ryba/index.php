@@ -67,12 +67,12 @@ if ($isPrivacyPolicyPage) {
 	$this->setMetaData('description', 'Политика конфиденциальности сервиса онлайн-записи Vigling.');
 }
 
-$this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-scale=1');
+$this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
 <head>
-	<meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport">
+	<meta content="width=device-width, initial-scale=1" name="viewport">
 	<meta content="IE=edge" http-equiv="X-UA-Compatible">
 	<link rel="icon" type="image/png" sizes="1852x1852" href="<?php echo rtrim(Uri::root(), '/'); ?>/images/logo.png?v=20260910h">
 	<link rel="apple-touch-icon" href="<?php echo rtrim(Uri::root(), '/'); ?>/images/logo.png?v=20260910h">
@@ -111,6 +111,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style-ext.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
 	<jdoc:include type="styles" />
 	<?php if ($isHome) :
 		require_once __DIR__ . '/helpers/schema_ld.php';
@@ -118,6 +119,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 	endif; ?>
 </head>
 <body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
+	<a class="skip-to-content" href="#main">Перейти к содержимому</a>
 	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
 		<div class="container d-flex">
 			<div class="header__menu">
@@ -296,6 +298,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1, maximum-sca
 			</div>
 		</div>
 	</header>
+	<div id="main" class="skip-target" tabindex="-1"></div>
 	<style>
 		@media (max-width: 768px) {
 			#header-mobile-panel .header-mobile__nav li.current > a,
