@@ -1636,6 +1636,28 @@ if (empty($isLkEmbed)) {
 		#zapis.in .calendar__master.preload .calendar__master-item {
 			opacity: 1;
 		}
+		#zapis .screen1 .calendar__master:not(.slick-initialized) {
+			display: flex !important;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
+			flex: 0 0 20%;
+			width: 20%;
+			min-width: 148px;
+			box-sizing: border-box;
+			opacity: 1 !important;
+		}
+		@media (max-width: 820px) {
+			#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
+				flex: 0 0 100%;
+				width: 100%;
+				min-width: 100%;
+			}
+		}
 		#zapis.modal {
 			padding-right: 0 !important;
 		}
@@ -3606,6 +3628,7 @@ if (empty($isLkEmbed)) {
 				activeBookingButton = this;
 				hideReservedNotice();
 				updateSummaryFromButton(this);
+				setTimeout(function () { initZapisCalendar(0); }, 350);
 			}, true);
 		});
 
@@ -3671,10 +3694,15 @@ if (empty($isLkEmbed)) {
 			try {
 				cal.slick(zapisCalendarSlick);
 			} catch (e3) {}
+			if (!zapisCalendarHasWidth(cal) && attempt < 20) {
+				try { cal.slick('unslick'); } catch (e4) {}
+				setTimeout(function () { initZapisCalendar(attempt + 1); }, 50);
+				return;
+			}
 			applyAvailableSlotsFilter();
 		}
 
-		jQuery(bookingModal).on('shown.bs.modal', function () {
+		function openZapisCalendarScreen() {
 			hideErrors();
 			hideReservedNotice();
 			showScreen('screen1');
@@ -3691,7 +3719,9 @@ if (empty($isLkEmbed)) {
 				return;
 			}
 			setTimeout(function () { initZapisCalendar(0); }, 0);
-		});
+		}
+
+		jQuery(document).off('shown.bs.modal.zapisCal').on('shown.bs.modal.zapisCal', '#zapis', openZapisCalendarScreen);
 
 		jQuery(bookingModal).on('hidden.bs.modal', function () {
 			if (redirectAfterClose && redirectAfterCloseUrl) {
