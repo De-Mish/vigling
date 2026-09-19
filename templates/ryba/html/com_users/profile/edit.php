@@ -1896,6 +1896,38 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
     max-width: 96px !important;
     display: inline-block !important;
 }
+.profile-edit .fixed-slot-time-wrap {
+    position: relative;
+    flex: 0 0 96px;
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    display: inline-block !important;
+}
+.profile-edit .fixed-slot-time-wrap select {
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    pointer-events: none;
+}
+.profile-edit .fixed-slot-time-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
 .profile-edit .fixed-slot-time-grid {
     display: none;
     position: absolute;
@@ -2550,6 +2582,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
     max-width: 100% !important;
     box-sizing: border-box !important;
 }
+#jform_searches_servis .service__item .fixed-slot-time-wrap {
+    width: 96px !important;
+    max-width: 96px !important;
+}
 #jform_searches_servis .service__item .search_duration select {
     max-width: 80px !important;
     width: auto !important;
@@ -3020,6 +3056,20 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			btn.setAttribute('aria-selected', on ? 'true' : 'false');
 		});
 	}
+	function setFixedSlotTimeExpanded(fields, open) {
+		var value = open ? 'true' : 'false';
+		if (!fields) {
+			return;
+		}
+		var sel = fields.querySelector('.course-slot-time, .search-slot-time');
+		if (sel) {
+			sel.setAttribute('aria-expanded', value);
+		}
+		var toggle = fields.querySelector('.fixed-slot-time-toggle');
+		if (toggle) {
+			toggle.setAttribute('aria-expanded', value);
+		}
+	}
 	function closeFixedSlotTimeGrids(except) {
 		document.querySelectorAll('.fixed-slot-time-grid.is-open').forEach(function (grid) {
 			if (grid === except) {
@@ -3030,10 +3080,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			if (fields) {
 				fields.classList.remove('is-time-open');
 			}
-			var sel = fields ? fields.querySelector('.course-slot-time, .search-slot-time') : null;
-			if (sel) {
-				sel.setAttribute('aria-expanded', 'false');
-			}
+			setFixedSlotTimeExpanded(fields, false);
 		});
 	}
 	function openFixedSlotTimeGrid(wrap, timeSelect, grid) {
@@ -3046,9 +3093,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		if (fields) {
 			fields.classList.add('is-time-open');
 		}
-		if (timeSelect) {
-			timeSelect.setAttribute('aria-expanded', 'true');
-		}
+		setFixedSlotTimeExpanded(fields, true);
 		syncFixedSlotTimeGrid(wrap, timeSelect ? timeSelect.value : '');
 		var on = grid.querySelector('.fixed-slot-time-btn.is-selected');
 		if (on && on.scrollIntoView) {
@@ -3062,7 +3107,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		document.documentElement.setAttribute('data-fixed-slot-grid-bound', '1');
 		document.addEventListener('mousedown', function (e) {
 			var t = e.target;
-			if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
+			if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('.fixed-slot-time-wrap') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
 				return;
 			}
 			closeFixedSlotTimeGrids();
@@ -3081,6 +3126,26 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		var fields = wrap.querySelector('.fixed-slot-fields') || timeSelect.parentNode;
 		var grid = wrap.querySelector('.fixed-slot-time-grid');
 		var holder;
+		var timeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+		var toggle;
+		if (!timeWrap) {
+			timeWrap = document.createElement('span');
+			timeWrap.className = 'fixed-slot-time-wrap';
+			if (timeSelect.parentNode) {
+				timeSelect.parentNode.insertBefore(timeWrap, timeSelect);
+			}
+			timeWrap.appendChild(timeSelect);
+		}
+		toggle = timeWrap.querySelector('.fixed-slot-time-toggle');
+		if (!toggle) {
+			toggle = document.createElement('button');
+			toggle.type = 'button';
+			toggle.className = 'fixed-slot-time-toggle';
+			toggle.setAttribute('aria-haspopup', 'listbox');
+			toggle.setAttribute('aria-label', 'Время');
+			toggle.setAttribute('aria-expanded', 'false');
+			timeWrap.appendChild(toggle);
+		}
 		if (!grid) {
 			holder = document.createElement('span');
 			holder.innerHTML = quarterHourTimeGridHtml(timeSelect.value);
@@ -3091,6 +3156,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		} else if (fields && grid.parentNode !== fields) {
 			fields.appendChild(grid);
 		}
+		timeSelect.setAttribute('tabindex', '-1');
+		timeSelect.setAttribute('aria-hidden', 'true');
 		timeSelect.setAttribute('aria-haspopup', 'listbox');
 		if (timeSelect.getAttribute('aria-expanded') !== 'true') {
 			timeSelect.setAttribute('aria-expanded', 'false');
@@ -3107,6 +3174,26 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
 				syncFixedSlotTimeGrid(wrap, timeSelect.value);
 				closeFixedSlotTimeGrids();
+			});
+		}
+		if (toggle.getAttribute('data-grid-toggle-bound') !== '1') {
+			toggle.setAttribute('data-grid-toggle-bound', '1');
+			toggle.addEventListener('click', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (grid.classList.contains('is-open')) {
+					closeFixedSlotTimeGrids();
+				} else {
+					openFixedSlotTimeGrid(wrap, timeSelect, grid);
+				}
+			});
+			toggle.addEventListener('keydown', function (e) {
+				if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+					e.preventDefault();
+					if (!grid.classList.contains('is-open')) {
+						openFixedSlotTimeGrid(wrap, timeSelect, grid);
+					}
+				}
 			});
 		}
 		if (timeSelect.getAttribute('data-grid-select-bound') !== '1') {
@@ -3134,7 +3221,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		var isSearch = kind === 'search';
 		return '<span class="fixed-slot-fields">' +
 			'<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
-			'<select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select>' +
+			'<span class="fixed-slot-time-wrap"><select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select></span>' +
 			quarterHourTimeGridHtml() +
 			'<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
 			'</span>';
@@ -3204,8 +3291,15 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			timeSelect.className = timeClass;
 			timeSelect.innerHTML = quarterHourTimeOptionsHtml();
 			fields.appendChild(timeSelect);
-		} else if (timeSelect.parentNode !== fields) {
-			fields.appendChild(timeSelect);
+		} else {
+			var existingTimeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+			if (existingTimeWrap) {
+				if (existingTimeWrap.parentNode !== fields) {
+					fields.appendChild(existingTimeWrap);
+				}
+			} else if (timeSelect.parentNode !== fields) {
+				fields.appendChild(timeSelect);
+			}
 		}
 		if (input.parentNode !== fields) {
 			fields.appendChild(input);
