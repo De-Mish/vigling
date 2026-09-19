@@ -37,6 +37,49 @@ final class UserServicesService
         return self::getUserServicesLegacyShapeFromTable($userId, '#__vigling_user_stock_services', true);
     }
 
+    public static function ensureRecommendationColumn(?DatabaseInterface $db = null): bool
+    {
+        static $ensured = null;
+        if ($ensured !== null) {
+            return $ensured;
+        }
+
+        try {
+            $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
+            $ok = true;
+            foreach (['#__vigling_user_services', '#__vigling_user_stock_services'] as $table) {
+                $columns = array_change_key_case($db->getTableColumns($table, false) ?: [], CASE_LOWER);
+                if (isset($columns['recommendation'])) {
+                    continue;
+                }
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName($table)
+                    . ' ADD COLUMN ' . $db->quoteName('recommendation') . ' VARCHAR(150) NOT NULL DEFAULT ' . $db->quote('')
+                )->execute();
+            }
+            $ensured = $ok;
+
+            return $ensured;
+        } catch (\Throwable $e) {
+            $ensured = false;
+
+            return false;
+        }
+    }
+
+    public static function sanitizeRecommendation($value): string
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+        if (function_exists('mb_substr')) {
+            return (string) mb_substr($text, 0, 150);
+        }
+
+        return substr($text, 0, 150);
+    }
+
     /**
      * Flat stock items for cards/lists (com_aktsii).
      *
@@ -96,6 +139,8 @@ final class UserServicesService
         if ($payloadJson === '') {
             return;
         }
+
+        self::ensureRecommendationColumn($db);
 
         $payload = json_decode($payloadJson, true);
         if (!is_array($payload) || !isset($payload['items']) || !is_array($payload['items'])) {
@@ -180,6 +225,7 @@ final class UserServicesService
                 $aboutStock = trim((string) ($item['about_stock'] ?? ''));
                 $countStock = self::toInt($item['count_stock'] ?? 0);
             }
+            $recommendation = self::sanitizeRecommendation($item['recommendation'] ?? '');
 
             self::upsertUserServiceRow(
                 $db,
@@ -195,7 +241,8 @@ final class UserServicesService
                 'vigling_payload_v1',
                 $oldPrice,
                 $aboutStock,
-                $countStock
+                $countStock,
+                $recommendation
             );
         }
 
@@ -272,8 +319,11 @@ final class UserServicesService
         ?string $payloadVariant = null,
         ?float $oldPrice = null,
         ?string $aboutStock = null,
-        ?int $countStock = null
+        ?int $countStock = null,
+        string $recommendation = ''
     ): void {
+        $hasRecommendation = self::ensureRecommendationColumn($db);
+        $recommendation = self::sanitizeRecommendation($recommendation);
         $priceSql = $db->quote(number_format((float) $price, 2, '.', ''));
         $legacyCatSql = $legacyCatId !== null ? (string) (int) $legacyCatId : 'NULL';
         $legacyTagSql = $legacyTagId !== null ? (string) (int) $legacyTagId : 'NULL';
@@ -316,6 +366,11 @@ final class UserServicesService
             $db->quoteName('pause_min') . '=VALUES(' . $db->quoteName('pause_min') . ')',
             $db->quoteName('payload_variant') . '=VALUES(' . $db->quoteName('payload_variant') . ')',
         ];
+        if ($hasRecommendation) {
+            $columns[] = $db->quoteName('recommendation');
+            $values[] = $db->quote($recommendation);
+            $updates[] = $db->quoteName('recommendation') . '=VALUES(' . $db->quoteName('recommendation') . ')';
+        }
 
         if ($targetTable === '#__vigling_user_stock_services') {
             $columns[] = $db->quoteName('old_price');
@@ -412,6 +467,7 @@ final class UserServicesService
     {
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $hasRecommendation = self::ensureRecommendationColumn($db);
             $columns = [
                 $db->quoteName('user_id'),
                 $db->quoteName('price'),
@@ -421,6 +477,9 @@ final class UserServicesService
                 $db->quoteName('pause_min'),
                 $db->quoteName('payload_variant'),
             ];
+            if ($hasRecommendation) {
+                $columns[] = $db->quoteName('recommendation');
+            }
             if ($table === '#__vigling_user_stock_services') {
                 $columns[] = $db->quoteName('old_price');
                 $columns[] = $db->quoteName('about_stock');

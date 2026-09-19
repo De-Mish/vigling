@@ -524,6 +524,9 @@ final class JsnDecodeHelper
         }
 
         try {
+            if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')) {
+                \Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureRecommendationColumn();
+            }
             $db = Factory::getContainer()->get(DatabaseInterface::class);
             $isStockTable = $userServicesTable === '#__vigling_user_stock_services';
             $select = [
@@ -534,6 +537,7 @@ final class JsnDecodeHelper
                 $db->quoteName('us.legacy_tag_id'),
                 $db->quoteName('us.pause_min'),
                 $db->quoteName('us.legacy_cat_id'),
+                $db->quoteName('us.recommendation'),
                 $db->quoteName('n.title', 'service_title'),
                 $db->quoteName('n.legacy_source', 'service_legacy_source'),
                 $db->quoteName('n.legacy_id', 'service_legacy_id'),
@@ -614,6 +618,7 @@ final class JsnDecodeHelper
                 'tag_id' => (int) ($row['legacy_tag_id'] ?? 0),
                 'legacy_cat_id' => (int) ($row['legacy_cat_id'] ?? 0),
                 'pause_min' => (int) ($row['pause_min'] ?? 0),
+                'recommendation' => \Joomla\Plugin\User\Vigling\Service\UserServicesService::sanitizeRecommendation($row['recommendation'] ?? ''),
             ];
 
             if ($userServicesTable === '#__vigling_user_stock_services') {

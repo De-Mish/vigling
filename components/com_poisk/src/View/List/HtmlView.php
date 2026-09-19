@@ -27,6 +27,7 @@ class HtmlView extends BaseHtmlView
 	protected $currentService = 0;
 	protected $currentTag = 0;
 	protected $pricesByUser = [];
+	protected $recommendationsByUser = [];
 	protected $listOrder = 'id';
 	protected $listDirn = 'ASC';
 
@@ -124,12 +125,17 @@ class HtmlView extends BaseHtmlView
 			]);
 		}
 		$this->pricesByUser = [];
-		if ($catId > 0 && $this->currentService > 0 && $this->currentTag > 0 && !empty($userIds)) {
-			$this->pricesByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getServicePricesForUsers(
+		$this->recommendationsByUser = [];
+		if ($catId > 0 && $this->currentService > 0 && !empty($userIds)) {
+			$serviceDetails = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFilteredServiceDetailsForUsers(
 				$userIds,
 				$this->currentService,
 				$this->currentTag
 			);
+			foreach ($serviceDetails as $userId => $row) {
+				$this->pricesByUser[(int) $userId] = (int) ($row['price'] ?? 0);
+				$this->recommendationsByUser[(int) $userId] = (string) ($row['recommendation'] ?? '');
+			}
 		}
 		$mapFieldsByUser = $this->fieldsByUser;
 		if (!is_array($mapFieldsByUser)) {

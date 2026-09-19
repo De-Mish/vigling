@@ -337,7 +337,7 @@ $doc->addStyleDeclaration('
 			<?php endif; ?>
 		</div>
 		<div data-da=".pagination__wrap,922,1" class="category__masters-sidebar">
-			<h2>Фильтр поиска</h2>
+			<h2>Фильтр поиска моделей</h2>
 			<form action="<?php echo $baseUrl; ?>" class="form-horizontal filter" method="get">
 				<div class="masters-sidebar__body">
 					<span class="clearable">

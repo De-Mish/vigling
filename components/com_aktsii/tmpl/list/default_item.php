@@ -10,6 +10,7 @@ $currentUser = $app->getIdentity();
 $isGuest = $currentUser->guest;
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
 $profileUrl .= (strpos($profileUrl, '?') === false ? '?' : '&') . 'source=catalog';
+$filterServiceId = (int) ($currentService ?? 0);
 
 $sity = trim($fields['sity'] ?? '');
 $area = trim($fields['area'] ?? '');
@@ -147,10 +148,15 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 			<?php if (!empty($stocks)) : ?>
 			<div class="category__content-info-list category__content-info-list--stocks">
 				<ul style="line-height: 1.6; padding-left: 0; margin: 0;">
-					<?php foreach ($stocks as $stock) : 
+					<?php foreach ($stocks as $stock) :
 						$serviceName = $getFullServiceName($item->id, $stock['cat_id'], $stock['tag_id']);
+						$isHighlightedStock = $filterServiceId > 0 && (
+							(int) ($stock['cat_id'] ?? 0) === $filterServiceId
+							|| (int) ($stock['tag_id'] ?? 0) === $filterServiceId
+						);
+						$serviceRecommendation = trim((string) ($stock['recommendation'] ?? ''));
 					?>
-					<li style="padding-left: 0; margin-left: 0;">
+					<li style="padding-left: 0; margin-left: 0;"<?php echo $isHighlightedStock ? ' class="list-service-highlight"' : ''; ?>>
 						<span><?php echo htmlspecialchars($serviceName); ?></span>
 						<span> / <?php echo number_format($stock['price'], 0, '.', ' '); ?> руб.</span>
 						<?php if ($stock['stock_count'] > 0) : ?>
@@ -163,6 +169,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 							<?php echo htmlspecialchars($stock['comment']); ?>
 						</div>
 						<?php endif; ?>
+						<?php include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php'; ?>
 					</li>
 					<?php endforeach; ?>
 				</ul>

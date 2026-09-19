@@ -715,6 +715,10 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="price"><label>Стоимость:</label><?php echo (int) ($item['price'] ?? 0); ?>&nbsp;RUB</span>
+														<?php
+														$serviceRecommendation = trim((string) ($item['recommendation'] ?? ''));
+														include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
+														?>
 													</p>
 													<?php endforeach; ?>
 												</div>
@@ -745,6 +749,10 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="price"><label>Стоимость:</label><?php echo (int) ($item['price'] ?? 0); ?>&nbsp;RUB</span>
+														<?php
+														$serviceRecommendation = trim((string) ($item['recommendation'] ?? ''));
+														include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
+														?>
 													</p>
 													<?php endforeach; ?>
 												</div>

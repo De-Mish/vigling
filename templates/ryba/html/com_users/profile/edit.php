@@ -779,6 +779,7 @@ try {
 				'duration' => (int) ($item['duration'] ?? 15),
 				'pause' => (int) ($item['pause_min'] ?? 15),
 				'price' => (int) ($item['price'] ?? 0),
+				'recommendation' => (string) ($item['recommendation'] ?? ''),
 			];
 			$rememberMissingServiceOption((int) $catId, $serviceRaw, $serviceLabel);
 		}
@@ -815,6 +816,7 @@ try {
 				'oldPrice' => (int) ($item['old_price'] ?? 0),
 				'aboutStock' => (string) ($item['about_stock'] ?? ''),
 				'countStock' => (int) ($item['count_stock'] ?? 0),
+				'recommendation' => (string) ($item['recommendation'] ?? ''),
 			];
 			$rememberMissingServiceOption((int) $catId, $serviceRaw, $serviceLabel);
 		}
@@ -1716,6 +1718,26 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	width: 100% !important;
 	min-width: 0 !important;
 	padding-right: 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation,
+.profile-edit #jform_stocks_servis .service__item .recommendation {
+	display: block !important;
+	width: 100% !important;
+	padding: 4px 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation label,
+.profile-edit #jform_stocks_servis .service__item .recommendation label {
+	display: block !important;
+	margin-bottom: 4px !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation textarea,
+.profile-edit #jform_stocks_servis .service__item .recommendation textarea {
+	width: 100% !important;
+	max-width: 255px !important;
+	min-height: 64px !important;
 }
 .profile-edit #jform_stocks_servis .service__item .count_stock input {
 	max-width: 90px !important;
@@ -2848,6 +2870,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			'<span class="time"><label>Время:</label><select class="time-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 			'<span class="time2"><label>Перерыв:</label><select class="pause-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 			'<span class="price"><label>Стоимость:</label><input type="number" min="0" step="1" class="price-input" value="" /></span>' +
+			'<span class="recommendation"><label>Описание услуги:</label><textarea maxlength="150" placeholder="Описание услуги" class="recommendation-input"></textarea></span>' +
 			'<button type="button" class="btn-remove-service">Удалить</button>';
 		serviceList.appendChild(row);
 		if (rowData) {
@@ -2855,11 +2878,13 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var timeSelect = row.querySelector('.time-select');
 			var pauseSelect = row.querySelector('.pause-select');
 			var priceInput = row.querySelector('.price-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
 			if (serviceSelect) ensureSelectValue(serviceSelect, String(rowData.serviceRaw || ''), String(rowData.serviceLabel || ''));
 			if (serviceSelect) serviceSelect.value = String(rowData.serviceRaw || '');
 			if (timeSelect) timeSelect.value = String(parseInt(rowData.duration || '15', 10) || 15);
 			if (pauseSelect) pauseSelect.value = String(parseInt(rowData.pause || '15', 10) || 15);
 			if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
+			if (recommendationInput) recommendationInput.value = String(rowData.recommendation || '');
 		}
 	}
 	function collectServiceRows() {
@@ -2870,12 +2895,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var timeSelect = row.querySelector('.time-select');
 			var pauseSelect = row.querySelector('.pause-select');
 			var priceInput = row.querySelector('.price-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
 			rows.push({
 				categoryId: parseInt(catId || '0', 10) || 0,
 				serviceRaw: serviceSelect ? String(serviceSelect.value || '') : '',
 				duration: parseInt(timeSelect ? String(timeSelect.value || '0') : '0', 10) || 0,
 				pause: parseInt(pauseSelect ? String(pauseSelect.value || '0') : '0', 10) || 0,
-				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0
+				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
+				recommendation: recommendationInput ? String(recommendationInput.value || '') : ''
 			});
 		});
 		return rows;
@@ -2913,7 +2940,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				cat_id: catId,
 				service_raw: serviceRaw,
 				price: price,
-				duration: String(duration + '.' + pause)
+				duration: String(duration + '.' + pause),
+				recommendation: String(row.recommendation || '').trim().slice(0, 150)
 			});
 		});
 		return {version: 1, items: items};
@@ -2960,7 +2988,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				duration: String(duration + '.' + pause),
 				old_price: oldPrice,
 				about_stock: aboutStock,
-				count_stock: countStock
+				count_stock: countStock,
+				recommendation: String(row.recommendation || '').trim().slice(0, 150)
 			});
 		});
 		return {version: 1, items: items};
@@ -4010,6 +4039,7 @@ function addStockRow(categoryLabel, rowData) {
 	'<span class="stock_price"><label>Акционная стоимость:</label><input type="number" min="0" step="1" class="stock-price-input" value="" /></span>' +
 	'<span class="old_price"><label>Цена без скидки:</label><input type="number" min="0" step="1" class="stock-old-price-input" value="" /></span>' +
 	'<span class="about_stock"><label>Условия акции:</label><textarea maxlength="150" placeholder="Условия акции" class="stock-about-input"></textarea></span>' +
+	'<span class="recommendation"><label>Описание услуги:</label><textarea maxlength="150" placeholder="Описание услуги" class="recommendation-input"></textarea></span>' +
 	'<span class="count_stock"><label>Всего предложений:</label><input type="number" min="0" step="1" class="stock-count-input" value="" /></span>' +
 	'<button type="button" class="btn-remove-service">Удалить</button>';
 	serviceList.appendChild(row);
@@ -4021,6 +4051,7 @@ function addStockRow(categoryLabel, rowData) {
 		var oldPriceInput = row.querySelector('.stock-old-price-input');
 		var countInput = row.querySelector('.stock-count-input');
 		var aboutInput = row.querySelector('.stock-about-input');
+		var recommendationInput = row.querySelector('.recommendation-input');
 		if (serviceSelect) ensureSelectValue(serviceSelect, String(rowData.serviceRaw || ''), String(rowData.serviceLabel || ''));
 		if (serviceSelect) serviceSelect.value = String(rowData.serviceRaw || '');
 		if (timeSelect) timeSelect.value = String(parseInt(rowData.duration || '15', 10) || 15);
@@ -4029,6 +4060,7 @@ function addStockRow(categoryLabel, rowData) {
 		if (oldPriceInput) oldPriceInput.value = String(parseInt(rowData.oldPrice || '0', 10) || 0);
 		if (countInput) countInput.value = String(parseInt(rowData.countStock || '0', 10) || 0);
 		if (aboutInput) aboutInput.value = String(rowData.aboutStock || '');
+		if (recommendationInput) recommendationInput.value = String(rowData.recommendation || '');
 	}
 }
 	function collectStockRows() {
@@ -4042,6 +4074,7 @@ function addStockRow(categoryLabel, rowData) {
 			var oldPriceInput = row.querySelector('.stock-old-price-input');
 			var countInput = row.querySelector('.stock-count-input');
 			var aboutInput = row.querySelector('.stock-about-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
 			rows.push({
 				categoryId: parseInt(catId || '0', 10) || 0,
 				serviceRaw: serviceSelect ? String(serviceSelect.value || '') : '',
@@ -4050,7 +4083,8 @@ function addStockRow(categoryLabel, rowData) {
 				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
 				oldPrice: parseInt(oldPriceInput ? String(oldPriceInput.value || '0') : '0', 10) || 0,
 				aboutStock: aboutInput ? String(aboutInput.value || '') : '',
-				countStock: parseInt(countInput ? String(countInput.value || '0') : '0', 10) || 0
+				countStock: parseInt(countInput ? String(countInput.value || '0') : '0', 10) || 0,
+				recommendation: recommendationInput ? String(recommendationInput.value || '') : ''
 			});
 		});
 		return rows;
