@@ -1049,10 +1049,10 @@ if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper
 $filterCatId = (int) $app->getInput()->getUint('cat_id', 0);
 $filterServiceId = (int) $app->getInput()->getUint('service', 0);
 $filterTagId = (int) $app->getInput()->getUint('tag', 0);
-$highlightSearchService = $filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0;
+$highlightSearchService = $filterServiceId > 0;
 $filterServiceTitle = '';
 $filterTagTitle = '';
-if ($highlightSearchService) {
+if ($highlightSearchService || $filterTagId > 0) {
 	$loadLookupTitle = static function (int $id): string {
 		if ($id <= 0) {
 			return '';
@@ -1093,20 +1093,31 @@ $serviceMatchesSearchFilter = static function (array $cat, array $item, int $fil
 		return $id > 0;
 	})));
 	$serviceMatch = in_array($filterServiceId, $serviceIds, true);
-	$tagMatch = in_array($filterTagId, $tagIds, true);
-	if ($serviceMatch && $tagMatch) {
+	$tagMatch = $filterTagId > 0 && in_array($filterTagId, $tagIds, true);
+	if ($filterTagId <= 0) {
+		if ($serviceMatch) {
+			return true;
+		}
+	} elseif ($serviceMatch && $tagMatch) {
 		return true;
 	}
 	$haystack = trim((string) ($cat['title'] ?? '') . ' ' . (string) ($item['name'] ?? ''));
-	if ($haystack === '' || $serviceTitle === '' || $tagTitle === '') {
+	if ($haystack === '' || $serviceTitle === '') {
 		return false;
 	}
-	if (function_exists('mb_stripos')) {
-		return mb_stripos($haystack, $serviceTitle) !== false && mb_stripos($haystack, $tagTitle) !== false;
+	$hasServiceTitle = function_exists('mb_stripos')
+		? mb_stripos($haystack, $serviceTitle) !== false
+		: strpos(strtolower($haystack), strtolower($serviceTitle)) !== false;
+	if ($filterTagId <= 0) {
+		return $hasServiceTitle;
 	}
-	$haystackLower = strtolower($haystack);
-	return strpos($haystackLower, strtolower($serviceTitle)) !== false
-		&& strpos($haystackLower, strtolower($tagTitle)) !== false;
+	if ($tagTitle === '') {
+		return false;
+	}
+	$hasTagTitle = function_exists('mb_stripos')
+		? mb_stripos($haystack, $tagTitle) !== false
+		: strpos(strtolower($haystack), strtolower($tagTitle)) !== false;
+	return $hasServiceTitle && $hasTagTitle;
 };
 $stockPricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
@@ -1334,7 +1345,7 @@ if (empty($isLkEmbed)) {
 		</div>
 		<div class="masters__big-img">
 			<?php foreach ($portfolioImages as $imageUrl) : ?>
-				<div style="background-image: url('<?php echo $this->escape($imageUrl); ?>'); width: 100%; display: inline-block;" class="masters__big-img-item"></div>
+				<div style="background-image: url('<?php echo $this->escape($imageUrl); ?>'); width: 100%;" class="masters__big-img-item"></div>
 			<?php endforeach; ?>
 		</div>
 	</div>
@@ -1378,7 +1389,7 @@ if (empty($isLkEmbed)) {
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
 				<?php foreach ($portfolioImages as $imageUrl) : ?>
-					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 100%; display: inline-block;" class="masters__small-img-item"></div>
+					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 100%;" class="masters__small-img-item"></div>
 				<?php endforeach; ?>
 			</div>
 			<div class="clearFloat"></div>
@@ -1420,7 +1431,8 @@ if (empty($isLkEmbed)) {
 			opacity: 1 !important;
 			overflow: visible !important;
 		}
-		.master__services .priceList__item.highlighted-service {
+		.master__services .priceList__item.highlighted-service,
+		.master__services .stockList__item.highlighted-service:not(.courseList__item) {
 			background-color: #f9ce54 !important;
 			border: 1px solid #e6b800;
 			border-radius: 10px;
@@ -1436,7 +1448,8 @@ if (empty($isLkEmbed)) {
 		.master__services .priceList__item.highlighted-service .service-name,
 		.master__services .priceList__item.highlighted-service .service-price,
 		.master__services .priceList__item.highlighted-service .priceList__item-coll,
-		.master__services .priceList__item.highlighted-service .price_span {
+		.master__services .priceList__item.highlighted-service .price_span,
+		.master__services .stockList__item.highlighted-service:not(.courseList__item) .stockList__item-coll {
 			color: #000000 !important;
 		}
 		.master__services .accordionItemHeading {
@@ -2130,8 +2143,10 @@ if (empty($isLkEmbed)) {
 									$stockCountLeft = (int) ($stockItem['count_stock'] ?? 0);
 									$stockServiceId = (int) ($stockItem['stock_service_id'] ?? 0);
 									$stockIsSoldOut = $stockServiceId <= 0 || $stockCountLeft <= 0;
+									$isHighlightedStock = $highlightSearchService
+										&& $serviceMatchesSearchFilter($stockCategory, $stockItem, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 								?>
-								<div class="stockList__item<?php echo $stockIsSoldOut ? ' is-unavailable' : ''; ?>" data-svc-id="<?php echo $this->escape((string) ($stockItem['svc_id'] ?? '')); ?>" data-stock-service-id="<?php echo $stockServiceId; ?>" data-tag-id="<?php echo (int) ($stockItem['tag_id'] ?? 0); ?>">
+								<div class="stockList__item<?php echo $stockIsSoldOut ? ' is-unavailable' : ''; ?><?php echo $isHighlightedStock ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo (int) ($stockCategory['cat_id'] ?? 0); ?>" data-svc-id="<?php echo $this->escape((string) ($stockItem['svc_id'] ?? '')); ?>" data-stock-service-id="<?php echo $stockServiceId; ?>" data-tag-id="<?php echo (int) ($stockItem['tag_id'] ?? 0); ?>" data-legacy-cat-id="<?php echo (int) ($stockItem['legacy_cat_id'] ?? 0); ?>">
 									<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($stockCategoryTitle . ' - ' . (string) ($stockItem['name'] ?? '')); ?></div>
 									<div class="stockList__item-coll stock__coll2">Описание: <?php echo $this->escape($stockDescription !== '' ? $stockDescription : 'Акционное предложение'); ?></div>
 									<div class="stockList__item-coll stock__coll3">от: <?php echo $stockOldPrice > 0 ? $stockOldPrice : $stockPrice; ?> <i class="old_price">руб.</i></div>
@@ -4078,12 +4093,12 @@ if (empty($isLkEmbed)) {
 	}
 
 	function applyHighlight(filters) {
-		if (!filters || !filters.service || !filters.tag) {
+		if (!filters || !filters.service) {
 			return null;
 		}
 		var serviceTitle = <?php echo json_encode($filterServiceTitle, JSON_UNESCAPED_UNICODE); ?>;
 		var tagTitle = <?php echo json_encode($filterTagTitle, JSON_UNESCAPED_UNICODE); ?>;
-		var items = document.querySelectorAll('.master__services .priceList__item');
+		var items = document.querySelectorAll('.master__services .priceList__item, .master__services .stockList__item:not(.courseList__item)');
 		var first = null;
 		items.forEach(function (item) {
 			var svcId = parsePositiveInt(item.getAttribute('data-svc-id'));
@@ -4091,14 +4106,21 @@ if (empty($isLkEmbed)) {
 			var catId = parsePositiveInt(item.getAttribute('data-cat-id'));
 			var legacyCatId = parsePositiveInt(item.getAttribute('data-legacy-cat-id'));
 			var serviceMatch = svcId === filters.service || catId === filters.service || legacyCatId === filters.service;
-			var tagMatch = tagId === filters.tag || svcId === filters.tag;
-			var nameEl = item.querySelector('.service-name');
+			var nameEl = item.querySelector('.service-name, .stock__coll1');
 			var haystack = ((nameEl && nameEl.textContent) || '').toLowerCase();
-			var nameMatch = serviceTitle && tagTitle
-				&& haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1
-				&& haystack.indexOf(String(tagTitle).toLowerCase()) !== -1;
-			if (!(serviceMatch && tagMatch) && !nameMatch) {
-				return;
+			if (!filters.tag) {
+				var nameMatch = serviceTitle && haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1;
+				if (!serviceMatch && !nameMatch) {
+					return;
+				}
+			} else {
+				var tagMatch = tagId === filters.tag || svcId === filters.tag;
+				var nameMatch = serviceTitle && tagTitle
+					&& haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1
+					&& haystack.indexOf(String(tagTitle).toLowerCase()) !== -1;
+				if (!(serviceMatch && tagMatch) && !nameMatch) {
+					return;
+				}
 			}
 			item.classList.add('highlighted-service');
 			if (!first) {

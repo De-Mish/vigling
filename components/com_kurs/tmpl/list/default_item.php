@@ -125,6 +125,7 @@ if ($slotStartUtc !== '') {
 ?>
 <div class="category__item course-catalog__item" data-address="<?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?>">
 <div class="category__item-img" style="<?php echo $imgStyle; ?>">
+	<img src="<?php echo htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($courseTitle !== '' ? $courseTitle : 'Курс', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
 </div>
 	<div class="category__item-content">
 		<div class="category__item-content-left">
