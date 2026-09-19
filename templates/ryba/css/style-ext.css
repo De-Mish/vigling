@@ -2262,6 +2262,15 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   width: 100%;
 }
 
+#content.view-profile .masters__small-img > .masters__small-img-item,
+#content.view_profile .masters__small-img > .masters__small-img-item {
+  display: inline-block;
+  width: 54px;
+  max-width: 54px;
+  min-height: 54px !important;
+  vertical-align: top;
+}
+
 #content.view-profile .masters__big-info-head-master,
 #content.view_profile .masters__big-info-head-master {
   width: 87px;

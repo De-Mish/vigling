@@ -126,7 +126,7 @@ class HtmlView extends BaseHtmlView
 		}
 		$this->pricesByUser = [];
 		$this->recommendationsByUser = [];
-		if ($catId > 0 && $this->currentService > 0 && !empty($userIds)) {
+		if ($catId > 0 && $this->currentService > 0 && $this->currentTag > 0 && !empty($userIds)) {
 			$serviceDetails = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFilteredServiceDetailsForUsers(
 				$userIds,
 				$this->currentService,
