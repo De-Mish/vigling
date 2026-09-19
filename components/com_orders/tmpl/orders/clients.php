@@ -274,6 +274,22 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		border: 1px solid #e0e0e0 !important;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	}
+	@media (min-width: 768px) {
+		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: flex-start;
+			align-items: flex-start;
+			gap: 6px 8px;
+			grid-template-columns: none;
+		}
+		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
+			width: auto !important;
+			flex: 0 0 auto;
+			padding-left: 3ch !important;
+			padding-right: 3ch !important;
+		}
+	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
 		background-color: #f0f0f0 !important;
 		color: #555 !important;

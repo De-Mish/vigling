@@ -1,6 +1,7 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Access\Access;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Router\Route;
@@ -1228,10 +1229,15 @@ try {
 		require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
 	}
 	$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
+	$profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
+	$isMasterProfile = in_array(3, $profileGroups, true) || in_array(8, $profileGroups, true);
+	$reviewDirection = $isMasterProfile
+		? \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
+		: \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT;
 	$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
 		$reviewDb,
 		$profileOwnerId,
-		\Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
+		$reviewDirection
 	);
 	$profileRatingAvg = \Viglin\Component\Orders\Site\Helper\ReviewHelper::averageRating($profileReviews);
 } catch (\Throwable $e) {
@@ -1696,6 +1702,22 @@ if (empty($isLkEmbed)) {
 			background-color: #fff !important;
 			border: 1px solid #e0e0e0 !important;
 			text-align: center !important;
+		}
+		@media (min-width: 768px) {
+			#zapis .screen1 .calendar__master-item .btns-m {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: flex-start;
+				align-items: flex-start;
+				gap: 6px 8px;
+				grid-template-columns: none;
+			}
+			#zapis .screen1 .calendar__master-item .btns-m .btn-select {
+				width: auto !important;
+				flex: 0 0 auto;
+				padding-left: 3ch !important;
+				padding-right: 3ch !important;
+			}
 		}
 		#zapis .screen1 .calendar__master-item .btns-m .btn-select.reserved {
 			background-color: #f0f0f0 !important;
@@ -2542,7 +2564,7 @@ if (empty($isLkEmbed)) {
 		<?php else : ?>
 			<h2>Отзывы</h2>
 			<div id="review__master" class="review__master-head">
-				<a href="<?php echo Route::_('index.php?option=com_orders&view=orders'); ?>">Написать отзыв</a>
+				<a class="z-link review-zlink" style="min-height: 18px;" href="<?php echo Route::_('index.php?option=com_orders&view=orders'); ?>">Написать отзыв<span></span></a>
 				<?php if ($profileReviews === []) : ?>
 					<span class="easylast_noentry">Нет отзывов</span>
 				<?php else : ?>
