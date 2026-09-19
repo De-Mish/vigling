@@ -99,6 +99,156 @@ class OrdersController extends BaseController
 		$this->setRedirectAndExit();
 	}
 
+	public function repeat()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$id = (int) $this->input->get('id', 0);
+		$timeUtcStr = trim((string) $this->input->get('time_utc', '', 'string'));
+		$timeStr = trim((string) $this->input->get('time', '', 'string'));
+		if ($id <= 0) {
+			$this->setMessage('Укажите запись', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+		$table = new OrderTable($db, $dispatcher);
+		if (!$table->load($id)) {
+			$this->setMessage('Запись не найдена', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if ((int) $table->user_id !== (int) $user->id) {
+			$this->setMessage('Нет прав на повтор этой записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$bookingKind = isset($table->booking_kind) ? trim((string) $table->booking_kind) : 'service';
+		if ($bookingKind === 'course' && ((int) ($table->course_id ?? 0) > 0 || (int) ($table->course_slot_id ?? 0) > 0)) {
+			$this->setMessage('Курс нельзя повторить этой кнопкой', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if ($bookingKind === 'search' && ((int) ($table->search_id ?? 0) > 0 || (int) ($table->search_slot_id ?? 0) > 0)) {
+			$this->setMessage('Поиск нельзя повторить этой кнопкой', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$masterId = (int) $table->master_id;
+		if ($masterId <= 0) {
+			$this->setMessage('Не указан мастер', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$serviceName = trim((string) ($table->service_name ?? ''));
+		if ($serviceName === '') {
+			$this->setMessage('У исходной записи не указана услуга', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$masterTimezone = self::getUserTimezoneById($masterId, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$time = self::parseRescheduleDateTime($timeUtcStr, $timeStr, $masterTimezone);
+		if (!$time) {
+			$this->setMessage('Укажите дату и время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
+		$timeTo = clone $time;
+		$timeTo->modify('+' . $durationMin . ' minutes');
+		$timeDb = $time->format('Y-m-d H:i:s');
+		$timeToDb = $timeTo->format('Y-m-d H:i:s');
+		$startUtc = \DateTimeImmutable::createFromMutable($time);
+		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
+		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+		if ($startUtc <= $nowUtc) {
+			$this->setMessage('Нельзя записаться на прошедшее время', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$scheduleCheck = self::validateMasterSchedule($masterId, $startUtc, $endUtc, $masterTimezone);
+		if (!$scheduleCheck['ok']) {
+			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$tableName = $db->getPrefix() . 'vigling_bookings';
+		$lockHeld = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+				$this->setMessage('Это время занято поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, 0)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+
+			OrderTable::ensureBookingCommentColumns($db);
+			OrderTable::ensureSourceColumn($db);
+			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			$new = new OrderTable($db, $dispatcher);
+			$payload = [
+				'user_id' => (int) $user->id,
+				'master_id' => $masterId,
+				'time' => $timeDb,
+				'time_to' => $timeToDb,
+				'service_name' => $serviceName,
+				'completed' => 0,
+			];
+			if (isset($columns['booking_kind'])) {
+				$payload['booking_kind'] = 'service';
+			}
+			if (isset($columns['source'])) {
+				$payload['source'] = 'profile';
+			}
+			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone'];
+			foreach ($copyIfPresent as $columnName) {
+				if (!isset($columns[$columnName]) || !isset($table->$columnName)) {
+					continue;
+				}
+				$value = $table->$columnName;
+				if ($value === null || $value === '') {
+					continue;
+				}
+				$payload[$columnName] = $value;
+			}
+			if (isset($columns['time_sum']) && empty($payload['time_sum'])) {
+				$payload['time_sum'] = $durationMin;
+			}
+			if (!$new->bind($payload) || !$new->store()) {
+				$this->setMessage($new->getError() ?: 'Ошибка сохранения записи', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
+		}
+		$this->setMessage('Вы записались!');
+		$this->setRedirectAndExit();
+	}
+
 	public function reschedule()
 	{
 		Session::checkToken('request') or $this->setRedirectAndExit();

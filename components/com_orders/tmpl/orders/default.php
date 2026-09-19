@@ -15,10 +15,12 @@ $token = Session::getFormToken();
 $returnEncoded = base64_encode(Uri::getInstance()->toString());
 $db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule');
+$repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 ?>
 <div class="com_orders orders-list">
 	<style>
 	.com_orders .reschedule-open { margin-right: 8px; margin-bottom: 4px; }
+	.com_orders .repeat-open { margin-left: 8px; margin-bottom: 4px; }
 	.com_orders .order-comment {
 		margin-top: 6px;
 		font-size: 13px;
@@ -193,6 +195,9 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 							<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
 							<button type="submit" class="btn btn-xs btn-default" onclick="return confirm('Удалить запись из списка?');">Удалить</button>
 						</form>
+						<?php if (!$isFixedCourse && !$isFixedSearch) : ?>
+						<button type="button" class="btn btn-xs btn-default repeat-open" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>">Повторить</button>
+						<?php endif; ?>
 						<?php else : ?>
 						<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancel'); ?>" class="form-inline form-cancel" style="display:inline;">
 							<input type="hidden" name="<?php echo $token; ?>" value="1">
@@ -217,7 +222,7 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 			</div>
 			<div class="modal-body">
-				<form id="reschedule-modal-form" method="post" action="<?php echo $rescheduleAction; ?>">
+				<form id="reschedule-modal-form" method="post" action="<?php echo $rescheduleAction; ?>" data-repeat-action="<?php echo $repeatAction; ?>">
 					<input type="hidden" name="<?php echo $token; ?>" value="1">
 					<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
 					<input type="hidden" name="id" id="reschedule-modal-id" value="0">
@@ -249,6 +254,10 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 	var timeUtcInp = document.getElementById('reschedule-modal-time-utc');
 	var errorEl = document.getElementById('reschedule-modal-error');
 	var submitBtn = document.getElementById('reschedule-modal-submit');
+	var submitLabel = submitBtn ? submitBtn.querySelector('.btn-label') : null;
+	var rescheduleAction = form ? form.getAttribute('action') : '';
+	var repeatAction = form ? (form.getAttribute('data-repeat-action') || '') : '';
+	var modalMode = 'reschedule';
 	var activeSlots = [];
 
 	function destroySlider(){
@@ -323,7 +332,7 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 			emptyItem.className = 'calendar__master-item';
 			var emptyNo = document.createElement('span');
 			emptyNo.className = 'line-no';
-			emptyNo.textContent = 'Нет доступного времени для переноса';
+			emptyNo.textContent = modalMode === 'repeat' ? 'Нет доступного времени' : 'Нет доступного времени для переноса';
 			emptyItem.appendChild(emptyNo);
 			cal.appendChild(emptyItem);
 			if (submitBtn) {
@@ -384,20 +393,47 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 		}
 	}
 
+	function openSlotModal(orderId, duration, currentUtc, nextMode){
+		hideError();
+		if (!orderId) return;
+		modalMode = nextMode === 'repeat' ? 'repeat' : 'reschedule';
+		if (form) {
+			form.setAttribute('action', modalMode === 'repeat' && repeatAction ? repeatAction : rescheduleAction);
+		}
+		if (submitLabel) {
+			submitLabel.textContent = modalMode === 'repeat' ? 'Записаться' : 'Сохранить';
+		}
+		if (submitBtn) {
+			submitBtn.classList.remove('is-loading');
+			submitBtn.removeAttribute('disabled');
+		}
+		idInp.value = String(orderId);
+		durationInp.value = String(isNaN(duration) ? 60 : duration);
+		timeUtcInp.value = '';
+		cal.classList.add('preload');
+		renderCalendar(readSlots(orderId), currentUtc);
+		jQuery(modal).modal('show');
+	}
+
 	document.querySelectorAll('.reschedule-open').forEach(function(btn){
 		btn.addEventListener('click', function(){
-			hideError();
-			var orderId = parseInt(this.getAttribute('data-id') || '0', 10);
-			var duration = parseInt(this.getAttribute('data-duration') || '60', 10);
-			var currentUtc = String(this.getAttribute('data-current-utc') || '').trim();
-			if (!orderId) return;
-			idInp.value = String(orderId);
-			durationInp.value = String(isNaN(duration) ? 60 : duration);
-			timeUtcInp.value = '';
-			cal.classList.add('preload');
-			var days = readSlots(orderId);
-			renderCalendar(days, currentUtc);
-			jQuery(modal).modal('show');
+			openSlotModal(
+				parseInt(this.getAttribute('data-id') || '0', 10),
+				parseInt(this.getAttribute('data-duration') || '60', 10),
+				String(this.getAttribute('data-current-utc') || '').trim(),
+				'reschedule'
+			);
+		});
+	});
+
+	document.querySelectorAll('.repeat-open').forEach(function(btn){
+		btn.addEventListener('click', function(){
+			openSlotModal(
+				parseInt(this.getAttribute('data-id') || '0', 10),
+				parseInt(this.getAttribute('data-duration') || '60', 10),
+				'',
+				'repeat'
+			);
 		});
 	});
 
@@ -411,6 +447,17 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 		destroySlider();
 		cal.innerHTML = '';
 		cal.classList.add('preload');
+		modalMode = 'reschedule';
+		if (form && rescheduleAction) {
+			form.setAttribute('action', rescheduleAction);
+		}
+		if (submitLabel) {
+			submitLabel.textContent = 'Сохранить';
+		}
+		if (submitBtn) {
+			submitBtn.classList.remove('is-loading');
+			submitBtn.removeAttribute('disabled');
+		}
 	});
 
 	form.addEventListener('submit', function(e){
@@ -418,7 +465,7 @@ $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.reschedule
 		var selected = form.querySelector('input[name="reschedule_slot"]:checked');
 		if (!selected || !selected.value) {
 			e.preventDefault();
-			showError('Выберите доступное время для переноса');
+			showError(modalMode === 'repeat' ? 'Выберите доступное время' : 'Выберите доступное время для переноса');
 			return;
 		}
 		timeUtcInp.value = String(selected.value);
