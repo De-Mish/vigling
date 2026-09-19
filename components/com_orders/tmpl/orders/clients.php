@@ -199,6 +199,33 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	.com_orders .orders-table .course-toggle[aria-expanded="true"] .course-toggle-open { display: none; }
 	.com_orders .orders-table .course-toggle[aria-expanded="false"] .course-toggle-close { display: none; }
 	.com_orders .reschedule-open { margin-right: 6px; margin-bottom: 4px; }
+	.com_orders .order-feedback {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top: 1px solid #eee;
+	}
+	.com_orders .order-feedback-form {
+		margin-top: 8px;
+	}
+	.com_orders .order-feedback-form textarea {
+		display: block;
+		width: 100%;
+		max-width: 360px;
+		margin: 4px 0 8px;
+		padding: 6px 8px;
+		box-sizing: border-box;
+		font-size: 13px;
+	}
+	.com_orders .order-feedback-label,
+	.com_orders .order-feedback-inline {
+		display: block;
+		font-size: 13px;
+		color: #555;
+		margin-bottom: 4px;
+	}
+	.com_orders .order-feedback-inline { margin: 0 0 8px; }
+	.com_orders .order-review-card { margin-top: 8px; font-size: 13px; color: #555; }
+	.com_orders .order-review-card__head { font-weight: 600; color: #333; }
 	#zapis-reschedule .modal-dialog {
 		width: 96vw !important;
 		max-width: 1180px !important;
@@ -226,7 +253,37 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		box-sizing: border-box;
 	}
 	#zapis-reschedule #reschedule-calendar .btns-m { padding-top: 2px; }
-	#zapis-reschedule #reschedule-calendar .btn-select { margin-bottom: 18px; }
+	#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 6px;
+		padding: 2px 2px 0;
+	}
+	#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
+		width: 100% !important;
+		min-width: 0 !important;
+		height: auto !important;
+		margin: 0 !important;
+		padding: 6px 2px !important;
+		font-size: 11px !important;
+		line-height: 1.4 !important;
+		border-radius: 6px !important;
+		box-sizing: border-box !important;
+		text-align: center !important;
+		background-color: #fff !important;
+		border: 1px solid #e0e0e0 !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+	}
+	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
+		background-color: #f0f0f0 !important;
+		color: #555 !important;
+		border-color: #e8e8e8 !important;
+	}
+	#zapis-reschedule #reschedule-calendar .btns-m input:checked + .btn-select {
+		background-color: #f7cc53 !important;
+		border-color: #f7cc53 !important;
+		box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
+	}
 	#zapis-reschedule #reschedule-calendar .slick-prev,
 	#zapis-reschedule #reschedule-calendar .slick-next {
 		z-index: 5;
@@ -465,6 +522,13 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 											<?php if (trim((string) ($participant->comment ?? '')) !== '') : ?>
 												<div class="order-comment"><?php echo htmlspecialchars((string) $participant->comment); ?></div>
 											<?php endif; ?>
+											<?php
+											$item = $participant;
+											$role = 'master';
+											$isPast = $participantIsPast;
+											$reviewsByDirection = is_array($participant->_reviews ?? null) ? $participant->_reviews : [];
+											include __DIR__ . '/_feedback.php';
+											?>
 										</div>
 										<div class="course-participant-time">
 											<span class="lk-time-utc" data-time-utc="<?php echo $participantTimeIso ? $this->escape($participantTimeIso) : ''; ?>">—</span>
@@ -503,6 +567,11 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 						<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
 							<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
 						<?php endif; ?>
+						<?php
+						$role = 'master';
+						$reviewsByDirection = is_array($item->_reviews ?? null) ? $item->_reviews : [];
+						include __DIR__ . '/_feedback.php';
+						?>
 					</td>
 					<td data-label="Дата и время"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></td>
 					<td data-label="Контакты"><?php
@@ -596,15 +665,11 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			} else {
 				jqCal.slick({
 					infinite: false,
-					slidesToShow: 5,
+					slidesToShow: 1,
 					slidesToScroll: 1,
 					dots: false,
 					arrows: true,
-					accessibility: false,
-					responsive: [
-						{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-						{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
-					]
+					accessibility: false
 				});
 			}
 			jqCal.removeClass('preload');

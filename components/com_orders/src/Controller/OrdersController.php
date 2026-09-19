@@ -8,7 +8,12 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
+use Viglin\Component\Orders\Site\Helper\ReviewHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
+
+if (!class_exists(ReviewHelper::class, false)) {
+	require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+}
 
 class OrdersController extends BaseController
 {
@@ -972,6 +977,86 @@ class OrdersController extends BaseController
 			'UPDATE ' . $db->quoteName($tbl) . ' SET ' . $db->quoteName('completed') . ' = 1 WHERE ' . $db->quoteName('id') . ' = ' . (int) $id
 		)->execute();
 		$this->setMessage('Запись отмечена как выполненная');
+		$this->setRedirectAndExit();
+	}
+
+	public function review()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$id = (int) $this->input->get('id', 0);
+		$rating = (int) $this->input->get('rating', 0);
+		$reviewText = (string) $this->input->get('review_text', '', 'string');
+		$anonymous = (int) $this->input->get('anonymous', 0) === 1;
+		if ($id <= 0) {
+			$this->setMessage('Неверный идентификатор записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+		$table = new OrderTable($db, $dispatcher);
+		if (!$table->load($id)) {
+			$this->setMessage('Запись не найдена', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$direction = '';
+		if ((int) $table->user_id === (int) $user->id) {
+			$direction = ReviewHelper::DIRECTION_CLIENT_TO_MASTER;
+		} elseif ((int) $table->master_id === (int) $user->id) {
+			$direction = ReviewHelper::DIRECTION_MASTER_TO_CLIENT;
+		} else {
+			$this->setMessage('Нет прав на этот отзыв', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$result = ReviewHelper::saveReview($db, $table, (int) $user->id, $direction, $rating, $reviewText, $anonymous);
+		$this->setMessage($result['message'], !empty($result['ok']) ? 'message' : 'error');
+		$this->setRedirectAndExit();
+	}
+
+	public function commentAfter()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$id = (int) $this->input->get('id', 0);
+		$comment = (string) $this->input->get('after_comment', '', 'string');
+		if ($id <= 0) {
+			$this->setMessage('Неверный идентификатор записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+		$table = new OrderTable($db, $dispatcher);
+		if (!$table->load($id)) {
+			$this->setMessage('Запись не найдена', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$role = '';
+		if ((int) $table->user_id === (int) $user->id) {
+			$role = 'client';
+		} elseif ((int) $table->master_id === (int) $user->id) {
+			$role = 'master';
+		} else {
+			$this->setMessage('Нет прав на этот комментарий', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$result = ReviewHelper::saveAfterComment($db, $table, (int) $user->id, $role, $comment);
+		$this->setMessage($result['message'], !empty($result['ok']) ? 'message' : 'error');
 		$this->setRedirectAndExit();
 	}
 

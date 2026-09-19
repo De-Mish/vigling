@@ -11,6 +11,7 @@
 		<folder>Model</folder>
 		<folder>View</folder>
 		<folder>Table</folder>
+		<folder>Helper</folder>
 	</files>
 	<administration>
 		<menu>COM_ORDERS</menu>
