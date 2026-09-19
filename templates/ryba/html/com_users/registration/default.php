@@ -870,6 +870,14 @@ $durationJson = json_encode($durationOptions);
     max-width: 90px !important;
     width: 90px !important;
 }
+#easyprofile.registration #jform_courses_servis .service__item .course_mode,
+#easyprofile.registration #jform_courses_servis .service__item .course_slot,
+#easyprofile.registration #jform_searches_servis .service__item .search_mode,
+#easyprofile.registration #jform_searches_servis .service__item .search_slot,
+#easyprofile.registration #jform_courses_servis .service__item,
+#easyprofile.registration #jform_searches_servis .service__item {
+    overflow: visible !important;
+}
 #easyprofile.registration .fixed-slot-fields {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -880,25 +888,71 @@ $durationJson = json_encode($durationOptions);
     position: relative;
 }
 #easyprofile.registration .fixed-slot-fields.is-time-open {
-    z-index: 6;
+    z-index: 4000;
+}
+#easyprofile.registration .fixed-slot-fields input[type="hidden"] {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    flex: 0 0 0 !important;
 }
 #easyprofile.registration .fixed-slot-fields input[type="date"] {
     flex: 1 1 140px;
     min-width: 130px;
     max-width: 150px !important;
     width: 150px !important;
+    display: inline-block !important;
+    height: 34px;
 }
 #easyprofile.registration .fixed-slot-fields select {
     flex: 0 0 96px;
     width: 96px !important;
     max-width: 96px !important;
+    display: inline-block !important;
+}
+#easyprofile.registration .fixed-slot-time-wrap {
+    position: relative;
+    flex: 0 0 96px;
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    display: inline-block !important;
+}
+#easyprofile.registration .fixed-slot-time-wrap select {
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    pointer-events: none;
+}
+#easyprofile.registration .fixed-slot-time-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
 }
 #easyprofile.registration .fixed-slot-time-grid {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
-    right: 0;
-    z-index: 40;
+    left: 0;
+    right: auto;
+    z-index: 4001;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     width: 255px;
@@ -913,7 +967,7 @@ $durationJson = json_encode($durationOptions);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 #easyprofile.registration .fixed-slot-time-grid.is-open {
-    display: grid;
+    display: grid !important;
 }
 #easyprofile.registration .fixed-slot-time-btn {
     display: block;
@@ -1132,7 +1186,6 @@ $durationJson = json_encode($durationOptions);
 }
 #easyprofile.registration #jform_searches_servis .service__item .search_desc textarea,
 #easyprofile.registration #jform_searches_servis .service__item .search_title input,
-#easyprofile.registration #jform_searches_servis .service__item .search_slot input,
 #easyprofile.registration #jform_searches_servis .service__item .search_media .search-media-file-input {
     max-width: 255px !important;
     width: 255px !important;
@@ -1226,7 +1279,6 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
     #easyprofile.registration #jform_courses_servis .service__item .course_title input,
     #easyprofile.registration #jform_courses_servis .service__item .course_media input,
-    #easyprofile.registration #jform_courses_servis .service__item .course_slot input,
     #easyprofile.registration #jform_courses_servis .service__item .course_media .course-media-file-input,
     #easyprofile.registration #jform_courses_servis .service__item .course_price input,
     #easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
@@ -1297,7 +1349,6 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_searches_servis .service__item .search_desc textarea,
     #easyprofile.registration #jform_searches_servis .service__item .search_title input,
     #easyprofile.registration #jform_searches_servis .service__item .search_media input,
-    #easyprofile.registration #jform_searches_servis .service__item .search_slot input,
     #easyprofile.registration #jform_searches_servis .service__item .search_media .search-media-file-input,
     #easyprofile.registration #jform_searches_servis .service__item .search_price input,
     #easyprofile.registration #jform_searches_servis .service__item .search_capacity input,
@@ -1878,6 +1929,20 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.setAttribute('aria-selected', on ? 'true' : 'false');
         });
     }
+    function setFixedSlotTimeExpanded(fields, open) {
+        var value = open ? 'true' : 'false';
+        if (!fields) {
+            return;
+        }
+        var sel = fields.querySelector('.course-slot-time, .search-slot-time');
+        if (sel) {
+            sel.setAttribute('aria-expanded', value);
+        }
+        var toggle = fields.querySelector('.fixed-slot-time-toggle');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', value);
+        }
+    }
     function closeFixedSlotTimeGrids(except) {
         document.querySelectorAll('.fixed-slot-time-grid.is-open').forEach(function (grid) {
             if (grid === except) {
@@ -1888,10 +1953,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (fields) {
                 fields.classList.remove('is-time-open');
             }
-            var sel = fields ? fields.querySelector('.course-slot-time, .search-slot-time') : null;
-            if (sel) {
-                sel.setAttribute('aria-expanded', 'false');
-            }
+            setFixedSlotTimeExpanded(fields, false);
         });
     }
     function openFixedSlotTimeGrid(wrap, timeSelect, grid) {
@@ -1904,9 +1966,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (fields) {
             fields.classList.add('is-time-open');
         }
-        if (timeSelect) {
-            timeSelect.setAttribute('aria-expanded', 'true');
-        }
+        setFixedSlotTimeExpanded(fields, true);
         syncFixedSlotTimeGrid(wrap, timeSelect ? timeSelect.value : '');
         var on = grid.querySelector('.fixed-slot-time-btn.is-selected');
         if (on && on.scrollIntoView) {
@@ -1920,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.documentElement.setAttribute('data-fixed-slot-grid-bound', '1');
         document.addEventListener('mousedown', function (e) {
             var t = e.target;
-            if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
+            if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('.fixed-slot-time-wrap') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
                 return;
             }
             closeFixedSlotTimeGrids();
@@ -1939,6 +1999,26 @@ document.addEventListener('DOMContentLoaded', function () {
         var fields = wrap.querySelector('.fixed-slot-fields') || timeSelect.parentNode;
         var grid = wrap.querySelector('.fixed-slot-time-grid');
         var holder;
+        var timeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+        var toggle;
+        if (!timeWrap) {
+            timeWrap = document.createElement('span');
+            timeWrap.className = 'fixed-slot-time-wrap';
+            if (timeSelect.parentNode) {
+                timeSelect.parentNode.insertBefore(timeWrap, timeSelect);
+            }
+            timeWrap.appendChild(timeSelect);
+        }
+        toggle = timeWrap.querySelector('.fixed-slot-time-toggle');
+        if (!toggle) {
+            toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'fixed-slot-time-toggle';
+            toggle.setAttribute('aria-haspopup', 'listbox');
+            toggle.setAttribute('aria-label', 'Время');
+            toggle.setAttribute('aria-expanded', 'false');
+            timeWrap.appendChild(toggle);
+        }
         if (!grid) {
             holder = document.createElement('span');
             holder.innerHTML = quarterHourTimeGridHtml(timeSelect.value);
@@ -1949,6 +2029,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (fields && grid.parentNode !== fields) {
             fields.appendChild(grid);
         }
+        timeSelect.setAttribute('tabindex', '-1');
+        timeSelect.setAttribute('aria-hidden', 'true');
         timeSelect.setAttribute('aria-haspopup', 'listbox');
         if (timeSelect.getAttribute('aria-expanded') !== 'true') {
             timeSelect.setAttribute('aria-expanded', 'false');
@@ -1965,6 +2047,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 syncFixedSlotTimeGrid(wrap, timeSelect.value);
                 closeFixedSlotTimeGrids();
+            });
+        }
+        if (toggle.getAttribute('data-grid-toggle-bound') !== '1') {
+            toggle.setAttribute('data-grid-toggle-bound', '1');
+            toggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (grid.classList.contains('is-open')) {
+                    closeFixedSlotTimeGrids();
+                } else {
+                    openFixedSlotTimeGrid(wrap, timeSelect, grid);
+                }
+            });
+            toggle.addEventListener('keydown', function (e) {
+                if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!grid.classList.contains('is-open')) {
+                        openFixedSlotTimeGrid(wrap, timeSelect, grid);
+                    }
+                }
             });
         }
         if (timeSelect.getAttribute('data-grid-select-bound') !== '1') {
@@ -1992,7 +2094,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var isSearch = kind === 'search';
         return '<span class="fixed-slot-fields">' +
             '<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
-            '<select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select>' +
+            '<span class="fixed-slot-time-wrap"><select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select></span>' +
             quarterHourTimeGridHtml() +
             '<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
             '</span>';
@@ -2062,8 +2164,15 @@ document.addEventListener('DOMContentLoaded', function () {
             timeSelect.className = timeClass;
             timeSelect.innerHTML = quarterHourTimeOptionsHtml();
             fields.appendChild(timeSelect);
-        } else if (timeSelect.parentNode !== fields) {
-            fields.appendChild(timeSelect);
+        } else {
+            var existingTimeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+            if (existingTimeWrap) {
+                if (existingTimeWrap.parentNode !== fields) {
+                    fields.appendChild(existingTimeWrap);
+                }
+            } else if (timeSelect.parentNode !== fields) {
+                fields.appendChild(timeSelect);
+            }
         }
         if (input.parentNode !== fields) {
             fields.appendChild(input);

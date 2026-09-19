@@ -2280,7 +2280,7 @@ if (empty($isLkEmbed)) {
 								<button type="button" class="zapis-reserved-notice__close" aria-label="Закрыть">&times;</button>
 							</div>
 							<div class="error-msg" style="display:none;"></div>
-							<div class="calendar__master preload">
+							<div class="calendar__master calendar__master--manual preload">
 								<?php foreach ($calendarDays as $calendarDay) : ?>
 								<div class="calendar__master-item">
 									<span class="mas-date">
@@ -3622,26 +3622,38 @@ if (empty($isLkEmbed)) {
 			}
 
 			var cal = jQuery(bookingModal).find('.calendar__master');
-			if (cal.length) {
-				if (!cal.hasClass('slick-initialized')) {
-					cal.slick({
-						infinite: false,
-						slidesToShow: 5,
-						slidesToScroll: 1,
-						dots: false,
-						arrows: true,
-						responsive: [
-							{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-							{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
-						]
-					});
-				} else {
-					cal.slick('setPosition');
-					cal.slick('refresh');
+			setTimeout(function () {
+				if (cal.length) {
+					if (cal.hasClass('slick-initialized')) {
+						var slideW = 0;
+						try {
+							slideW = cal.find('.slick-slide').not('.slick-cloned').first().width() || 0;
+						} catch (e) {}
+						if (slideW < 10) {
+							try { cal.slick('unslick'); } catch (e2) {}
+						}
+					}
+					if (!cal.hasClass('slick-initialized')) {
+						cal.slick({
+							infinite: false,
+							slidesToShow: 5,
+							slidesToScroll: 1,
+							dots: false,
+							arrows: true,
+							accessibility: false,
+							responsive: [
+								{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
+								{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
+							]
+						});
+					} else {
+						cal.slick('setPosition');
+						cal.slick('refresh');
+					}
+					cal.removeClass('preload');
 				}
-				cal.removeClass('preload');
-			}
-			applyAvailableSlotsFilter();
+				applyAvailableSlotsFilter();
+			}, 0);
 		});
 
 		jQuery(bookingModal).on('hidden.bs.modal', function () {
