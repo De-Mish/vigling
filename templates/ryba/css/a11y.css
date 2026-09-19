@@ -1,0 +1,52 @@
+/* Keyboard and motion accessibility. Mouse look stays the same. */
+
+.skip-to-content {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  z-index: 100000;
+  padding: 10px 16px;
+  background: #111;
+  color: #fff;
+  font-family: "GothamPro-Medium", sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+  text-decoration: none;
+  border-radius: 6px;
+  transform: translateY(-200%);
+}
+
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  transform: translateY(0);
+  color: #fff;
+  outline: 2px solid #f7cc53 !important;
+  outline-offset: 2px !important;
+}
+
+#main.skip-target {
+  position: relative;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid #111 !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
