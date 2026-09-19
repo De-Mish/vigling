@@ -1,7 +1,6 @@
 <?php
 defined('_JEXEC') or die;
 
-use Joomla\CMS\Router\Route;
 use Viglin\Component\Orders\Site\Helper\ReviewHelper;
 
 if (!class_exists(ReviewHelper::class)) {
@@ -13,7 +12,6 @@ $profileReviews = is_array($profileReviews ?? null) ? $profileReviews : [];
 <div class="review__master lk-client-reviews">
 	<h2>Отзывы</h2>
 	<div id="review__master" class="review__master-head">
-		<a class="z-link review-zlink" style="min-height: 18px;" href="<?php echo Route::_('index.php?option=com_orders&view=orders'); ?>">Написать отзыв<span></span></a>
 		<?php if ($profileReviews === []) : ?>
 			<span class="easylast_noentry">Нет отзывов</span>
 		<?php else : ?>
