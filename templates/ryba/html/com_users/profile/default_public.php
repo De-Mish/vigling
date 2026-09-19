@@ -1632,6 +1632,32 @@ if (empty($isLkEmbed)) {
 			background-color: #ddd;
 			pointer-events: auto;
 		}
+		#zapis.show .calendar__master.preload .calendar__master-item,
+		#zapis.in .calendar__master.preload .calendar__master-item {
+			opacity: 1;
+		}
+		#zapis .screen1 .calendar__master:not(.slick-initialized) {
+			display: flex !important;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
+			flex: 0 0 20%;
+			width: 20%;
+			min-width: 148px;
+			box-sizing: border-box;
+			opacity: 1 !important;
+		}
+		@media (max-width: 820px) {
+			#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
+				flex: 0 0 100%;
+				width: 100%;
+				min-width: 100%;
+			}
+		}
 		#zapis.modal {
 			padding-right: 0 !important;
 		}
@@ -3602,10 +3628,81 @@ if (empty($isLkEmbed)) {
 				activeBookingButton = this;
 				hideReservedNotice();
 				updateSummaryFromButton(this);
+				setTimeout(function () { initZapisCalendar(0); }, 350);
 			}, true);
 		});
 
-		jQuery(bookingModal).on('shown.bs.modal', function () {
+		var zapisCalendarSlick = {
+			infinite: false,
+			slidesToShow: 5,
+			slidesToScroll: 1,
+			dots: false,
+			arrows: true,
+			accessibility: false,
+			responsive: [
+				{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
+				{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
+			]
+		};
+
+		function zapisCalendarHasWidth(cal) {
+			var listW = 0;
+			var wrapW = 0;
+			try {
+				listW = cal.find('.slick-list').width() || 0;
+			} catch (e) {}
+			wrapW = cal.width() || cal.parent().width() || 0;
+			return Math.max(listW, wrapW) >= 40;
+		}
+
+		function initZapisCalendar(attempt) {
+			attempt = attempt || 0;
+			var cal = jQuery(bookingModal).find('.calendar__master');
+			if (!cal.length) {
+				applyAvailableSlotsFilter();
+				return;
+			}
+			cal.removeClass('preload');
+			var screen1 = bookingModal.querySelector('.screen1');
+			if (screen1 && screen1.style.display === 'none') {
+				return;
+			}
+			if (typeof cal.slick !== 'function') {
+				applyAvailableSlotsFilter();
+				return;
+			}
+			if (cal.hasClass('slick-initialized')) {
+				if (zapisCalendarHasWidth(cal)) {
+					try {
+						cal.slick('setPosition');
+						cal.slick('refresh');
+					} catch (e) {}
+					applyAvailableSlotsFilter();
+					return;
+				}
+				try { cal.slick('unslick'); } catch (e2) {}
+			}
+			var hostW = cal.parent().width() || jQuery(bookingModal).find('.calc__body').width() || jQuery(bookingModal).find('.modal-dialog').width() || 0;
+			if (hostW < 40) {
+				if (attempt < 20) {
+					setTimeout(function () { initZapisCalendar(attempt + 1); }, 50);
+				} else {
+					applyAvailableSlotsFilter();
+				}
+				return;
+			}
+			try {
+				cal.slick(zapisCalendarSlick);
+			} catch (e3) {}
+			if (!zapisCalendarHasWidth(cal) && attempt < 20) {
+				try { cal.slick('unslick'); } catch (e4) {}
+				setTimeout(function () { initZapisCalendar(attempt + 1); }, 50);
+				return;
+			}
+			applyAvailableSlotsFilter();
+		}
+
+		function openZapisCalendarScreen() {
 			hideErrors();
 			hideReservedNotice();
 			showScreen('screen1');
@@ -3619,42 +3716,12 @@ if (empty($isLkEmbed)) {
 			syncNotifyButtonVisibility();
 			if (isFixedCourseBooking() && applyFixedCourseSelection()) {
 				showScreen('screen2');
+				return;
 			}
+			setTimeout(function () { initZapisCalendar(0); }, 0);
+		}
 
-			var cal = jQuery(bookingModal).find('.calendar__master');
-			setTimeout(function () {
-				if (cal.length) {
-					if (cal.hasClass('slick-initialized')) {
-						var slideW = 0;
-						try {
-							slideW = cal.find('.slick-slide').not('.slick-cloned').first().width() || 0;
-						} catch (e) {}
-						if (slideW < 10) {
-							try { cal.slick('unslick'); } catch (e2) {}
-						}
-					}
-					if (!cal.hasClass('slick-initialized')) {
-						cal.slick({
-							infinite: false,
-							slidesToShow: 5,
-							slidesToScroll: 1,
-							dots: false,
-							arrows: true,
-							accessibility: false,
-							responsive: [
-								{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-								{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
-							]
-						});
-					} else {
-						cal.slick('setPosition');
-						cal.slick('refresh');
-					}
-					cal.removeClass('preload');
-				}
-				applyAvailableSlotsFilter();
-			}, 0);
-		});
+		jQuery(document).off('shown.bs.modal.zapisCal').on('shown.bs.modal.zapisCal', '#zapis', openZapisCalendarScreen);
 
 		jQuery(bookingModal).on('hidden.bs.modal', function () {
 			if (redirectAfterClose && redirectAfterCloseUrl) {
