@@ -2085,6 +2085,10 @@ if (empty($isLkEmbed)) {
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
 							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
 							<div class="clearFloat"></div>
+							<?php
+							$serviceRecommendation = trim((string) ($item['recommendation'] ?? ''));
+							include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
+							?>
 						</div>
 						<?php endforeach; ?>
 					</div>
@@ -2155,6 +2159,10 @@ if (empty($isLkEmbed)) {
 										data-srv-time="<?php echo $this->escape($stockSrvTime); ?>"
 									></button>
 									<div class="clearFloat"></div>
+									<?php
+									$serviceRecommendation = trim((string) ($stockItem['recommendation'] ?? ''));
+									include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
+									?>
 								</div>
 								<?php endforeach; ?>
 							</div>

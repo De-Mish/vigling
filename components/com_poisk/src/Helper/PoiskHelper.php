@@ -156,30 +156,52 @@ class PoiskHelper
 	}
 
 	/**
-	 * Per-specialist price for the selected service + method (3-level filter).
+	 * Per-specialist price for the selected service, optionally narrowed by method (tag).
 	 *
 	 * @param array<int> $userIds
 	 * @return array<int, int> userId => price
 	 */
-	public static function getServicePricesForUsers(array $userIds, int $serviceId, int $tagId): array
+	public static function getServicePricesForUsers(array $userIds, int $serviceId, int $tagId = 0): array
+	{
+		$details = self::getFilteredServiceDetailsForUsers($userIds, $serviceId, $tagId);
+		$prices = [];
+		foreach ($details as $userId => $row) {
+			$prices[$userId] = (int) ($row['price'] ?? 0);
+		}
+
+		return $prices;
+	}
+
+	/**
+	 * @param array<int> $userIds
+	 * @return array<int, array{price:int, recommendation:string}>
+	 */
+	public static function getFilteredServiceDetailsForUsers(array $userIds, int $serviceId, int $tagId = 0): array
 	{
 		$ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static function (int $id): bool {
 			return $id > 0;
 		})));
-		if ($ids === [] || $serviceId <= 0 || $tagId <= 0) {
+		if ($ids === [] || $serviceId <= 0) {
 			return [];
 		}
 
+		$hasRecommendation = false;
 		try {
 			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$select = [
+				$db->quoteName('us.user_id'),
+				$db->quoteName('us.price'),
+				$db->quoteName('us.legacy_cat_id'),
+				$db->quoteName('n.legacy_id', 'node_legacy_id'),
+				$db->quoteName('parent.legacy_id', 'parent_legacy_id'),
+			];
+			$hasRecommendation = class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')
+				&& \Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureRecommendationColumn();
+			if ($hasRecommendation) {
+				$select[] = $db->quoteName('us.recommendation');
+			}
 			$query = $db->getQuery(true)
-				->select([
-					$db->quoteName('us.user_id'),
-					$db->quoteName('us.price'),
-					$db->quoteName('us.legacy_cat_id'),
-					$db->quoteName('n.legacy_id', 'node_legacy_id'),
-					$db->quoteName('parent.legacy_id', 'parent_legacy_id'),
-				])
+				->select($select)
 				->from($db->quoteName('#__vigling_user_services', 'us'))
 				->join(
 					'LEFT',
@@ -193,7 +215,6 @@ class PoiskHelper
 				)
 				->whereIn($db->quoteName('us.user_id'), $ids)
 				->where($db->quoteName('us.is_active') . ' = 1')
-				->where($db->quoteName('us.legacy_tag_id') . ' = ' . $tagId)
 				->where($db->quoteName('us.price') . ' > 0')
 				->where(
 					'('
@@ -203,6 +224,9 @@ class PoiskHelper
 					. ')'
 				)
 				->order($db->quoteName('us.id') . ' ASC');
+			if ($tagId > 0) {
+				$query->where($db->quoteName('us.legacy_tag_id') . ' = ' . $tagId);
+			}
 			$db->setQuery($query);
 			$rows = $db->loadAssocList() ?: [];
 		} catch (\Throwable $e) {
@@ -217,14 +241,20 @@ class PoiskHelper
 			if ($userId <= 0 || $price <= 0) {
 				continue;
 			}
+			$payload = [
+				'price' => $price,
+				'recommendation' => $hasRecommendation && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')
+					? \Joomla\Plugin\User\Vigling\Service\UserServicesService::sanitizeRecommendation($row['recommendation'] ?? '')
+					: trim((string) ($row['recommendation'] ?? '')),
+			];
 			if ((int) ($row['legacy_cat_id'] ?? 0) === $serviceId) {
 				if (!isset($exact[$userId])) {
-					$exact[$userId] = $price;
+					$exact[$userId] = $payload;
 				}
 				continue;
 			}
 			if (!isset($fallback[$userId])) {
-				$fallback[$userId] = $price;
+				$fallback[$userId] = $payload;
 			}
 		}
 

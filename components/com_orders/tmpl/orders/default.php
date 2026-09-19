@@ -20,7 +20,12 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 <div class="com_orders orders-list">
 	<style>
 	.com_orders .reschedule-open { margin-right: 8px; margin-bottom: 4px; }
-	.com_orders .repeat-open { margin-left: 8px; margin-bottom: 4px; }
+	.com_orders button.repeat-open.review-zlink {
+		margin-left: 8px !important;
+		margin-right: 0 !important;
+		margin-bottom: 4px !important;
+		vertical-align: middle;
+	}
 	.com_orders .order-comment {
 		margin-top: 6px;
 		font-size: 13px;
@@ -258,7 +263,16 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 				?>
 				<tr data-order-id="<?php echo (int) $item->id; ?>" class="orders-row" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">
 					<td data-label="Дата и время"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></td>
-					<td data-label="Мастер"><?php echo htmlspecialchars($item->master_name); ?></td>
+					<td data-label="Мастер"><?php
+						$masterId = (int) ($item->master_id ?? 0);
+						$masterName = (string) ($item->master_name ?? '—');
+						if ($masterId > 0 && $masterName !== '—') :
+							$masterProfileUrl = rtrim(Uri::root(true), '/') . '/' . $masterId;
+							?><a href="<?php echo htmlspecialchars($masterProfileUrl); ?>"><?php echo htmlspecialchars($masterName); ?></a><?php
+						else :
+							echo htmlspecialchars($masterName);
+						endif;
+					?></td>
 					<td data-label="Услуга">
 						<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name)); ?>
 						<?php if ($isFixedCourse || $isFixedSearch) : ?>
@@ -285,7 +299,7 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 							<button type="submit" class="btn btn-xs btn-default" onclick="return confirm('Удалить запись из списка?');">Удалить</button>
 						</form>
 						<?php if (!$isFixedCourse && !$isFixedSearch && !$isPromotion) : ?>
-						<button type="button" class="btn btn-xs btn-default repeat-open" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>">Повторить</button>
+						<button type="button" class="z-link review-zlink repeat-open" style="min-height: 18px;" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>">Повторить<span></span></button>
 						<?php endif; ?>
 						<?php else : ?>
 						<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancel'); ?>" class="form-inline form-cancel" style="display:inline;">

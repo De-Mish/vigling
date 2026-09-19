@@ -111,17 +111,30 @@ class HtmlView extends BaseHtmlView
 		if (empty($userIds)) {
 			return [];
 		}
+		if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')) {
+			\Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureRecommendationColumn();
+		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$prefix = $db->getPrefix();
 		$ids = array_map('intval', $userIds);
 
 		$query = $db->getQuery(true)
-			->select('s.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min')
+			->select('s.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min, s.recommendation')
 			->from($db->quoteName($prefix . 'vigling_user_stock_services', 's'))
 			->whereIn('s.user_id', $ids)
 			->where('s.is_active = 1');
-		$db->setQuery($query);
-		$rows = $db->loadObjectList() ?: [];
+		try {
+			$db->setQuery($query);
+			$rows = $db->loadObjectList() ?: [];
+		} catch (\Throwable $e) {
+			$query = $db->getQuery(true)
+				->select('s.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min')
+				->from($db->quoteName($prefix . 'vigling_user_stock_services', 's'))
+				->whereIn('s.user_id', $ids)
+				->where('s.is_active = 1');
+			$db->setQuery($query);
+			$rows = $db->loadObjectList() ?: [];
+		}
 
 		$result = [];
 		foreach ($rows as $row) {
@@ -137,6 +150,9 @@ class HtmlView extends BaseHtmlView
 				'stock_count' => (int) $row->count_stock,
 				'comment' => $row->about_stock,
 				'duration' => (int) $row->duration_min,
+				'recommendation' => class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')
+					? \Joomla\Plugin\User\Vigling\Service\UserServicesService::sanitizeRecommendation($row->recommendation ?? '')
+					: trim((string) ($row->recommendation ?? '')),
 			];
 		}
 		return $result;

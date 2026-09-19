@@ -4794,3 +4794,79 @@ body#home .home-search-links a.homepage-link-btn:focus {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.service-rec {
+  clear: both;
+  margin-top: 8px;
+  max-width: 100%;
+}
+.service-rec-toggle {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+  line-height: 0;
+}
+.service-rec-toggle > b {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.11);
+  background: #fff;
+  background-image: none;
+  position: relative;
+}
+.service-rec-toggle > b:before {
+  content: "!";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  color: #f9ce54;
+  font-family: "GothamPro-Bold", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+}
+.service-rec-label {
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: middle;
+  font-size: 14px;
+  font-family: "GothamPro-Medium", sans-serif;
+  color: #333;
+}
+.service-rec-body {
+  display: none;
+  margin-top: 8px;
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #555;
+  word-break: break-word;
+}
+.service-rec.is-open .service-rec-body {
+  display: block;
+}
+.category.jsn_list .list-service-highlight,
+.category.jsn_stockList .list-service-highlight {
+  background-color: #f3e0ac;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  color: #000;
+}
+.category.jsn_stockList li.list-service-highlight {
+  display: block;
+}
