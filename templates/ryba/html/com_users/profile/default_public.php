@@ -1221,6 +1221,24 @@ if (!empty($reviewsModules)) {
 	}
 }
 
+$profileReviews = [];
+$profileRatingAvg = null;
+try {
+	if (!class_exists(\Viglin\Component\Orders\Site\Helper\ReviewHelper::class)) {
+		require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+	}
+	$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
+	$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
+		$reviewDb,
+		$profileOwnerId,
+		\Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
+	);
+	$profileRatingAvg = \Viglin\Component\Orders\Site\Helper\ReviewHelper::averageRating($profileReviews);
+} catch (\Throwable $e) {
+	$profileReviews = [];
+	$profileRatingAvg = null;
+}
+
 $isFavorite = false;
 if ((int) $currentUser->id > 0 && $profileOwnerId > 0 && (int) $currentUser->id !== $profileOwnerId) {
 	try {
@@ -1335,7 +1353,7 @@ if (empty($isLkEmbed)) {
 				<?php if (!empty($childrenYes)) : ?><span class="attr_left3">Подходит для детей</span><?php endif; ?>
 			</div>
 			<div class="masters__attr-right">
-				<span class="attr-rating">5.0</span>
+				<span class="attr-rating"><?php echo $profileRatingAvg !== null ? number_format($profileRatingAvg, 1, '.', '') : '—'; ?></span>
 				<div class="attr-div-rating">
 					<ul class="category_cinfo-ratings" style="display:none">
 						<li><i class="fa fa-star" aria-hidden="true"></i></li>
@@ -1386,6 +1404,9 @@ if (empty($isLkEmbed)) {
 			max-width: 1170px;
 			margin-left: auto;
 			margin-right: auto;
+		}
+		.review__master-body-item {
+			margin-bottom: 20px;
 		}
 		.master__services .accordionItemContent {
 			display: block !important;
@@ -1645,18 +1666,46 @@ if (empty($isLkEmbed)) {
 			max-width: 100% !important;
 		}
 		#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
-			flex: 0 0 20%;
-			width: 20%;
-			min-width: 148px;
+			flex: 0 0 100%;
+			width: 100%;
+			min-width: 100%;
 			box-sizing: border-box;
 			opacity: 1 !important;
 		}
-		@media (max-width: 820px) {
-			#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
-				flex: 0 0 100%;
-				width: 100%;
-				min-width: 100%;
-			}
+		#zapis .screen1 .calendar__master-item .btns-m {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 6px;
+			padding: 0 2px;
+			max-height: calc(100vh - 360px);
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+		#zapis .screen1 .calendar__master-item .btns-m .btn-select {
+			width: 100% !important;
+			min-width: 0 !important;
+			padding: 6px 2px !important;
+			font-size: 11px !important;
+			height: auto !important;
+			line-height: 1.4 !important;
+			box-sizing: border-box !important;
+			display: inline-block !important;
+			margin: 0 !important;
+			border-radius: 6px !important;
+			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+			background-color: #fff !important;
+			border: 1px solid #e0e0e0 !important;
+			text-align: center !important;
+		}
+		#zapis .screen1 .calendar__master-item .btns-m .btn-select.reserved {
+			background-color: #f0f0f0 !important;
+			color: #555 !important;
+			border-color: #e8e8e8 !important;
+		}
+		#zapis .screen1 .calendar__master-item .btns-m input:checked + .btn-select {
+			background-color: #f7cc53 !important;
+			border-color: #f7cc53 !important;
+			box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
 		}
 		#zapis.modal {
 			padding-right: 0 !important;
@@ -2493,8 +2542,38 @@ if (empty($isLkEmbed)) {
 		<?php else : ?>
 			<h2>Отзывы</h2>
 			<div id="review__master" class="review__master-head">
-				<a href="<?php echo (int) $currentUser->id > 0 ? '#' : Route::_('index.php?option=com_users&view=login&return=' . base64_encode(Uri::current())); ?>">Написать отзыв</a>
-				<span class="easylast_noentry">Нет отзывов</span>
+				<a href="<?php echo Route::_('index.php?option=com_orders&view=orders'); ?>">Написать отзыв</a>
+				<?php if ($profileReviews === []) : ?>
+					<span class="easylast_noentry">Нет отзывов</span>
+				<?php else : ?>
+					<span><?php echo count($profileReviews); ?></span>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+		<?php if ($profileReviews !== []) : ?>
+			<div class="review__master-body">
+				<?php foreach ($profileReviews as $review) : ?>
+					<div class="review__master-body-item">
+						<div class="review__item-data">
+							<span><?php echo $this->escape(\Viglin\Component\Orders\Site\Helper\ReviewHelper::displayName($review)); ?></span>
+							<i><?php echo $this->escape(!empty($review->created) ? date('d.m.Y', strtotime((string) $review->created)) : ''); ?></i>
+						</div>
+						<div class="review__item-rate">
+							<?php echo number_format((int) $review->rating, 1, '.', ''); ?>
+							<ul class="category_cinfo-ratings">
+								<?php for ($r = 1; $r <= 5; $r++) : ?>
+									<?php if ($r <= (int) $review->rating) : ?>
+										<li><i class="fa fa-star" aria-hidden="true"></i></li>
+									<?php endif; ?>
+								<?php endfor; ?>
+							</ul>
+						</div>
+						<?php if (trim((string) ($review->review_text ?? '')) !== '') : ?>
+							<div class="review__text"><?php echo $this->escape((string) $review->review_text); ?></div>
+						<?php endif; ?>
+					</div>
+				<?php endforeach; ?>
+				<div class="clearFloat"></div>
 			</div>
 		<?php endif; ?>
 	</div>
@@ -3634,15 +3713,11 @@ if (empty($isLkEmbed)) {
 
 		var zapisCalendarSlick = {
 			infinite: false,
-			slidesToShow: 5,
+			slidesToShow: 1,
 			slidesToScroll: 1,
 			dots: false,
 			arrows: true,
-			accessibility: false,
-			responsive: [
-				{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-				{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
-			]
+			accessibility: false
 		};
 
 		function zapisCalendarHasWidth(cal) {

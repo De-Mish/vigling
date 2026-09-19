@@ -8,7 +8,12 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\DatabaseQuery;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
+use Viglin\Component\Orders\Site\Helper\ReviewHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
+
+if (!class_exists(ReviewHelper::class, false)) {
+	require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+}
 
 class OrdersModel extends ListModel
 {
@@ -32,6 +37,7 @@ class OrdersModel extends ListModel
 		$db = $this->getDatabase();
 		$layout = (string) $this->getState('layout', 'default');
 		OrderTable::ensureBookingCommentColumns($db);
+		ReviewHelper::ensureSchema($db);
 		$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
@@ -53,6 +59,12 @@ class OrdersModel extends ListModel
 				->order($db->quoteName('o.time') . ' ASC');
 			if (isset($tableColumns['comment'])) {
 				$query->select($db->quoteName('o.comment'));
+			}
+			if (isset($tableColumns['client_after_comment'])) {
+				$query->select($db->quoteName('o.client_after_comment'));
+			}
+			if (isset($tableColumns['master_after_comment'])) {
+				$query->select($db->quoteName('o.master_after_comment'));
 			}
 			if (isset($tableColumns['contact_name'])) {
 				$query->select($db->quoteName('o.contact_name'));
@@ -81,6 +93,12 @@ class OrdersModel extends ListModel
 			->order($db->quoteName('o.time') . ' DESC');
 		if (isset($tableColumns['comment'])) {
 			$query->select($db->quoteName('o.comment'));
+		}
+		if (isset($tableColumns['client_after_comment'])) {
+			$query->select($db->quoteName('o.client_after_comment'));
+		}
+		if (isset($tableColumns['master_after_comment'])) {
+			$query->select($db->quoteName('o.master_after_comment'));
 		}
 		if (isset($tableColumns['contact_name'])) {
 			$query->select($db->quoteName('o.contact_name'));
@@ -280,6 +298,19 @@ class OrdersModel extends ListModel
 				}
 			}
 		}
+		$reviewsMap = ReviewHelper::loadForBookings($this->getDatabase(), array_map(static function ($item): int {
+			return (int) ($item->id ?? 0);
+		}, $items));
+		foreach ($items as $item) {
+			$item->_reviews = $reviewsMap[(int) ($item->id ?? 0)] ?? [];
+			if (!isset($item->client_after_comment)) {
+				$item->client_after_comment = '';
+			}
+			if (!isset($item->master_after_comment)) {
+				$item->master_after_comment = '';
+			}
+		}
+
 		return $items;
 	}
 

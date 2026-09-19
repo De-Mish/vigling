@@ -7267,6 +7267,43 @@ input[type=text] {
     }
 }
 
+#zapis .calendar__master-item .btns-m,
+#zapis-reschedule .calendar__master-item .btns-m {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 0 2px;
+}
+#zapis .calendar__master-item .btns-m .btn-select,
+#zapis-reschedule .calendar__master-item .btns-m .btn-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 6px 2px !important;
+    font-size: 11px !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box !important;
+    display: inline-block !important;
+    margin: 0 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    background-color: #fff !important;
+    border: 1px solid #e0e0e0 !important;
+    text-align: center !important;
+}
+#zapis .calendar__master-item .btns-m .btn-select.reserved,
+#zapis-reschedule .calendar__master-item .btns-m .btn-select.reserved {
+    background-color: #f0f0f0 !important;
+    color: #555 !important;
+    border-color: #e8e8e8 !important;
+}
+#zapis .calendar__master-item .btns-m input:checked + .btn-select,
+#zapis-reschedule .calendar__master-item .btns-m input:checked + .btn-select {
+    background-color: #f7cc53 !important;
+    border-color: #f7cc53 !important;
+    box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
+}
+
 #zapis .calc__body h2 {
     text-align: center !important;
     position: relative !important;

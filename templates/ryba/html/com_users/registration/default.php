@@ -851,6 +851,45 @@ $durationJson = json_encode($durationOptions);
     gap: 8px;
     width: 255px;
 }
+#easyprofile.registration .media-preview-thumb,
+.profile-edit .media-preview-thumb {
+    position: relative;
+    display: inline-block;
+    width: 96px;
+    height: 96px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+#easyprofile.registration .media-preview-thumb[hidden] {
+    display: none !important;
+}
+#easyprofile.registration .media-preview-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+#easyprofile.registration .lk-portfolio-remove,
+#easyprofile.registration .portfolio_field-group .preview .lk-portfolio-remove {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+}
+#easyprofile.registration .portfolio_field-group .preview {
+    position: relative;
+}
 #easyprofile.registration #jform_courses_servis .service__item .course_price input,
 #easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
 #easyprofile.registration #jform_courses_servis .service__item .course_concurrent input,
@@ -1819,6 +1858,62 @@ document.addEventListener('DOMContentLoaded', function () {
         var parts = raw.split('/');
         return parts.length ? parts[parts.length - 1] : raw;
     }
+    function mediaUrlFromPath(path) {
+        var raw = String(path || '').trim();
+        if (!raw) {
+            return '';
+        }
+        if (/^https?:\/\//i.test(raw) || raw.charAt(0) === '/') {
+            return raw;
+        }
+        return '/' + raw.replace(/^\/+/, '');
+    }
+    function updateMediaPreview($row, file, existingPath) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var thumb = $row.find('.media-preview-thumb')[0];
+        var img = thumb ? thumb.querySelector('img') : null;
+        if (!thumb || !img) {
+            return;
+        }
+        if (thumb._objectUrl) {
+            try { URL.revokeObjectURL(thumb._objectUrl); } catch (e) {}
+            thumb._objectUrl = '';
+        }
+        if (file) {
+            var objectUrl = URL.createObjectURL(file);
+            thumb._objectUrl = objectUrl;
+            img.src = objectUrl;
+            thumb.hidden = false;
+            return;
+        }
+        if (existingPath) {
+            img.src = mediaUrlFromPath(existingPath);
+            thumb.hidden = false;
+            return;
+        }
+        img.removeAttribute('src');
+        thumb.hidden = true;
+    }
+    function clearMediaSelection($row) {
+        if (!$row || !$row.length) {
+            return;
+        }
+        var fileInput = $row.find('.course-media-file-input, .search-media-file-input')[0];
+        var hiddenInput = $row.find('.course-media-input, .search-media-input');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        if (hiddenInput.length) {
+            hiddenInput.val('');
+        }
+        if ($row.find('.course-media-file-input').length) {
+            syncCourseMediaState($row);
+        } else {
+            syncSearchMediaState($row);
+        }
+    }
 
     function formatDatetimeLocal(value) {
         var raw = String(value || '').trim();
@@ -2363,10 +2458,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var file = fileInput.length && fileInput[0].files && fileInput[0].files.length ? fileInput[0].files[0] : null;
         if (file && file.name) {
             currentNode.text('Новый файл: ' + file.name);
+            updateMediaPreview(row, file, '');
             return;
         }
         var existingPath = String(hiddenInput.val() || '').trim();
         currentNode.text(existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран');
+        updateMediaPreview(row, null, existingPath);
     }
 
     function syncSearchModeState(row) {
@@ -2393,10 +2490,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var file = fileInput.length && fileInput[0].files && fileInput[0].files.length ? fileInput[0].files[0] : null;
         if (file && file.name) {
             currentNode.text('Новый файл: ' + file.name);
+            updateMediaPreview(row, file, '');
             return;
         }
         var existingPath = String(hiddenInput.val() || '').trim();
         currentNode.text(existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран');
+        updateMediaPreview(row, null, existingPath);
     }
 
     function addServiceRow(categoryLabel) {
@@ -2429,7 +2528,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = $('<p class="service__item">' +
             '<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
             '<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
-            '<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="course-media-current">Файл не выбран</span></span></span>' +
+            '<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="course-media-current">Файл не выбран</span></span></span>' +
             '<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
             '<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span></span>' +
@@ -2456,7 +2555,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = $('<p class="service__item">' +
             '<span class="search_title"><label>Название поиска:</label><input type="text" maxlength="150" class="search-title-input" value="" /></span>' +
             '<span class="search_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="search-description-input"></textarea></span>' +
-            '<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" /><span class="search-media-current">Файл не выбран</span></span></span>' +
+            '<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="search-media-current">Файл не выбран</span></span></span>' +
             '<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" /></span>' +
             '<span class="search_duration"><label>Длительность:</label><select class="search-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
             '<span class="search_mode"><label>Режим записи:</label><select class="search-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="search_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('search') + '</span></span>' +
@@ -3127,11 +3226,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         var anchorControl = portfolioGroup.find('.controls').first();
-        selectedPortfolioFiles.forEach(function (file) {
+        selectedPortfolioFiles.forEach(function (file, index) {
             var src = URL.createObjectURL(file);
             var preview = $('<div class="controls preview upload-preview"></div>');
             preview.css('background-image', 'url("' + src + '")');
             preview.append('<img src="' + src + '" alt="" />');
+            preview.append('<button type="button" class="lk-portfolio-remove" data-index="' + index + '" title="Удалить">×</button>');
             preview.insertBefore(anchorControl);
         });
         updateTabsContainerHeight();
@@ -3189,7 +3289,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 syncPortfolioInputWithSelectedFiles();
             });
         });
+        portfolioGroup.on('click', '.upload-preview .lk-portfolio-remove', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var index = parseInt($(this).attr('data-index') || '-1', 10);
+            if (index < 0) {
+                return;
+            }
+            selectedPortfolioFiles.splice(index, 1);
+            renderPortfolioPreview();
+            syncPortfolioInputWithSelectedFiles();
+        });
     }
+
+    $('#jform_courses_servis, #jform_searches_servis').on('click', '.media-preview-remove', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearMediaSelection($(this).closest('.service__item'));
+        persistDraftState();
+    });
 
     emailInput.on('input change', syncUsernameWithEmail);
     form.on('input change', 'input, select, textarea', persistDraftState);

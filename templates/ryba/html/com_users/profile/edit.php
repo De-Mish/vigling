@@ -2402,6 +2402,24 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	z-index: 2;
 }
 .profile-edit .lk-portfolio-remove:hover { background: rgba(0, 0, 0, 0.8); }
+.profile-edit .media-preview-thumb {
+	position: relative;
+	display: inline-block;
+	width: 96px;
+	height: 96px;
+	margin-top: 4px;
+	border-radius: 10px;
+	overflow: hidden;
+}
+.profile-edit .media-preview-thumb[hidden] { display: none !important; }
+.profile-edit .media-preview-thumb img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+}
 
 .profile-edit .lk-edit-form-footer {
 	display: flex;
@@ -3459,6 +3477,62 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		var parts = raw.split('/');
 		return parts.length ? parts[parts.length - 1] : raw;
 	}
+	function mediaUrlFromPath(path) {
+		var raw = String(path || '').trim();
+		if (!raw) {
+			return '';
+		}
+		if (/^https?:\/\//i.test(raw) || raw.charAt(0) === '/') {
+			return raw;
+		}
+		return '/' + raw.replace(/^\/+/, '');
+	}
+	function updateMediaPreview(row, file, existingPath) {
+		if (!row) {
+			return;
+		}
+		var thumb = row.querySelector('.media-preview-thumb');
+		var img = thumb ? thumb.querySelector('img') : null;
+		if (!thumb || !img) {
+			return;
+		}
+		if (thumb._objectUrl) {
+			try { URL.revokeObjectURL(thumb._objectUrl); } catch (e) {}
+			thumb._objectUrl = '';
+		}
+		if (file) {
+			var objectUrl = URL.createObjectURL(file);
+			thumb._objectUrl = objectUrl;
+			img.src = objectUrl;
+			thumb.hidden = false;
+			return;
+		}
+		if (existingPath) {
+			img.src = mediaUrlFromPath(existingPath);
+			thumb.hidden = false;
+			return;
+		}
+		img.removeAttribute('src');
+		thumb.hidden = true;
+	}
+	function clearMediaSelection(row) {
+		if (!row) {
+			return;
+		}
+		var fileInput = row.querySelector('.course-media-file-input, .search-media-file-input');
+		var hiddenInput = row.querySelector('.course-media-input, .search-media-input');
+		if (fileInput) {
+			fileInput.value = '';
+		}
+		if (hiddenInput) {
+			hiddenInput.value = '';
+		}
+		if (row.querySelector('.course-media-file-input')) {
+			syncCourseMediaState(row);
+		} else {
+			syncSearchMediaState(row);
+		}
+	}
 	function syncCourseMediaState(row) {
 		if (!row) {
 			return;
@@ -3470,15 +3544,19 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			return;
 		}
 		var fileName = '';
+		var file = null;
 		if (fileInput && fileInput.files && fileInput.files.length > 0) {
-			fileName = String(fileInput.files[0].name || '').trim();
+			file = fileInput.files[0];
+			fileName = String(file && file.name ? file.name : '').trim();
 		}
 		if (fileName) {
 			currentNode.textContent = 'Новый файл: ' + fileName;
+			updateMediaPreview(row, file, '');
 			return;
 		}
 		var existingPath = hiddenInput ? String(hiddenInput.value || '').trim() : '';
 		currentNode.textContent = existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран';
+		updateMediaPreview(row, null, existingPath);
 	}
 	function syncCourseModeState(row) {
 		if (!row) {
@@ -3529,7 +3607,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	row.innerHTML =
 		'<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
 		'<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
-		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="course-media-current">Файл не выбран</span></span></span>' +
+		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="course-media-current">Файл не выбран</span></span></span>' +
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
 		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span></span>' +
@@ -3698,15 +3776,19 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			return;
 		}
 		var fileName = '';
+		var file = null;
 		if (fileInput && fileInput.files && fileInput.files.length > 0) {
-			fileName = String(fileInput.files[0].name || '').trim();
+			file = fileInput.files[0];
+			fileName = String(file && file.name ? file.name : '').trim();
 		}
 		if (fileName) {
 			currentNode.textContent = 'Новый файл: ' + fileName;
+			updateMediaPreview(row, file, '');
 			return;
 		}
 		var existingPath = hiddenInput ? String(hiddenInput.value || '').trim() : '';
 		currentNode.textContent = existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран';
+		updateMediaPreview(row, null, existingPath);
 	}
 	function syncSearchModeState(row) {
 		if (!row) {
@@ -3760,7 +3842,7 @@ function addSearchRow(categoryLabel, rowData) {
 	row.setAttribute('data-search-id', rowData && rowData.id ? String(parseInt(rowData.id, 10) || 0) : '0');
 	row.setAttribute('data-booking-count', rowData && rowData.bookingCount ? String(parseInt(rowData.bookingCount, 10) || 0) : '0');
 	row.innerHTML =
-		'<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" style="max-width:100%;width:100%;" /><span class="search-media-current" style="word-break:break-all;overflow-wrap:break-word;white-space:normal;display:inline-block;max-width:100%;">Файл не выбран</span></span></span>' +
+		'<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" style="max-width:100%;width:100%;" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="search-media-current" style="word-break:break-all;overflow-wrap:break-word;white-space:normal;display:inline-block;max-width:100%;">Файл не выбран</span></span></span>' +
 		'<span class="search_title"><label>Название поиска:</label><input type="text" maxlength="150" class="search-title-input" value="" style="width:100%;max-width:100%;box-sizing:border-box;" /></span>' +
 		'<span class="search_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="search-description-input" style="width:100%;max-width:100%;box-sizing:border-box;resize:vertical;"></textarea></span>' +
 		'<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" style="width:100%;max-width:200px;" /></span>' +
@@ -4302,29 +4384,144 @@ if (searchesHolder) {
 
 	if (window.ViglingImageUpload) {
 		window.ViglingImageUpload.bind(document.getElementById('member-profile') || document);
-		var portfolioUpload = document.getElementById('jform_upload_portfolio_field');
-		if (portfolioUpload) {
-			portfolioUpload.addEventListener('change', function () {
-				window.ViglingImageUpload.prepareInput(portfolioUpload);
-			});
+	}
+
+	var selectedPortfolioFiles = [];
+	function fileKey(file) {
+		return [file.name, file.size, file.lastModified].join('::');
+	}
+	function syncPortfolioInputWithSelectedFiles() {
+		if (!portfolioUpload || !window.DataTransfer) {
+			return;
 		}
+		var dt = new DataTransfer();
+		selectedPortfolioFiles.forEach(function (file) {
+			dt.items.add(file);
+		});
+		portfolioUpload.files = dt.files;
+	}
+	function ensurePortfolioGrid() {
+		var controls = document.querySelector('.profile-edit .lk-portfolio-edit-controls');
+		if (!controls) {
+			return null;
+		}
+		var grid = controls.querySelector('.lk-edit-portfolio-grid');
+		if (!grid) {
+			var empty = controls.querySelector('fieldset.readonly');
+			if (empty) {
+				empty.remove();
+			}
+			grid = document.createElement('div');
+			grid.className = 'lk-portfolio-grid lk-edit-portfolio-grid';
+			controls.appendChild(grid);
+		}
+		return grid;
+	}
+	function renderPendingPortfolio() {
+		var grid = ensurePortfolioGrid();
+		if (!grid) {
+			return;
+		}
+		grid.querySelectorAll('.lk-edit-portfolio-item.is-pending').forEach(function (node) {
+			node.remove();
+		});
+		selectedPortfolioFiles.forEach(function (file, index) {
+			var item = document.createElement('div');
+			item.className = 'lk-portfolio-item lk-edit-portfolio-item is-pending';
+			item.setAttribute('data-pending-index', String(index));
+			var img = document.createElement('img');
+			img.alt = 'Портфолио';
+			img.src = URL.createObjectURL(file);
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'lk-portfolio-remove';
+			btn.title = 'Удалить';
+			btn.setAttribute('data-pending-index', String(index));
+			btn.textContent = '×';
+			item.appendChild(img);
+			item.appendChild(btn);
+			grid.appendChild(item);
+		});
+	}
+	var portfolioUpload = document.getElementById('jform_upload_portfolio_field');
+	if (portfolioUpload) {
+		portfolioUpload.addEventListener('change', function () {
+			var incoming = portfolioUpload.files ? Array.prototype.slice.call(portfolioUpload.files) : [];
+			var prepare = window.ViglingImageUpload && typeof window.ViglingImageUpload.prepareFile === 'function'
+				? function (file) { return window.ViglingImageUpload.prepareFile(file); }
+				: function (file) { return Promise.resolve({ ok: true, file: file }); };
+			var existing = {};
+			selectedPortfolioFiles.forEach(function (file) {
+				existing[fileKey(file)] = true;
+			});
+			var chain = Promise.resolve();
+			incoming.forEach(function (file) {
+				chain = chain.then(function () {
+					if (selectedPortfolioFiles.length >= 10) {
+						return;
+					}
+					return prepare(file).then(function (result) {
+						if (!result || !result.ok || !result.file) {
+							if (result && result.error) {
+								alert(result.error);
+							}
+							return;
+						}
+						var key = fileKey(result.file);
+						if (existing[key]) {
+							return;
+						}
+						existing[key] = true;
+						selectedPortfolioFiles.push(result.file);
+					});
+				});
+			});
+			chain.then(function () {
+				renderPendingPortfolio();
+				syncPortfolioInputWithSelectedFiles();
+			});
+		});
 	}
 
 	// Portfolio delete UX for profile edit.
 	var deletedInput = document.getElementById('jform_portfolio_deleted');
-	if (deletedInput) {
-		var deleted = [];
-		document.querySelectorAll('.profile-edit .lk-portfolio-remove').forEach(function(btn){
-			btn.addEventListener('click', function(){
-				var file = btn.getAttribute('data-file') || '';
-				if (!file) return;
-				if (deleted.indexOf(file) === -1) deleted.push(file);
-				deletedInput.value = deleted.join(',');
-				var item = btn.closest('.lk-edit-portfolio-item');
-				if (item) item.remove();
-			});
-		});
-	}
+	var deleted = [];
+	document.addEventListener('click', function (e) {
+		var mediaRemove = e.target && e.target.closest ? e.target.closest('.media-preview-remove') : null;
+		if (mediaRemove) {
+			e.preventDefault();
+			var mediaRow = mediaRemove.closest('.service__item');
+			clearMediaSelection(mediaRow);
+			return;
+		}
+		var pendingBtn = e.target && e.target.closest ? e.target.closest('.lk-edit-portfolio-item.is-pending .lk-portfolio-remove') : null;
+		if (pendingBtn) {
+			e.preventDefault();
+			var pendingIndex = parseInt(pendingBtn.getAttribute('data-pending-index') || '-1', 10);
+			if (pendingIndex >= 0) {
+				selectedPortfolioFiles.splice(pendingIndex, 1);
+				renderPendingPortfolio();
+				syncPortfolioInputWithSelectedFiles();
+			}
+			return;
+		}
+		var btn = e.target && e.target.closest ? e.target.closest('.profile-edit .lk-portfolio-remove') : null;
+		if (!btn || !deletedInput) {
+			return;
+		}
+		var file = btn.getAttribute('data-file') || '';
+		if (!file) {
+			return;
+		}
+		if (deleted.indexOf(file) === -1) {
+			deleted.push(file);
+		}
+		deletedInput.value = deleted.join(',');
+		var item = btn.closest('.lk-edit-portfolio-item');
+		if (item) {
+			item.remove();
+		}
+	});
 
 	// Avatar change trigger + preview.
 	var avatarTrigger = document.getElementById('lk-avatar-trigger');
