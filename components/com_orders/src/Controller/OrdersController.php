@@ -130,6 +130,11 @@ class OrdersController extends BaseController
 			return;
 		}
 		$bookingKind = isset($table->booking_kind) ? trim((string) $table->booking_kind) : 'service';
+		if ($bookingKind === 'stock' || (int) ($table->stock_service_id ?? 0) > 0) {
+			$this->setMessage('Акцию нельзя повторить', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
 		if ($bookingKind === 'course' && ((int) ($table->course_id ?? 0) > 0 || (int) ($table->course_slot_id ?? 0) > 0)) {
 			$this->setMessage('Курс нельзя повторить этой кнопкой', 'error');
 			$this->setRedirectAndExit();

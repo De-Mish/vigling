@@ -101,6 +101,9 @@ class OrdersModel extends ListModel
 				$db->quoteName('o.search_slot_id'),
 			]);
 		}
+		if (isset($tableColumns['stock_service_id'])) {
+			$query->select($db->quoteName('o.stock_service_id'));
+		}
 		if ((int) $this->getState('as_master', 0) === 1) {
 			$query->select('o.completed')
 				->where($db->quoteName('o.master_id') . ' = ' . (int) $user->id)

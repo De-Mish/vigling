@@ -161,6 +161,7 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 					$isPast = $timeUtc ? ($timeUtc < $nowUtc) : false;
 					$isFixedCourse = trim((string) ($item->booking_kind ?? 'service')) === 'course' && (int) ($item->course_slot_id ?? 0) > 0;
 					$isFixedSearch = trim((string) ($item->booking_kind ?? 'service')) === 'search' && (int) ($item->search_slot_id ?? 0) > 0;
+					$isPromotion = trim((string) ($item->booking_kind ?? 'service')) === 'stock' || (int) ($item->stock_service_id ?? 0) > 0;
 					$timeIso = $timeUtc ? $timeUtc->format('c') : '';
 					$durationMin = 60;
 					if ($timeUtc && $timeToUtc) {
@@ -195,7 +196,7 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 							<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
 							<button type="submit" class="btn btn-xs btn-default" onclick="return confirm('Удалить запись из списка?');">Удалить</button>
 						</form>
-						<?php if (!$isFixedCourse && !$isFixedSearch) : ?>
+						<?php if (!$isFixedCourse && !$isFixedSearch && !$isPromotion) : ?>
 						<button type="button" class="btn btn-xs btn-default repeat-open" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>">Повторить</button>
 						<?php endif; ?>
 						<?php else : ?>
