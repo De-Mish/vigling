@@ -5,7 +5,9 @@ $(document).ready(function($){
 		slidesToScroll:1,pauseOnHover:false,pauseOnFocus:false,arrows: true
 	});
 	
-	$('.calendar__master').not('.calendar__master--manual').slick({
+	$('.calendar__master').not('.calendar__master--manual').filter(function(){
+		return $(this).closest('.modal').length === 0;
+	}).slick({
 		infinite: false,
 		slidesToShow: 5,
 		slidesToScroll: 1,

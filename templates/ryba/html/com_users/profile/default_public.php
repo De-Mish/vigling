@@ -2280,7 +2280,7 @@ if (empty($isLkEmbed)) {
 								<button type="button" class="zapis-reserved-notice__close" aria-label="Закрыть">&times;</button>
 							</div>
 							<div class="error-msg" style="display:none;"></div>
-							<div class="calendar__master preload">
+							<div class="calendar__master calendar__master--manual preload">
 								<?php foreach ($calendarDays as $calendarDay) : ?>
 								<div class="calendar__master-item">
 									<span class="mas-date">
@@ -3630,6 +3630,7 @@ if (empty($isLkEmbed)) {
 						slidesToScroll: 1,
 						dots: false,
 						arrows: true,
+						accessibility: false,
 						responsive: [
 							{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
 							{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }

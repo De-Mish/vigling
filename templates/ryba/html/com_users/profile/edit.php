@@ -1848,10 +1848,17 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jform_courses_servis .service__item .course_price input,
 .profile-edit #jform_courses_servis .service__item .course_capacity input,
 .profile-edit #jform_courses_servis .service__item .course_concurrent input,
-.profile-edit #jform_courses_servis .service__item .course_mode select,
-.profile-edit #jform_courses_servis .service__item .course_slot input {
+.profile-edit #jform_courses_servis .service__item .course_mode select {
     max-width: 100% !important;
     width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_mode,
+.profile-edit #jform_courses_servis .service__item .course_slot,
+.profile-edit #jform_searches_servis .service__item .search_mode,
+.profile-edit #jform_searches_servis .service__item .search_slot,
+.profile-edit #jform_courses_servis .service__item,
+.profile-edit #jform_searches_servis .service__item {
+	overflow: visible !important;
 }
 .profile-edit .fixed-slot-fields {
     display: flex !important;
@@ -1863,25 +1870,39 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
     position: relative;
 }
 .profile-edit .fixed-slot-fields.is-time-open {
-    z-index: 6;
+    z-index: 4000;
+}
+.profile-edit .fixed-slot-fields input[type="hidden"] {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    flex: 0 0 0 !important;
 }
 .profile-edit .fixed-slot-fields input[type="date"] {
     flex: 1 1 150px;
     min-width: 140px;
     max-width: 180px !important;
     width: auto !important;
+    display: inline-block !important;
+    height: 34px;
 }
 .profile-edit .fixed-slot-fields select {
     flex: 0 0 96px;
     width: 96px !important;
     max-width: 96px !important;
+    display: inline-block !important;
 }
 .profile-edit .fixed-slot-time-grid {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
-    right: 0;
-    z-index: 40;
+    left: 0;
+    right: auto;
+    z-index: 4001;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     width: 255px;
@@ -1896,7 +1917,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 .profile-edit .fixed-slot-time-grid.is-open {
-    display: grid;
+    display: grid !important;
 }
 .profile-edit .fixed-slot-time-btn {
     display: block;
@@ -2083,8 +2104,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 }
 .profile-edit #jform_searches_servis .service__item .search_desc input,
 .profile-edit #jform_searches_servis .service__item .search_title input,
-.profile-edit #jform_searches_servis .service__item .search_media input,
-.profile-edit #jform_searches_servis .service__item .search_slot input {
+.profile-edit #jform_searches_servis .service__item .search_media input {
 	max-width: 255px !important;
 	width: 255px !important;
 }
@@ -2436,7 +2456,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	.profile-edit #jform_courses_servis .service__item .course_desc textarea,
 	.profile-edit #jform_courses_servis .service__item .course_title input,
 	.profile-edit #jform_courses_servis .service__item .course_media input,
-	.profile-edit #jform_courses_servis .service__item .course_slot input,
 	.profile-edit #jform_courses_servis .service__item .course_media .course-media-file-input,
 	.profile-edit #jform_courses_servis .service__item .course_price input,
 	.profile-edit #jform_courses_servis .service__item .course_capacity input,
@@ -2524,8 +2543,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
     box-sizing: border-box !important;
     padding: 4px 0 !important;
 }
-#jform_searches_servis .service__item input,
-#jform_searches_servis .service__item select,
+#jform_searches_servis .service__item input:not(.search-slot-date):not(.search-slot-input):not(.course-slot-date):not(.course-slot-input),
+#jform_searches_servis .service__item select:not(.search-slot-time):not(.course-slot-time),
 #jform_searches_servis .service__item textarea {
     width: 100% !important;
     max-width: 100% !important;

@@ -870,6 +870,14 @@ $durationJson = json_encode($durationOptions);
     max-width: 90px !important;
     width: 90px !important;
 }
+#easyprofile.registration #jform_courses_servis .service__item .course_mode,
+#easyprofile.registration #jform_courses_servis .service__item .course_slot,
+#easyprofile.registration #jform_searches_servis .service__item .search_mode,
+#easyprofile.registration #jform_searches_servis .service__item .search_slot,
+#easyprofile.registration #jform_courses_servis .service__item,
+#easyprofile.registration #jform_searches_servis .service__item {
+    overflow: visible !important;
+}
 #easyprofile.registration .fixed-slot-fields {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -880,25 +888,39 @@ $durationJson = json_encode($durationOptions);
     position: relative;
 }
 #easyprofile.registration .fixed-slot-fields.is-time-open {
-    z-index: 6;
+    z-index: 4000;
+}
+#easyprofile.registration .fixed-slot-fields input[type="hidden"] {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    flex: 0 0 0 !important;
 }
 #easyprofile.registration .fixed-slot-fields input[type="date"] {
     flex: 1 1 140px;
     min-width: 130px;
     max-width: 150px !important;
     width: 150px !important;
+    display: inline-block !important;
+    height: 34px;
 }
 #easyprofile.registration .fixed-slot-fields select {
     flex: 0 0 96px;
     width: 96px !important;
     max-width: 96px !important;
+    display: inline-block !important;
 }
 #easyprofile.registration .fixed-slot-time-grid {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
-    right: 0;
-    z-index: 40;
+    left: 0;
+    right: auto;
+    z-index: 4001;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     width: 255px;
@@ -913,7 +935,7 @@ $durationJson = json_encode($durationOptions);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 #easyprofile.registration .fixed-slot-time-grid.is-open {
-    display: grid;
+    display: grid !important;
 }
 #easyprofile.registration .fixed-slot-time-btn {
     display: block;
@@ -1132,7 +1154,6 @@ $durationJson = json_encode($durationOptions);
 }
 #easyprofile.registration #jform_searches_servis .service__item .search_desc textarea,
 #easyprofile.registration #jform_searches_servis .service__item .search_title input,
-#easyprofile.registration #jform_searches_servis .service__item .search_slot input,
 #easyprofile.registration #jform_searches_servis .service__item .search_media .search-media-file-input {
     max-width: 255px !important;
     width: 255px !important;
@@ -1226,7 +1247,6 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_courses_servis .service__item .course_desc textarea,
     #easyprofile.registration #jform_courses_servis .service__item .course_title input,
     #easyprofile.registration #jform_courses_servis .service__item .course_media input,
-    #easyprofile.registration #jform_courses_servis .service__item .course_slot input,
     #easyprofile.registration #jform_courses_servis .service__item .course_media .course-media-file-input,
     #easyprofile.registration #jform_courses_servis .service__item .course_price input,
     #easyprofile.registration #jform_courses_servis .service__item .course_capacity input,
@@ -1297,7 +1317,6 @@ $durationJson = json_encode($durationOptions);
     #easyprofile.registration #jform_searches_servis .service__item .search_desc textarea,
     #easyprofile.registration #jform_searches_servis .service__item .search_title input,
     #easyprofile.registration #jform_searches_servis .service__item .search_media input,
-    #easyprofile.registration #jform_searches_servis .service__item .search_slot input,
     #easyprofile.registration #jform_searches_servis .service__item .search_media .search-media-file-input,
     #easyprofile.registration #jform_searches_servis .service__item .search_price input,
     #easyprofile.registration #jform_searches_servis .service__item .search_capacity input,
