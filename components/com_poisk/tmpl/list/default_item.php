@@ -13,12 +13,18 @@ $filterCatId = (int) ($currentCatId ?? $input->getUint('cat_id', 0));
 $filterServiceId = (int) ($currentService ?? $input->getUint('service', 0));
 $filterTagId = (int) ($currentTag ?? $input->getUint('tag', 0));
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
-if ($filterCatId > 0 && $filterServiceId > 0 && $filterTagId > 0) {
-	$profileUrl .= '?' . http_build_query([
-		'cat_id' => $filterCatId,
-		'service' => $filterServiceId,
-		'tag' => $filterTagId,
-	]);
+$profileQuery = [];
+if ($filterCatId > 0) {
+	$profileQuery['cat_id'] = $filterCatId;
+}
+if ($filterServiceId > 0) {
+	$profileQuery['service'] = $filterServiceId;
+}
+if ($filterTagId > 0) {
+	$profileQuery['tag'] = $filterTagId;
+}
+if ($profileQuery !== []) {
+	$profileUrl .= '?' . http_build_query($profileQuery);
 }
 
 $sity = trim($fields['sity'] ?? '');
@@ -135,17 +141,6 @@ $imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($car
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
 $servicePrice = isset($this->pricesByUser[(int) $item->id]) ? (int) $this->pricesByUser[(int) $item->id] : 0;
 $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' ') . ' ₽' : '';
-$filterServiceTitle = '';
-if ($filterServiceId > 0) {
-	foreach ((array) ($this->services ?? []) as $serviceRow) {
-		if ((int) ($serviceRow['id'] ?? 0) === $filterServiceId) {
-			$filterServiceTitle = trim((string) ($serviceRow['title'] ?? ''));
-			break;
-		}
-	}
-}
-$serviceRecommendation = trim((string) (($this->recommendationsByUser[(int) $item->id] ?? '')));
-$highlightFilteredService = $filterServiceId > 0 && ($servicePriceLabel !== '' || $filterServiceTitle !== '');
 ?>
 <div class="category__item" data-address="<?php echo htmlspecialchars($addr); ?>">
 	<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
@@ -168,17 +163,7 @@ $highlightFilteredService = $filterServiceId > 0 && ($servicePriceLabel !== '' |
 				$listExtraFields = $fields;
 				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
 				?>
-				<?php if ($highlightFilteredService) : ?>
-					<div class="list-service-highlight">
-						<?php if ($filterServiceTitle !== '') : ?>
-							<div class="list-service-name"><?php echo htmlspecialchars($filterServiceTitle, ENT_QUOTES, 'UTF-8'); ?></div>
-						<?php endif; ?>
-						<?php if ($servicePriceLabel !== '') : ?>
-							<div class="service-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></div>
-						<?php endif; ?>
-						<?php include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php'; ?>
-					</div>
-				<?php elseif ($servicePriceLabel !== '') : ?>
+				<?php if ($servicePriceLabel !== '') : ?>
 					<div class="service-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></div>
 				<?php endif; ?>
 			</div>

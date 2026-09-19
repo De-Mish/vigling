@@ -9,8 +9,20 @@ $app = Factory::getApplication();
 $currentUser = $app->getIdentity();
 $isGuest = $currentUser->guest;
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
-$profileUrl .= (strpos($profileUrl, '?') === false ? '?' : '&') . 'source=catalog';
+$filterCatId = (int) ($currentCatId ?? 0);
 $filterServiceId = (int) ($currentService ?? 0);
+$filterTagId = (int) ($currentTag ?? 0);
+$profileQuery = ['source' => 'catalog'];
+if ($filterCatId > 0) {
+	$profileQuery['cat_id'] = $filterCatId;
+}
+if ($filterServiceId > 0) {
+	$profileQuery['service'] = $filterServiceId;
+}
+if ($filterTagId > 0) {
+	$profileQuery['tag'] = $filterTagId;
+}
+$profileUrl .= '?' . http_build_query($profileQuery);
 
 $sity = trim($fields['sity'] ?? '');
 $area = trim($fields['area'] ?? '');
@@ -150,13 +162,9 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				<ul style="line-height: 1.6; padding-left: 0; margin: 0;">
 					<?php foreach ($stocks as $stock) :
 						$serviceName = $getFullServiceName($item->id, $stock['cat_id'], $stock['tag_id']);
-						$isHighlightedStock = $filterServiceId > 0 && (
-							(int) ($stock['cat_id'] ?? 0) === $filterServiceId
-							|| (int) ($stock['tag_id'] ?? 0) === $filterServiceId
-						);
 						$serviceRecommendation = trim((string) ($stock['recommendation'] ?? ''));
 					?>
-					<li style="padding-left: 0; margin-left: 0;"<?php echo $isHighlightedStock ? ' class="list-service-highlight"' : ''; ?>>
+					<li style="padding-left: 0; margin-left: 0;">
 						<span><?php echo htmlspecialchars($serviceName); ?></span>
 						<span> / <?php echo number_format($stock['price'], 0, '.', ' '); ?> руб.</span>
 						<?php if ($stock['stock_count'] > 0) : ?>

@@ -2258,7 +2258,8 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   background-repeat: no-repeat;
   min-height: 507px !important;
   background-size: cover;
-  border-radius: 20px
+  border-radius: 20px;
+  width: 100%;
 }
 
 #content.view-profile .masters__big-info-head-master,
@@ -3819,7 +3820,8 @@ div[role="tooltip"][id^="tip-"] {
 
   #content.view-profile .masters__gall-small,
   #content.view_profile .masters__gall-small {
-    display: none;
+    display: block;
+    margin-top: 18px;
   }
 
   #content.view-profile .arrows_master-slider,
@@ -4412,7 +4414,8 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
-.master__services .priceList__item.highlighted-service {
+.master__services .priceList__item.highlighted-service,
+.master__services .stockList__item.highlighted-service:not(.courseList__item) {
   background-color: #f9ce54 !important;
   border: 1px solid #e6b800;
   border-radius: 10px;
@@ -4429,7 +4432,8 @@ div[role="tooltip"][id^="tip-"] {
 .master__services .priceList__item.highlighted-service .service-name,
 .master__services .priceList__item.highlighted-service .service-price,
 .master__services .priceList__item.highlighted-service .priceList__item-coll,
-.master__services .priceList__item.highlighted-service .price_span {
+.master__services .priceList__item.highlighted-service .price_span,
+.master__services .stockList__item.highlighted-service:not(.courseList__item) .stockList__item-coll {
   color: #000000 !important;
 }
 
@@ -4855,18 +4859,5 @@ body#home .home-search-links a.homepage-link-btn:focus {
   word-break: break-word;
 }
 .service-rec.is-open .service-rec-body {
-  display: block;
-}
-.category.jsn_list .list-service-highlight,
-.category.jsn_stockList .list-service-highlight {
-  background-color: #f3e0ac;
-  border-radius: 8px;
-  padding: 6px 10px;
-  display: inline-block;
-  max-width: 100%;
-  box-sizing: border-box;
-  color: #000;
-}
-.category.jsn_stockList li.list-service-highlight {
   display: block;
 }

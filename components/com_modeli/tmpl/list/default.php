@@ -71,6 +71,9 @@ $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root(true) . '/templates/ryba/css/chosen.min.css');
 $doc->addScript(Uri::root(true) . '/templates/ryba/js/chosen.jquery.min.js', ['defer' => true]);
 $doc->addStyleDeclaration('
+	.search-catalog .category__item-img img {
+		display: none;
+	}
 	@media (max-width: 820px) {
 		.search-catalog .category__item {
 			padding: 12px 0 !important;
