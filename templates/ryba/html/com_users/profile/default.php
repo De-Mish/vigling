@@ -91,6 +91,22 @@ if ($profileIsAdministrator) {
 	$roleLabel = 'Клиент';
 }
 $profileIsClient = !$profileIsMaster && !$profileIsAdministrator && $profileMasterType !== '1' && $profileMasterType !== '2';
+$profileReviews = [];
+if ($isOwn && $profileIsClient && $profileOwnerId > 0) {
+	try {
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\ReviewHelper::class)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+		}
+		$reviewDb = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
+			$reviewDb,
+			$profileOwnerId,
+			\Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT
+		);
+	} catch (\Throwable $e) {
+		$profileReviews = [];
+	}
+}
 $pricesStructured = [];
 $stockPricesStructured = [];
 $pricesStructuredWithIds = [];
@@ -635,6 +651,9 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 								<?php echo $this->loadTemplate('core'); ?>
 								<?php echo $this->loadTemplate('params'); ?>
 								<?php echo $this->loadTemplate('custom'); ?>
+								<?php if ($profileIsClient) : ?>
+									<?php include __DIR__ . '/default_reviews.php'; ?>
+								<?php endif; ?>
 								<!-- Редактирование услуг/акций доступно только через "Настройки профиля". -->
 							</fieldset>
 						</div>

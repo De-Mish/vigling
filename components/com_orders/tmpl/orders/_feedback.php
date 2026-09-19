@@ -85,7 +85,7 @@ $ownAnonymous = $ownReview ? (int) ($ownReview->is_anonymous ?? 0) === 1 : false
 			<input type="checkbox" name="anonymous" value="1"<?php echo $ownAnonymous ? ' checked' : ''; ?>>
 			Анонимный отзыв
 		</label>
-		<button type="submit" class="btn btn-xs btn-default"><?php echo $ownReview ? 'Обновить отзыв' : 'Оставить отзыв'; ?></button>
+		<button type="submit" class="z-link review-zlink" style="min-height: 18px;"><?php echo $ownReview ? 'Обновить отзыв' : 'Оставить отзыв'; ?><span></span></button>
 	</form>
 </div>
 <?php endif; ?>

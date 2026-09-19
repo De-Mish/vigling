@@ -7291,6 +7291,27 @@ input[type=text] {
     border: 1px solid #e0e0e0 !important;
     text-align: center !important;
 }
+@media only screen and (min-width: 768px) {
+    #zapis .calendar__master-item .btns-m,
+    #zapis-reschedule .calendar__master-item .btns-m {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        align-items: flex-start;
+        gap: 6px 8px;
+        grid-template-columns: none;
+    }
+    #zapis .calendar__master-item .btns-m .btn-select,
+    #zapis-reschedule .calendar__master-item .btns-m .btn-select {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: 0 0 auto;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        padding-left: 3ch !important;
+        padding-right: 3ch !important;
+    }
+}
 #zapis .calendar__master-item .btns-m .btn-select.reserved,
 #zapis-reschedule .calendar__master-item .btns-m .btn-select.reserved {
     background-color: #f0f0f0 !important;
@@ -7388,4 +7409,45 @@ input[type=text] {
     .category__content-info-list--stocks {
         margin-left: -95px !important;
     }
+}
+
+a.review-zlink,
+button.review-zlink,
+.review__master-head a.review-zlink {
+    display: inline-block !important;
+    box-sizing: border-box;
+    width: auto;
+    min-height: 18px;
+    height: 30px;
+    line-height: 30px !important;
+    margin: 0 15px 0 0 !important;
+    padding: 0 16px !important;
+    outline: none;
+    border: 2px solid transparent !important;
+    border-radius: 4px !important;
+    background-color: #dfe6ed !important;
+    color: #55677d !important;
+    font-size: 12.5px !important;
+    font-weight: normal;
+    font-family: inherit;
+    text-align: center;
+    text-decoration: none !important;
+    text-shadow: none !important;
+    white-space: nowrap;
+    cursor: pointer;
+    appearance: none;
+    box-shadow: none !important;
+}
+a.review-zlink:hover,
+a.review-zlink:focus,
+button.review-zlink:hover,
+button.review-zlink:focus {
+    opacity: 0.88;
+    background-color: #dfe6ed;
+    color: #55677d;
+    text-decoration: none;
+}
+a.review-zlink > span:empty,
+button.review-zlink > span:empty {
+    display: none;
 }
