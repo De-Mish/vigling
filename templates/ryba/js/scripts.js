@@ -78,6 +78,28 @@ $(document).ready(function($){
 			accessibility: false
 		});
 	}
+	$('.masters__gall-small').on('click', '.masters__small-img-item', function() {
+		var $thumb = $(this);
+		var $nav = $thumb.closest('.masters__small-img');
+		if ($nav.hasClass('slick-initialized')) {
+			return;
+		}
+		var $big = $thumb.closest('.masters__big-info').prevAll('.masters__big-img-cont').first().find('.masters__big-img');
+		if (!$big.length) {
+			$big = $('.masters__big-img').first();
+		}
+		var idx = $nav.children('.masters__small-img-item').index($thumb);
+		if (idx < 0) {
+			return;
+		}
+		if ($big.hasClass('slick-initialized')) {
+			$big.slick('slickGoTo', idx);
+			return;
+		}
+		$big.children('.masters__big-img-item').each(function(i) {
+			$(this).css('display', i === idx ? 'block' : 'none');
+		});
+	});
 	if ($bigImg.length || $smallImg.length) {
 		$(window).on('resize orientationchange', function() {
 			if ($bigImg.hasClass('slick-initialized')) $bigImg.slick('setPosition');

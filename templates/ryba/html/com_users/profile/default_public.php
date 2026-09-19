@@ -1389,7 +1389,7 @@ if (empty($isLkEmbed)) {
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
 				<?php foreach ($portfolioImages as $imageUrl) : ?>
-					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 100%;" class="masters__small-img-item"></div>
+					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 54px; display: inline-block;" class="masters__small-img-item"></div>
 				<?php endforeach; ?>
 			</div>
 			<div class="clearFloat"></div>
