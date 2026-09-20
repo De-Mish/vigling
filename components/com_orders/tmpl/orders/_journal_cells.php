@@ -1,6 +1,8 @@
 <?php
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Uri\Uri;
+
 /** @var string $journalCellPart */
 /** @var array $boardDays */
 
