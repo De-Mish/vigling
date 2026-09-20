@@ -1024,22 +1024,33 @@ if ($avatarPreviewUrl === '') {
 }
 
 $portfolioRaw = $fieldValue($jcfields, 'portfolio_field');
-$portfolioImages = $parseImageList($portfolioRaw, $resolveProfileImage);
-$portfolioImages = array_values(array_filter(array_map(static function (string $url) use ($vgImageUrl): string {
-	return $vgImageUrl($url, true);
-}, $portfolioImages), static function (string $url): bool {
-	return $url !== '';
-}));
-if ($portfolioImages === [] && $avatarUrl !== '') {
-	$avatarExisting = $vgImageUrl($avatarUrl, true);
-	if ($avatarExisting !== '') {
-		$portfolioImages[] = $avatarExisting;
+$portfolioResolved = $parseImageList($portfolioRaw, $resolveProfileImage);
+$portfolioSlides = [];
+$addPortfolioSlide = static function (string $url) use ($vgImageUrl, &$portfolioSlides): void {
+	$full = $vgImageUrl($url, false);
+	$thumb = $vgImageUrl($url, true);
+	if ($full === '' && $thumb === '') {
+		return;
 	}
+	$portfolioSlides[] = [
+		'full' => $full !== '' ? $full : $thumb,
+		'thumb' => $thumb !== '' ? $thumb : $full,
+	];
+};
+foreach ($portfolioResolved as $url) {
+	$addPortfolioSlide($url);
 }
-if ($portfolioImages === []) {
-	$portfolioImages[] = $defaultImg;
+if ($portfolioSlides === [] && $avatarUrl !== '') {
+	$addPortfolioSlide($avatarUrl);
 }
-$portfolioCountTotal = count($portfolioImages);
+if ($portfolioSlides === []) {
+	$portfolioSlides[] = [
+		'full' => $defaultImg,
+		'thumb' => $defaultImg,
+	];
+}
+$portfolioCountTotal = count($portfolioSlides);
+$portfolioFirst = $portfolioSlides[0];
 $profileShortText = $specialityText !== '' ? $specialityText : $aboutText;
 
 $pricesStructuredWithIds = [];
@@ -1324,15 +1335,15 @@ if (empty($isLkEmbed)) {
 	})();
 	</script>
 	<?php endif; ?>
-	<div class="masters__big-img-cont col-md-6">
+	<div class="masters__big-img-cont col-md-6" data-vg-idx="0">
 		<div class="arrows_master-slider">
-			<button type="button" class="my-slick-prev slick-arrow"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
-			<button type="button" class="my-slick-next slick-arrow"><i class="fa fa-angle-right" aria-hidden="true"></i></button>
+			<button type="button" class="my-slick-prev slick-arrow" aria-label="Предыдущее фото"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
+			<button type="button" class="my-slick-next slick-arrow" aria-label="Следующее фото"><i class="fa fa-angle-right" aria-hidden="true"></i></button>
 		</div>
 		<div class="masters__big-img">
-			<?php foreach ($portfolioImages as $imageUrl) : ?>
-				<div style="background-image: url('<?php echo $this->escape($imageUrl); ?>'); width: 100%;" class="masters__big-img-item"></div>
-			<?php endforeach; ?>
+			<div class="masters__big-img-item" style="width: 100%;">
+				<img class="masters__big-img-photo" src="<?php echo $this->escape($portfolioFirst['full']); ?>" alt="<?php echo $this->escape($displayName); ?>" decoding="async">
+			</div>
 		</div>
 	</div>
 	<div class="masters__big-info col-md-6">
@@ -1374,8 +1385,10 @@ if (empty($isLkEmbed)) {
 		<div class="masters__gall-small">
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
-				<?php foreach ($portfolioImages as $imageUrl) : ?>
-					<div style="background-image: url('<?php echo $this->escape($vgImageUrl($imageUrl, true)); ?>'); width: 54px; display: inline-block;" class="masters__small-img-item"></div>
+				<?php foreach ($portfolioSlides as $slideIdx => $slide) : ?>
+					<div class="masters__small-img-item<?php echo (int) $slideIdx === 0 ? ' is-current' : ''; ?>" style="width: 54px; display: inline-block;" data-full-src="<?php echo $this->escape($slide['full']); ?>">
+						<img src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" loading="lazy" decoding="async">
+					</div>
 				<?php endforeach; ?>
 			</div>
 			<div class="clearFloat"></div>
