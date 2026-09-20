@@ -29,6 +29,7 @@ $canBookTime = !empty($src->canBookTime);
 $dayUrl = (string) ($src->dayUrl ?? $src->appointmentsBaseUrl ?? '');
 $weekUrl = (string) ($src->weekUrl ?? '');
 $monthUrl = (string) ($src->monthUrl ?? '');
+$monthCurrentUrl = (string) ($src->monthCurrentUrl ?? $monthUrl);
 $tzName = viglingOrdersGetUserTimezone($db, $viewerId, (string) Factory::getApplication()->get('offset', 'UTC'));
 try {
 	$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
@@ -51,6 +52,20 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	.appointments-page .appointments-toolbar h1 { margin: 0; }
 	.appointments-page .appointments-lead { margin: 6px 0 0; color: #707070; font-size: 13px; }
+	.appointments-page .appointments-jump-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 36px;
+		padding: 8px 16px;
+		border: 0;
+		border-radius: 8px;
+		background: #e8e8e8;
+		color: #333;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+	}
 	.appointments-page .appointments-modes {
 		display: inline-flex;
 		gap: 4px;
@@ -357,6 +372,59 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	#zapis-reschedule .btn-next.is-loading .btn-spinner { display: inline-block; }
 	@keyframes appointmentsSpin { to { transform: rotate(360deg); } }
+	.com_orders.orders-list--clients .orders-table { display: block; border: 0; background: transparent; }
+	.com_orders.orders-list--clients .orders-table thead { display: none; }
+	.com_orders.orders-list--clients .orders-table tbody { display: block; }
+	.com_orders.orders-list--clients .orders-table .orders-row {
+		display: block;
+		border: 1px solid #d9d9d9;
+		border-radius: 12px;
+		margin-bottom: 14px;
+		padding: 12px;
+		background: #fff;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row td {
+		display: grid;
+		grid-template-columns: 96px minmax(0, 1fr);
+		align-items: start;
+		column-gap: 10px;
+		border: 0;
+		padding: 6px 0;
+		line-height: 1.25;
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row td::before {
+		content: attr(data-label);
+		font-weight: 600;
+		color: #666;
+		display: block;
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row td a {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+	.com_orders .order-comment { white-space: pre-wrap; }
+	.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions {
+		display: block;
+		margin-top: 8px;
+		padding-top: 10px;
+		border-top: 1px solid #ececec;
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions::before { display: block; margin-bottom: 8px; }
+	.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .btn,
+	.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .reschedule-open {
+		min-width: 114px;
+		margin: 0 8px 8px 0;
+		text-align: center;
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .form-inline { display: inline-block; }
+	.com_orders.orders-list--clients .orders-table .orders-row--course-details { display: none; }
+	.com_orders.orders-list--clients .orders-table .orders-row--course-details.is-open { display: block; }
+	.com_orders.orders-list--clients .orders-table .orders-row--course-details td {
+		display: block;
+		grid-template-columns: none;
+	}
+	.com_orders.orders-list--clients .orders-table .orders-row--course-details td::before { display: none; }
 	@media (max-width: 768px) {
 		.appointments-page .appointments-month-wrap { width: 100%; }
 		.appointments-page .appointments-modes { width: 100%; }
@@ -387,74 +455,17 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		#zapis-reschedule .calc__btn { display: flex; flex-direction: column; gap: 12px; padding-left: 0; }
 		#zapis-reschedule .calc__btn .btn-next,
 		#zapis-reschedule .calc__btn .close__btn { width: 100%; margin: 0; float: none; }
-		.com_orders.orders-list--clients .orders-table { display: block; border: 0; background: transparent; }
-		.com_orders.orders-list--clients .orders-table thead { display: none; }
-		.com_orders.orders-list--clients .orders-table tbody { display: block; }
-		.com_orders.orders-list--clients .orders-table .orders-row {
-			display: block;
-			border: 1px solid #d9d9d9;
-			border-radius: 12px;
-			margin-bottom: 14px;
-			padding: 12px;
-			background: #fff;
-			box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row td {
-			display: grid;
-			grid-template-columns: 96px minmax(0, 1fr);
-			align-items: start;
-			column-gap: 10px;
-			border: 0;
-			padding: 6px 0;
-			line-height: 1.25;
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row td::before {
-			content: attr(data-label);
-			font-weight: 600;
-			color: #666;
-			display: block;
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row td a {
-			overflow-wrap: anywhere;
-			word-break: break-word;
-		}
-		.com_orders .order-comment { white-space: pre-wrap; }
-		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions {
-			display: block;
-			margin-top: 8px;
-			padding-top: 10px;
-			border-top: 1px solid #ececec;
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions::before { display: block; margin-bottom: 8px; }
-		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .btn,
-		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .reschedule-open {
-			min-width: 114px;
-			margin: 0 8px 8px 0;
-			text-align: center;
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row td.orders-actions .form-inline { display: inline-block; }
-		.com_orders.orders-list--clients .orders-table .orders-row--course-details { display: none; }
-		.com_orders.orders-list--clients .orders-table .orders-row--course-details.is-open { display: block; }
-		.com_orders.orders-list--clients .orders-table .orders-row--course-details td {
-			display: block;
-			grid-template-columns: none;
-		}
-		.com_orders.orders-list--clients .orders-table .orders-row--course-details td::before { display: none; }
 	}
 	</style>
 
 	<div class="appointments-toolbar">
 		<div>
+			<?php if ($mode === 'month') : ?>
+			<a class="appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">Текущий месяц</a>
+			<?php elseif ($mode !== 'week') : ?>
 			<h1 class="page-title">Записи</h1>
-			<p class="appointments-lead"><?php
-				if ($mode === 'week') {
-					echo 'Неделя как в Журнале. Стрелки листают недели назад и вперёд без ограничения.';
-				} elseif ($mode === 'month') {
-					echo 'Календарь на месяц. Под датой — сколько записей. Стрелки листают месяцы без ограничения.';
-				} else {
-					echo 'Список по времени: сначала недавние, затем будущие. Открывается сразу.';
-				}
-			?></p>
+			<p class="appointments-lead">Список по времени: сначала недавние, затем будущие. Открывается сразу.</p>
+			<?php endif; ?>
 		</div>
 		<nav class="appointments-modes" aria-label="Режим записей">
 			<a href="<?php echo $this->escape($dayUrl); ?>" class="<?php echo $mode === 'day' ? 'is-active' : ''; ?>">День</a>

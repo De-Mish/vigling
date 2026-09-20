@@ -536,8 +536,15 @@ dt.no-title+dd {
   gap: 10px;
 }
 
+#easyprofile .view_profile-header .jsn-p-opt .lk-notify-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
 #easyprofile .view_profile-header .jsn-p-opt .lk-notify-label {
-  display: none;
+  display: inline;
 }
 
 .jsn-p-avatar .avatar-placeholder {
