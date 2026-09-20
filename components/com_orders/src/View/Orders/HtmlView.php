@@ -7,10 +7,37 @@ namespace Viglin\Component\Orders\Site\View\Orders;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Uri\Uri;
+use Viglin\Component\Orders\Site\Helper\AppointmentsHelper;
 
 class HtmlView extends BaseHtmlView
 {
-	protected $items = [];
+	public $items = [];
+
+	public $appointmentsMode = 'day';
+
+	public $appointmentsEmbed = false;
+
+	public $canBookTime = false;
+
+	public $weekStartLocal;
+
+	public $weekPrevUrl = '';
+
+	public $weekNextUrl = '';
+
+	public $monthCursor;
+
+	public $monthPrevUrl = '';
+
+	public $monthNextUrl = '';
+
+	public $appointmentsBaseUrl = '';
+
+	public $dayUrl = '';
+
+	public $weekUrl = '';
+
+	public $monthUrl = '';
 
 	public function display($tpl = null)
 	{
@@ -22,37 +49,23 @@ class HtmlView extends BaseHtmlView
 			$app->redirect(\Joomla\CMS\Router\Route::_('index.php?option=com_users&view=login&return=' . $return));
 			return;
 		}
-		$layout = $app->getInput()->getCmd('layout', 'default');
-		if (in_array($layout, ['clients', 'journal'], true)) {
-			$groups = $user->getAuthorisedGroups();
-			if (!in_array(3, $groups) && !in_array(8, $groups)) {
-				$app->enqueueMessage('Доступ только для мастеров', 'notice');
-				$app->redirect(\Joomla\CMS\Router\Route::_('index.php?option=com_orders&view=orders'));
-				return;
-			}
+
+		if (!class_exists(AppointmentsHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
 		}
-		/** @var \Viglin\Component\Orders\Site\Model\OrdersModel $model */
-		$model = $this->getModel();
-		$model->setState('layout', $layout);
-		$model->setState('as_master', ($layout === 'clients' || $layout === 'journal') ? 1 : 0);
-		if ($layout === 'journal') {
-			$model->setState('list.limit', 500);
-			$model->setState('list.start', 0);
-			try {
-				$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
-				require_once JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
-				$tzName = viglingOrdersGetUserTimezone($db, (int) $user->id, (string) $app->get('offset', 'UTC'));
-				$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
-				$fromUtc = (new \DateTimeImmutable('today', $tz))->modify('-21 days')->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
-				$toUtc = (new \DateTimeImmutable('today', $tz))->modify('+22 days')->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
-				$model->setState('journal.from_utc', $fromUtc);
-				$model->setState('journal.to_utc', $toUtc);
-			} catch (\Throwable $e) {
-				$model->setState('journal.from_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('-21 days')->format('Y-m-d H:i:s'));
-				$model->setState('journal.to_utc', (new \DateTimeImmutable('today', new \DateTimeZone('UTC')))->modify('+22 days')->format('Y-m-d H:i:s'));
-			}
+
+		$input = $app->getInput();
+		$layout = $input->getCmd('layout', 'default');
+		$format = $input->getCmd('format', 'html');
+		$combined = in_array($layout, ['default', 'clients', 'journal', 'appointments'], true);
+		if ($combined && $format === 'html') {
+			$app->redirect(AppointmentsHelper::redirectUrlFromRequest($input));
+			return;
 		}
-		$this->items = $model->getItems();
+
+		AppointmentsHelper::fill($this, $input);
+		$this->setLayout('appointments');
+		$app->getDocument()->setTitle('Записи');
 		return parent::display($tpl);
 	}
 }

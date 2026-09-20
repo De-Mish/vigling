@@ -1342,9 +1342,12 @@ class OrdersController extends BaseController
 	private function setRedirectAndExit()
 	{
 		$return = $this->input->get('return', '', 'base64');
-		$url = $return ? base64_decode($return) : Uri::base() . 'index.php?option=com_orders&view=orders';
-		if (!Uri::isInternal($url)) {
-			$url = Uri::base() . 'index.php?option=com_orders&view=orders';
+		$url = $return ? base64_decode($return) : '';
+		if ($url === '' || !Uri::isInternal($url)) {
+			if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
+				require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+			}
+			$url = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 		}
 		$this->setRedirect($url);
 		$this->redirect();

@@ -136,6 +136,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						$topItems = $topItems ? array_filter($topItems, function ($it) use ($levels) {
 							return in_array((int) $it->access, $levels, true);
 						}) : [];
+						require_once __DIR__ . '/html/mod_menu/appointments_filter.php';
+						$topItems = ryba_filter_appointment_menu_items(array_values($topItems));
 						if (!empty($topItems)) : ?>
 					<nav class="jmoddiv jmodinside" id="mod-menu-ryba-fallback">
 						<ul class="mod-menu mod-list nav">
@@ -280,6 +282,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						$topItems = $topItems ? array_filter($topItems, function ($it) use ($levels) {
 							return in_array((int) $it->access, $levels, true);
 						}) : [];
+						require_once __DIR__ . '/html/mod_menu/appointments_filter.php';
+						$topItems = ryba_filter_appointment_menu_items(array_values($topItems));
 						if (!empty($topItems)) : ?>
 				<ul class="mod-menu mod-list nav">
 					<?php foreach ($topItems as $mitem) :
@@ -615,7 +619,15 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	}
 	$pushnotifyHasFirebase = $pushnotifyLoggedIn && !empty($pushnotifyFirebaseConfig['apiKey']);
 	$pushnotifyIsLkProfile = $option === 'com_users' && $view === 'profile';
-	$pushnotifyIsClientsPage = $option === 'com_orders' && $view === 'orders' && $layout === 'clients';
+	$pushnotifyZapisi = $input->getCmd('zapisi', '');
+	$pushnotifyUserIsMaster = false;
+	if ($pushnotifyLoggedIn) {
+		$pushnotifyGroups = $pushnotifyUser->getAuthorisedGroups();
+		$pushnotifyUserIsMaster = in_array(3, $pushnotifyGroups, true) || in_array(8, $pushnotifyGroups, true);
+	}
+	$pushnotifyIsZapisiTab = $pushnotifyIsLkProfile && in_array($pushnotifyZapisi, ['day', 'week', 'month'], true);
+	$pushnotifyIsClientsPage = ($option === 'com_orders' && $view === 'orders' && $layout === 'clients')
+		|| ($pushnotifyIsZapisiTab && $pushnotifyUserIsMaster);
 	?>
 	<?php if ($pushnotifyHasFirebase) : ?>
 	<script>
@@ -626,6 +638,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		window.PUSHNOTIFY_TOKEN_VALUE = <?php echo json_encode($pushnotifyTokenValue); ?>;
 		window.PUSHNOTIFY_IS_LK_PROFILE = <?php echo $pushnotifyIsLkProfile ? 'true' : 'false'; ?>;
 		window.PUSHNOTIFY_IS_CLIENTS_PAGE = <?php echo $pushnotifyIsClientsPage ? 'true' : 'false'; ?>;
+		window.PUSHNOTIFY_IS_MASTER = <?php echo $pushnotifyUserIsMaster ? 'true' : 'false'; ?>;
 		window.FIREBASE_VAPID_KEY = <?php echo json_encode($pushnotifyFirebaseConfig['vapidKey'] ?? ''); ?>;
 		window.FIREBASE_CONFIG = <?php echo json_encode([
 			'apiKey' => $pushnotifyFirebaseConfig['apiKey'] ?? '',

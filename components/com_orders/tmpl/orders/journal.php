@@ -8,9 +8,11 @@ use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
 
 require_once __DIR__ . '/_reschedule_helper.php';
+require_once __DIR__ . '/_appointments_lib.php';
 
 /** @var \Viglin\Component\Orders\Site\View\Orders\HtmlView $this */
-$items = $this->items;
+$src = (isset($appointments) && is_object($appointments)) ? $appointments : $this;
+$items = is_array($src->items ?? null) ? $src->items : [];
 $user = Factory::getApplication()->getIdentity();
 $masterId = (int) ($user->id ?? 0);
 $token = Session::getFormToken();
@@ -22,6 +24,7 @@ $journalTimezone = (string) ($payload['timezone'] ?? 'UTC');
 $addAction = Route::_('index.php?option=com_orders&task=orders.journalAdd');
 $deleteAction = Route::_('index.php?option=com_orders&task=orders.journalDelete');
 $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.rescheduleByMaster');
+$rescheduleClientAction = Route::_('index.php?option=com_orders&task=orders.reschedule');
 $rescheduleCourseAction = Route::_('index.php?option=com_orders&task=orders.rescheduleCourseSlotByMaster');
 $rescheduleSearchAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSearchSlotByMaster');
 $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSlots');
@@ -36,12 +39,20 @@ $nowUtc = new \DateTimeImmutable('now', $utc);
 $todayLocal = new \DateTimeImmutable('today', $journalTz);
 $monthShort = [1 => 'янв', 2 => 'фев', 3 => 'мар', 4 => 'апр', 5 => 'май', 6 => 'июн', 7 => 'июл', 8 => 'авг', 9 => 'сен', 10 => 'окт', 11 => 'ноя', 12 => 'дек'];
 $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
+$appointmentsEmbed = !empty($src->appointmentsEmbed);
+$canBookTime = !isset($src->canBookTime) || !empty($src->canBookTime);
 $pastDays = 21;
 $futureDays = 21;
 $dayCount = $pastDays + $futureDays;
 $pxPerMin = 1.35;
 $scheduleByDay = $masterId > 0 ? viglingOrdersLoadMasterSchedule($db, $masterId) : [];
 $boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
+if ($appointmentsEmbed && !empty($src->weekStartLocal) && $src->weekStartLocal instanceof \DateTimeImmutable) {
+	$boardStartLocal = $src->weekStartLocal;
+	$pastDays = 0;
+	$futureDays = 6;
+	$dayCount = 7;
+}
 
 $formatMinutes = static function (int $minutes): string {
 	$minutes = max(0, min(24 * 60, $minutes));
@@ -187,11 +198,12 @@ foreach ($items as $item) {
 	$courseSlotId = (int) ($item->course_slot_id ?? 0);
 	$searchSlotId = (int) ($item->search_slot_id ?? 0);
 	$userId = (int) ($item->user_id ?? 0);
+	$isMasterOfItem = (int) ($user->id ?? 0) > 0 && (int) ($item->master_id ?? 0) === (int) ($user->id ?? 0);
 	if ($userId <= 0 || $bookingKind === 'journal') {
 		$displayRows[] = ['type' => 'block', 'item' => $item];
 		continue;
 	}
-	if ($bookingKind === 'course' && $courseSlotId > 0) {
+	if ($isMasterOfItem && $bookingKind === 'course' && $courseSlotId > 0) {
 		$key = 'course-slot-' . $courseSlotId;
 		if (!isset($displayRows[$key])) {
 			$displayRows[$key] = ['type' => 'course-group', 'kind' => 'course', 'slot_id' => $courseSlotId, 'item' => $item, 'participants' => []];
@@ -199,7 +211,7 @@ foreach ($items as $item) {
 		$displayRows[$key]['participants'][] = $item;
 		continue;
 	}
-	if ($bookingKind === 'search' && $searchSlotId > 0) {
+	if ($isMasterOfItem && $bookingKind === 'search' && $searchSlotId > 0) {
 		$key = 'search-slot-' . $searchSlotId;
 		if (!isset($displayRows[$key])) {
 			$displayRows[$key] = ['type' => 'search-group', 'kind' => 'search', 'slot_id' => $searchSlotId, 'item' => $item, 'participants' => []];
@@ -275,7 +287,11 @@ foreach ($displayRows as $row) {
 		$title = $isSearch ? 'Поиск моделей' : 'Курс';
 		$service = trim((string) ($item->service_display_name ?? $item->service_name ?? $title));
 	} else {
+		$viewerId = (int) ($user->id ?? 0);
 		$title = trim((string) ($item->client_name ?? 'Клиент'));
+		if ($viewerId > 0 && (int) ($item->master_id ?? 0) !== $viewerId) {
+			$title = trim((string) ($item->master_name ?? $title));
+		}
 	}
 	$boardDays[$dateKey]['events'][] = [
 		'id' => $eventId,
@@ -365,7 +381,8 @@ $kindClass = static function (string $kind): string {
 		gap: 8px;
 		align-items: center;
 	}
-	.com_orders.orders-journal .journal-nav button {
+	.com_orders.orders-journal .journal-nav button,
+	.com_orders.orders-journal .journal-nav a.journal-nav-link {
 		min-width: 40px;
 		height: 36px;
 		border: 1px solid #bbb;
@@ -374,6 +391,11 @@ $kindClass = static function (string $kind): string {
 		font-size: 22px;
 		line-height: 1;
 		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		text-decoration: none;
+		color: #111;
 	}
 	.com_orders.orders-journal .journal-time-gutter {
 		position: sticky;
@@ -393,6 +415,11 @@ $kindClass = static function (string $kind): string {
 		margin: 0;
 		color: #707070;
 		font-size: 13px;
+	}
+	.com_orders.orders-journal .journal-week-label {
+		font-size: 18px;
+		font-weight: 700;
+		line-height: 1.2;
 	}
 	.com_orders.orders-journal .journal-board {
 		background: #fff;
@@ -520,6 +547,10 @@ $kindClass = static function (string $kind): string {
 	.com_orders.orders-journal .journal-event.is-course { background: #ffe7a3; }
 	.com_orders.orders-journal .journal-event.is-search { background: #c8efd9; }
 	.com_orders.orders-journal .journal-event.is-block { background: #e4e4e4; color: #555; }
+	.com_orders.orders-journal .journal-event.is-past {
+		color: #6c757d;
+		background: #e6e6e6;
+	}
 	.com_orders.orders-journal .journal-event__time,
 	.com_orders.orders-journal .journal-event__title,
 	.com_orders.orders-journal .journal-event__service {
@@ -703,12 +734,22 @@ $kindClass = static function (string $kind): string {
 
 	<div class="journal-toolbar">
 		<div>
+			<?php if (!$appointmentsEmbed) : ?>
 			<h1 class="page-title">Журнал</h1>
 			<p class="journal-meta">Часовой пояс: <strong><?php echo $this->escape($journalTimezone); ?></strong>. Листайте влево к прошедшим дням и вправо к следующим.</p>
+			<?php else : ?>
+			<div class="journal-week-label"><?php echo $this->escape($boardStartLocal->format('d.m.Y') . ' – ' . $boardStartLocal->modify('+6 days')->format('d.m.Y')); ?></div>
+			<p class="journal-meta">Листайте недели назад и вперёд без ограничения. Прошедшие записи серым.</p>
+			<?php endif; ?>
 		</div>
 		<div class="journal-nav">
+			<?php if ($appointmentsEmbed) : ?>
+			<a class="journal-nav-link" href="<?php echo $this->escape((string) ($src->weekPrevUrl ?? '#')); ?>" aria-label="Назад">‹</a>
+			<a class="journal-nav-link" href="<?php echo $this->escape((string) ($src->weekNextUrl ?? '#')); ?>" aria-label="Вперёд">›</a>
+			<?php else : ?>
 			<button type="button" id="journal-scroll-prev" aria-label="Назад">‹</button>
 			<button type="button" id="journal-scroll-next" aria-label="Вперёд">›</button>
+			<?php endif; ?>
 		</div>
 	</div>
 
@@ -754,7 +795,7 @@ $kindClass = static function (string $kind): string {
 							?>
 							<button
 								type="button"
-								class="journal-event <?php echo $kindClass((string) $event['kind']); ?>"
+								class="journal-event <?php echo $kindClass((string) $event['kind']); ?><?php echo (!empty($event['startLocal']) && $event['startLocal'] < $nowUtc->setTimezone($journalTz)) ? ' is-past' : ''; ?>"
 								style="top: <?php echo $top; ?>px; height: <?php echo $height; ?>px; left: <?php echo $left; ?>; width: <?php echo $width; ?>;"
 								data-event-id="<?php echo $this->escape((string) $event['id']); ?>"
 							>
@@ -770,67 +811,9 @@ $kindClass = static function (string $kind): string {
 		</div>
 	</div>
 
-	<div class="journal-card journal-card--calendar">
-		<h2>Забронировать время</h2>
-		<form id="journal-form" method="post" action="<?php echo $addAction; ?>">
-			<input type="hidden" name="<?php echo $token; ?>" value="1">
-			<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
-			<input type="hidden" name="time_utc" id="journal-time-utc" value="">
-			<div class="journal-controls">
-				<div class="journal-field">
-					<label for="journal-duration">Длительность</label>
-					<input type="text" id="journal-duration" name="duration" value="60" placeholder="95 или 1:35">
-				</div>
-				<div class="journal-field">
-					<label for="journal-comment">Комментарий</label>
-					<textarea id="journal-comment" name="comment" rows="3" placeholder="Причина блокировки времени"></textarea>
-				</div>
-				<div class="journal-selected" id="journal-selected">
-					<strong>Выберите время</strong>
-					<span>Нажмите на свободное время в календаре ниже.</span>
-				</div>
-				<div class="journal-submit-wrap">
-					<button type="submit" class="btn btn-primary journal-submit" id="journal-submit" disabled>Забронировать время</button>
-				</div>
-			</div>
-			<div class="calc__body">
-				<div class="calendar__master calendar__master--manual preload" id="journal-calendar">
-				<?php if (!empty($days)) : ?>
-					<?php foreach ($days as $day) : ?>
-						<div class="calendar__master-item">
-							<span class="mas-date">
-								<?php echo $this->escape((string) ($day['date_view'] ?? '')); ?>
-								<b><?php echo $this->escape((string) ($day['dow'] ?? '')); ?></b>
-							</span>
-							<?php $slots = (array) ($day['slots'] ?? []); ?>
-							<?php if (!empty($slots)) : ?>
-								<p class="btns-m">
-									<?php foreach ($slots as $slot) : ?>
-										<?php
-										$slotLabel = (string) ($slot['label'] ?? '');
-										$slotUtc = (string) ($slot['utc'] ?? '');
-										$slotFull = trim((string) ($day['date_view'] ?? '') . ' ' . $slotLabel);
-										$slotId = preg_replace('/[^a-zA-Z0-9\-_]/', '-', (string) ($day['date'] ?? '') . '-' . str_replace(':', '-', $slotLabel));
-										?>
-										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="journal_slot" value="<?php echo $this->escape($slotUtc); ?>" data-slot-label="<?php echo $this->escape($slotFull); ?>">
-										<label for="<?php echo $this->escape($slotId); ?>" class="btn-select"><?php echo $this->escape($slotLabel); ?></label>
-									<?php endforeach; ?>
-								</p>
-							<?php else : ?>
-								<div class="journal-empty-text">Нет свободных слотов</div>
-							<?php endif; ?>
-						</div>
-					<?php endforeach; ?>
-				<?php else : ?>
-					<div class="calendar__master-item">
-						<div class="journal-empty-text">Свободных слотов пока нет</div>
-					</div>
-				<?php endif; ?>
-				</div>
-			</div>
-			<div class="error-msg" id="journal-error"></div>
-		</form>
-	</div>
+	<?php if ($canBookTime) : ?>
+		<?php include __DIR__ . '/_journal_book.php'; ?>
+	<?php endif; ?>
 
 	<div class="journal-backdrop" id="journal-backdrop" hidden></div>
 	<div class="journal-overlay" id="journal-overlay" hidden>
@@ -917,7 +900,30 @@ $kindClass = static function (string $kind): string {
 					$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->user_id;
 					$contacts = $contactBits($item);
 					$completed = !empty($item->completed);
+					$viewerIsMaster = !empty($item->_viewer_is_master)
+						|| ((int) ($item->master_id ?? 0) > 0 && (int) ($item->master_id ?? 0) === (int) ($user->id ?? 0));
 				?>
+					<?php if (!$viewerIsMaster) : ?>
+					<h2><?php echo viglingAppointmentsRenderPeople($item); ?></h2>
+					<div class="journal-detail__grid">
+						<div class="journal-detail__label">Клиент</div>
+						<div><?php echo viglingAppointmentsPersonLink((int) ($item->user_id ?? 0), trim((string) ($item->client_name ?? '—'))); ?></div>
+						<div class="journal-detail__label">Мастер</div>
+						<div><?php echo viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), trim((string) ($item->master_name ?? '—'))); ?></div>
+						<div class="journal-detail__label">Услуга</div>
+						<div>
+							<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name ?? '—')); ?>
+							<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
+								<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
+							<?php endif; ?>
+						</div>
+						<div class="journal-detail__label">Дата и время</div>
+						<div><?php echo $this->escape($timeText); ?></div>
+					</div>
+					<div class="journal-detail__actions">
+						<?php echo viglingAppointmentsRenderClientActions($item, $isPast, $token, $returnEncoded, (string) $event['timeIso'], $db, $rescheduleClientAction, false); ?>
+					</div>
+					<?php else : ?>
 					<h2>
 						<?php if (($item->client_name ?? '—') !== '—' && (int) $item->user_id > 0) : ?>
 							<a href="<?php echo htmlspecialchars($clientProfileUrl); ?>"><?php echo htmlspecialchars((string) $item->client_name); ?></a>
@@ -943,6 +949,7 @@ $kindClass = static function (string $kind): string {
 					<div class="journal-detail__actions">
 						<?php echo $renderOrderActions($item, $isPast, $completed, $token, $returnEncoded, (string) $event['timeIso']); ?>
 					</div>
+					<?php endif; ?>
 				<?php endif; ?>
 			</div>
 			<?php endforeach; ?>
@@ -1050,72 +1057,6 @@ $kindClass = static function (string $kind): string {
 	document.addEventListener('keydown', function(e){
 		if (e.key === 'Escape') closeDetail();
 	});
-
-	var form = document.getElementById('journal-form');
-	var cal = document.getElementById('journal-calendar');
-	var timeInput = document.getElementById('journal-time-utc');
-	var durationInput = document.getElementById('journal-duration');
-	var selectedBox = document.getElementById('journal-selected');
-	var errorEl = document.getElementById('journal-error');
-	var submitBtn = document.getElementById('journal-submit');
-
-	function setError(msg) {
-		if (!errorEl) return;
-		errorEl.style.display = msg ? 'block' : 'none';
-		errorEl.textContent = msg || '';
-	}
-	function initSlider() {
-		if (!cal || !window.jQuery) {
-			if (cal) cal.classList.remove('preload');
-			return;
-		}
-		var jqCal = window.jQuery(cal);
-		setTimeout(function(){
-			if (jqCal.hasClass('slick-initialized')) {
-				jqCal.slick('setPosition');
-			} else if (cal.querySelector('.calendar__master-item')) {
-				jqCal.slick({
-					infinite: false,
-					slidesToShow: 5,
-					slidesToScroll: 1,
-					dots: false,
-					arrows: true,
-					accessibility: false,
-					responsive: [
-						{ breakpoint: 1024, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-						{ breakpoint: 820, settings: { slidesToShow: 1, slidesToScroll: 1 } }
-					]
-				});
-			}
-			jqCal.removeClass('preload');
-		}, 0);
-	}
-	if (cal) {
-		initSlider();
-		cal.querySelectorAll('input[name="journal_slot"]').forEach(function(input){
-			input.addEventListener('change', function(){
-				if (timeInput) timeInput.value = input.value || '';
-				if (selectedBox) {
-					selectedBox.innerHTML = '<strong>Выбран слот</strong><span>' + (input.getAttribute('data-slot-label') || '') + '</span>';
-				}
-				if (submitBtn) submitBtn.disabled = !input.value;
-				setError('');
-			});
-		});
-	}
-	if (form) {
-		form.addEventListener('submit', function(e){
-			if (!timeInput || !timeInput.value.trim()) {
-				e.preventDefault();
-				setError('Сначала выберите слот в календаре.');
-				return;
-			}
-			if (durationInput && !durationInput.value.trim()) {
-				e.preventDefault();
-				setError('Укажите длительность блока.');
-			}
-		});
-	}
 
 	var modal = document.getElementById('zapis-reschedule');
 	var rForm = document.getElementById('reschedule-modal-form');
@@ -1239,6 +1180,21 @@ $kindClass = static function (string $kind): string {
 			rCal.appendChild(item);
 		});
 	}
+	function readEmbeddedDays(orderId, courseSlotId, searchSlotId) {
+		var id = '';
+		if (searchSlotId > 0) id = 'reschedule-search-slot-' + searchSlotId;
+		else if (courseSlotId > 0) id = 'reschedule-course-slot-' + courseSlotId;
+		else if (orderId > 0) id = 'reschedule-slots-' + orderId;
+		if (!id) return [];
+		var node = document.getElementById(id);
+		if (!node) return [];
+		try {
+			var parsed = JSON.parse(node.textContent || '[]');
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (e) {
+			return [];
+		}
+	}
 	document.querySelectorAll('.reschedule-open').forEach(function(btn){
 		btn.addEventListener('click', function(){
 			var orderId = parseInt(this.getAttribute('data-id') || '0', 10);
@@ -1252,11 +1208,17 @@ $kindClass = static function (string $kind): string {
 			searchSlotInp.value = String(searchSlotId > 0 ? searchSlotId : 0);
 			durationInp.value = String(isNaN(duration) ? 60 : duration);
 			timeUtcInp.value = '';
-			rForm.setAttribute('action', (courseSlotId > 0 || searchSlotId > 0) ? (this.getAttribute('data-reschedule-action') || defaultAction) : defaultAction);
+			rForm.setAttribute('action', this.getAttribute('data-reschedule-action') || defaultAction);
 			rCal.classList.add('preload');
 			if (rCal) rCal.innerHTML = '';
 			jQuery(modal).modal('show');
-			loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
+			if (this.getAttribute('data-slots-embedded') === '1') {
+				renderCalendar(readEmbeddedDays(orderId, courseSlotId, searchSlotId), currentUtc);
+				initRescheduleSlider();
+				if (rCal) rCal.classList.remove('preload');
+			} else {
+				loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
+			}
 		});
 	});
 	if (window.jQuery && modal) {

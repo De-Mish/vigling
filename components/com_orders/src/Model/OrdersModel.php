@@ -20,13 +20,21 @@ class OrdersModel extends ListModel
 	protected function populateState($ordering = null, $direction = null): void
 	{
 		$app = Factory::getApplication();
-		$layout = $app->getInput()->getCmd('layout', 'default');
-		$this->setState('layout', $layout);
-		if ($layout === 'journal') {
+		$input = $app->getInput();
+		$layout = $input->getCmd('layout', 'default');
+		$zapisi = $input->getCmd('zapisi', '');
+		$option = $input->getCmd('option', '');
+		$view = $input->getCmd('view', '');
+		$isAppointments = in_array($layout, ['default', 'clients', 'journal', 'appointments'], true)
+			|| in_array($zapisi, ['day', 'week', 'month'], true)
+			|| ($option === 'com_users' && $view === 'profile');
+		if ($isAppointments) {
+			$this->setState('layout', 'appointments');
 			$this->setState('list.limit', 500);
 			$this->setState('list.start', 0);
 			return;
 		}
+		$this->setState('layout', $layout);
 		$this->setState('list.limit', $app->getInput()->getUint('limit', 50));
 		$this->setState('list.start', $app->getInput()->getUint('limitstart', 0));
 	}
@@ -79,11 +87,59 @@ class OrdersModel extends ListModel
 					$db->quoteName('o.course_slot_id'),
 				]);
 			}
+		if ($hasSearchColumns) {
+			$query->select([
+				$db->quoteName('o.search_id'),
+				$db->quoteName('o.search_slot_id'),
+			]);
+		}
+		return $query;
+		}
+		if ($layout === 'appointments') {
+			$fromUtc = trim((string) $this->getState('journal.from_utc', ''));
+			$toUtc = trim((string) $this->getState('journal.to_utc', ''));
+			$query = $db->getQuery(true)
+				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')
+				->from($db->quoteName('#__vigling_bookings', 'o'))
+				->where('(' . $db->quoteName('o.user_id') . ' = ' . (int) $user->id
+					. ' OR ' . $db->quoteName('o.master_id') . ' = ' . (int) $user->id . ')')
+				->order($db->quoteName('o.time') . ' ASC');
+			if ($fromUtc !== '') {
+				$query->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc));
+			}
+			if ($toUtc !== '') {
+				$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
+			}
+			if (isset($tableColumns['comment'])) {
+				$query->select($db->quoteName('o.comment'));
+			}
+			if (isset($tableColumns['client_after_comment'])) {
+				$query->select($db->quoteName('o.client_after_comment'));
+			}
+			if (isset($tableColumns['master_after_comment'])) {
+				$query->select($db->quoteName('o.master_after_comment'));
+			}
+			if (isset($tableColumns['contact_name'])) {
+				$query->select($db->quoteName('o.contact_name'));
+			}
+			if (isset($tableColumns['contact_phone'])) {
+				$query->select($db->quoteName('o.contact_phone'));
+			}
+			if ($hasCourseColumns) {
+				$query->select([
+					$db->quoteName('o.booking_kind'),
+					$db->quoteName('o.course_id'),
+					$db->quoteName('o.course_slot_id'),
+				]);
+			}
 			if ($hasSearchColumns) {
 				$query->select([
 					$db->quoteName('o.search_id'),
 					$db->quoteName('o.search_slot_id'),
 				]);
+			}
+			if (isset($tableColumns['stock_service_id'])) {
+				$query->select($db->quoteName('o.stock_service_id'));
 			}
 			return $query;
 		}
@@ -139,7 +195,8 @@ class OrdersModel extends ListModel
 			return [];
 		}
 		$asMaster = (int) $this->getState('as_master', 0) === 1
-			|| (string) $this->getState('layout', 'default') === 'journal';
+			|| (string) $this->getState('layout', 'default') === 'journal'
+			|| (string) $this->getState('layout', 'default') === 'appointments';
 		$tableColumns = array_change_key_case($this->getDatabase()->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
@@ -301,6 +358,21 @@ class OrdersModel extends ListModel
 		$reviewsMap = ReviewHelper::loadForBookings($this->getDatabase(), array_map(static function ($item): int {
 			return (int) ($item->id ?? 0);
 		}, $items));
+		$layout = (string) $this->getState('layout', 'default');
+		if ($layout === 'appointments') {
+			$viewerId = (int) Factory::getApplication()->getIdentity()->id;
+			$masterIds = array_unique(array_map(static function ($o): int {
+				return (int) ($o->master_id ?? 0);
+			}, $items));
+			$masterNames = $this->getUserNames($masterIds);
+			foreach ($items as $item) {
+				$item->master_name = $masterNames[(int) ($item->master_id ?? 0)] ?? '—';
+				$item->_viewer_is_master = $viewerId > 0 && (int) ($item->master_id ?? 0) === $viewerId;
+				if (!isset($item->client_name) || $item->client_name === '') {
+					$item->client_name = '—';
+				}
+			}
+		}
 		foreach ($items as $item) {
 			$item->_reviews = $reviewsMap[(int) ($item->id ?? 0)] ?? [];
 			if (!isset($item->client_after_comment)) {
