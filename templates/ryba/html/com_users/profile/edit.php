@@ -798,6 +798,9 @@ try {
 		}
 		$items = isset($category['items']) && is_array($category['items']) ? $category['items'] : [];
 		foreach ($items as $item) {
+			if ((int) ($item['count_stock'] ?? 0) <= 0) {
+				continue;
+			}
 			$svcId = (string) ($item['svc_id'] ?? '');
 			if ($svcId === '') {
 				continue;
@@ -807,6 +810,7 @@ try {
 			$serviceRaw = ($tagId > 0 && $tagId !== $svcInt) ? ($svcId . '-' . $tagId) : $svcId;
 			$serviceLabel = trim((string) ($item['name'] ?? ''));
 			$existingStockRows[] = [
+				'id' => (int) ($item['stock_service_id'] ?? 0),
 				'categoryId' => (int) $catId,
 				'serviceRaw' => $serviceRaw,
 				'serviceLabel' => $serviceLabel,
@@ -823,6 +827,23 @@ try {
 	}
 } catch (\Throwable $e) {
 	$existingStockRows = [];
+}
+
+$repeatStockId = (int) Factory::getApplication()->getInput()->getInt('repeat_stock', 0);
+$openStocksTab = false;
+$stocksTabIndex = array_search('stocks', $tabs, true);
+if ($repeatStockId > 0 && $isMaster) {
+	$repeatRow = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServiceForRepeat((int) $userId, $repeatStockId);
+	if (is_array($repeatRow) && (int) ($repeatRow['categoryId'] ?? 0) > 0) {
+		$repeatRow['id'] = 0;
+		$existingStockRows[] = $repeatRow;
+		$rememberMissingServiceOption(
+			(int) $repeatRow['categoryId'],
+			(string) ($repeatRow['serviceRaw'] ?? ''),
+			(string) ($repeatRow['serviceLabel'] ?? '')
+		);
+		$openStocksTab = true;
+	}
 }
 
 $existingCourseRows = [];
@@ -2982,6 +3003,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				return;
 			}
 			items.push({
+				id: parseInt(row.id || 0, 10) || 0,
 				cat_id: catId,
 				service_raw: serviceRaw,
 				price: price,
@@ -4032,6 +4054,7 @@ function addStockRow(categoryLabel, rowData) {
 	var row = document.createElement('p');
 	row.className = 'service__item';
 	row.setAttribute('data-category-id', String(catId));
+	row.setAttribute('data-stock-id', String(parseInt((rowData && (rowData.id || rowData.stockId)) || '0', 10) || 0));
 	row.innerHTML =
 	'<select class="stock-service-select">' + serviceOptionsHtml(catId) + '</select>' +
 	'<span class="time"><label>Время:</label><select class="stock-time-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
@@ -4076,6 +4099,7 @@ function addStockRow(categoryLabel, rowData) {
 			var aboutInput = row.querySelector('.stock-about-input');
 			var recommendationInput = row.querySelector('.recommendation-input');
 			rows.push({
+				id: parseInt(row.getAttribute('data-stock-id') || '0', 10) || 0,
 				categoryId: parseInt(catId || '0', 10) || 0,
 				serviceRaw: serviceSelect ? String(serviceSelect.value || '') : '',
 				duration: parseInt(timeSelect ? String(timeSelect.value || '0') : '0', 10) || 0,
@@ -4222,6 +4246,11 @@ function addStockRow(categoryLabel, rowData) {
 	renderCourseBuilders();
 	renderSearchBuilders();
 	bindAllFixedSlotInputs();
+	<?php if (!empty($openStocksTab) && $stocksTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $stocksTabIndex; ?>);
+	}
+	<?php endif; ?>
 	document.addEventListener('change', function(e){
 		if (!e.target || !e.target.classList) {
 			return;

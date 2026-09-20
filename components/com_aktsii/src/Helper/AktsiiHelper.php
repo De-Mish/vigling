@@ -82,6 +82,7 @@ class AktsiiHelper
             ->from($db->quoteName('#__vigling_user_stock_services'))
             ->whereIn($db->quoteName('user_id'), $ids)
             ->where($db->quoteName('is_active') . ' = 1')
+            ->where($db->quoteName('count_stock') . ' > 0')
             ->order($db->quoteName('id') . ' ASC');
         $db->setQuery($query);
         try {

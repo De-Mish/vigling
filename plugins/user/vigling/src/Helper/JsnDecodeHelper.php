@@ -264,6 +264,10 @@ final class JsnDecodeHelper
                 ->join('LEFT', $db->quoteName('#__vigling_service_nodes', 'parent') . ' ON ' . $db->quoteName('n.parent_id') . ' = ' . $db->quoteName('parent.id'))
                 ->where($db->quoteName('us.is_active') . ' = 1');
 
+            if ($userServicesTable === '#__vigling_user_stock_services') {
+                $query->where($db->quoteName('us.count_stock') . ' > 0');
+            }
+
             if ($allowedCategoryIds !== []) {
                 $expanded = self::expandToAllLegacyCatIds($allowedCategoryIds);
                 $query->whereIn($db->quoteName('us.legacy_cat_id'), $expanded);
@@ -511,13 +515,66 @@ final class JsnDecodeHelper
      */
     public static function getUserStockServicesStructuredWithIds(int $userId): array
     {
-        return self::getUserServicesStructuredWithIdsFromTable($userId, '#__vigling_user_stock_services');
+        return self::getUserServicesStructuredWithIdsFromTable($userId, '#__vigling_user_stock_services', 'active');
     }
 
     /**
+     * Sold-out promotions (count_stock = 0) for the profile archive.
+     *
+     * @return array<int, array{cat_id: string, title: string, items: array<int, array<string, mixed>>}>
+     */
+    public static function getUserArchivedStockServicesStructuredWithIds(int $userId): array
+    {
+        return self::getUserServicesStructuredWithIdsFromTable($userId, '#__vigling_user_stock_services', 'archived');
+    }
+
+    /**
+     * Prefill the profile-edit stocks form for Repeat. Returns a new-key row (id = 0).
+     *
+     * @return array{id:int,categoryId:int,serviceRaw:string,serviceLabel:string,duration:int,pause:int,price:int,oldPrice:int,aboutStock:string,countStock:int,recommendation:string}|null
+     */
+    public static function getUserStockServiceForRepeat(int $userId, int $stockServiceId): ?array
+    {
+        if ($userId <= 0 || $stockServiceId <= 0) {
+            return null;
+        }
+        $grouped = self::getUserServicesStructuredWithIdsFromTable($userId, '#__vigling_user_stock_services', 'all');
+        foreach ($grouped as $category) {
+            $catId = (int) ($category['cat_id'] ?? 0);
+            foreach ((array) ($category['items'] ?? []) as $item) {
+                if ((int) ($item['stock_service_id'] ?? 0) !== $stockServiceId) {
+                    continue;
+                }
+                $svcId = (string) ($item['svc_id'] ?? '');
+                $tagId = (int) ($item['tag_id'] ?? 0);
+                $svcInt = (int) $svcId;
+                $serviceRaw = ($tagId > 0 && $tagId !== $svcInt) ? ($svcId . '-' . $tagId) : $svcId;
+                $original = (int) ($item['count_stock_original'] ?? 0);
+                $remaining = (int) ($item['count_stock'] ?? 0);
+                return [
+                    'id' => 0,
+                    'categoryId' => $catId,
+                    'serviceRaw' => $serviceRaw,
+                    'serviceLabel' => trim((string) ($item['name'] ?? '')),
+                    'duration' => (int) ($item['duration'] ?? 15),
+                    'pause' => (int) ($item['pause_min'] ?? 15),
+                    'price' => (int) ($item['price'] ?? 0),
+                    'oldPrice' => (int) ($item['old_price'] ?? 0),
+                    'aboutStock' => (string) ($item['about_stock'] ?? ''),
+                    'countStock' => $original > 0 ? $original : $remaining,
+                    'recommendation' => (string) ($item['recommendation'] ?? ''),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param 'active'|'archived'|'all' $stockMode
      * @return array<int, array{cat_id: string, title: string, items: array<int, array{name: string, price: int, duration: int, svc_id: string, tag_id: int, pause_min: int, stock_service_id?: int, old_price?: int, about_stock?: string, count_stock?: int}>}>
      */
-    private static function getUserServicesStructuredWithIdsFromTable(int $userId, string $userServicesTable): array
+    private static function getUserServicesStructuredWithIdsFromTable(int $userId, string $userServicesTable, string $stockMode = 'active'): array
     {
         if ($userId <= 0) {
             return [];
@@ -526,6 +583,9 @@ final class JsnDecodeHelper
         try {
             if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')) {
                 \Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureRecommendationColumn();
+                if ($userServicesTable === '#__vigling_user_stock_services') {
+                    \Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureStockArchiveSchema();
+                }
             }
             $db = Factory::getContainer()->get(DatabaseInterface::class);
             $isStockTable = $userServicesTable === '#__vigling_user_stock_services';
@@ -552,10 +612,12 @@ final class JsnDecodeHelper
                 $select[] = $db->quoteName('us.old_price');
                 $select[] = $db->quoteName('us.about_stock');
                 $select[] = $db->quoteName('us.count_stock');
+                $select[] = $db->quoteName('us.count_stock_original');
             } else {
                 $select[] = '0 AS ' . $db->quoteName('old_price');
                 $select[] = "'' AS " . $db->quoteName('about_stock');
                 $select[] = '0 AS ' . $db->quoteName('count_stock');
+                $select[] = '0 AS ' . $db->quoteName('count_stock_original');
             }
             $query = $db->getQuery(true)
                 ->select($select)
@@ -563,19 +625,30 @@ final class JsnDecodeHelper
                 ->join('INNER', $db->quoteName('#__vigling_service_nodes', 'n') . ' ON ' . $db->quoteName('us.service_node_id') . ' = ' . $db->quoteName('n.id'))
                 ->join('LEFT', $db->quoteName('#__vigling_service_nodes', 'parent') . ' ON ' . $db->quoteName('n.parent_id') . ' = ' . $db->quoteName('parent.id'))
                 ->where($db->quoteName('us.user_id') . ' = ' . (int) $userId)
-                ->where($db->quoteName('us.is_active') . ' = 1')
-                ->order($db->quoteName('parent.sort_order') . ' ASC')
+                ->where($db->quoteName('us.is_active') . ' = 1');
+            if ($isStockTable && $stockMode === 'active') {
+                $query->where($db->quoteName('us.count_stock') . ' > 0');
+            } elseif ($isStockTable && $stockMode === 'archived') {
+                $query->where('(' . $db->quoteName('us.count_stock') . ' IS NULL OR ' . $db->quoteName('us.count_stock') . ' <= 0)');
+            }
+            $query->order($db->quoteName('parent.sort_order') . ' ASC')
                 ->order($db->quoteName('parent.title') . ' ASC')
                 ->order($db->quoteName('n.sort_order') . ' ASC')
                 ->order($db->quoteName('n.title') . ' ASC');
             $db->setQuery($query);
             $rows = $db->loadAssocList() ?: [];
         } catch (\Throwable $e) {
+            if ($stockMode === 'archived') {
+                return [];
+            }
             return self::getLegacyFieldCatalogFallback($userId, $userServicesTable === '#__vigling_user_stock_services');
         }
 
         if ($rows === []) {
-            return self::getLegacyFieldCatalogFallback($userId, $userServicesTable === '#__vigling_user_stock_services');
+            if ($userServicesTable === '#__vigling_user_stock_services') {
+                return [];
+            }
+            return self::getLegacyFieldCatalogFallback($userId, false);
         }
 
         $grouped = [];
@@ -626,6 +699,7 @@ final class JsnDecodeHelper
                 $item['old_price'] = (int) round((float) ($row['old_price'] ?? 0));
                 $item['about_stock'] = trim((string) ($row['about_stock'] ?? ''));
                 $item['count_stock'] = (int) ($row['count_stock'] ?? 0);
+                $item['count_stock_original'] = (int) ($row['count_stock_original'] ?? 0);
             }
 
             $grouped[$catId]['items'][] = $item;

@@ -2123,7 +2123,9 @@ if (empty($isLkEmbed)) {
 						$stockAccCounter = 0;
 						foreach ((array) $stockPricesStructuredWithIds as $stockCategory) :
 							$stockCategoryTitle = (string) ($stockCategory['title'] ?? '');
-							$stockItems = (array) ($stockCategory['items'] ?? []);
+							$stockItems = array_values(array_filter((array) ($stockCategory['items'] ?? []), static function ($stockItem) {
+								return (int) ($stockItem['count_stock'] ?? 0) > 0 && (int) ($stockItem['stock_service_id'] ?? 0) > 0;
+							}));
 							if ($stockItems === []) {
 								continue;
 							}
@@ -2143,6 +2145,9 @@ if (empty($isLkEmbed)) {
 									$stockCountLeft = (int) ($stockItem['count_stock'] ?? 0);
 									$stockServiceId = (int) ($stockItem['stock_service_id'] ?? 0);
 									$stockIsSoldOut = $stockServiceId <= 0 || $stockCountLeft <= 0;
+									if ($stockIsSoldOut) {
+										continue;
+									}
 									$isHighlightedStock = $highlightSearchService
 										&& $serviceMatchesSearchFilter($stockCategory, $stockItem, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 								?>
@@ -3123,13 +3128,23 @@ if (empty($isLkEmbed)) {
 			var next = Math.max(0, current - 1);
 			counter.textContent = 'Осталось предложений: ' + next;
 			if (next <= 0) {
-				item.classList.add('is-unavailable');
-				button.classList.add('is-disabled');
-				button.setAttribute('data-booking-disabled', '1');
-				button.setAttribute('disabled', 'disabled');
-				button.setAttribute('aria-disabled', 'true');
-				button.setAttribute('title', 'Акция закончилась');
-				button.setAttribute('aria-label', 'Акция закончилась');
+				var list = item.closest('.stockList');
+				var wrap = list ? list.closest('.accordionItemContent2') : null;
+				var heading = wrap ? wrap.previousElementSibling : null;
+				item.remove();
+				if (list && !list.querySelector('.stockList__item')) {
+					if (wrap) {
+						wrap.remove();
+					}
+					if (heading && heading.tagName === 'H2') {
+						heading.remove();
+					}
+				}
+				var section = button.closest('section.master__services');
+				if (section && !section.querySelector('.stockList__item')) {
+					section.remove();
+				}
+				return;
 			}
 		}
 

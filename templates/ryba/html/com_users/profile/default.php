@@ -18,6 +18,10 @@ if (!$isOwn && $profileOwnerId > 0) {
 	return;
 }
 $openZapisi = false;
+$openAktsiiArchive = false;
+$aktsiiListUrl = '';
+$aktsiiArchiveUrl = '';
+$repeatStockBase = '';
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
 $profileIsMaster = in_array(3, $profileGroups) || in_array(8, $profileGroups);
 $profileIsAdministrator = in_array(8, $profileGroups, true) || in_array(7, $profileGroups, true) || in_array(6, $profileGroups, true);
@@ -111,6 +115,7 @@ $pricesStructured = [];
 $stockPricesStructured = [];
 $pricesStructuredWithIds = [];
 $stockPricesStructuredWithIds = [];
+$archivedStockPricesStructuredWithIds = [];
 $coursesStructured = [];
 $searchesStructured = [];
 $formatProfileServiceDisplayName = static function (string $categoryTitle, string $itemName): string {
@@ -136,6 +141,7 @@ if ($profileOwnerId > 0) {
 if ($profileOwnerId > 0) {
 	$stockPricesStructured = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructured($profileOwnerId);
 	$stockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($profileOwnerId);
+	$archivedStockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserArchivedStockServicesStructuredWithIds($profileOwnerId);
 	$coursesStructured = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCoursesStructured($profileOwnerId);
 	if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserSearchesService')) {
 		$searchesStructured = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::getUserSearchesStructured($profileOwnerId);
@@ -552,7 +558,11 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 						require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
 					}
 					$openZapisi = in_array(Factory::getApplication()->getInput()->getCmd('zapisi', ''), ['day', 'week', 'month'], true);
+					$openAktsiiArchive = Factory::getApplication()->getInput()->getCmd('aktsii', '') === 'archive';
 					$zapisiUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
+					$aktsiiListUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl();
+					$aktsiiArchiveUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['aktsii' => 'archive']);
+					$repeatStockBase = Route::_('index.php?option=com_users&view=profile&layout=edit', false);
 					?>
 					<div class="lk-notify-wrap" style="display:inline-block; position:relative; vertical-align:middle;">
 						<button type="button" class="btn btn-xs btn-default lk-notify-btn" id="lk-notify-toggle" aria-expanded="false" aria-haspopup="true" title="Уведомления">
@@ -641,12 +651,12 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
 					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
 					<?php else : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo ($openZapisi || $openAktsiiArchive) ? '' : ' z-active'; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
 					<li data-index="11" data-link="profile-tab11" class="z-tab<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
 					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
 					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
-					<li data-index="4" data-link="profile-tab4" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
+					<li data-index="4" data-link="profile-tab4" class="z-tab<?php echo $openAktsiiArchive ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
 					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
 					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
 					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
@@ -656,7 +666,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<?php endif; ?>
 				</ul>
 				<div class="z-container">
-					<div class="z-content<?php echo $openZapisi ? '' : ' z-active'; ?>" data-index="0" data-name="profile-tab0"<?php echo $openZapisi ? ' style="display: none;"' : ''; ?>>
+					<div class="z-content<?php echo ($openZapisi || $openAktsiiArchive) ? '' : ' z-active'; ?>" data-index="0" data-name="profile-tab0"<?php echo ($openZapisi || $openAktsiiArchive) ? ' style="display: none;"' : ''; ?>>
 						<div class="z-content-inner">
 							<fieldset id="jsn_default" class="jsn-form-fieldset" data-index="0" data-name="profile-tab0">
 								<legend style="display: none;">Профиль</legend>
@@ -748,11 +758,15 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							</fieldset>
 						</div>
 					</div>
-						<div class="z-content" data-index="4" data-name="profile-tab4" style="display: none;">
+						<div class="z-content<?php echo $openAktsiiArchive ? ' z-active' : ''; ?>" data-index="4" data-name="profile-tab4"<?php echo $openAktsiiArchive ? '' : ' style="display: none;"'; ?>>
 							<div class="z-content-inner">
 							<fieldset id="jsn_stocks" class="jsn-form-fieldset" data-index="4" data-name="profile-tab4">
 								<legend style="display: none;">Акции</legend>
-								<div class="stock_pricesValue">
+								<div class="stocks-subnav" role="navigation" aria-label="Акции">
+									<a class="stocks-subnav__btn<?php echo $openAktsiiArchive ? '' : ' is-active'; ?>" href="<?php echo $this->escape($aktsiiListUrl !== '' ? $aktsiiListUrl : Route::_('index.php?option=com_users&view=profile', false)); ?>">Акции</a>
+									<a class="stocks-subnav__btn<?php echo $openAktsiiArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($aktsiiArchiveUrl !== '' ? $aktsiiArchiveUrl : Route::_('index.php?option=com_users&view=profile&aktsii=archive', false)); ?>">Архив</a>
+								</div>
+								<div class="stock_pricesValue"<?php echo $openAktsiiArchive ? ' hidden' : ''; ?>>
 									<?php if (!empty($stockPricesStructuredWithIds)) : ?>
 										<?php foreach ($stockPricesStructuredWithIds as $cat) : ?>
 										<label class="checkbox type_master_open">
@@ -777,6 +791,57 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 										<?php endforeach; ?>
 									<?php else : ?>
 										<fieldset id="jform_stocks_servis" class="readonly">Акции не заполнены</fieldset>
+									<?php endif; ?>
+								</div>
+								<div class="stocks-archive"<?php echo $openAktsiiArchive ? '' : ' hidden'; ?>>
+									<?php
+									$archivedStockCards = [];
+									foreach ((array) $archivedStockPricesStructuredWithIds as $archivedCat) {
+										$archivedCatTitle = (string) ($archivedCat['title'] ?? '');
+										foreach ((array) ($archivedCat['items'] ?? []) as $archivedItem) {
+											$archivedStockCards[] = [
+												'cat' => $archivedCatTitle,
+												'item' => $archivedItem,
+											];
+										}
+									}
+									?>
+									<?php if ($archivedStockCards === []) : ?>
+										<p class="stocks-archive__empty">Архив пуст</p>
+									<?php else : ?>
+										<div class="stocks-archive__list">
+											<?php foreach ($archivedStockCards as $archivedCard) :
+												$archivedItem = $archivedCard['item'];
+												$archivedCatTitle = $archivedCard['cat'];
+												$archivedName = $formatProfileServiceDisplayName($archivedCatTitle, (string) ($archivedItem['name'] ?? ''));
+												$archivedOriginal = (int) ($archivedItem['count_stock_original'] ?? 0);
+												if ($archivedOriginal <= 0) {
+													$archivedOriginal = (int) ($archivedItem['count_stock'] ?? 0);
+												}
+												$archivedId = (int) ($archivedItem['stock_service_id'] ?? 0);
+												$repeatHref = $repeatStockBase !== ''
+													? $repeatStockBase . (strpos($repeatStockBase, '?') === false ? '?' : '&') . 'repeat_stock=' . $archivedId
+													: Route::_('index.php?option=com_users&view=profile&layout=edit&repeat_stock=' . $archivedId, false);
+											?>
+											<article class="stocks-archive__card">
+												<div class="stocks-archive__card-body">
+													<div class="stocks-archive__name"><?php echo $this->escape($archivedName); ?></div>
+													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedItem['duration'] ?? 0); ?> мин.</div>
+													<div class="stocks-archive__row"><label>Перерыв:</label> <?php echo (int) ($archivedItem['pause_min'] ?? 0); ?> мин.</div>
+													<div class="stocks-archive__row"><label>Акционная стоимость:</label> <?php echo (int) ($archivedItem['price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Цена без скидки:</label> <?php echo (int) ($archivedItem['old_price'] ?? 0); ?> RUB</div>
+													<?php if (trim((string) ($archivedItem['about_stock'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Условия акции:</label> <?php echo $this->escape(trim((string) $archivedItem['about_stock'])); ?></div>
+													<?php endif; ?>
+													<?php if (trim((string) ($archivedItem['recommendation'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Описание услуги:</label> <?php echo $this->escape(trim((string) $archivedItem['recommendation'])); ?></div>
+													<?php endif; ?>
+													<div class="stocks-archive__row"><label>Всего предложений:</label> <?php echo $archivedOriginal; ?></div>
+												</div>
+												<a class="stocks-archive__repeat" href="<?php echo $this->escape($repeatHref); ?>">Повторить</a>
+											</article>
+											<?php endforeach; ?>
+										</div>
 									<?php endif; ?>
 								</div>
 								</fieldset>
@@ -1154,15 +1219,18 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 	var contents = document.querySelectorAll('#jsn-form .z-container .z-content');
 	if (!tabs.length || !contents.length) return;
 	var zapisiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab11"]');
+	var aktsiiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab4"]');
 	var activeIndex = 0;
-	if (zapisiTab) {
-		try {
-			if (new URLSearchParams(window.location.search).has('zapisi')) {
-				var zapisiIndex = Array.prototype.indexOf.call(tabs, zapisiTab);
-				if (zapisiIndex >= 0) activeIndex = zapisiIndex;
-			}
-		} catch (e) {}
-	}
+	try {
+		var params = new URLSearchParams(window.location.search);
+		if (zapisiTab && params.has('zapisi')) {
+			var zapisiIndex = Array.prototype.indexOf.call(tabs, zapisiTab);
+			if (zapisiIndex >= 0) activeIndex = zapisiIndex;
+		} else if (aktsiiTab && params.get('aktsii') === 'archive') {
+			var aktsiiIndex = Array.prototype.indexOf.call(tabs, aktsiiTab);
+			if (aktsiiIndex >= 0) activeIndex = aktsiiIndex;
+		}
+	} catch (e) {}
 	function showTab(index) {
 		if (index === activeIndex) return;
 		var prev = contents[activeIndex];
