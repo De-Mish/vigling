@@ -18,7 +18,13 @@ $masterId = (int) ($user->id ?? 0);
 $token = Session::getFormToken();
 $returnEncoded = base64_encode(Uri::getInstance()->toString());
 $db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
-$payload = $masterId > 0 ? viglingOrdersBuildRescheduleSlots($db, $masterId, 15, 0, 0, 45) : ['timezone' => 'UTC', 'days' => []];
+$journalRangeChunk = !empty($journalRangeChunk);
+$payload = ['timezone' => 'UTC', 'days' => []];
+if (!$journalRangeChunk) {
+	$payload = $masterId > 0 ? viglingOrdersBuildRescheduleSlots($db, $masterId, 15, 0, 0, 45) : ['timezone' => 'UTC', 'days' => []];
+} elseif (function_exists('viglingOrdersGetUserTimezone')) {
+	$payload['timezone'] = viglingOrdersGetUserTimezone($db, $masterId, (string) Factory::getApplication()->get('offset', 'UTC'));
+}
 $days = $payload['days'] ?? [];
 $journalTimezone = (string) ($payload['timezone'] ?? 'UTC');
 $addAction = Route::_('index.php?option=com_orders&task=orders.journalAdd');
@@ -47,11 +53,18 @@ $dayCount = $pastDays + $futureDays;
 $pxPerMin = 1.35;
 $scheduleByDay = $masterId > 0 ? viglingOrdersLoadMasterSchedule($db, $masterId) : [];
 $boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
-if ($appointmentsEmbed && !empty($src->weekStartLocal) && $src->weekStartLocal instanceof \DateTimeImmutable) {
-	$boardStartLocal = $src->weekStartLocal;
-	$pastDays = 0;
-	$futureDays = 6;
-	$dayCount = 7;
+if ($appointmentsEmbed) {
+	$pastDays = 14;
+	$futureDays = 14;
+	if (!empty($src->weekStartLocal) && $src->weekStartLocal instanceof \DateTimeImmutable) {
+		$boardStartLocal = $src->weekStartLocal;
+	} else {
+		$boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
+	}
+	$dayCount = !empty($src->weekDayCount) ? (int) $src->weekDayCount : ($pastDays + 1 + $futureDays);
+	if ($dayCount < 1) {
+		$dayCount = $pastDays + 1 + $futureDays;
+	}
 }
 
 $formatMinutes = static function (int $minutes): string {
@@ -272,7 +285,7 @@ foreach ($displayRows as $row) {
 	$gridEnd = max($gridEnd, $endMin);
 	$type = (string) ($row['type'] ?? 'single');
 	$kind = $type === 'block' ? 'journal' : (string) ($row['kind'] ?? ($item->booking_kind ?? 'service'));
-	$eventId = 'evt-' . (++$eventIndex);
+	$eventId = 'evt-' . $dateKey . '-' . (int) ($item->id ?? 0) . '-' . (++$eventIndex);
 	$title = '';
 	$service = trim((string) ($item->service_display_name ?? $item->service_name ?? ''));
 	if ($type === 'block') {
@@ -311,6 +324,14 @@ foreach ($displayRows as $row) {
 
 $gridStart = (int) (floor(max(0, $gridStart) / 60) * 60);
 $gridEnd = (int) (ceil(min(24 * 60, max($gridStart + 60, $gridEnd)) / 60) * 60);
+if ($journalRangeChunk) {
+	$reqStart = (int) Factory::getApplication()->getInput()->getInt('grid_start', 0);
+	$reqEnd = (int) Factory::getApplication()->getInput()->getInt('grid_end', 0);
+	if ($reqStart >= 0 && $reqEnd > $reqStart) {
+		$gridStart = $reqStart;
+		$gridEnd = $reqEnd;
+	}
+}
 $gridHeight = max(60, $gridEnd - $gridStart);
 $hourMarks = [];
 for ($mark = $gridStart; $mark < $gridEnd; $mark += 60) {
@@ -362,8 +383,24 @@ $kindClass = static function (string $kind): string {
 	}
 	return 'is-service';
 };
+if ($journalRangeChunk) {
+	ob_start();
+	$journalCellPart = 'heads';
+	include __DIR__ . '/_journal_cells.php';
+	$journalChunkHeads = trim((string) ob_get_clean());
+	ob_start();
+	$journalCellPart = 'cols';
+	include __DIR__ . '/_journal_cells.php';
+	$journalChunkCols = trim((string) ob_get_clean());
+	ob_start();
+	$journalCellPart = 'details';
+	include __DIR__ . '/_journal_cells.php';
+	$journalChunkDetails = trim((string) ob_get_clean());
+	$journalChunkFrom = $boardStartLocal->format('Y-m-d');
+	$journalChunkDays = (int) $dayCount;
+} else {
 ?>
-<div class="com_orders orders-journal">
+<div class="com_orders orders-journal" style="--journal-days: <?php echo (int) $dayCount; ?>; --journal-gutter: 64px; --journal-col: 168px;">
 	<style>
 	.com_orders.orders-journal .journal-toolbar {
 		display: flex;
@@ -411,6 +448,19 @@ $kindClass = static function (string $kind): string {
 		opacity: .4;
 		cursor: default;
 	}
+	.com_orders.orders-journal .journal-today-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 36px;
+		padding: 8px 16px;
+		border: 0;
+		border-radius: 8px;
+		background: #e8e8e8;
+		color: #333;
+		font-weight: 600;
+		cursor: pointer;
+	}
 	.com_orders.orders-journal .journal-meta {
 		margin: 0;
 		color: #707070;
@@ -447,12 +497,12 @@ $kindClass = static function (string $kind): string {
 		border-radius: 8px;
 	}
 	.com_orders.orders-journal .journal-board__inner {
-		min-width: max(100%, calc(64px + <?php echo (int) $dayCount; ?> * 168px));
+		min-width: max(100%, calc(var(--journal-gutter) + var(--journal-days) * var(--journal-col)));
 	}
 	.com_orders.orders-journal .journal-board__head,
 	.com_orders.orders-journal .journal-board__body {
 		display: grid;
-		grid-template-columns: 64px repeat(<?php echo (int) $dayCount; ?>, minmax(168px, 1fr));
+		grid-template-columns: var(--journal-gutter) repeat(var(--journal-days), minmax(var(--journal-col), 1fr));
 	}
 	.com_orders.orders-journal .journal-board__head {
 		position: sticky;
@@ -712,6 +762,10 @@ $kindClass = static function (string $kind): string {
 			background: #888;
 			border-radius: 8px;
 		}
+		.com_orders.orders-journal {
+			--journal-gutter: 52px;
+			--journal-col: 148px;
+		}
 		.com_orders.orders-journal .journal-board {
 			overflow: visible;
 		}
@@ -721,9 +775,6 @@ $kindClass = static function (string $kind): string {
 			overflow-y: visible;
 			overscroll-behavior-x: contain;
 		}
-		.com_orders.orders-journal .journal-board__inner { min-width: calc(52px + <?php echo (int) $dayCount; ?> * 148px); }
-		.com_orders.orders-journal .journal-board__head,
-		.com_orders.orders-journal .journal-board__body { grid-template-columns: 52px repeat(<?php echo (int) $dayCount; ?>, minmax(148px, 1fr)); }
 		.com_orders.orders-journal .journal-detail { padding: 14px 16px 16px; }
 		.com_orders.orders-journal .journal-detail__grid { grid-template-columns: 1fr; gap: 4px; }
 		.com_orders.orders-journal .journal-controls,
@@ -738,33 +789,32 @@ $kindClass = static function (string $kind): string {
 			<h1 class="page-title">Журнал</h1>
 			<p class="journal-meta">Часовой пояс: <strong><?php echo $this->escape($journalTimezone); ?></strong>. Листайте влево к прошедшим дням и вправо к следующим.</p>
 			<?php else : ?>
-			<div class="journal-week-label"><?php echo $this->escape($boardStartLocal->format('d.m.Y') . ' – ' . $boardStartLocal->modify('+6 days')->format('d.m.Y')); ?></div>
-			<p class="journal-meta">Листайте недели назад и вперёд без ограничения. Прошедшие записи серым.</p>
+			<button type="button" class="journal-today-btn" id="journal-today-btn"><?php echo $this->escape($todayLocal->format('d.m.Y')); ?></button>
 			<?php endif; ?>
 		</div>
 		<div class="journal-nav">
-			<?php if ($appointmentsEmbed) : ?>
-			<a class="journal-nav-link" href="<?php echo $this->escape((string) ($src->weekPrevUrl ?? '#')); ?>" aria-label="Назад">‹</a>
-			<a class="journal-nav-link" href="<?php echo $this->escape((string) ($src->weekNextUrl ?? '#')); ?>" aria-label="Вперёд">›</a>
-			<?php else : ?>
 			<button type="button" id="journal-scroll-prev" aria-label="Назад">‹</button>
 			<button type="button" id="journal-scroll-next" aria-label="Вперёд">›</button>
-			<?php endif; ?>
 		</div>
 	</div>
 
 	<div class="journal-board">
-		<div class="journal-board__scroll" id="journal-board-scroll" data-today-index="<?php echo (int) $pastDays; ?>">
+		<div
+			class="journal-board__scroll"
+			id="journal-board-scroll"
+			data-today-index="<?php echo (int) $pastDays; ?>"
+			data-from="<?php echo $this->escape($boardStartLocal->format('Y-m-d')); ?>"
+			data-days="<?php echo (int) $dayCount; ?>"
+			data-grid-start="<?php echo (int) $gridStart; ?>"
+			data-grid-end="<?php echo (int) $gridEnd; ?>"
+			data-range-url="<?php echo $this->escape((string) ($src->weekRangeUrl ?? '')); ?>"
+			data-token="<?php echo $this->escape($token); ?>"
+			data-load-more="<?php echo $appointmentsEmbed ? '1' : '0'; ?>"
+		>
 			<div class="journal-board__inner">
 				<div class="journal-board__head">
 					<div class="journal-time-gutter"></div>
-					<?php foreach ($boardDays as $day) : ?>
-						<div class="journal-day-head<?php echo !empty($day['is_today']) ? ' is-today' : ''; ?>">
-							<span class="dow"><?php echo $this->escape((string) $day['dow_label']); ?></span>
-							<span class="date"><?php echo (int) $day['day_num']; ?></span>
-							<span class="month"><?php echo $this->escape((string) $day['month_label']); ?></span>
-						</div>
-					<?php endforeach; ?>
+					<?php $journalCellPart = 'heads'; include __DIR__ . '/_journal_cells.php'; ?>
 				</div>
 				<div class="journal-board__body" style="min-height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
 					<div class="journal-time-gutter journal-hours" style="height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
@@ -772,40 +822,7 @@ $kindClass = static function (string $kind): string {
 							<div class="journal-hour" style="top: <?php echo (int) round(($mark - $gridStart) * $pxPerMin); ?>px;"><?php echo $this->escape($formatMinutes($mark)); ?></div>
 						<?php endforeach; ?>
 					</div>
-					<?php foreach ($boardDays as $day) : ?>
-						<div class="journal-day-col<?php echo !empty($day['is_today']) ? ' is-today' : ''; ?>" style="height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
-							<?php
-							if (!empty($day['is_today'])) :
-								$nowLocal = $nowUtc->setTimezone($journalTz);
-								$nowMin = ((int) $nowLocal->format('H')) * 60 + (int) $nowLocal->format('i');
-								if ($nowMin >= $gridStart && $nowMin <= $gridEnd) :
-							?>
-								<div class="journal-now" style="top: <?php echo (int) round(($nowMin - $gridStart) * $pxPerMin); ?>px;"></div>
-							<?php
-								endif;
-							endif;
-							foreach ($day['events'] as $event) :
-								$cols = max(1, (int) ($event['cols'] ?? 1));
-								$col = (int) ($event['col'] ?? 0);
-								$top = (int) round(($event['startMin'] - $gridStart) * $pxPerMin);
-								$height = max(46, (int) round(($event['endMin'] - $event['startMin']) * $pxPerMin));
-								$width = 'calc(' . (100 / $cols) . '% - 6px)';
-								$left = 'calc(' . (($col / $cols) * 100) . '% + 3px)';
-								$timeLabel = $formatMinutes((int) $event['startMin']) . '–' . $formatMinutes((int) $event['endMin']);
-							?>
-							<button
-								type="button"
-								class="journal-event <?php echo $kindClass((string) $event['kind']); ?><?php echo (!empty($event['startLocal']) && $event['startLocal'] < $nowUtc->setTimezone($journalTz)) ? ' is-past' : ''; ?>"
-								style="top: <?php echo $top; ?>px; height: <?php echo $height; ?>px; left: <?php echo $left; ?>; width: <?php echo $width; ?>;"
-								data-event-id="<?php echo $this->escape((string) $event['id']); ?>"
-							>
-								<span class="journal-event__time"><?php echo $this->escape($timeLabel); ?></span>
-								<span class="journal-event__title"><?php echo $this->escape((string) $event['title']); ?></span>
-								<span class="journal-event__service"><?php echo $this->escape((string) $event['service']); ?></span>
-							</button>
-							<?php endforeach; ?>
-						</div>
-					<?php endforeach; ?>
+					<?php $journalCellPart = 'cols'; include __DIR__ . '/_journal_cells.php'; ?>
 				</div>
 			</div>
 		</div>
@@ -818,142 +835,7 @@ $kindClass = static function (string $kind): string {
 	<div class="journal-backdrop" id="journal-backdrop" hidden></div>
 	<div class="journal-overlay" id="journal-overlay" hidden>
 		<button type="button" class="journal-overlay__close" id="journal-overlay-close" aria-label="Закрыть">&times;</button>
-		<?php foreach ($boardDays as $day) : ?>
-			<?php foreach ($day['events'] as $event) :
-				$row = $event['row'];
-				$item = $event['item'];
-				$isPast = $event['startLocal'] < $nowUtc->setTimezone($journalTz);
-				$timeText = $event['startLocal']->format('d.m.Y H:i') . ' – ' . $event['endLocal']->format('H:i');
-			?>
-			<div class="journal-detail" data-event-id="<?php echo $this->escape((string) $event['id']); ?>">
-				<?php if (($row['type'] ?? '') === 'block') : ?>
-					<h2><?php echo $this->escape((string) $event['title']); ?></h2>
-					<div class="journal-detail__grid">
-						<div class="journal-detail__label">Услуга</div>
-						<div>Забронировать время</div>
-						<div class="journal-detail__label">Дата и время</div>
-						<div><?php echo $this->escape($timeText); ?></div>
-						<div class="journal-detail__label">Комментарий</div>
-						<div><?php echo $this->escape((string) ($item->_journal_comment ?? '—')); ?></div>
-					</div>
-					<div class="journal-detail__actions">
-						<form method="post" action="<?php echo $deleteAction; ?>" class="form-inline" style="display:inline;">
-							<input type="hidden" name="<?php echo $token; ?>" value="1">
-							<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
-							<input type="hidden" name="id" value="<?php echo (int) $item->id; ?>">
-							<button type="submit" class="btn btn-xs btn-default" onclick="return confirm('Удалить блок времени?');">Удалить</button>
-						</form>
-					</div>
-				<?php elseif (in_array(($row['type'] ?? ''), ['course-group', 'search-group'], true)) :
-					$isSearchGroup = ($row['kind'] ?? '') === 'search';
-					$entityLabel = $isSearchGroup ? 'Поиск моделей' : 'Курс';
-					$participants = $row['participants'] ?? [];
-					$participantCount = count($participants);
-					$capacityTotal = $isSearchGroup
-						? (int) ($item->search_slot_capacity_total ?? $item->search_capacity ?? 0)
-						: (int) ($item->course_slot_capacity_total ?? $item->course_capacity ?? 0);
-					$entityTitle = trim((string) ($item->service_display_name ?? $item->service_name ?? $entityLabel));
-				?>
-					<h2><?php echo $this->escape($entityTitle); ?></h2>
-					<div class="journal-detail__grid">
-						<div class="journal-detail__label">Клиент</div>
-						<div><?php echo $this->escape($entityLabel); ?> · <?php echo (int) $participantCount; ?> из <?php echo $capacityTotal > 0 ? (int) $capacityTotal : '—'; ?></div>
-						<div class="journal-detail__label">Услуга</div>
-						<div><?php echo $this->escape($entityTitle); ?></div>
-						<div class="journal-detail__label">Дата и время</div>
-						<div><?php echo $this->escape($timeText); ?></div>
-						<div class="journal-detail__label">Контакты</div>
-						<div>Участники внутри слота</div>
-					</div>
-					<div class="journal-detail__actions">
-						<?php echo $isSearchGroup
-							? $renderSearchSlotActions($item, $isPast, $token, $returnEncoded, $rescheduleSearchAction)
-							: $renderCourseSlotActions($item, $isPast, $token, $returnEncoded, $rescheduleCourseAction); ?>
-					</div>
-					<div class="course-participants">
-						<?php foreach ($participants as $participant) :
-							$participantTimeUtc = !empty($participant->time) ? new \DateTimeImmutable((string) $participant->time, $utc) : null;
-							$participantTimeIso = $participantTimeUtc ? $participantTimeUtc->format('c') : '';
-							$participantIsPast = $participantTimeUtc ? ($participantTimeUtc < $nowUtc) : false;
-							$participantContacts = $contactBits($participant);
-							$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $participant->user_id;
-						?>
-						<div class="course-participant">
-							<div class="course-participant-name">
-								<?php if (($participant->client_name ?? '—') !== '—' && (int) $participant->user_id > 0) : ?>
-									<a href="<?php echo htmlspecialchars($clientProfileUrl); ?>"><?php echo htmlspecialchars((string) $participant->client_name); ?></a>
-								<?php else : ?>
-									<?php echo htmlspecialchars((string) ($participant->client_name ?? '—')); ?>
-								<?php endif; ?>
-							</div>
-							<div><?php echo $participantContacts !== [] ? htmlspecialchars(implode(', ', $participantContacts)) : '—'; ?></div>
-							<?php if (trim((string) ($participant->comment ?? '')) !== '') : ?>
-								<div class="order-comment"><?php echo htmlspecialchars((string) $participant->comment); ?></div>
-							<?php endif; ?>
-							<div class="journal-detail__actions">
-								<?php echo $renderOrderActions($participant, $participantIsPast, !empty($participant->completed), $token, $returnEncoded, $participantTimeIso); ?>
-							</div>
-						</div>
-						<?php endforeach; ?>
-					</div>
-				<?php else :
-					$clientProfileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->user_id;
-					$contacts = $contactBits($item);
-					$completed = !empty($item->completed);
-					$viewerIsMaster = !empty($item->_viewer_is_master)
-						|| ((int) ($item->master_id ?? 0) > 0 && (int) ($item->master_id ?? 0) === (int) ($user->id ?? 0));
-				?>
-					<?php if (!$viewerIsMaster) : ?>
-					<h2><?php echo viglingAppointmentsRenderPeople($item); ?></h2>
-					<div class="journal-detail__grid">
-						<div class="journal-detail__label">Клиент</div>
-						<div><?php echo viglingAppointmentsPersonLink((int) ($item->user_id ?? 0), trim((string) ($item->client_name ?? '—'))); ?></div>
-						<div class="journal-detail__label">Мастер</div>
-						<div><?php echo viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), trim((string) ($item->master_name ?? '—'))); ?></div>
-						<div class="journal-detail__label">Услуга</div>
-						<div>
-							<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name ?? '—')); ?>
-							<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
-								<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
-							<?php endif; ?>
-						</div>
-						<div class="journal-detail__label">Дата и время</div>
-						<div><?php echo $this->escape($timeText); ?></div>
-					</div>
-					<div class="journal-detail__actions">
-						<?php echo viglingAppointmentsRenderClientActions($item, $isPast, $token, $returnEncoded, (string) $event['timeIso'], $db, $rescheduleClientAction, false); ?>
-					</div>
-					<?php else : ?>
-					<h2>
-						<?php if (($item->client_name ?? '—') !== '—' && (int) $item->user_id > 0) : ?>
-							<a href="<?php echo htmlspecialchars($clientProfileUrl); ?>"><?php echo htmlspecialchars((string) $item->client_name); ?></a>
-						<?php else : ?>
-							<?php echo htmlspecialchars((string) ($item->client_name ?? 'Клиент')); ?>
-						<?php endif; ?>
-					</h2>
-					<div class="journal-detail__grid">
-						<div class="journal-detail__label">Клиент</div>
-						<div><?php echo htmlspecialchars((string) ($item->client_name ?? '—')); ?></div>
-						<div class="journal-detail__label">Услуга</div>
-						<div>
-							<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name ?? '—')); ?>
-							<?php if (trim((string) ($item->comment ?? '')) !== '') : ?>
-								<div class="order-comment"><?php echo htmlspecialchars((string) $item->comment); ?></div>
-							<?php endif; ?>
-						</div>
-						<div class="journal-detail__label">Дата и время</div>
-						<div><?php echo $this->escape($timeText); ?></div>
-						<div class="journal-detail__label">Контакты</div>
-						<div><?php echo $contacts !== [] ? htmlspecialchars(implode(', ', $contacts)) : '—'; ?></div>
-					</div>
-					<div class="journal-detail__actions">
-						<?php echo $renderOrderActions($item, $isPast, $completed, $token, $returnEncoded, (string) $event['timeIso']); ?>
-					</div>
-					<?php endif; ?>
-				<?php endif; ?>
-			</div>
-			<?php endforeach; ?>
-		<?php endforeach; ?>
+		<?php $journalCellPart = 'details'; include __DIR__ . '/_journal_cells.php'; ?>
 	</div>
 </div>
 
@@ -994,31 +876,139 @@ $kindClass = static function (string $kind): string {
 	var scroller = document.getElementById('journal-board-scroll');
 	var prevBtn = document.getElementById('journal-scroll-prev');
 	var nextBtn = document.getElementById('journal-scroll-next');
+	var todayBtn = document.getElementById('journal-today-btn');
 	var overlay = document.getElementById('journal-overlay');
 	var backdrop = document.getElementById('journal-backdrop');
 	var closeBtn = document.getElementById('journal-overlay-close');
+	var canLoadMore = !!(scroller && scroller.getAttribute('data-load-more') === '1');
+	var rangeUrl = scroller ? (scroller.getAttribute('data-range-url') || '') : '';
+	var rangeToken = scroller ? (scroller.getAttribute('data-token') || '') : '';
+	var gridStart = scroller ? parseInt(scroller.getAttribute('data-grid-start') || '0', 10) : 0;
+	var gridEnd = scroller ? parseInt(scroller.getAttribute('data-grid-end') || '0', 10) : 0;
+	var loadedFrom = scroller ? (scroller.getAttribute('data-from') || '') : '';
+	var loadedDays = scroller ? parseInt(scroller.getAttribute('data-days') || '0', 10) : 0;
+	var loadingDir = '';
 
+	function pad2(n) { return (n < 10 ? '0' : '') + n; }
+	function parseYmd(value) {
+		var parts = String(value || '').split('-');
+		if (parts.length !== 3) return null;
+		var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10), d = parseInt(parts[2], 10);
+		if (!y || !m || !d) return null;
+		return new Date(y, m - 1, d);
+	}
+	function formatYmd(date) {
+		return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+	}
+	function shiftYmd(value, days) {
+		var date = parseYmd(value);
+		if (!date) return '';
+		date.setDate(date.getDate() + days);
+		return formatYmd(date);
+	}
 	function dayWidth() {
 		var col = root ? root.querySelector('.journal-day-col') : null;
 		return col ? col.getBoundingClientRect().width : 168;
 	}
+	function setDayCount(n) {
+		loadedDays = n;
+		if (root) root.style.setProperty('--journal-days', String(n));
+		if (scroller) scroller.setAttribute('data-days', String(n));
+	}
 	function syncNav() {
 		if (!scroller || !prevBtn || !nextBtn) return;
+		if (canLoadMore) {
+			prevBtn.disabled = loadingDir !== '';
+			nextBtn.disabled = loadingDir !== '';
+			return;
+		}
 		prevBtn.disabled = scroller.scrollLeft <= 2;
 		nextBtn.disabled = scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 2;
 	}
+	function nearStart() {
+		return scroller && scroller.scrollLeft <= dayWidth() * 2;
+	}
+	function nearEnd() {
+		return scroller && scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - dayWidth() * 2;
+	}
+	function loadRange(from, prepend) {
+		if (!canLoadMore || !rangeUrl || !from || loadingDir) return Promise.resolve(false);
+		loadingDir = prepend ? 'prev' : 'next';
+		syncNav();
+		var url = rangeUrl + (rangeUrl.indexOf('?') >= 0 ? '&' : '?') + 'from=' + encodeURIComponent(from) + '&days=14';
+		if (rangeToken) url += '&' + encodeURIComponent(rangeToken) + '=1';
+		if (!isNaN(gridStart)) url += '&grid_start=' + encodeURIComponent(String(gridStart));
+		if (!isNaN(gridEnd) && gridEnd > gridStart) url += '&grid_end=' + encodeURIComponent(String(gridEnd));
+		return fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+			.then(function(res){ return res.json(); })
+			.then(function(data){
+				if (!data || !data.success || !data.heads || !data.cols) return false;
+				var head = scroller.querySelector('.journal-board__head');
+				var body = scroller.querySelector('.journal-board__body');
+				if (!head || !body) return false;
+				var firstHead = head.querySelector('.journal-day-head');
+				var firstCol = body.querySelector('.journal-day-col');
+				var prevWidth = scroller.scrollWidth;
+				if (prepend) {
+					if (firstHead) firstHead.insertAdjacentHTML('beforebegin', data.heads);
+					else head.insertAdjacentHTML('beforeend', data.heads);
+					if (firstCol) firstCol.insertAdjacentHTML('beforebegin', data.cols);
+					else body.insertAdjacentHTML('beforeend', data.cols);
+					loadedFrom = data.from || from;
+					if (scroller) scroller.setAttribute('data-from', loadedFrom);
+					scroller.scrollLeft += (scroller.scrollWidth - prevWidth);
+				} else {
+					head.insertAdjacentHTML('beforeend', data.heads);
+					body.insertAdjacentHTML('beforeend', data.cols);
+				}
+				if (overlay && data.details) overlay.insertAdjacentHTML('beforeend', data.details);
+				setDayCount(loadedDays + (parseInt(data.days, 10) || 14));
+				return true;
+			})
+			.catch(function(){ return false; })
+			.then(function(ok){
+				loadingDir = '';
+				syncNav();
+				return ok;
+			});
+	}
+	function ensureEdge(dir) {
+		if (!canLoadMore) return Promise.resolve();
+		if (dir === 'prev' && nearStart()) return loadRange(shiftYmd(loadedFrom, -14), true);
+		if (dir === 'next' && nearEnd()) return loadRange(shiftYmd(loadedFrom, loadedDays), false);
+		return Promise.resolve();
+	}
+	function scrollToToday() {
+		if (!scroller) return;
+		var todayCol = scroller.querySelector('.journal-day-col.is-today');
+		if (!todayCol) return;
+		var gutter = scroller.querySelector('.journal-time-gutter');
+		var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
+		scroller.scrollTo({ left: Math.max(0, todayCol.offsetLeft - gutterW), behavior: 'smooth' });
+	}
 	if (prevBtn && scroller) {
 		prevBtn.addEventListener('click', function(){
-			scroller.scrollBy({ left: -dayWidth(), behavior: 'smooth' });
+			ensureEdge('prev').then(function(){
+				scroller.scrollBy({ left: -dayWidth(), behavior: 'smooth' });
+			});
 		});
 	}
 	if (nextBtn && scroller) {
 		nextBtn.addEventListener('click', function(){
-			scroller.scrollBy({ left: dayWidth(), behavior: 'smooth' });
+			ensureEdge('next').then(function(){
+				scroller.scrollBy({ left: dayWidth(), behavior: 'smooth' });
+			});
 		});
 	}
+	if (todayBtn) {
+		todayBtn.addEventListener('click', scrollToToday);
+	}
 	if (scroller) {
-		scroller.addEventListener('scroll', syncNav);
+		scroller.addEventListener('scroll', function(){
+			syncNav();
+			if (nearStart()) ensureEdge('prev');
+			if (nearEnd()) ensureEdge('next');
+		});
 		var todayCol = scroller.querySelector('.journal-day-col.is-today');
 		if (todayCol) {
 			var gutter = scroller.querySelector('.journal-time-gutter');
@@ -1046,10 +1036,10 @@ $kindClass = static function (string $kind): string {
 		document.body.style.overflow = '';
 	}
 	if (root) {
-		root.querySelectorAll('.journal-event').forEach(function(btn){
-			btn.addEventListener('click', function(){
-				openDetail(btn.getAttribute('data-event-id') || '');
-			});
+		root.addEventListener('click', function(e){
+			var btn = e.target.closest('.journal-event');
+			if (!btn || !root.contains(btn)) return;
+			openDetail(btn.getAttribute('data-event-id') || '');
 		});
 	}
 	if (closeBtn) closeBtn.addEventListener('click', closeDetail);
@@ -1195,31 +1185,31 @@ $kindClass = static function (string $kind): string {
 			return [];
 		}
 	}
-	document.querySelectorAll('.reschedule-open').forEach(function(btn){
-		btn.addEventListener('click', function(){
-			var orderId = parseInt(this.getAttribute('data-id') || '0', 10);
-			var courseSlotId = parseInt(this.getAttribute('data-course-slot-id') || '0', 10);
-			var searchSlotId = parseInt(this.getAttribute('data-search-slot-id') || '0', 10);
-			var duration = parseInt(this.getAttribute('data-duration') || '60', 10);
-			var currentUtc = String(this.getAttribute('data-current-utc') || '').trim();
-			if (!orderId && !courseSlotId && !searchSlotId) return;
-			idInp.value = String(orderId > 0 ? orderId : 0);
-			courseSlotInp.value = String(courseSlotId > 0 ? courseSlotId : 0);
-			searchSlotInp.value = String(searchSlotId > 0 ? searchSlotId : 0);
-			durationInp.value = String(isNaN(duration) ? 60 : duration);
-			timeUtcInp.value = '';
-			rForm.setAttribute('action', this.getAttribute('data-reschedule-action') || defaultAction);
-			rCal.classList.add('preload');
-			if (rCal) rCal.innerHTML = '';
-			jQuery(modal).modal('show');
-			if (this.getAttribute('data-slots-embedded') === '1') {
-				renderCalendar(readEmbeddedDays(orderId, courseSlotId, searchSlotId), currentUtc);
-				initRescheduleSlider();
-				if (rCal) rCal.classList.remove('preload');
-			} else {
-				loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
-			}
-		});
+	document.addEventListener('click', function(e){
+		var btn = e.target && e.target.closest ? e.target.closest('.reschedule-open') : null;
+		if (!btn || !root || !root.contains(btn)) return;
+		var orderId = parseInt(btn.getAttribute('data-id') || '0', 10);
+		var courseSlotId = parseInt(btn.getAttribute('data-course-slot-id') || '0', 10);
+		var searchSlotId = parseInt(btn.getAttribute('data-search-slot-id') || '0', 10);
+		var duration = parseInt(btn.getAttribute('data-duration') || '60', 10);
+		var currentUtc = String(btn.getAttribute('data-current-utc') || '').trim();
+		if (!orderId && !courseSlotId && !searchSlotId) return;
+		idInp.value = String(orderId > 0 ? orderId : 0);
+		courseSlotInp.value = String(courseSlotId > 0 ? courseSlotId : 0);
+		searchSlotInp.value = String(searchSlotId > 0 ? searchSlotId : 0);
+		durationInp.value = String(isNaN(duration) ? 60 : duration);
+		timeUtcInp.value = '';
+		rForm.setAttribute('action', btn.getAttribute('data-reschedule-action') || defaultAction);
+		rCal.classList.add('preload');
+		if (rCal) rCal.innerHTML = '';
+		jQuery(modal).modal('show');
+		if (btn.getAttribute('data-slots-embedded') === '1') {
+			renderCalendar(readEmbeddedDays(orderId, courseSlotId, searchSlotId), currentUtc);
+			initRescheduleSlider();
+			if (rCal) rCal.classList.remove('preload');
+		} else {
+			loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
+		}
 	});
 	if (window.jQuery && modal) {
 		jQuery(modal).on('shown.bs.modal', initRescheduleSlider);
@@ -1249,3 +1239,6 @@ $kindClass = static function (string $kind): string {
 	}
 })();
 </script>
+<?php
+}
+?>

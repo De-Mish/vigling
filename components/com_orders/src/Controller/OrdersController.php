@@ -1253,6 +1253,84 @@ class OrdersController extends BaseController
 		$this->setRedirectAndExit();
 	}
 
+	public function weekRange()
+	{
+		$app = Factory::getApplication();
+		if (!Session::checkToken('request')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверный токен']);
+			return;
+		}
+		$user = $app->getIdentity();
+		if (!$user->id) {
+			$this->jsonResponse(['success' => false, 'message' => 'Нужна авторизация']);
+			return;
+		}
+
+		$fromRaw = trim((string) $this->input->getString('from', ''));
+		$days = (int) $this->input->getInt('days', 14);
+		$days = max(1, min(14, $days));
+		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromRaw)) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверная дата']);
+			return;
+		}
+
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+		}
+
+		$this->input->set('zapisi', 'week');
+		$this->input->set('from', $fromRaw);
+		$this->input->set('days', $days);
+
+		$src = new \stdClass();
+		\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::fill($src, $this->input);
+		$src->appointmentsEmbed = true;
+
+		$renderer = new class ($src) {
+			public $appointments;
+
+			public function __construct($src)
+			{
+				$this->appointments = $src;
+			}
+
+			public function escape($s)
+			{
+				return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+			}
+
+			public function renderChunk(): array
+			{
+				$appointments = $this->appointments;
+				$journalRangeChunk = true;
+				$journalChunkHeads = '';
+				$journalChunkCols = '';
+				$journalChunkDetails = '';
+				$journalChunkFrom = '';
+				$journalChunkDays = 0;
+				include JPATH_SITE . '/components/com_orders/tmpl/orders/journal.php';
+
+				return [
+					'heads' => $journalChunkHeads,
+					'cols' => $journalChunkCols,
+					'details' => $journalChunkDetails,
+					'from' => $journalChunkFrom,
+					'days' => $journalChunkDays,
+				];
+			}
+		};
+
+		$chunk = $renderer->renderChunk();
+		$this->jsonResponse([
+			'success' => true,
+			'from' => $chunk['from'],
+			'days' => (int) $chunk['days'],
+			'heads' => $chunk['heads'],
+			'cols' => $chunk['cols'],
+			'details' => $chunk['details'],
+		]);
+	}
+
 	public function rescheduleSlots()
 	{
 		$app = Factory::getApplication();
