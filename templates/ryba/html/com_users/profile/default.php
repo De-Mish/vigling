@@ -6,7 +6,6 @@ use Joomla\CMS\Router\Route;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Session\Session;
-use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Access\Access;
 
 $user = Factory::getApplication()->getIdentity();
@@ -18,6 +17,7 @@ if (!$isOwn && $profileOwnerId > 0) {
 	echo $this->loadTemplate('public');
 	return;
 }
+$openZapisi = false;
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
 $profileIsMaster = in_array(3, $profileGroups) || in_array(8, $profileGroups);
 $profileIsAdministrator = in_array(8, $profileGroups, true) || in_array(7, $profileGroups, true) || in_array(6, $profileGroups, true);
@@ -514,7 +514,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 .lk-notify-item-read { color: #777; }
 /* Gap between the last profile field ("Аккаунт подтвержден") and the public
    name matches reviews → about: 30px bottom + 40px top. */
-#easyprofile.view_profile > .jsn-p > form.jsn-p-fields {
+#easyprofile.view_profile > .jsn-p > form.jsn-p-fields,
+#easyprofile.view_profile > .jsn-p > .jsn-p-fields {
   margin-bottom: 0;
   padding-bottom: 0;
 }
@@ -547,10 +548,11 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 			<div class="jsn-p-opt">
 				<?php if ($isOwn) : ?>
 					<?php
-					$ordersComp = ComponentHelper::getComponent('com_orders');
-					$ordersItem = $ordersComp->id ? Factory::getApplication()->getMenu()->getItems(['component_id'], [$ordersComp->id], true) : null;
-					$ordersUrl = $ordersItem ? Route::_('index.php?Itemid=' . (int) $ordersItem->id) : Route::_('index.php?option=com_orders&view=orders');
-					$clientsUrl = $ordersItem ? Route::_('index.php?option=com_orders&view=orders&layout=clients&Itemid=' . (int) $ordersItem->id) : Route::_('index.php?option=com_orders&view=orders&layout=clients');
+					if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
+						require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+					}
+					$openZapisi = in_array(Factory::getApplication()->getInput()->getCmd('zapisi', ''), ['day', 'week', 'month'], true);
+					$zapisiUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 					?>
 					<div class="lk-notify-wrap" style="display:inline-block; position:relative; vertical-align:middle;">
 						<button type="button" class="btn btn-xs btn-default lk-notify-btn" id="lk-notify-toggle" aria-expanded="false" aria-haspopup="true" title="Уведомления">
@@ -567,14 +569,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					</div>
 					<a class="btn btn-xs btn-default" href="<?php echo Route::_('index.php?option=com_users&task=profile.edit&user_id=' . (int) $this->data->id); ?>">
 						<i class="jsn-icon jsn-icon-cog"></i> Настройки профиля</a>
-					<a class="btn btn-xs btn-default" href="<?php echo $ordersUrl; ?>">
-						<i class="jsn-icon jsn-icon-cog"></i> Мои записи к мастерам</a>
-					<?php if ($isMaster) : ?>
-					<a class="btn btn-xs btn-default" href="<?php echo Route::_('index.php?option=com_orders&view=orders&layout=journal' . ($ordersItem ? '&Itemid=' . (int) $ordersItem->id : '')); ?>">
-						<i class="jsn-icon jsn-icon-calendar"></i> Журнал</a>
-					<a class="btn btn-xs btn-default" href="<?php echo $clientsUrl; ?>">
-						<i class="jsn-icon jsn-icon-user"></i> Записи ко мне</a>
-					<?php endif; ?>
+					<a class="btn btn-xs btn-default" href="<?php echo $zapisiUrl; ?>" data-open-tab="profile-tab11">
+						<i class="jsn-icon jsn-icon-calendar"></i> Записи</a>
 				<?php else : ?>
 					<button type="button" class="btn btn-xs btn-primary" id="lk-booking-toggle" aria-expanded="false">
 						Записаться
@@ -632,33 +628,35 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 			</form>
 		</div>
 		<?php endif; ?>
-		<form class="jsn-p-fields">
+		<div class="jsn-p-fields">
 			<div id="jsn-form" class="hover clean mini flat z-icons-light z-shadows z-spaced z-tabs horizontal top-compact top view_profile-tabs">
 				<ul class="z-tabs-nav z-tabs-mobile" style="display: none;"><li><a class="z-link" style="text-align: left;"><span class="z-title">Профиль</span><span class="z-arrow"></span></a></li></ul>
 				<i class="z-dropdown-arrow"></i>
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
 					<?php if ($profileIsClient) : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 20%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab z-last<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<?php else : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first z-active" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
-					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
-					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
-					<li data-index="4" data-link="profile-tab4" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: 9.09%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
+					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
+					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
+					<li data-index="4" data-link="profile-tab4" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
+					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab z-last<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<?php endif; ?>
 				</ul>
 				<div class="z-container">
-					<div class="z-content z-active" data-index="0" data-name="profile-tab0">
+					<div class="z-content<?php echo $openZapisi ? '' : ' z-active'; ?>" data-index="0" data-name="profile-tab0"<?php echo $openZapisi ? ' style="display: none;"' : ''; ?>>
 						<div class="z-content-inner">
 							<fieldset id="jsn_default" class="jsn-form-fieldset" data-index="0" data-name="profile-tab0">
 								<legend style="display: none;">Профиль</legend>
@@ -993,9 +991,10 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<?php if (!$profileIsClient) : ?>
 						<?php echo $this->loadTemplate('favorites'); ?>
 					<?php endif; ?>
+					<?php echo $this->loadTemplate('appointments'); ?>
 				</div>
 			</div>
-		</form>
+		</div>
 		<?php if ($showMasterPublicCard) : ?>
 			<?php
 			$this->lkEmbed = true;
@@ -1072,6 +1071,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 </div>
 <?php endif; ?>
 <style>
+.view_profile-tabs .appointments-page { padding-top: 4px; }
+.view_profile-tabs .appointments-page .appointments-toolbar h1 { font-size: 22px; }
 .view_profile-tabs .z-container { position: relative; min-height: 1px; }
 .view_profile-tabs .z-container .z-content { position: relative !important; transition: opacity 0.25s ease-out; }
 .view_profile-tabs .z-container .z-content.z-tab-animating { position: absolute !important; top: 0; left: 0; right: 0; width: 100%; box-sizing: border-box; }
@@ -1152,11 +1153,21 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 	var tabs = document.querySelectorAll('#jsn-profile-tabs .z-tab');
 	var contents = document.querySelectorAll('#jsn-form .z-container .z-content');
 	if (!tabs.length || !contents.length) return;
+	var zapisiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab11"]');
 	var activeIndex = 0;
+	if (zapisiTab) {
+		try {
+			if (new URLSearchParams(window.location.search).has('zapisi')) {
+				var zapisiIndex = Array.prototype.indexOf.call(tabs, zapisiTab);
+				if (zapisiIndex >= 0) activeIndex = zapisiIndex;
+			}
+		} catch (e) {}
+	}
 	function showTab(index) {
 		if (index === activeIndex) return;
 		var prev = contents[activeIndex];
 		var next = contents[index];
+		if (!prev || !next) return;
 		tabs.forEach(function(t, i){ t.classList.toggle('z-active', i === index); });
 		contents.forEach(function(c, i){
 			c.classList.toggle('z-active', i === index);
@@ -1177,12 +1188,25 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 		activeIndex = index;
 	}
 	contents.forEach(function(c, i){
-		c.style.display = i === 0 ? 'block' : 'none';
-		if (i === 0) c.style.opacity = '1';
+		c.style.display = i === activeIndex ? 'block' : 'none';
+		if (i === activeIndex) c.style.opacity = '1';
 	});
 	tabs.forEach(function(tab, index){
+		tab.classList.toggle('z-active', index === activeIndex);
 		var a = tab.querySelector('a');
 		if (a) a.addEventListener('click', function(e){ e.preventDefault(); showTab(index); });
+	});
+	document.querySelectorAll('[data-open-tab="profile-tab11"]').forEach(function(el){
+		el.addEventListener('click', function(e){
+			if (!zapisiTab) return;
+			var idx = Array.prototype.indexOf.call(tabs, zapisiTab);
+			if (idx < 0) return;
+			e.preventDefault();
+			showTab(idx);
+			if (contents[idx] && contents[idx].scrollIntoView) {
+				contents[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		});
 	});
 })();
 </script>
