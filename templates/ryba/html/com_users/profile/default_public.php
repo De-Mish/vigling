@@ -1250,6 +1250,12 @@ try {
 		$profileOwnerId,
 		$reviewDirection
 	);
+	if ($profileReviews === []) {
+		$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
+			$reviewDb,
+			$profileOwnerId
+		);
+	}
 	$profileRatingAvg = \Viglin\Component\Orders\Site\Helper\ReviewHelper::averageRating($profileReviews);
 } catch (\Throwable $e) {
 	$profileReviews = [];
@@ -1370,7 +1376,7 @@ if (empty($isLkEmbed)) {
 				<?php if (!empty($childrenYes)) : ?><span class="attr_left3">Подходит для детей</span><?php endif; ?>
 			</div>
 			<div class="masters__attr-right">
-				<span class="attr-rating"><?php echo $profileRatingAvg !== null ? number_format($profileRatingAvg, 1, '.', '') : '—'; ?></span>
+				<span class="attr-rating"><?php echo number_format($profileRatingAvg !== null ? $profileRatingAvg : 0, 1, '.', ''); ?></span>
 				<div class="attr-div-rating">
 					<ul class="category_cinfo-ratings" style="display:none">
 						<li><i class="fa fa-star" aria-hidden="true"></i></li>
@@ -1433,24 +1439,9 @@ if (empty($isLkEmbed)) {
 		}
 		.master__services .priceList__item.highlighted-service,
 		.master__services .stockList__item.highlighted-service:not(.courseList__item) {
-			background-color: #f9ce54 !important;
-			border: 1px solid #e6b800;
-			border-radius: 10px;
-			padding: 12px 16px !important;
-			width: 100%;
-			max-width: 100%;
-			box-sizing: border-box;
-			color: #000000 !important;
-			margin: 8px 0;
-			display: block;
-			overflow: visible;
-		}
-		.master__services .priceList__item.highlighted-service .service-name,
-		.master__services .priceList__item.highlighted-service .service-price,
-		.master__services .priceList__item.highlighted-service .priceList__item-coll,
-		.master__services .priceList__item.highlighted-service .price_span,
-		.master__services .stockList__item.highlighted-service:not(.courseList__item) .stockList__item-coll {
-			color: #000000 !important;
+			background-color: transparent !important;
+			border: 0;
+			color: inherit;
 		}
 		.master__services .accordionItemHeading {
 			cursor: default !important;
@@ -2116,7 +2107,7 @@ if (empty($isLkEmbed)) {
 	<section class="master__services master__services--fullbleed">
 		<div class="container">
 			<div class="accordionWrapper">
-				<div style="background-color:#f7cc53; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened">
+				<div class="accordionItem opened">
 					<button style="color:green; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Акционные услуги:</button>
 					<div class="accordionItem opened">
 						<?php

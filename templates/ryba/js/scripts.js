@@ -50,62 +50,70 @@ $(document).ready(function($){
 
 		]
 	});
-	var $bigImg = $('.masters__big-img');
-	var $smallImg = $('.masters__small-img');
-	if ($bigImg.length && $bigImg.children().length && !$bigImg.hasClass('slick-initialized')) {
-		$bigImg.slick({
-			slidesToShow: 1,
-			slidesToScroll: 1,
-			arrows: true,
-			fade: true,
-			infinite: true,
-			mobileFirst: true,
-			accessibility: false,
-			prevArrow: $bigImg.closest('.masters__big-img-cont').find(".my-slick-prev"),
-			nextArrow: $bigImg.closest('.masters__big-img-cont').find(".my-slick-next"),
-			asNavFor: $smallImg.length ? '.masters__small-img' : null
+	$('.masters__big-img-cont').each(function () {
+		var $cont = $(this);
+		var $bigImg = $cont.children('.masters__big-img');
+		if (!$bigImg.length) {
+			$bigImg = $cont.find('.masters__big-img').first();
+		}
+		var $info = $cont.nextAll('.masters__big-info').first();
+		var $smallImg = $info.find('.masters__small-img').first();
+		if ($smallImg.hasClass('slick-initialized')) {
+			$smallImg.slick('unslick');
+		}
+		if ($bigImg.length && $bigImg.children('.masters__big-img-item').length && !$bigImg.hasClass('slick-initialized')) {
+			$bigImg.slick({
+				slidesToShow: 1,
+				slidesToScroll: 1,
+				arrows: true,
+				fade: true,
+				infinite: true,
+				accessibility: false,
+				prevArrow: $cont.find('.my-slick-prev'),
+				nextArrow: $cont.find('.my-slick-next')
+			});
+		}
+		function showBigAt(idx) {
+			var count = $bigImg.hasClass('slick-initialized')
+				? $bigImg.slick('getSlick').slideCount
+				: $bigImg.children('.masters__big-img-item').length;
+			if (!count) {
+				return;
+			}
+			idx = ((idx % count) + count) % count;
+			if ($bigImg.hasClass('slick-initialized')) {
+				$bigImg.slick('slickGoTo', idx);
+				return;
+			}
+			$bigImg.children('.masters__big-img-item').each(function (i) {
+				$(this).css('display', i === idx ? 'block' : 'none');
+			});
+		}
+		$info.find('.masters__gall-small').off('click.vgGall').on('click.vgGall', '.masters__small-img-item', function () {
+			var idx = $smallImg.children('.masters__small-img-item').index(this);
+			if (idx < 0) {
+				return;
+			}
+			showBigAt(idx);
 		});
-	}
-	if ($smallImg.length && $smallImg.children().length && !$smallImg.hasClass('slick-initialized')) {
-		$smallImg.slick({
-			slidesToShow: 4,
-			slidesToScroll: 1,
-			asNavFor: $bigImg.length ? '.masters__big-img' : null,
-			dots: false,
-			arrows: false,
-			centerMode: true,
-			focusOnSelect: true,
-			accessibility: false
-		});
-	}
-	$('.masters__gall-small').on('click', '.masters__small-img-item', function() {
-		var $thumb = $(this);
-		var $nav = $thumb.closest('.masters__small-img');
-		if ($nav.hasClass('slick-initialized')) {
-			return;
+		if (!$bigImg.hasClass('slick-initialized')) {
+			$cont.find('.my-slick-next').off('click.vgGall').on('click.vgGall', function () {
+				var $items = $bigImg.children('.masters__big-img-item');
+				var cur = $items.index($items.filter(':visible').first());
+				showBigAt(cur + 1);
+			});
+			$cont.find('.my-slick-prev').off('click.vgGall').on('click.vgGall', function () {
+				var $items = $bigImg.children('.masters__big-img-item');
+				var cur = $items.index($items.filter(':visible').first());
+				showBigAt(cur - 1);
+			});
 		}
-		var $big = $thumb.closest('.masters__big-info').prevAll('.masters__big-img-cont').first().find('.masters__big-img');
-		if (!$big.length) {
-			$big = $('.masters__big-img').first();
-		}
-		var idx = $nav.children('.masters__small-img-item').index($thumb);
-		if (idx < 0) {
-			return;
-		}
-		if ($big.hasClass('slick-initialized')) {
-			$big.slick('slickGoTo', idx);
-			return;
-		}
-		$big.children('.masters__big-img-item').each(function(i) {
-			$(this).css('display', i === idx ? 'block' : 'none');
+		$(window).on('resize.vgGall orientationchange.vgGall', function () {
+			if ($bigImg.hasClass('slick-initialized')) {
+				$bigImg.slick('setPosition');
+			}
 		});
 	});
-	if ($bigImg.length || $smallImg.length) {
-		$(window).on('resize orientationchange', function() {
-			if ($bigImg.hasClass('slick-initialized')) $bigImg.slick('setPosition');
-			if ($smallImg.hasClass('slick-initialized')) $smallImg.slick('setPosition');
-		});
-	}
 	$(window).scroll(function(){
 		if ($(window).scrollTop() >= $('header').height())
 			$('header').addClass('scrolled');
