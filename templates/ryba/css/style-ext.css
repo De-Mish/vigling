@@ -4959,3 +4959,62 @@ body#home .home-search-links a.homepage-link-btn:focus {
 .service-rec.is-open .service-rec-body {
   display: block;
 }
+
+#easyprofile #jsn_zapisi .appointments-page .appointments-card,
+.appointments-page .appointments-card {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  float: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+#easyprofile #jsn_zapisi .appointments-page .appointments-card > *,
+.appointments-page .appointments-card > * {
+  float: none !important;
+  clear: both !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 auto !important;
+}
+#easyprofile #jsn_zapisi .appointments-page .appointments-card__people,
+.appointments-page .appointments-card__people {
+  display: grid !important;
+  grid-template-columns: 110px minmax(0, 1fr) !important;
+  grid-auto-flow: row !important;
+  align-items: start !important;
+  column-gap: 10px !important;
+  row-gap: 2px !important;
+  width: 100% !important;
+}
+#easyprofile #jsn_zapisi .appointments-page .appointments-card__row,
+.appointments-page .appointments-card__row {
+  display: grid !important;
+  grid-template-columns: 110px minmax(0, 1fr) !important;
+  grid-auto-flow: row !important;
+  float: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+#easyprofile #jsn_zapisi .appointments-page .appointments-card__label,
+#easyprofile #jsn_zapisi .appointments-page .appointments-card__value,
+.appointments-page .appointments-card__label,
+.appointments-page .appointments-card__value {
+  display: block !important;
+  float: none !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+#easyprofile #jsn_zapisi .appointments-page .appointments-card .order-feedback,
+#easyprofile #jsn_zapisi .appointments-page .appointments-card .order-feedback-form,
+.appointments-page .appointments-card .order-feedback,
+.appointments-page .appointments-card .order-feedback-form {
+  display: block !important;
+  float: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  columns: 1 !important;
+  column-count: 1 !important;
+}
+

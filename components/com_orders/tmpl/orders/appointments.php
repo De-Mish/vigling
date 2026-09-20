@@ -291,7 +291,9 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		gap: 14px;
 	}
 	.appointments-page .appointments-card {
-		display: block;
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
 		width: 100%;
 		border: 1px solid #d9d9d9;
 		border-radius: 12px;
@@ -299,6 +301,22 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		background: #fff;
 		box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 		box-sizing: border-box;
+	}
+	.appointments-page .appointments-card > * {
+		width: 100%;
+		max-width: 100%;
+		flex: 0 0 auto;
+		float: none;
+	}
+	.appointments-page .appointments-card__people {
+		display: grid;
+		grid-template-columns: 110px minmax(0, 1fr);
+		grid-auto-flow: row;
+		align-items: start;
+		column-gap: 10px;
+		row-gap: 2px;
+		padding: 6px 0;
+		line-height: 1.25;
 	}
 	.appointments-page .appointments-card.orders-row--past {
 		background-color: #e9ecef;
@@ -353,6 +371,18 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	@media (min-width: 769px) {
 		.appointments-page .appointments-lead { display: none; }
+		.appointments-page .appointments-card {
+			display: flex !important;
+			flex-direction: column !important;
+			flex-wrap: nowrap !important;
+		}
+		.appointments-page .appointments-card > * {
+			width: 100% !important;
+			max-width: 100% !important;
+			flex: 0 0 auto !important;
+			float: none !important;
+		}
+		.appointments-page .appointments-card__people,
 		.appointments-page .appointments-card__row {
 			display: grid !important;
 			grid-template-columns: 110px minmax(0, 1fr) !important;

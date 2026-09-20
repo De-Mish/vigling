@@ -205,9 +205,19 @@ class OrdersModel extends ListModel
 				return (int) $o->user_id;
 			}, $items));
 			$clientInfo = $this->getClientInfo($clientIds);
-			$serviceDisplayMap = $this->getMasterServiceDisplayMap(array_unique(array_map(function ($o) {
+			$serviceDisplayMap = [];
+			$masterIdsForMap = array_unique(array_map(function ($o) {
 				return (int) $o->master_id;
-			}, $items)));
+			}, $items));
+			if ((string) $this->getState('layout', 'default') === 'appointments') {
+				foreach ($masterIdsForMap as $masterId) {
+					if ((int) $masterId > 0) {
+						$serviceDisplayMap[(int) $masterId] = ['exact' => [], 'suffix' => []];
+					}
+				}
+			} else {
+				$serviceDisplayMap = $this->getMasterServiceDisplayMap($masterIdsForMap);
+			}
 			$courseInfoMap = [];
 			$courseSlotInfoMap = [];
 			$searchInfoMap = [];
