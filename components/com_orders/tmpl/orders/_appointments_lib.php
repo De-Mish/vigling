@@ -77,8 +77,10 @@ if (!function_exists('viglingAppointmentsRenderPeople')) {
 		$clientName = trim((string) ($item->client_name ?? '—')) ?: '—';
 		$masterName = trim((string) ($item->master_name ?? '—')) ?: '—';
 
-		return '<div class="appointments-person">• ' . viglingAppointmentsPersonLink($userId, $clientName) . '</div>'
-			. '<div class="appointments-person">• ' . viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), $masterName) . '</div>';
+		return '<div class="appointments-people">'
+			. '<div class="appointments-person">• ' . viglingAppointmentsPersonLink($userId, $clientName) . '</div>'
+			. '<div class="appointments-person">• ' . viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), $masterName) . '</div>'
+			. '</div>';
 	}
 }
 

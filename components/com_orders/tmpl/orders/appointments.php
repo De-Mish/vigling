@@ -88,7 +88,8 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		background: #f9ce54;
 		color: #111;
 	}
-	.appointments-page .appointments-person { line-height: 1.35; }
+	.appointments-page .appointments-person { display: block; line-height: 1.35; }
+	.appointments-page .appointments-people { display: flex; flex-direction: column; gap: 2px; }
 	.appointments-page .journal-card {
 		margin-top: 18px;
 		background: #fff;
@@ -284,6 +285,40 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	.com_orders .order-feedback-inline { margin: 0 0 8px; }
 	.com_orders .order-review-card { margin-top: 8px; font-size: 13px; color: #555; }
 	.com_orders .order-review-card__head { font-weight: 600; color: #333; }
+	@media (min-width: 769px) {
+		.appointments-page.com_orders .orders-table,
+		.appointments-page.com_orders .orders-table tbody,
+		.appointments-page.com_orders .orders-table .orders-row {
+			display: block !important;
+			width: 100% !important;
+			float: none !important;
+			max-width: 100%;
+		}
+		.appointments-page.com_orders .orders-table thead { display: none !important; }
+		.appointments-page.com_orders .orders-table .orders-row > td {
+			display: grid !important;
+			float: none !important;
+			width: 100% !important;
+			max-width: 100%;
+			grid-template-columns: 96px minmax(0, 1fr);
+			align-items: start;
+			column-gap: 10px;
+		}
+		.appointments-page.com_orders .orders-table .orders-row > td.orders-actions {
+			display: block !important;
+			text-align: left !important;
+			clear: both;
+		}
+		.appointments-page.com_orders .order-feedback,
+		.appointments-page.com_orders .order-feedback-form {
+			display: block !important;
+			float: none !important;
+			width: 100%;
+			max-width: 420px;
+			columns: 1;
+			column-count: 1;
+		}
+	}
 	#zapis-reschedule .modal-dialog {
 		width: 96vw !important;
 		max-width: 1180px !important;
