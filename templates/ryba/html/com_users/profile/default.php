@@ -377,14 +377,29 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, f
 		require_once $vgImageHelperFile;
 	}
 }
-if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
-	$portfolioImages = array_values(array_filter(array_map(static function (string $url): string {
-		return \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($url, true);
-	}, $portfolioImages), static function (string $url): bool {
-		return $url !== '';
-	}));
-}
 $portfolioImages = array_values(array_unique($portfolioImages));
+$portfolioSlides = [];
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	foreach ($portfolioImages as $url) {
+		$full = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($url, false);
+		$thumb = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($url, true);
+		if ($full === '' && $thumb === '') {
+			continue;
+		}
+		$portfolioSlides[] = [
+			'full' => $full !== '' ? $full : $thumb,
+			'thumb' => $thumb !== '' ? $thumb : $full,
+		];
+	}
+} else {
+	foreach ($portfolioImages as $url) {
+		$portfolioSlides[] = [
+			'full' => $url,
+			'thumb' => $url,
+		];
+	}
+}
+$portfolioImages = $portfolioSlides;
 
 $specialtyRaw = '';
 if (!empty($this->data->jcfields)) {
@@ -667,7 +682,9 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 									<?php if (!empty($portfolioImages)) : ?>
 									<div class="lk-portfolio-grid">
 										<?php foreach ($portfolioImages as $img) : ?>
-										<div class="lk-portfolio-item"><img src="<?php echo $this->escape($img); ?>" alt="Портфолио"></div>
+										<a class="lk-portfolio-item" href="<?php echo $this->escape($img['full']); ?>" data-fancybox="lk-portfolio">
+											<img src="<?php echo $this->escape($img['thumb']); ?>" alt="Портфолио" loading="lazy" decoding="async">
+										</a>
 										<?php endforeach; ?>
 									</div>
 									<?php else : ?>
@@ -1059,6 +1076,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 .view_profile-tabs .z-container .z-content { position: relative !important; transition: opacity 0.25s ease-out; }
 .view_profile-tabs .z-container .z-content.z-tab-animating { position: absolute !important; top: 0; left: 0; right: 0; width: 100%; box-sizing: border-box; }
 .view_profile-tabs .lk-portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.view_profile-tabs .lk-portfolio-item { display: block; cursor: pointer; }
 .view_profile-tabs .lk-portfolio-item img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; border: 1px solid #ddd; }
 .view_profile-tabs .service__item--readonly { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 0; }
 .view_profile-tabs .service__item--readonly .service-name { min-width: 260px; font-weight: 600; }
