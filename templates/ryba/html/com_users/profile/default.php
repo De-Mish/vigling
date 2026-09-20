@@ -635,13 +635,14 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
 					<?php if ($profileIsClient) : ?>
 					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
 					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
 					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<li data-index="11" data-link="profile-tab11" class="z-tab z-last<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
 					<?php else : ?>
 					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
 					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
 					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
@@ -651,8 +652,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
 					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
 					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
-					<li data-index="11" data-link="profile-tab11" class="z-tab z-last<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
 					<?php endif; ?>
 				</ul>
 				<div class="z-container">
@@ -671,6 +671,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							</fieldset>
 						</div>
 					</div>
+					<?php echo $this->loadTemplate('appointments'); ?>
 					<?php if (!$profileIsClient) : ?>
 					<div class="z-content" data-index="1" data-name="profile-tab1" style="display: none;">
 						<div class="z-content-inner">
@@ -991,7 +992,6 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<?php if (!$profileIsClient) : ?>
 						<?php echo $this->loadTemplate('favorites'); ?>
 					<?php endif; ?>
-					<?php echo $this->loadTemplate('appointments'); ?>
 				</div>
 			</div>
 		</div>
@@ -1186,6 +1186,14 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 		}
 		prev.addEventListener('transitionend', onPrevEnd);
 		activeIndex = index;
+		if (zapisiTab && tabs[index] === zapisiTab) {
+			maybeZapisiNotify();
+		}
+	}
+	function maybeZapisiNotify() {
+		if (window.PUSHNOTIFY_IS_MASTER !== true) return;
+		if (!window.ViglingPushPrompt || typeof window.ViglingPushPrompt.show !== 'function') return;
+		window.ViglingPushPrompt.show({ reason: 'clients_first_visit' });
 	}
 	contents.forEach(function(c, i){
 		c.style.display = i === activeIndex ? 'block' : 'none';
