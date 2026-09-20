@@ -18,6 +18,8 @@ try {
 	$appointments->dayUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 	$appointments->weekUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'week']);
 	$appointments->monthUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'month']);
+	$appointments->monthCurrentUrl = $appointments->monthUrl;
+	$appointments->weekRangeUrl = \Joomla\CMS\Router\Route::_('index.php?option=com_orders&task=orders.weekRange&format=json');
 	$appointments->appointmentsBaseUrl = $appointments->dayUrl;
 	$appointments->weekPrevUrl = '#';
 	$appointments->weekNextUrl = '#';

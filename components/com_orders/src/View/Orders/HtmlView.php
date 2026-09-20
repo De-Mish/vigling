@@ -39,6 +39,12 @@ class HtmlView extends BaseHtmlView
 
 	public $monthUrl = '';
 
+	public $monthCurrentUrl = '';
+
+	public $weekRangeUrl = '';
+
+	public $weekDayCount = 29;
+
 	public function display($tpl = null)
 	{
 		$app = Factory::getApplication();

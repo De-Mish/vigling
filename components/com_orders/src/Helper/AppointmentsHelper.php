@@ -107,22 +107,36 @@ class AppointmentsHelper
 		}
 		$todayLocal = new \DateTimeImmutable('today', $tz);
 		$utc = new \DateTimeZone('UTC');
-		$weekStart = self::mondayOf(self::parseDate($input->getString('start', ''), $tz) ?? $todayLocal);
 		$monthStart = self::monthStart(self::parseMonth($input->getString('month', ''), $tz) ?? $todayLocal);
+		$weekPastDays = 14;
+		$weekFutureDays = 14;
+		$weekFrom = self::parseDate($input->getString('from', ''), $tz);
+		$weekDays = (int) $input->getInt('days', 0);
+		if ($weekFrom instanceof \DateTimeImmutable && $weekDays > 0) {
+			$weekDays = max(1, min(14, $weekDays));
+			$weekStart = $weekFrom;
+			$weekDayCount = $weekDays;
+		} else {
+			$weekStart = $todayLocal->modify('-' . $weekPastDays . ' days');
+			$weekDayCount = $weekPastDays + 1 + $weekFutureDays;
+		}
 		$target->weekStartLocal = $weekStart;
+		$target->weekDayCount = $weekDayCount;
 		$target->monthCursor = $monthStart;
 		$target->appointmentsBaseUrl = self::profileUrl(['zapisi' => 'day']);
 		$target->dayUrl = self::profileUrl(['zapisi' => 'day']);
-		$target->weekUrl = self::profileUrl(['zapisi' => 'week', 'start' => $weekStart->format('Y-m-d')]);
-		$target->monthUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->format('Y-m')]);
-		$target->weekPrevUrl = self::profileUrl(['zapisi' => 'week', 'start' => $weekStart->modify('-7 days')->format('Y-m-d')]);
-		$target->weekNextUrl = self::profileUrl(['zapisi' => 'week', 'start' => $weekStart->modify('+7 days')->format('Y-m-d')]);
+		$target->weekUrl = self::profileUrl(['zapisi' => 'week']);
+		$target->monthUrl = self::profileUrl(['zapisi' => 'month']);
+		$target->monthCurrentUrl = self::profileUrl(['zapisi' => 'month']);
+		$target->weekPrevUrl = self::profileUrl(['zapisi' => 'week']);
+		$target->weekNextUrl = self::profileUrl(['zapisi' => 'week']);
 		$target->monthPrevUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->modify('-1 month')->format('Y-m')]);
 		$target->monthNextUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->modify('+1 month')->format('Y-m')]);
+		$target->weekRangeUrl = Route::_('index.php?option=com_orders&task=orders.weekRange&format=json');
 
 		if ($mode === 'week') {
 			$fromLocal = $weekStart;
-			$toLocal = $weekStart->modify('+7 days');
+			$toLocal = $weekStart->modify('+' . $weekDayCount . ' days');
 		} elseif ($mode === 'month') {
 			$fromLocal = self::mondayOf($monthStart);
 			$monthEndExclusive = $monthStart->modify('+1 month');
