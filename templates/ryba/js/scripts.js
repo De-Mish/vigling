@@ -58,60 +58,60 @@ $(document).ready(function($){
 		}
 		var $info = $cont.nextAll('.masters__big-info').first();
 		var $smallImg = $info.find('.masters__small-img').first();
+		if ($bigImg.hasClass('slick-initialized')) {
+			$bigImg.slick('unslick');
+		}
 		if ($smallImg.hasClass('slick-initialized')) {
 			$smallImg.slick('unslick');
 		}
-		if ($bigImg.length && $bigImg.children('.masters__big-img-item').length && !$bigImg.hasClass('slick-initialized')) {
-			$bigImg.slick({
-				slidesToShow: 1,
-				slidesToScroll: 1,
-				arrows: true,
-				fade: true,
-				infinite: true,
-				accessibility: false,
-				prevArrow: $cont.find('.my-slick-prev'),
-				nextArrow: $cont.find('.my-slick-next')
-			});
-		}
-		function showBigAt(idx) {
-			var count = $bigImg.hasClass('slick-initialized')
-				? $bigImg.slick('getSlick').slideCount
-				: $bigImg.children('.masters__big-img-item').length;
-			if (!count) {
+		var $slides = $bigImg.children('.masters__big-img-item');
+		var $thumbs = $smallImg.children('.masters__small-img-item');
+		var idx = 0;
+		function showAt(nextIdx) {
+			if (!$slides.length) {
 				return;
 			}
-			idx = ((idx % count) + count) % count;
-			if ($bigImg.hasClass('slick-initialized')) {
-				$bigImg.slick('slickGoTo', idx);
-				return;
-			}
-			$bigImg.children('.masters__big-img-item').each(function (i) {
+			idx = ((nextIdx % $slides.length) + $slides.length) % $slides.length;
+			$slides.each(function (i) {
 				$(this).css('display', i === idx ? 'block' : 'none');
 			});
+			$thumbs.removeClass('is-current').eq(idx).addClass('is-current');
 		}
-		$info.find('.masters__gall-small').off('click.vgGall').on('click.vgGall', '.masters__small-img-item', function () {
-			var idx = $smallImg.children('.masters__small-img-item').index(this);
-			if (idx < 0) {
+		showAt(0);
+		$cont.find('.my-slick-next').off('click.vgGall').on('click.vgGall', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			showAt(idx + 1);
+		});
+		$cont.find('.my-slick-prev').off('click.vgGall').on('click.vgGall', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			showAt(idx - 1);
+		});
+		$smallImg.off('click.vgGall').on('click.vgGall', '.masters__small-img-item', function (e) {
+			e.preventDefault();
+			var thumbIdx = $thumbs.index(this);
+			if (thumbIdx < 0) {
 				return;
 			}
-			showBigAt(idx);
+			showAt(thumbIdx);
 		});
-		if (!$bigImg.hasClass('slick-initialized')) {
-			$cont.find('.my-slick-next').off('click.vgGall').on('click.vgGall', function () {
-				var $items = $bigImg.children('.masters__big-img-item');
-				var cur = $items.index($items.filter(':visible').first());
-				showBigAt(cur + 1);
-			});
-			$cont.find('.my-slick-prev').off('click.vgGall').on('click.vgGall', function () {
-				var $items = $bigImg.children('.masters__big-img-item');
-				var cur = $items.index($items.filter(':visible').first());
-				showBigAt(cur - 1);
-			});
-		}
-		$(window).on('resize.vgGall orientationchange.vgGall', function () {
-			if ($bigImg.hasClass('slick-initialized')) {
-				$bigImg.slick('setPosition');
+		var touchX = null;
+		$bigImg.off('touchstart.vgGall touchend.vgGall').on('touchstart.vgGall', function (e) {
+			var t = e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0];
+			touchX = t ? t.clientX : null;
+		}).on('touchend.vgGall', function (e) {
+			if (touchX === null) {
+				return;
 			}
+			var t = e.originalEvent && e.originalEvent.changedTouches && e.originalEvent.changedTouches[0];
+			var endX = t ? t.clientX : touchX;
+			var dx = endX - touchX;
+			touchX = null;
+			if (Math.abs(dx) < 40) {
+				return;
+			}
+			showAt(idx + (dx < 0 ? 1 : -1));
 		});
 	});
 	$(window).scroll(function(){

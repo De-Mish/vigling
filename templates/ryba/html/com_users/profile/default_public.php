@@ -1093,31 +1093,11 @@ $serviceMatchesSearchFilter = static function (array $cat, array $item, int $fil
 		return $id > 0;
 	})));
 	$serviceMatch = in_array($filterServiceId, $serviceIds, true);
-	$tagMatch = $filterTagId > 0 && in_array($filterTagId, $tagIds, true);
 	if ($filterTagId <= 0) {
-		if ($serviceMatch) {
-			return true;
-		}
-	} elseif ($serviceMatch && $tagMatch) {
-		return true;
+		return $serviceMatch;
 	}
-	$haystack = trim((string) ($cat['title'] ?? '') . ' ' . (string) ($item['name'] ?? ''));
-	if ($haystack === '' || $serviceTitle === '') {
-		return false;
-	}
-	$hasServiceTitle = function_exists('mb_stripos')
-		? mb_stripos($haystack, $serviceTitle) !== false
-		: strpos(strtolower($haystack), strtolower($serviceTitle)) !== false;
-	if ($filterTagId <= 0) {
-		return $hasServiceTitle;
-	}
-	if ($tagTitle === '') {
-		return false;
-	}
-	$hasTagTitle = function_exists('mb_stripos')
-		? mb_stripos($haystack, $tagTitle) !== false
-		: strpos(strtolower($haystack), strtolower($tagTitle)) !== false;
-	return $hasServiceTitle && $hasTagTitle;
+	$tagMatch = in_array($filterTagId, $tagIds, true);
+	return $serviceMatch && $tagMatch;
 };
 $stockPricesStructuredWithIds = [];
 if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Helper\\JsnDecodeHelper')) {
@@ -1437,11 +1417,27 @@ if (empty($isLkEmbed)) {
 			opacity: 1 !important;
 			overflow: visible !important;
 		}
+		.master__services .priceList__item-coll.price__coll1.service-name {
+			background: none !important;
+			background-color: transparent !important;
+		}
 		.master__services .priceList__item.highlighted-service,
 		.master__services .stockList__item.highlighted-service:not(.courseList__item) {
+			background-color: #f9ce54 !important;
+			border: 1px solid #e6b800;
+			border-radius: 10px;
+			padding: 12px 16px !important;
+			width: 100%;
+			max-width: 100%;
+			box-sizing: border-box;
+			color: #000000 !important;
+			margin: 8px 0;
+			display: block;
+			overflow: visible;
+		}
+		.master__services .priceList__item.highlighted-service .priceList__item-coll.price__coll1.service-name {
+			background: none !important;
 			background-color: transparent !important;
-			border: 0;
-			color: inherit;
 		}
 		.master__services .accordionItemHeading {
 			cursor: default !important;
@@ -4087,8 +4083,6 @@ if (empty($isLkEmbed)) {
 		if (!filters || !filters.service) {
 			return null;
 		}
-		var serviceTitle = <?php echo json_encode($filterServiceTitle, JSON_UNESCAPED_UNICODE); ?>;
-		var tagTitle = <?php echo json_encode($filterTagTitle, JSON_UNESCAPED_UNICODE); ?>;
 		var items = document.querySelectorAll('.master__services .priceList__item, .master__services .stockList__item:not(.courseList__item)');
 		var first = null;
 		items.forEach(function (item) {
@@ -4097,21 +4091,11 @@ if (empty($isLkEmbed)) {
 			var catId = parsePositiveInt(item.getAttribute('data-cat-id'));
 			var legacyCatId = parsePositiveInt(item.getAttribute('data-legacy-cat-id'));
 			var serviceMatch = svcId === filters.service || catId === filters.service || legacyCatId === filters.service;
-			var nameEl = item.querySelector('.service-name, .stock__coll1');
-			var haystack = ((nameEl && nameEl.textContent) || '').toLowerCase();
-			if (!filters.tag) {
-				var nameMatch = serviceTitle && haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1;
-				if (!serviceMatch && !nameMatch) {
-					return;
-				}
-			} else {
-				var tagMatch = tagId === filters.tag || svcId === filters.tag;
-				var nameMatch = serviceTitle && tagTitle
-					&& haystack.indexOf(String(serviceTitle).toLowerCase()) !== -1
-					&& haystack.indexOf(String(tagTitle).toLowerCase()) !== -1;
-				if (!(serviceMatch && tagMatch) && !nameMatch) {
-					return;
-				}
+			if (!serviceMatch) {
+				return;
+			}
+			if (filters.tag && !(tagId === filters.tag || svcId === filters.tag)) {
+				return;
 			}
 			item.classList.add('highlighted-service');
 			if (!first) {
