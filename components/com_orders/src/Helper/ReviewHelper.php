@@ -14,6 +14,10 @@ class ReviewHelper
 
 	public static function ensureSchema(DatabaseInterface $db): bool
 	{
+		static $ensured = null;
+		if ($ensured !== null) {
+			return $ensured;
+		}
 		try {
 			$prefix = $db->getPrefix();
 			$table = $prefix . 'vigling_reviews';
@@ -58,8 +62,10 @@ class ReviewHelper
 				)->execute();
 			}
 
+			$ensured = true;
 			return true;
 		} catch (\Throwable $e) {
+			$ensured = false;
 			return false;
 		}
 	}

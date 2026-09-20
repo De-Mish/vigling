@@ -142,13 +142,11 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 					<div class="appointments-card__value"><?php echo viglingAppointmentsRenderPeople($item); ?></div>
 				</div>
 				<?php else : ?>
-				<div class="appointments-card__row appointments-card__row--people">
+				<div class="appointments-card__people">
 					<div class="appointments-card__label">Клиент /</div>
 					<div class="appointments-card__value">
 						<div class="appointments-person">• <?php echo viglingAppointmentsPersonLink((int) ($item->user_id ?? 0), trim((string) ($item->client_name ?? '—')) ?: '—'); ?></div>
 					</div>
-				</div>
-				<div class="appointments-card__row appointments-card__row--people">
 					<div class="appointments-card__label">Мастер</div>
 					<div class="appointments-card__value">
 						<div class="appointments-person">• <?php echo viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), trim((string) ($item->master_name ?? '—')) ?: '—'); ?></div>

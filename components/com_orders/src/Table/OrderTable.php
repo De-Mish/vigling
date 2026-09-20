@@ -41,6 +41,10 @@ class OrderTable extends Table
 
 	public static function ensureBookingCommentColumns(DatabaseInterface $db): bool
 	{
+		static $ensured = null;
+		if ($ensured !== null) {
+			return $ensured;
+		}
 		try {
 			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 			$after = 'service_name';
@@ -74,8 +78,10 @@ class OrderTable extends Table
 				)->execute();
 			}
 
+			$ensured = true;
 			return true;
 		} catch (\Throwable $e) {
+			$ensured = false;
 			return false;
 		}
 	}
