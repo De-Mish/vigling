@@ -132,7 +132,7 @@ class ListModel extends BaseListModel
 		if ($orderCol === 'price') {
 			$stockTable = $db->quoteName($prefix . 'vigling_user_stock_services', 'vuss');
 			$q->select('MIN(' . $db->quoteName('vuss.price') . ') AS min_stock_price');
-			$q->join('LEFT', $stockTable . ' ON ' . $db->quoteName('vuss.user_id') . ' = ' . $db->quoteName('u.id') . ' AND ' . $db->quoteName('vuss.is_active') . ' = 1');
+			$q->join('LEFT', $stockTable . ' ON ' . $db->quoteName('vuss.user_id') . ' = ' . $db->quoteName('u.id') . ' AND ' . $db->quoteName('vuss.is_active') . ' = 1 AND ' . $db->quoteName('vuss.count_stock') . ' > 0');
 			$q->group('u.id');
 			$q->order('min_stock_price ' . $orderDir);
 		} elseif ($orderCol === 'id') {
@@ -184,6 +184,7 @@ class ListModel extends BaseListModel
 		$stockConds = [
 			$db->quoteName('vuss.user_id') . ' = ' . $db->quoteName('u.id'),
 			$db->quoteName('vuss.is_active') . ' = 1',
+			$db->quoteName('vuss.count_stock') . ' > 0',
 		];
 
 		if ($serviceId > 0) {

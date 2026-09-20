@@ -5006,15 +5006,93 @@ body#home .home-search-links a.homepage-link-btn:focus {
   width: auto !important;
   max-width: 100% !important;
 }
-#easyprofile #jsn_zapisi .appointments-page .appointments-card .order-feedback,
-#easyprofile #jsn_zapisi .appointments-page .appointments-card .order-feedback-form,
-.appointments-page .appointments-card .order-feedback,
-.appointments-page .appointments-card .order-feedback-form {
-  display: block !important;
-  float: none !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  columns: 1 !important;
-  column-count: 1 !important;
+#easyprofile #jsn_stocks [hidden] {
+  display: none !important;
+}
+#easyprofile #jsn_stocks .stocks-subnav,
+.stocks-subnav {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 16px;
+  background: #f3f3f3;
+  border-radius: 999px;
+}
+#easyprofile #jsn_stocks .stocks-subnav__btn,
+.stocks-subnav__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: #333;
+  font-weight: 600;
+  text-decoration: none;
+}
+#easyprofile #jsn_stocks .stocks-subnav__btn.is-active,
+.stocks-subnav__btn.is-active {
+  background: #f9ce54;
+  color: #222;
+}
+#easyprofile #jsn_stocks .stocks-archive__empty,
+.stocks-archive__empty {
+  margin: 0;
+  color: #888;
+  font-size: 14px;
+}
+#easyprofile #jsn_stocks .stocks-archive__list,
+.stocks-archive__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#easyprofile #jsn_stocks .stocks-archive__card,
+.stocks-archive__card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#easyprofile #jsn_stocks .stocks-archive__card-body,
+.stocks-archive__card-body {
+  padding: 12px 14px;
+}
+#easyprofile #jsn_stocks .stocks-archive__name,
+.stocks-archive__name {
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+#easyprofile #jsn_stocks .stocks-archive__row,
+.stocks-archive__row {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #333;
+}
+#easyprofile #jsn_stocks .stocks-archive__row label,
+.stocks-archive__row label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+#easyprofile #jsn_stocks .stocks-archive__repeat,
+.stocks-archive__repeat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 14px 12px;
+  min-height: 36px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #f9ce54;
+  color: #222;
+  font-weight: 600;
+  text-decoration: none;
+  align-self: flex-start;
 }
 

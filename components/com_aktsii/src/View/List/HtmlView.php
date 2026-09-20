@@ -122,7 +122,8 @@ class HtmlView extends BaseHtmlView
 			->select('s.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min, s.recommendation')
 			->from($db->quoteName($prefix . 'vigling_user_stock_services', 's'))
 			->whereIn('s.user_id', $ids)
-			->where('s.is_active = 1');
+			->where('s.is_active = 1')
+			->where('s.count_stock > 0');
 		try {
 			$db->setQuery($query);
 			$rows = $db->loadObjectList() ?: [];
@@ -131,13 +132,17 @@ class HtmlView extends BaseHtmlView
 				->select('s.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min')
 				->from($db->quoteName($prefix . 'vigling_user_stock_services', 's'))
 				->whereIn('s.user_id', $ids)
-				->where('s.is_active = 1');
+				->where('s.is_active = 1')
+				->where('s.count_stock > 0');
 			$db->setQuery($query);
 			$rows = $db->loadObjectList() ?: [];
 		}
 
 		$result = [];
 		foreach ($rows as $row) {
+			if ((int) $row->count_stock <= 0) {
+				continue;
+			}
 			$userId = (int) $row->user_id;
 			if (!isset($result[$userId])) {
 				$result[$userId] = [];

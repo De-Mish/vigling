@@ -67,6 +67,78 @@ final class UserServicesService
         }
     }
 
+    public static function ensureStockArchiveSchema(?DatabaseInterface $db = null): bool
+    {
+        static $ensured = null;
+        if ($ensured !== null) {
+            return $ensured;
+        }
+
+        try {
+            $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
+            $table = '#__vigling_user_stock_services';
+            $columns = array_change_key_case($db->getTableColumns($table, false) ?: [], CASE_LOWER);
+            if (!isset($columns['count_stock_original'])) {
+                $sql = 'ALTER TABLE ' . $db->quoteName($table)
+                    . ' ADD COLUMN ' . $db->quoteName('count_stock_original') . ' INT NULL';
+                if (isset($columns['count_stock'])) {
+                    $sql .= ' AFTER ' . $db->quoteName('count_stock');
+                }
+                $db->setQuery($sql)->execute();
+            }
+
+            $db->setQuery('SHOW INDEX FROM ' . $db->quoteName($table));
+            $indexes = $db->loadAssocList() ?: [];
+            $hasUnique = false;
+            $hasNodeIndex = false;
+            foreach ($indexes as $index) {
+                $keyName = strtolower((string) ($index['Key_name'] ?? $index['key_name'] ?? ''));
+                if ($keyName === 'uniq_user_service') {
+                    $hasUnique = true;
+                }
+                if ($keyName === 'idx_user_service_node') {
+                    $hasNodeIndex = true;
+                }
+            }
+            if ($hasUnique) {
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName($table)
+                    . ' DROP INDEX ' . $db->quoteName('uniq_user_service')
+                )->execute();
+            }
+            if (!$hasNodeIndex) {
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName($table)
+                    . ' ADD INDEX ' . $db->quoteName('idx_user_service_node')
+                    . ' (' . $db->quoteName('user_id') . ', ' . $db->quoteName('service_node_id') . ')'
+                )->execute();
+            }
+
+            try {
+                $s = $db->quoteName('s');
+                $b = $db->quoteName('b');
+                $db->setQuery(
+                    'UPDATE ' . $db->quoteName($table) . ' AS ' . $s
+                    . ' SET ' . $s . '.' . $db->quoteName('count_stock_original')
+                    . ' = (SELECT COUNT(*) FROM ' . $db->quoteName('#__vigling_bookings') . ' AS ' . $b
+                    . ' WHERE ' . $b . '.' . $db->quoteName('stock_service_id') . ' = ' . $s . '.' . $db->quoteName('id')
+                    . ' AND ' . $b . '.' . $db->quoteName('booking_kind') . ' = ' . $db->quote('stock') . ')'
+                    . ' WHERE (' . $s . '.' . $db->quoteName('count_stock') . ' IS NULL OR ' . $s . '.' . $db->quoteName('count_stock') . ' <= 0)'
+                    . ' AND (' . $s . '.' . $db->quoteName('count_stock_original') . ' IS NULL OR ' . $s . '.' . $db->quoteName('count_stock_original') . ' <= 0)'
+                )->execute();
+            } catch (\Throwable $e) {
+            }
+
+            $ensured = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            $ensured = false;
+
+            return false;
+        }
+    }
+
     public static function sanitizeRecommendation($value): string
     {
         $text = trim((string) $value);
@@ -141,6 +213,9 @@ final class UserServicesService
         }
 
         self::ensureRecommendationColumn($db);
+        if ($targetTable === '#__vigling_user_stock_services') {
+            self::ensureStockArchiveSchema($db);
+        }
 
         $payload = json_decode($payloadJson, true);
         if (!is_array($payload) || !isset($payload['items']) || !is_array($payload['items'])) {
@@ -149,6 +224,12 @@ final class UserServicesService
                 Log::WARNING,
                 'plg_user_vigling'
             );
+            return;
+        }
+
+        if ($targetTable === '#__vigling_user_stock_services') {
+            self::syncStockPayloadKeepingArchive($db, $userId, $payload['items']);
+            \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::clearFilterCaches();
             return;
         }
 
@@ -248,6 +329,214 @@ final class UserServicesService
 
         // Clear filter hierarchy caches since service data has changed
         \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::clearFilterCaches();
+    }
+
+    /**
+     * Keep sold-out rows (count_stock = 0) as archive. Replace only remaining offers.
+     *
+     * @param array<int, mixed> $items
+     */
+    private static function syncStockPayloadKeepingArchive(DatabaseInterface $db, int $userId, array $items): void
+    {
+        $existing = [];
+        try {
+            $query = $db->getQuery(true)
+                ->select([$db->quoteName('id'), $db->quoteName('count_stock')])
+                ->from($db->quoteName('#__vigling_user_stock_services'))
+                ->where($db->quoteName('user_id') . ' = ' . (int) $userId);
+            $db->setQuery($query);
+            $existing = $db->loadAssocList() ?: [];
+        } catch (\Throwable $e) {
+            $existing = [];
+        }
+
+        $activeIds = [];
+        foreach ($existing as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            if ((int) ($row['count_stock'] ?? 0) > 0) {
+                $activeIds[$id] = true;
+            }
+        }
+
+        $keptActiveIds = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $resolved = self::resolvePayloadItemToNode($item);
+            if ($resolved === null) {
+                continue;
+            }
+            $countStock = self::toInt($item['count_stock'] ?? 0);
+            $payloadId = (int) ($item['id'] ?? $item['stock_service_id'] ?? 0);
+            $canUpdate = $payloadId > 0 && isset($activeIds[$payloadId]);
+            if ($canUpdate) {
+                self::updateStockServiceRow(
+                    $db,
+                    $payloadId,
+                    $userId,
+                    $resolved['node_id'],
+                    $resolved['price'],
+                    $resolved['duration'],
+                    $resolved['legacy_cat_id'],
+                    $resolved['legacy_tag_id'],
+                    $resolved['pause_min'],
+                    $resolved['old_price'],
+                    $resolved['about_stock'],
+                    $countStock,
+                    $resolved['recommendation']
+                );
+                $keptActiveIds[$payloadId] = true;
+            } else {
+                self::upsertUserServiceRow(
+                    $db,
+                    '#__vigling_user_stock_services',
+                    $userId,
+                    $resolved['node_id'],
+                    $resolved['price'],
+                    $resolved['duration'],
+                    null,
+                    $resolved['legacy_cat_id'],
+                    $resolved['legacy_tag_id'],
+                    $resolved['pause_min'],
+                    'vigling_payload_v1',
+                    $resolved['old_price'],
+                    $resolved['about_stock'],
+                    $countStock,
+                    $resolved['recommendation']
+                );
+            }
+        }
+
+        $deleteIds = [];
+        foreach (array_keys($activeIds) as $id) {
+            if (!isset($keptActiveIds[$id])) {
+                $deleteIds[] = (int) $id;
+            }
+        }
+        if ($deleteIds !== []) {
+            $query = $db->getQuery(true)
+                ->delete($db->quoteName('#__vigling_user_stock_services'))
+                ->where($db->quoteName('user_id') . ' = ' . (int) $userId)
+                ->where($db->quoteName('count_stock') . ' > 0')
+                ->whereIn($db->quoteName('id'), $deleteIds);
+            $db->setQuery($query)->execute();
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $item
+     * @return array{node_id:int,price:float,duration:int,pause_min:int,legacy_cat_id:?int,legacy_tag_id:?int,old_price:?float,about_stock:?string,recommendation:string}|null
+     */
+    private static function resolvePayloadItemToNode(array $item): ?array
+    {
+        $catIdStr = (string) ($item['cat_id'] ?? '');
+        $serviceRaw = self::toServiceRaw($item['service_raw'] ?? '');
+        $price = self::parsePrice($item['price'] ?? 0);
+        $durationRaw = $item['duration'] ?? ($item['duration_min'] ?? 0);
+        $duration = self::parseDuration($durationRaw);
+        $pauseMin = self::extractPauseMin($durationRaw);
+        $parts = self::parseServiceRawParts($serviceRaw);
+        $baseId = $parts['base_id'];
+        $tagId = $parts['tag_id'];
+        $map = self::getLegacyServiceMap();
+        $sourcePriority = ['content', 'vigling_services', 'tag'];
+        $catFallbackPriority = ['tag', 'content', 'vigling_services', 'category'];
+
+        if ($baseId === null && trim($serviceRaw) === '') {
+            $baseId = 0;
+        }
+
+        $resolvedNodeId = null;
+        if ($tagId !== null && $tagId > 0) {
+            if ($baseId !== null && $baseId > 0) {
+                $resolvedNodeId = self::resolveContextMappedNode(self::getLegacyServiceContextMap(), 'content', (int) $baseId, 'tag', $tagId);
+            }
+            if ($resolvedNodeId === null) {
+                $resolvedNodeId = self::resolveMappedNode($map, $tagId, ['tag']);
+            }
+        }
+
+        if ($resolvedNodeId === null && $baseId !== null) {
+            if ($baseId > 0) {
+                $resolvedNodeId = self::resolveMappedNode($map, $baseId, ['content', 'vigling_services', 'tag']);
+            } elseif (preg_match('/^\d+$/', $catIdStr)) {
+                $resolvedNodeId = self::resolveMappedNode($map, (int) $catIdStr, $catFallbackPriority);
+            }
+        }
+
+        if ($resolvedNodeId === null) {
+            $floatLike = self::parseFloatLike($serviceRaw);
+            if ($floatLike !== null) {
+                $resolvedNodeId = self::resolveMappedNode($map, (int) floor($floatLike), $sourcePriority);
+            }
+        }
+
+        if ($resolvedNodeId === null && preg_match('/^\d+$/', $catIdStr)) {
+            $resolvedNodeId = self::resolveMappedNode($map, (int) $catIdStr, $catFallbackPriority);
+        }
+
+        if ($resolvedNodeId === null) {
+            return null;
+        }
+
+        return [
+            'node_id' => (int) $resolvedNodeId,
+            'price' => $price,
+            'duration' => $duration,
+            'pause_min' => $pauseMin,
+            'legacy_cat_id' => preg_match('/^\d+$/', $catIdStr) ? (int) $catIdStr : null,
+            'legacy_tag_id' => ($tagId !== null && $tagId > 0) ? (int) $tagId : null,
+            'old_price' => self::parsePrice($item['old_price'] ?? 0),
+            'about_stock' => trim((string) ($item['about_stock'] ?? '')),
+            'recommendation' => self::sanitizeRecommendation($item['recommendation'] ?? ''),
+        ];
+    }
+
+    private static function updateStockServiceRow(
+        DatabaseInterface $db,
+        int $rowId,
+        int $userId,
+        int $resolvedNodeId,
+        float $price,
+        int $duration,
+        ?int $legacyCatId,
+        ?int $legacyTagId,
+        int $pauseMin,
+        ?float $oldPrice,
+        ?string $aboutStock,
+        int $countStock,
+        string $recommendation
+    ): void {
+        $hasRecommendation = self::ensureRecommendationColumn($db);
+        $hasOriginal = self::ensureStockArchiveSchema($db);
+        $fields = [
+            $db->quoteName('service_node_id') . ' = ' . (int) $resolvedNodeId,
+            $db->quoteName('price') . ' = ' . $db->quote(number_format((float) $price, 2, '.', '')),
+            $db->quoteName('duration_min') . ' = ' . (int) $duration,
+            $db->quoteName('is_active') . ' = 1',
+            $db->quoteName('legacy_cat_id') . ' = ' . ($legacyCatId !== null ? (string) (int) $legacyCatId : 'NULL'),
+            $db->quoteName('legacy_tag_id') . ' = ' . ($legacyTagId !== null ? (string) (int) $legacyTagId : 'NULL'),
+            $db->quoteName('pause_min') . ' = ' . (string) max(0, (int) $pauseMin),
+            $db->quoteName('old_price') . ' = ' . ($oldPrice !== null ? $db->quote(number_format((float) $oldPrice, 2, '.', '')) : 'NULL'),
+            $db->quoteName('about_stock') . ' = ' . ($aboutStock !== null ? $db->quote($aboutStock) : 'NULL'),
+            $db->quoteName('count_stock') . ' = ' . (int) $countStock,
+        ];
+        if ($hasOriginal) {
+            $fields[] = $db->quoteName('count_stock_original') . ' = ' . (int) $countStock;
+        }
+        if ($hasRecommendation) {
+            $fields[] = $db->quoteName('recommendation') . ' = ' . $db->quote(self::sanitizeRecommendation($recommendation));
+        }
+        $query = $db->getQuery(true)
+            ->update($db->quoteName('#__vigling_user_stock_services'))
+            ->set($fields)
+            ->where($db->quoteName('id') . ' = ' . (int) $rowId)
+            ->where($db->quoteName('user_id') . ' = ' . (int) $userId);
+        $db->setQuery($query)->execute();
     }
 
     /**
@@ -373,6 +662,7 @@ final class UserServicesService
         }
 
         if ($targetTable === '#__vigling_user_stock_services') {
+            $hasOriginal = self::ensureStockArchiveSchema($db);
             $columns[] = $db->quoteName('old_price');
             $columns[] = $db->quoteName('about_stock');
             $columns[] = $db->quoteName('count_stock');
@@ -382,6 +672,11 @@ final class UserServicesService
             $updates[] = $db->quoteName('old_price') . '=VALUES(' . $db->quoteName('old_price') . ')';
             $updates[] = $db->quoteName('about_stock') . '=VALUES(' . $db->quoteName('about_stock') . ')';
             $updates[] = $db->quoteName('count_stock') . '=VALUES(' . $db->quoteName('count_stock') . ')';
+            if ($hasOriginal) {
+                $columns[] = $db->quoteName('count_stock_original');
+                $values[] = $countStockSql;
+                $updates[] = $db->quoteName('count_stock_original') . '=VALUES(' . $db->quoteName('count_stock_original') . ')';
+            }
         }
 
         $sql = 'INSERT INTO ' . $db->quoteName($targetTable)
@@ -489,8 +784,11 @@ final class UserServicesService
                 ->select($columns)
                 ->from($db->quoteName($table))
                 ->whereIn($db->quoteName('user_id'), array_map('intval', $userIds))
-                ->where($db->quoteName('is_active') . ' = 1')
-                ->order($db->quoteName('id') . ' ASC');
+                ->where($db->quoteName('is_active') . ' = 1');
+            if ($table === '#__vigling_user_stock_services') {
+                $query->where($db->quoteName('count_stock') . ' > 0');
+            }
+            $query->order($db->quoteName('id') . ' ASC');
             $db->setQuery($query);
 
             /** @var array<int, array<string, mixed>> $rows */
