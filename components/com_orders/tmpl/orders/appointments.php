@@ -285,40 +285,78 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	.com_orders .order-feedback-inline { margin: 0 0 8px; }
 	.com_orders .order-review-card { margin-top: 8px; font-size: 13px; color: #555; }
 	.com_orders .order-review-card__head { font-weight: 600; color: #333; }
-	@media (min-width: 769px) {
-		.appointments-page.com_orders .orders-table,
-		.appointments-page.com_orders .orders-table tbody,
-		.appointments-page.com_orders .orders-table .orders-row {
-			display: block !important;
-			width: 100% !important;
-			float: none !important;
-			max-width: 100%;
-		}
-		.appointments-page.com_orders .orders-table thead { display: none !important; }
-		.appointments-page.com_orders .orders-table .orders-row > td {
-			display: grid !important;
-			float: none !important;
-			width: 100% !important;
-			max-width: 100%;
-			grid-template-columns: 96px minmax(0, 1fr);
-			align-items: start;
-			column-gap: 10px;
-		}
-		.appointments-page.com_orders .orders-table .orders-row > td.orders-actions {
-			display: block !important;
-			text-align: left !important;
-			clear: both;
-		}
-		.appointments-page.com_orders .order-feedback,
-		.appointments-page.com_orders .order-feedback-form {
-			display: block !important;
-			float: none !important;
-			width: 100%;
-			max-width: 420px;
-			columns: 1;
-			column-count: 1;
-		}
+	.appointments-page .appointments-cards {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
 	}
+	.appointments-page .appointments-card {
+		display: block;
+		width: 100%;
+		border: 1px solid #d9d9d9;
+		border-radius: 12px;
+		padding: 12px;
+		background: #fff;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+		box-sizing: border-box;
+	}
+	.appointments-page .appointments-card.orders-row--past {
+		background-color: #e9ecef;
+		color: #6c757d;
+	}
+	.appointments-page .appointments-card.orders-row--past a { color: #495057; }
+	.appointments-page .appointments-card.orders-row--course-summary { background: #fffdf3; }
+	.appointments-page .appointments-card__row {
+		display: grid;
+		grid-template-columns: 110px minmax(0, 1fr);
+		align-items: start;
+		column-gap: 10px;
+		padding: 6px 0;
+		line-height: 1.25;
+	}
+	.appointments-page .appointments-card__label {
+		font-weight: 600;
+		color: #666;
+	}
+	.appointments-page .appointments-card__value {
+		min-width: 0;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+	.appointments-page .appointments-card__row--actions {
+		margin-top: 8px;
+		padding-top: 10px;
+		border-top: 1px solid #ececec;
+	}
+	.appointments-page .appointments-card__row--actions .orders-actions .btn,
+	.appointments-page .appointments-card__row--actions .orders-actions .reschedule-open {
+		min-width: 114px;
+		margin: 0 8px 8px 0;
+		text-align: center;
+	}
+	.appointments-page .appointments-card__row--actions .form-inline { display: inline-block; }
+	.appointments-page .appointments-card .order-feedback,
+	.appointments-page .appointments-card .order-feedback-form {
+		display: block;
+		float: none;
+		width: 100%;
+		max-width: 100%;
+		columns: auto;
+		column-count: auto;
+	}
+	.appointments-page .appointments-card .order-feedback-form textarea {
+		max-width: 100%;
+	}
+	.appointments-page .appointments-card__participants { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #ececec; }
+	.appointments-page .appointments-card__participants.is-open { display: block; }
+	.appointments-page .course-participants { display: grid; gap: 12px; }
+	.appointments-page .course-participant { border: 1px solid #ece4b6; border-radius: 10px; padding: 12px; background: #fff; }
+	.appointments-page .course-participant-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+	.appointments-page .course-participant-name { font-weight: 600; }
+	.appointments-page .course-participant-time { color: #555; }
+	.appointments-page .course-meta { font-size: 13px; color: #666; margin-top: 4px; }
+	.appointments-page .course-toggle[aria-expanded="true"] .course-toggle-open { display: none; }
+	.appointments-page .course-toggle[aria-expanded="false"] .course-toggle-close { display: none; }
 	#zapis-reschedule .modal-dialog {
 		width: 96vw !important;
 		max-width: 1180px !important;
