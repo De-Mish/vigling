@@ -136,10 +136,25 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 				}
 			?>
 			<div class="<?php echo $rowClass; ?>" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">
+				<?php if ($isBlock) : ?>
 				<div class="appointments-card__row">
-					<div class="appointments-card__label">Клиент / Мастер</div>
+					<div class="appointments-card__label">Клиент /<br>Мастер</div>
 					<div class="appointments-card__value"><?php echo viglingAppointmentsRenderPeople($item); ?></div>
 				</div>
+				<?php else : ?>
+				<div class="appointments-card__row appointments-card__row--people">
+					<div class="appointments-card__label">Клиент /</div>
+					<div class="appointments-card__value">
+						<div class="appointments-person">• <?php echo viglingAppointmentsPersonLink((int) ($item->user_id ?? 0), trim((string) ($item->client_name ?? '—')) ?: '—'); ?></div>
+					</div>
+				</div>
+				<div class="appointments-card__row appointments-card__row--people">
+					<div class="appointments-card__label">Мастер</div>
+					<div class="appointments-card__value">
+						<div class="appointments-person">• <?php echo viglingAppointmentsPersonLink((int) ($item->master_id ?? 0), trim((string) ($item->master_name ?? '—')) ?: '—'); ?></div>
+					</div>
+				</div>
+				<?php endif; ?>
 				<div class="appointments-card__row">
 					<div class="appointments-card__label">Услуга</div>
 					<div class="appointments-card__value">
@@ -153,13 +168,20 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 						<?php if ($isBlock && $blockComment !== '') : ?>
 							<div class="order-comment"><?php echo htmlspecialchars($blockComment); ?></div>
 						<?php endif; ?>
-						<?php if (!$isBlock) :
-							$role = !empty($item->_viewer_is_master) ? 'master' : 'client';
-							$reviewsByDirection = is_array($item->_reviews ?? null) ? $item->_reviews : [];
-							include __DIR__ . '/_feedback.php';
-						endif; ?>
 					</div>
 				</div>
+				<?php if (!$isBlock && $isPast) : ?>
+				<div class="appointments-card__row appointments-card__row--feedback">
+					<div class="appointments-card__label"></div>
+					<div class="appointments-card__value">
+						<?php
+						$role = !empty($item->_viewer_is_master) ? 'master' : 'client';
+						$reviewsByDirection = is_array($item->_reviews ?? null) ? $item->_reviews : [];
+						include __DIR__ . '/_feedback.php';
+						?>
+					</div>
+				</div>
+				<?php endif; ?>
 				<div class="appointments-card__row">
 					<div class="appointments-card__label">Дата и время</div>
 					<div class="appointments-card__value"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></div>

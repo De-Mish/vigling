@@ -317,12 +317,16 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	.appointments-page .appointments-card__label {
 		font-weight: 600;
 		color: #666;
+		white-space: normal;
 	}
 	.appointments-page .appointments-card__value {
+		display: block;
 		min-width: 0;
 		overflow-wrap: anywhere;
 		word-break: break-word;
 	}
+	.appointments-page .appointments-card__row--people { padding-top: 2px; padding-bottom: 2px; }
+	.appointments-page .appointments-card__row--feedback { padding-top: 8px; }
 	.appointments-page .appointments-card__row--actions {
 		margin-top: 8px;
 		padding-top: 10px;
@@ -341,11 +345,47 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		float: none;
 		width: 100%;
 		max-width: 100%;
-		columns: auto;
-		column-count: auto;
+		columns: 1;
+		column-count: 1;
 	}
 	.appointments-page .appointments-card .order-feedback-form textarea {
 		max-width: 100%;
+	}
+	@media (min-width: 769px) {
+		.appointments-page .appointments-lead { display: none; }
+		.appointments-page .appointments-card__row {
+			display: grid !important;
+			grid-template-columns: 110px minmax(0, 1fr) !important;
+			grid-auto-flow: row !important;
+			float: none !important;
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.appointments-page .appointments-card__label,
+		.appointments-page .appointments-card__value,
+		.appointments-page .appointments-people,
+		.appointments-page .appointments-person {
+			display: block !important;
+			float: none !important;
+			width: auto !important;
+			max-width: 100% !important;
+		}
+		.appointments-page .appointments-people {
+			display: flex !important;
+			flex-direction: column !important;
+			flex-wrap: nowrap !important;
+			gap: 2px !important;
+		}
+		.appointments-page .appointments-person { width: 100% !important; }
+		.appointments-page .appointments-card .order-feedback,
+		.appointments-page .appointments-card .order-feedback-form {
+			display: block !important;
+			float: none !important;
+			width: 100% !important;
+			max-width: 100% !important;
+			columns: 1 !important;
+			column-count: 1 !important;
+		}
 	}
 	.appointments-page .appointments-card__participants { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #ececec; }
 	.appointments-page .appointments-card__participants.is-open { display: block; }
@@ -537,7 +577,6 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			<a class="appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">Текущий месяц</a>
 			<?php elseif ($mode !== 'week') : ?>
 			<h1 class="page-title">Записи</h1>
-			<p class="appointments-lead">Список по времени: сначала недавние, затем будущие. Открывается сразу.</p>
 			<?php endif; ?>
 		</div>
 		<nav class="appointments-modes" aria-label="Режим записей">
