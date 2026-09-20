@@ -1343,11 +1343,9 @@ class OrdersController extends BaseController
 			$this->jsonResponse(['success' => false, 'message' => 'Нужна авторизация']);
 			return;
 		}
+		$viewerId = (int) $user->id;
 		$groups = $user->getAuthorisedGroups();
-		if (!in_array(3, $groups, true) && !in_array(8, $groups, true)) {
-			$this->jsonResponse(['success' => false, 'message' => 'Доступ только для мастеров']);
-			return;
-		}
+		$isMasterGroup = in_array(3, $groups, true) || in_array(8, $groups, true);
 
 		$orderId = (int) $this->input->getInt('id', 0);
 		$courseSlotId = (int) $this->input->getInt('course_slot_id', 0);
@@ -1363,32 +1361,54 @@ class OrdersController extends BaseController
 		}
 
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
-		$masterId = (int) $user->id;
+		$masterId = 0;
 		$excludeOrderId = 0;
 		$excludeCourseSlotId = 0;
 		$excludeSearchSlotId = 0;
 
 		if ($orderId > 0) {
 			$table = new OrderTable($db, Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class));
-			if (!$table->load($orderId) || (int) $table->master_id !== $masterId) {
+			if (!$table->load($orderId)) {
 				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этой записи']);
 				return;
 			}
+			$isBookingMaster = (int) $table->master_id === $viewerId;
+			$isBookingClient = (int) $table->user_id === $viewerId;
+			if (!$isBookingMaster && !$isBookingClient) {
+				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этой записи']);
+				return;
+			}
+			$masterId = (int) $table->master_id;
 			$excludeOrderId = $orderId;
 		} elseif ($courseSlotId > 0) {
+			if (!$isMasterGroup) {
+				$this->jsonResponse(['success' => false, 'message' => 'Доступ только для мастеров']);
+				return;
+			}
 			$courseContext = self::loadCourseSlotContext($db, $courseSlotId);
-			if ($courseContext === null || (int) $courseContext['master_id'] !== $masterId) {
+			if ($courseContext === null || (int) $courseContext['master_id'] !== $viewerId) {
 				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этого курса']);
 				return;
 			}
+			$masterId = (int) $courseContext['master_id'];
 			$excludeCourseSlotId = $courseSlotId;
 		} elseif ($searchSlotId > 0) {
+			if (!$isMasterGroup) {
+				$this->jsonResponse(['success' => false, 'message' => 'Доступ только для мастеров']);
+				return;
+			}
 			$searchContext = self::loadSearchSlotContext($db, $searchSlotId);
-			if ($searchContext === null || (int) $searchContext['master_id'] !== $masterId) {
+			if ($searchContext === null || (int) $searchContext['master_id'] !== $viewerId) {
 				$this->jsonResponse(['success' => false, 'message' => 'Нет прав на перенос этого поиска']);
 				return;
 			}
+			$masterId = (int) $searchContext['master_id'];
 			$excludeSearchSlotId = $searchSlotId;
+		}
+
+		if ($masterId <= 0) {
+			$this->jsonResponse(['success' => false, 'message' => 'Не удалось загрузить свободное время']);
+			return;
 		}
 
 		$helper = JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';

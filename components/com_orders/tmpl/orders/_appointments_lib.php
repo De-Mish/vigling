@@ -172,12 +172,10 @@ if (!function_exists('viglingAppointmentsRenderClientActions')) {
 		$isFixedCourse = trim((string) ($item->booking_kind ?? 'service')) === 'course' && (int) ($item->course_slot_id ?? 0) > 0;
 		$isFixedSearch = trim((string) ($item->booking_kind ?? 'service')) === 'search' && (int) ($item->search_slot_id ?? 0) > 0;
 		$isPromotion = trim((string) ($item->booking_kind ?? 'service')) === 'stock' || (int) ($item->stock_service_id ?? 0) > 0;
-		$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, (int) $item->id, 0, 45);
-		$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		ob_start();
 		?>
 		<?php if (!$isFixedCourse && !$isFixedSearch) : ?>
-		<button type="button" class="btn btn-xs btn-warning reschedule-open"<?php echo $isPast ? ' disabled' : ''; ?> data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleAction, ENT_QUOTES, 'UTF-8'); ?>" data-slots-embedded="1">Перенести</button>
+		<button type="button" class="btn btn-xs btn-warning reschedule-open"<?php echo $isPast ? ' disabled' : ''; ?> data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleAction, ENT_QUOTES, 'UTF-8'); ?>">Перенести</button>
 		<?php endif; ?>
 		<?php if ($isPast) : ?>
 		<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.delete'); ?>" class="form-inline form-delete" style="display:inline;">
@@ -187,7 +185,7 @@ if (!function_exists('viglingAppointmentsRenderClientActions')) {
 			<button type="submit" class="btn btn-xs btn-default" onclick="return confirm('Удалить запись из списка?');">Удалить</button>
 		</form>
 		<?php if (!$isFixedCourse && !$isFixedSearch && !$isPromotion && $withRepeat) : ?>
-		<button type="button" class="z-link review-zlink repeat-open" style="min-height: 18px;" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>" data-slots-embedded="1">Повторить<span></span></button>
+		<button type="button" class="z-link review-zlink repeat-open" style="min-height: 18px;" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>">Повторить<span></span></button>
 		<?php endif; ?>
 		<?php else : ?>
 		<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancel'); ?>" class="form-inline form-cancel" style="display:inline;">
@@ -197,7 +195,6 @@ if (!function_exists('viglingAppointmentsRenderClientActions')) {
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('<?php echo ($isFixedCourse || $isFixedSearch) ? 'Отменить участие?' : 'Отменить запись?'; ?>');"><?php echo ($isFixedCourse || $isFixedSearch) ? 'Отменить участие' : 'Отменить'; ?></button>
 		</form>
 		<?php endif; ?>
-		<script type="application/json" id="reschedule-slots-<?php echo (int) $item->id; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -209,8 +206,6 @@ if (!function_exists('viglingAppointmentsRenderMasterActions')) {
 		$durationMin = viglingAppointmentsDurationMin($item);
 		$isFixedCourse = trim((string) ($item->booking_kind ?? 'service')) === 'course' && (int) ($item->course_slot_id ?? 0) > 0;
 		$isFixedSearch = trim((string) ($item->booking_kind ?? 'service')) === 'search' && (int) ($item->search_slot_id ?? 0) > 0;
-		$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, (int) $item->id, 0, 45);
-		$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		ob_start();
 		?>
 		<?php if ($isPast) : ?>
@@ -230,7 +225,7 @@ if (!function_exists('viglingAppointmentsRenderMasterActions')) {
 				</form>
 			<?php endif; ?>
 		<?php else : ?>
-			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>" data-slots-embedded="1">Перенести</button>
+			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-id="<?php echo (int) $item->id; ?>" data-duration="<?php echo (int) $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>">Перенести</button>
 			<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancelByMaster'); ?>" class="form-inline" style="display:inline;">
 				<input type="hidden" name="<?php echo $token; ?>" value="1">
 				<input type="hidden" name="id" value="<?php echo (int) $item->id; ?>">
@@ -238,7 +233,6 @@ if (!function_exists('viglingAppointmentsRenderMasterActions')) {
 				<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('<?php echo ($isFixedCourse || $isFixedSearch) ? 'Отменить участие этого клиента? Ему придёт уведомление.' : 'Отменить запись? Клиенту придёт уведомление.'; ?>');">Отменить</button>
 			</form>
 		<?php endif; ?>
-		<script type="application/json" id="reschedule-slots-<?php echo (int) $item->id; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -254,8 +248,6 @@ if (!function_exists('viglingAppointmentsRenderCourseSlotActions')) {
 		if ($durationMin <= 0) {
 			$durationMin = 60;
 		}
-		$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, $courseSlotId, 45);
-		$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		$timeIso = '';
 		if (!empty($item->time)) {
 			try {
@@ -267,7 +259,7 @@ if (!function_exists('viglingAppointmentsRenderCourseSlotActions')) {
 		ob_start();
 		?>
 		<?php if (!$isPast) : ?>
-			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-course-slot-id="<?php echo $courseSlotId; ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleCourseAction, ENT_QUOTES, 'UTF-8'); ?>" data-duration="<?php echo $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>" data-slots-embedded="1">Перенести курс</button>
+			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-course-slot-id="<?php echo $courseSlotId; ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleCourseAction, ENT_QUOTES, 'UTF-8'); ?>" data-duration="<?php echo $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>">Перенести курс</button>
 			<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancelCourseSlotByMaster'); ?>" class="form-inline" style="display:inline;">
 				<input type="hidden" name="<?php echo $token; ?>" value="1">
 				<input type="hidden" name="course_slot_id" value="<?php echo $courseSlotId; ?>">
@@ -275,7 +267,6 @@ if (!function_exists('viglingAppointmentsRenderCourseSlotActions')) {
 				<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить курс для всех участников? Всем придёт уведомление.');">Отменить курс</button>
 			</form>
 		<?php endif; ?>
-		<script type="application/json" id="reschedule-course-slot-<?php echo $courseSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -291,8 +282,6 @@ if (!function_exists('viglingAppointmentsRenderSearchSlotActions')) {
 		if ($durationMin <= 0) {
 			$durationMin = 60;
 		}
-		$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, 0, 45, $searchSlotId);
-		$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		$timeIso = '';
 		if (!empty($item->time)) {
 			try {
@@ -304,7 +293,7 @@ if (!function_exists('viglingAppointmentsRenderSearchSlotActions')) {
 		ob_start();
 		?>
 		<?php if (!$isPast) : ?>
-			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-search-slot-id="<?php echo $searchSlotId; ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleSearchAction, ENT_QUOTES, 'UTF-8'); ?>" data-duration="<?php echo $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>" data-slots-embedded="1">Перенести поиск</button>
+			<button type="button" class="btn btn-xs btn-warning reschedule-open" data-search-slot-id="<?php echo $searchSlotId; ?>" data-reschedule-action="<?php echo htmlspecialchars($rescheduleSearchAction, ENT_QUOTES, 'UTF-8'); ?>" data-duration="<?php echo $durationMin; ?>" data-current-utc="<?php echo htmlspecialchars($timeIso, ENT_QUOTES, 'UTF-8'); ?>">Перенести поиск</button>
 			<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancelSearchSlotByMaster'); ?>" class="form-inline" style="display:inline;">
 				<input type="hidden" name="<?php echo $token; ?>" value="1">
 				<input type="hidden" name="search_slot_id" value="<?php echo $searchSlotId; ?>">
@@ -312,7 +301,6 @@ if (!function_exists('viglingAppointmentsRenderSearchSlotActions')) {
 				<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить поиск для всех участников? Всем придёт уведомление.');">Отменить поиск</button>
 			</form>
 		<?php endif; ?>
-		<script type="application/json" id="reschedule-search-slot-<?php echo $searchSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 		<?php
 		return (string) ob_get_clean();
 	}

@@ -1,10 +1,14 @@
 <?php
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Router\Route;
+
 /** @var string $token */
 /** @var string $returnEncoded */
 /** @var string $rescheduleAction */
 /** @var string $repeatAction */
+
+$rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSlots');
 ?>
 <div class="modal fade" id="zapis-reschedule" role="dialog" aria-hidden="true">
 	<div class="modal-dialog" role="document">
@@ -53,6 +57,9 @@
 	var defaultAction = form.getAttribute('action') || '';
 	var repeatAction = form.getAttribute('data-repeat-action') || '';
 	var modalMode = 'reschedule';
+	var slotsUrl = <?php echo json_encode($rescheduleSlotsAction); ?>;
+	var slotsToken = <?php echo json_encode($token); ?>;
+	var slotsRequestId = 0;
 
 	function destroySlider(){
 		if (!window.jQuery) return;
@@ -165,6 +172,35 @@
 		}
 		if (submitBtn) submitBtn.disabled = !cal.querySelector('input[name="reschedule_slot"]');
 	}
+	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
+		var requestId = ++slotsRequestId;
+		hideError();
+		cal.classList.add('preload');
+		cal.innerHTML = '';
+		if (submitBtn) submitBtn.disabled = true;
+		var fd = new FormData();
+		fd.append(slotsToken, '1');
+		fd.append('id', String(orderId || 0));
+		fd.append('course_slot_id', String(courseSlotId || 0));
+		fd.append('search_slot_id', String(searchSlotId || 0));
+		fd.append('duration', String(duration || 60));
+		fetch(slotsUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(response){ return response.json(); })
+			.then(function(data){
+				if (requestId !== slotsRequestId) return;
+				var days = (data && data.success && Array.isArray(data.days)) ? data.days : [];
+				renderCalendar(days, currentUtc);
+				initSlider();
+				if ((!data || !data.success) && errorEl) {
+					showError((data && data.message) ? data.message : 'Не удалось загрузить свободное время');
+				}
+			})
+			.catch(function(){
+				if (requestId !== slotsRequestId) return;
+				renderCalendar([], currentUtc);
+				showError('Не удалось загрузить свободное время');
+			});
+	}
 	function openSlotModal(btn, nextMode){
 		hideError();
 		var orderId = parseInt(btn.getAttribute('data-id') || '0', 10);
@@ -191,11 +227,18 @@
 		durationInp.value = String(isNaN(duration) ? 60 : duration);
 		timeUtcInp.value = '';
 		cal.classList.add('preload');
-		var days = searchSlotId > 0
+		cal.innerHTML = '';
+		var highlightUtc = modalMode === 'repeat' ? '' : currentUtc;
+		var embeddedDays = searchSlotId > 0
 			? readJson('reschedule-search-slot-' + searchSlotId)
 			: (courseSlotId > 0 ? readJson('reschedule-course-slot-' + courseSlotId) : readJson('reschedule-slots-' + orderId));
-		renderCalendar(days, modalMode === 'repeat' ? '' : currentUtc);
 		jQuery(modal).modal('show');
+		if (btn.getAttribute('data-slots-embedded') === '1' && embeddedDays.length) {
+			renderCalendar(embeddedDays, highlightUtc);
+			initSlider();
+			return;
+		}
+		loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, highlightUtc);
 	}
 	document.querySelectorAll('.reschedule-open').forEach(function(btn){
 		btn.addEventListener('click', function(){ openSlotModal(this, 'reschedule'); });
@@ -215,6 +258,7 @@
 	});
 	jQuery(modal).on('shown.bs.modal', initSlider);
 	jQuery(modal).on('hidden.bs.modal', function () {
+		slotsRequestId++;
 		hideError();
 		timeUtcInp.value = '';
 		idInp.value = '0';
