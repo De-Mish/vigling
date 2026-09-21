@@ -55,16 +55,9 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	.appointments-page .appointments-jump-btn {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		min-height: 36px;
-		padding: 8px 16px;
-		border: 0;
-		border-radius: 8px;
-		background: #e8e8e8;
-		color: #333;
-		font-weight: 600;
+		gap: 6px;
+		margin: 0;
 		text-decoration: none;
-		cursor: pointer;
 	}
 	.appointments-page .appointments-modes {
 		display: inline-flex;
@@ -604,7 +597,9 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	<div class="appointments-toolbar">
 		<div>
 			<?php if ($mode === 'month') : ?>
-			<a class="appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">Текущий месяц</a>
+			<a class="btn btn-xs btn-default appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">
+				<i class="jsn-icon jsn-icon-calendar"></i> Текущий месяц
+			</a>
 			<?php elseif ($mode !== 'week') : ?>
 			<h1 class="page-title">Записи</h1>
 			<?php endif; ?>

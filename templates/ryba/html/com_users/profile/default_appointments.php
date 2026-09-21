@@ -7,7 +7,8 @@ if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class
 	require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
 }
 
-$openZapisi = in_array(Factory::getApplication()->getInput()->getCmd('zapisi', ''), ['day', 'week', 'month'], true);
+$openAktsiiArchive = Factory::getApplication()->getInput()->getCmd('aktsii', '') === 'archive';
+$openZapisi = !$openAktsiiArchive;
 $appointments = new \stdClass();
 try {
 	\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::fill($appointments);

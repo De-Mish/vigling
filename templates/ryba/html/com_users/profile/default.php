@@ -19,6 +19,8 @@ if (!$isOwn && $profileOwnerId > 0) {
 }
 $openZapisi = false;
 $openAktsiiArchive = false;
+$lkTabWidth = '25%';
+$lkDefaultTab = 'profile-tab11';
 $aktsiiListUrl = '';
 $aktsiiArchiveUrl = '';
 $repeatStockBase = '';
@@ -559,6 +561,9 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					}
 					$openZapisi = in_array(Factory::getApplication()->getInput()->getCmd('zapisi', ''), ['day', 'week', 'month'], true);
 					$openAktsiiArchive = Factory::getApplication()->getInput()->getCmd('aktsii', '') === 'archive';
+					$lkVisibleTabCount = $profileIsClient ? 4 : 8;
+					$lkTabWidth = rtrim(rtrim(number_format(100 / $lkVisibleTabCount, 4, '.', ''), '0'), '.') . '%';
+					$lkDefaultTab = $openAktsiiArchive ? 'profile-tab4' : 'profile-tab11';
 					$zapisiUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 					$aktsiiListUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl();
 					$aktsiiArchiveUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['aktsii' => 'archive']);
@@ -571,7 +576,10 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							<span class="lk-notify-badge" id="lk-notify-badge" style="display:none;">0</span>
 						</button>
 						<div class="lk-notify-dropdown" id="lk-notify-dropdown" style="display:none; position:absolute; top:100%; right:0; margin-top:4px; min-width:320px; max-width:400px; max-height:70vh; overflow:auto; background:#fff; border:1px solid #ddd; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:1000;">
-							<div class="lk-notify-header" style="padding:8px 12px; border-bottom:1px solid #eee; font-weight:bold;">Уведомления</div>
+							<div class="lk-notify-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; border-bottom:1px solid #eee; font-weight:bold;">
+								<span>Уведомления</span>
+								<button type="button" class="btn btn-xs btn-default" id="lk-notify-read-all" style="display:none; font-weight:normal;">Прочитать все</button>
+							</div>
 							<div class="lk-notify-list" id="lk-notify-list"></div>
 							<div class="lk-notify-empty" id="lk-notify-empty" style="display:none; padding:16px; color:#888;">Нет уведомлений</div>
 							<div class="lk-notify-loading" id="lk-notify-loading" style="display:none; padding:16px; text-align:center;">Загрузка…</div>
@@ -644,86 +652,24 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 				<i class="z-dropdown-arrow"></i>
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
 					<?php if ($profileIsClient) : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo $openZapisi ? '' : ' z-active'; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="11" data-link="profile-tab11" class="z-tab<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: 16.67%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab z-first<?php echo $lkDefaultTab === 'profile-tab11' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
 					<?php else : ?>
-					<li data-index="0" data-link="profile-tab0" class="z-tab z-first<?php echo ($openZapisi || $openAktsiiArchive) ? '' : ' z-active'; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Профиль<span></span></a></li>
-					<li data-index="11" data-link="profile-tab11" class="z-tab<?php echo $openZapisi ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
-					<li data-index="1" data-link="profile-tab1" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Портфолио<span></span></a></li>
-					<li data-index="2" data-link="profile-tab2" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Специальность<span></span></a></li>
-					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
-					<li data-index="4" data-link="profile-tab4" class="z-tab<?php echo $openAktsiiArchive ? ' z-active' : ''; ?>" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="8" data-link="profile-tab8" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Email и пароль<span></span></a></li>
-					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: 8.33%;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
+					<li data-index="11" data-link="profile-tab11" class="z-tab z-first<?php echo $lkDefaultTab === 'profile-tab11' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
+					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
+					<li data-index="4" data-link="profile-tab4" class="z-tab<?php echo $lkDefaultTab === 'profile-tab4' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
+					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
+					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
+					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
 					<?php endif; ?>
 				</ul>
 				<div class="z-container">
-					<div class="z-content<?php echo ($openZapisi || $openAktsiiArchive) ? '' : ' z-active'; ?>" data-index="0" data-name="profile-tab0"<?php echo ($openZapisi || $openAktsiiArchive) ? ' style="display: none;"' : ''; ?>>
-						<div class="z-content-inner">
-							<fieldset id="jsn_default" class="jsn-form-fieldset" data-index="0" data-name="profile-tab0">
-								<legend style="display: none;">Профиль</legend>
-								<?php echo $this->loadTemplate('profile_main'); ?>
-								<?php echo $this->loadTemplate('core'); ?>
-								<?php echo $this->loadTemplate('params'); ?>
-								<?php echo $this->loadTemplate('custom'); ?>
-								<?php if ($profileIsClient) : ?>
-									<?php include __DIR__ . '/default_reviews.php'; ?>
-								<?php endif; ?>
-								<!-- Редактирование услуг/акций доступно только через "Настройки профиля". -->
-							</fieldset>
-						</div>
-					</div>
 					<?php echo $this->loadTemplate('appointments'); ?>
 					<?php if (!$profileIsClient) : ?>
-					<div class="z-content" data-index="1" data-name="profile-tab1" style="display: none;">
-						<div class="z-content-inner">
-							<fieldset id="jsn_portfolio" class="jsn-form-fieldset" data-index="1" data-name="profile-tab1">
-								<legend style="display: none;">Портфолио</legend>
-								<div class="portfolio_fieldValue">
-									<?php if (!empty($portfolioImages)) : ?>
-									<div class="lk-portfolio-grid">
-										<?php foreach ($portfolioImages as $img) : ?>
-										<a class="lk-portfolio-item" href="<?php echo $this->escape($img['full']); ?>" data-fancybox="lk-portfolio">
-											<img src="<?php echo $this->escape($img['thumb']); ?>" alt="Портфолио" loading="lazy" decoding="async">
-										</a>
-										<?php endforeach; ?>
-									</div>
-									<?php else : ?>
-									<fieldset class="readonly">Портфолио не заполнено</fieldset>
-									<?php endif; ?>
-								</div>
-							</fieldset>
-						</div>
-					</div>
-					<div class="z-content" data-index="2" data-name="profile-tab2" style="display: none;">
-						<div class="z-content-inner">
-							<fieldset id="jsn_spetsialnost" class="jsn-form-fieldset" data-index="2" data-name="profile-tab2">
-								<legend style="display: none;">Специальность</legend>
-								<div class="vyberite_spetsialnosValue">
-									<?php if (!empty($specialityList)) : ?>
-									<fieldset id="jform_vyberite_spetsialnos" class="checkboxes readonly">
-										<?php foreach ($specialityList as $specialityName) : ?>
-										<label class="checkbox active">
-											<input type="checkbox" checked disabled>
-											<?php echo $this->escape($specialityName); ?>
-										</label>
-										<?php endforeach; ?>
-									</fieldset>
-									<?php else : ?>
-									<fieldset class="readonly">Специальности не выбраны</fieldset>
-									<?php endif; ?>
-								</div>
-							</fieldset>
-						</div>
-					</div>
 					<div class="z-content" data-index="3" data-name="profile-tab3" style="display: none;">
 						<div class="z-content-inner">
 							<fieldset id="jsn_addinfo" class="jsn-form-fieldset" data-index="3" data-name="profile-tab3">
@@ -967,6 +913,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							</div>
 						</div>
 						<?php endif; ?>
+					<?php if (!$profileIsClient) : ?>
 						<div class="z-content" data-index="7" data-name="profile-tab7" style="display: none;">
 							<div class="z-content-inner">
 							<fieldset id="jsn_notify" class="jsn-form-fieldset" data-index="7" data-name="profile-tab7">
@@ -992,37 +939,38 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							</fieldset>
 						</div>
 					</div>
+					<?php endif; ?>
 					<?php if ($profileIsClient) : ?>
+					<div class="z-content" data-index="5" data-name="profile-tab5" style="display: none;">
+						<div class="z-content-inner">
+							<fieldset id="jsn_notify" class="jsn-form-fieldset" data-index="5" data-name="profile-tab5">
+								<legend style="display: none;">Уведомления</legend>
+								<dl class="dl-horizontal">
+									<dt class="no-title">Push-уведомления</dt>
+									<dd>
+										<?php if ($isOwn) : ?>
+										<div class="push-notify-block">
+											<div class="push-notify-row push-notify-row-status">
+												<label class="push-notify-switch" title="Включить/выключить уведомления">
+													<input type="checkbox" id="pushnotify-toggle-input">
+													<span class="push-notify-slider"></span>
+												</label>
+												<span id="pushnotify-status">—</span>
+											</div>
+										</div>
+										<?php else : ?>
+										<span>—</span>
+										<?php endif; ?>
+									</dd>
+								</dl>
+							</fieldset>
+						</div>
+					</div>
 						<?php echo $this->loadTemplate('favorites'); ?>
 					<?php endif; ?>
-					<?php if (!$profileIsClient) : ?>
-					<div class="z-content" data-index="8" data-name="profile-tab8" style="display: none;">
+					<div class="z-content" data-index="<?php echo !$profileIsClient ? '9' : '7'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '7'; ?>" style="display: none;">
 						<div class="z-content-inner">
-								<fieldset id="jsn_login" class="jsn-form-fieldset" data-index="8" data-name="profile-tab8">
-									<legend style="display: none;">Email и пароль</legend>
-									<dl class="dl-horizontal">
-										<dt class="usernameLabel">Email</dt>
-										<dd class="usernameValue"><?php echo $this->escape(isset($this->data->email) ? $this->data->email : ''); ?></dd>
-									</dl>
-								</fieldset>
-						</div>
-					</div>
-					<?php else : ?>
-					<div class="z-content" data-index="7" data-name="profile-tab7" style="display: none;">
-						<div class="z-content-inner">
-								<fieldset id="jsn_login" class="jsn-form-fieldset" data-index="7" data-name="profile-tab7">
-									<legend style="display: none;">Email и пароль</legend>
-									<dl class="dl-horizontal">
-										<dt class="usernameLabel">Email</dt>
-										<dd class="usernameValue"><?php echo $this->escape(isset($this->data->email) ? $this->data->email : ''); ?></dd>
-									</dl>
-								</fieldset>
-						</div>
-					</div>
-					<?php endif; ?>
-					<div class="z-content" data-index="<?php echo !$profileIsClient ? '9' : '8'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '8'; ?>" style="display: none;">
-						<div class="z-content-inner">
-							<fieldset id="jsn_activate" class="jsn-form-fieldset" data-index="<?php echo !$profileIsClient ? '9' : '8'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '8'; ?>">
+							<fieldset id="jsn_activate" class="jsn-form-fieldset" data-index="<?php echo !$profileIsClient ? '9' : '7'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '7'; ?>">
 								<legend style="display: none;">Активировать аккаунт</legend>
 								<dl class="dl-horizontal">
 									<dt>Статус</dt>
@@ -1215,46 +1163,56 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 </style>
 <script>
 (function(){
-	var tabs = document.querySelectorAll('#jsn-profile-tabs .z-tab');
-	var contents = document.querySelectorAll('#jsn-form .z-container .z-content');
-	if (!tabs.length || !contents.length) return;
+	var tabs = document.querySelectorAll('#jsn-profile-tabs > li.z-tab');
+	if (!tabs.length) return;
+	function panelFor(tab) {
+		if (!tab) return null;
+		var name = tab.getAttribute('data-link');
+		if (!name) return null;
+		return document.querySelector('#jsn-form .z-container > .z-content[data-name="' + name + '"]');
+	}
 	var zapisiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab11"]');
 	var aktsiiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab4"]');
-	var activeIndex = 0;
+	var activeTab = tabs[0];
 	try {
 		var params = new URLSearchParams(window.location.search);
 		if (zapisiTab && params.has('zapisi')) {
-			var zapisiIndex = Array.prototype.indexOf.call(tabs, zapisiTab);
-			if (zapisiIndex >= 0) activeIndex = zapisiIndex;
+			activeTab = zapisiTab;
 		} else if (aktsiiTab && params.get('aktsii') === 'archive') {
-			var aktsiiIndex = Array.prototype.indexOf.call(tabs, aktsiiTab);
-			if (aktsiiIndex >= 0) activeIndex = aktsiiIndex;
+			activeTab = aktsiiTab;
 		}
 	} catch (e) {}
-	function showTab(index) {
-		if (index === activeIndex) return;
-		var prev = contents[activeIndex];
-		var next = contents[index];
-		if (!prev || !next) return;
-		tabs.forEach(function(t, i){ t.classList.toggle('z-active', i === index); });
-		contents.forEach(function(c, i){
-			c.classList.toggle('z-active', i === index);
+	function showTab(tab) {
+		if (!tab || tab === activeTab) return;
+		var prev = panelFor(activeTab);
+		var next = panelFor(tab);
+		if (!next) return;
+		tabs.forEach(function(t){ t.classList.toggle('z-active', t === tab); });
+		document.querySelectorAll('#jsn-form .z-container > .z-content').forEach(function(c){
+			c.classList.toggle('z-active', c === next);
 		});
 		next.style.display = 'block';
 		next.style.opacity = '0';
 		next.offsetHeight;
-		prev.classList.add('z-tab-animating');
-		prev.style.opacity = '0';
+		if (prev) {
+			prev.classList.add('z-tab-animating');
+			prev.style.opacity = '0';
+		}
 		next.style.opacity = '1';
 		function onPrevEnd() {
+			if (!prev) return;
 			prev.removeEventListener('transitionend', onPrevEnd);
 			prev.style.display = 'none';
 			prev.classList.remove('z-tab-animating');
 			prev.style.opacity = '';
 		}
-		prev.addEventListener('transitionend', onPrevEnd);
-		activeIndex = index;
-		if (zapisiTab && tabs[index] === zapisiTab) {
+		if (prev) prev.addEventListener('transitionend', onPrevEnd);
+		else onPrevEnd();
+		activeTab = tab;
+		try {
+			window.dispatchEvent(new CustomEvent('vigling:tab-shown', { detail: { name: tab.getAttribute('data-link') } }));
+		} catch (err) {}
+		if (zapisiTab && tab === zapisiTab) {
 			maybeZapisiNotify();
 		}
 	}
@@ -1263,24 +1221,30 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 		if (!window.ViglingPushPrompt || typeof window.ViglingPushPrompt.show !== 'function') return;
 		window.ViglingPushPrompt.show({ reason: 'clients_first_visit' });
 	}
-	contents.forEach(function(c, i){
-		c.style.display = i === activeIndex ? 'block' : 'none';
-		if (i === activeIndex) c.style.opacity = '1';
+	document.querySelectorAll('#jsn-form .z-container > .z-content').forEach(function(c){
+		var on = activeTab && c.getAttribute('data-name') === activeTab.getAttribute('data-link');
+		c.style.display = on ? 'block' : 'none';
+		c.classList.toggle('z-active', !!on);
+		if (on) c.style.opacity = '1';
 	});
-	tabs.forEach(function(tab, index){
-		tab.classList.toggle('z-active', index === activeIndex);
+	tabs.forEach(function(tab){
+		tab.classList.toggle('z-active', tab === activeTab);
 		var a = tab.querySelector('a');
-		if (a) a.addEventListener('click', function(e){ e.preventDefault(); showTab(index); });
+		if (a) a.addEventListener('click', function(e){ e.preventDefault(); showTab(tab); });
 	});
+	if (activeTab) {
+		try {
+			window.dispatchEvent(new CustomEvent('vigling:tab-shown', { detail: { name: activeTab.getAttribute('data-link') } }));
+		} catch (err) {}
+	}
 	document.querySelectorAll('[data-open-tab="profile-tab11"]').forEach(function(el){
 		el.addEventListener('click', function(e){
 			if (!zapisiTab) return;
-			var idx = Array.prototype.indexOf.call(tabs, zapisiTab);
-			if (idx < 0) return;
 			e.preventDefault();
-			showTab(idx);
-			if (contents[idx] && contents[idx].scrollIntoView) {
-				contents[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+			showTab(zapisiTab);
+			var panel = panelFor(zapisiTab);
+			if (panel && panel.scrollIntoView) {
+				panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}
 		});
 	});
@@ -1772,11 +1736,26 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 	var emptyEl = document.getElementById('lk-notify-empty');
 	var loadingEl = document.getElementById('lk-notify-loading');
 	var badgeEl = document.getElementById('lk-notify-badge');
+	var readAllBtn = document.getElementById('lk-notify-read-all');
 	if (!toggle || !dropdown || !listEl) return;
 	var baseUrl = window.PUSHNOTIFY_BASE || '';
 	var tokenName = window.PUSHNOTIFY_TOKEN_NAME || '';
 	var tokenValue = window.PUSHNOTIFY_TOKEN_VALUE || '';
 	function getSep(u) { return (u && u.indexOf('?') === -1) ? '?' : '&'; }
+	function setUnreadUi(count) {
+		var n = parseInt(count, 10) || 0;
+		if (badgeEl) {
+			if (n > 0) {
+				badgeEl.textContent = n > 99 ? '99+' : String(n);
+				badgeEl.style.display = 'inline-block';
+			} else {
+				badgeEl.style.display = 'none';
+			}
+		}
+		if (readAllBtn) {
+			readAllBtn.style.display = n > 0 ? 'inline-block' : 'none';
+		}
+	}
 	function loadInbox(cb) {
 		if (!baseUrl) { if (cb) cb(); return; }
 		loadingEl.style.display = 'block';
@@ -1786,13 +1765,8 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 			.then(function(r){ return r.json(); })
 			.then(function(data){
 				loadingEl.style.display = 'none';
-				if (data && data.success && Array.isArray(data.items)) {
-					if (data.unread_count > 0 && badgeEl) {
-						badgeEl.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-						badgeEl.style.display = 'inline-block';
-					} else if (badgeEl) {
-						badgeEl.style.display = 'none';
-					}
+					if (data && data.success && Array.isArray(data.items)) {
+					setUnreadUi(data.unread_count);
 					if (data.items.length === 0) {
 						emptyEl.style.display = 'block';
 					} else {
@@ -1869,8 +1843,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 						if (br && br.textContent === 'Прочитано') br.remove();
 					}
 					var n = badgeEl ? parseInt(badgeEl.textContent, 10) : 0;
-					if (n > 1 && badgeEl) badgeEl.textContent = n - 1;
-					else if (badgeEl) badgeEl.style.display = 'none';
+					setUnreadUi(n > 1 ? n - 1 : 0);
 				}
 			});
 	}
@@ -1887,11 +1860,36 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 					if (items.length === 0) {
 						emptyEl.style.display = 'block';
 						var n = badgeEl ? parseInt(badgeEl.textContent, 10) : 0;
-						if (n > 1 && badgeEl) badgeEl.textContent = n - 1;
-						else if (badgeEl) badgeEl.style.display = 'none';
+						setUnreadUi(n > 1 ? n - 1 : 0);
 					}
 				}
 			});
+	}
+	function markAllRead() {
+		var fd = new FormData();
+		fd.append(tokenName, tokenValue);
+		fetch(baseUrl + getSep(baseUrl) + 'task=display.markAllRead&format=json', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(r){ return r.json(); })
+			.then(function(data){
+				if (!data || !data.success) return;
+				listEl.querySelectorAll('.lk-notify-item').forEach(function(rowEl){
+					rowEl.classList.add('lk-notify-item-read');
+					rowEl.style.backgroundColor = '#f5f5f5';
+					var acts = rowEl.querySelector('div:last-child');
+					if (acts) {
+						var br = acts.querySelector('button');
+						if (br && br.textContent === 'Прочитано') br.remove();
+					}
+				});
+				setUnreadUi(0);
+			});
+	}
+	if (readAllBtn) {
+		readAllBtn.addEventListener('click', function(e){
+			e.preventDefault();
+			e.stopPropagation();
+			markAllRead();
+		});
 	}
 	toggle.addEventListener('click', function(e){
 		e.stopPropagation();

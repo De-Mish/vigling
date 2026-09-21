@@ -91,6 +91,25 @@ if ($isAdministrator) {
 } else {
 	$roleLabel = 'Клиент';
 }
+$profileReviews = [];
+try {
+	if ($userId > 0) {
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\ReviewHelper::class)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+		}
+		$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
+		$reviewDirection = $isMaster
+			? \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
+			: \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT;
+		$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
+			$reviewDb,
+			$userId,
+			$reviewDirection
+		);
+	}
+} catch (\Throwable $e) {
+	$profileReviews = [];
+}
 if ($profileImage !== '' && strpos($profileImage, 'http') !== 0) {
 	$clean = preg_replace('#^/?(images/profiler/?)?#i', '', str_replace('\\', '/', $profileImage));
 	$profileImage = rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/images/profiler/' . $clean;
@@ -123,7 +142,7 @@ $tabTitles = [
 	'courses' => 'Курсы',
 	'searches' => 'Поиск моделей',
 	'schedule' => 'Расписание',
-	'login' => 'Пароль',
+	'login' => 'Email и пароль',
 ];
 
 $tabFields = [
@@ -1013,6 +1032,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 											<input type="hidden" name="jform[email1]" value="<?php echo $this->escape($emailValue); ?>">
 										</div>
 									</div>
+									<?php include __DIR__ . '/default_reviews.php'; ?>
 								<?php elseif ($isMaster && $tabKey === 'profile') : ?>
 									<div class="control-group avatar-group lk-avatar-edit-group">
 										<div class="control-label"><label for="jform_upload_avatar">Фото профиля</label></div>
@@ -1121,6 +1141,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 										<div class="control-label"><label for="jform_o_sebe">О себе</label></div>
 										<div class="controls"><textarea name="jform[profile][aboutme]" id="jform_o_sebe" class="input_placeholder" placeholder="О себе"><?php echo $this->escape($aboutMeValue); ?></textarea></div>
 									</div>
+									<?php include __DIR__ . '/default_reviews.php'; ?>
 								<?php elseif ($isMaster && $tabKey === 'portfolio') : ?>
 									<div class="control-group portfolio_field-group">
 										<div class="control-label"><label for="jform_upload_portfolio_field">Портфолио</label></div>

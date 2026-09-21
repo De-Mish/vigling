@@ -321,6 +321,30 @@ class DisplayController extends BaseController
 		$this->jsonResponse(['success' => true]);
 	}
 
+	public function markAllRead()
+	{
+		$userId = $this->requireUser();
+		if ($userId === null) return;
+
+		if (!Session::checkToken('post')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверный токен']);
+			return;
+		}
+
+		$db = $this->getDb();
+		$now = (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
+		$db->setQuery(
+			$db->getQuery(true)
+				->update($db->quoteName('#__pushnotify_inbox'))
+				->set($db->quoteName('read_at') . ' = ' . $db->quote($now))
+				->where($db->quoteName('user_id') . ' = ' . (int) $userId)
+				->where($db->quoteName('deleted_at') . ' IS NULL')
+				->where($db->quoteName('read_at') . ' IS NULL')
+		)->execute();
+
+		$this->jsonResponse(['success' => true]);
+	}
+
 	public function deleteNotification()
 	{
 		$userId = $this->requireUser();
