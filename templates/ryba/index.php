@@ -1091,42 +1091,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
-			position: relative;
-		}
-		#pwa-install-btn:before,
-		.app-install-guide__install-btn:before {
-			content: '';
-			position: absolute;
-			right: 16px;
-			top: 50%;
-			margin-top: -12px;
-			width: 24px;
-			height: 24px;
-			border: 2px solid;
-			border-left-color: transparent;
-			border-right-color: transparent;
-			border-radius: 50%;
-			opacity: 0;
-			transition: opacity 0.5s;
-			animation: 0.8s linear infinite pwa-install-btn-rotate;
-			pointer-events: none;
-			box-sizing: border-box;
-		}
-		#pwa-install-btn.sending,
-		.app-install-guide__install-btn.sending {
-			pointer-events: none;
-			cursor: not-allowed;
-			padding-right: 48px;
-		}
-		#pwa-install-btn.sending:before,
-		.app-install-guide__install-btn.sending:before {
-			transition-delay: 0.5s;
-			transition-duration: 1s;
-			opacity: 1;
-		}
-		@keyframes pwa-install-btn-rotate {
-			0% { transform: rotate(0deg); }
-			100% { transform: rotate(360deg); }
 		}
 		.pwa-install-actions .pwa-install-back {
 			display: inline-flex;
@@ -1251,22 +1215,18 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					}
 					return 'Если окно установки не появилось: меню Chrome (⋮) → «Установить приложение» или «Добавить на главный экран». Если ярлык уже есть, удалите его и установите снова. Chrome предлагает установку после нескольких секунд на сайте.';
 				}
-				function setSending(on) {
-					btn.classList.toggle('sending', !!on);
-					btn.blur();
-				}
 				function tryInstall() {
 					if (isStandalone()) {
 						setStatus(unavailableMessage());
-						return Promise.resolve();
+						return;
 					}
 					if (isIos()) {
 						setStatus(unavailableMessage());
-						return Promise.resolve();
+						return;
 					}
 					function runPrompt() {
 						setStatus('Ожидаем подтверждение установки...');
-						return window.ViglingPwaInstall.requestInstall().then(function(res) {
+						window.ViglingPwaInstall.requestInstall().then(function(res) {
 							if (res && res.success) {
 								setStatus('Приложение установлено.');
 							} else {
@@ -1277,33 +1237,20 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						});
 					}
 					if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
-						return runPrompt();
+						runPrompt();
+						return;
 					}
 					setStatus('Подготовка установки, подождите несколько секунд…');
-					return waitForPrompt(8000).then(function(ready) {
+					waitForPrompt(8000).then(function(ready) {
 						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
-							return runPrompt();
+							runPrompt();
+							return;
 						}
 						setStatus(unavailableMessage());
 					});
 				}
 
-				btn.addEventListener('click', function() {
-					if (btn.classList.contains('sending')) {
-						return;
-					}
-					setSending(true);
-					var stopped = false;
-					function stopSending() {
-						if (stopped) {
-							return;
-						}
-						stopped = true;
-						setSending(false);
-					}
-					Promise.resolve(tryInstall()).then(stopSending, stopSending);
-					window.setTimeout(stopSending, 4500);
-				});
+				btn.addEventListener('click', function() { tryInstall(); });
 				overlay.querySelectorAll('[data-close-pwa-install="1"]').forEach(function(el) {
 					el.addEventListener('click', function() { closeOverlay(); });
 				});
@@ -1333,12 +1280,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 
 		document.addEventListener('DOMContentLoaded', function() {
 			initInstallPage();
-			document.querySelectorAll('a.app-install-guide__install-btn').forEach(function(el) {
-				el.addEventListener('click', function() {
-					el.classList.add('sending');
-					el.blur();
-				});
-			});
 		});
 	})();
 	</script>
@@ -1437,7 +1378,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		position: relative;
 		margin-top: 0 !important;
 		margin-left: 0 !important;
 		margin-right: 0 !important;
