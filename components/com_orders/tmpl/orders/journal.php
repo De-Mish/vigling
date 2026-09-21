@@ -54,10 +54,19 @@ $pxPerMin = 1.35;
 $scheduleByDay = $masterId > 0 ? viglingOrdersLoadMasterSchedule($db, $masterId) : [];
 $boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
 if ($appointmentsEmbed) {
+	if (function_exists('viglingOrdersGetUserTimezone')) {
+		$journalTimezone = viglingOrdersGetUserTimezone($db, $masterId, (string) Factory::getApplication()->get('offset', 'UTC'));
+		try {
+			$journalTz = new \DateTimeZone($journalTimezone !== '' ? $journalTimezone : 'UTC');
+		} catch (\Throwable $e) {
+			$journalTz = new \DateTimeZone('UTC');
+		}
+		$todayLocal = new \DateTimeImmutable('today', $journalTz);
+	}
 	$pastDays = 14;
 	$futureDays = 14;
 	if (!empty($src->weekStartLocal) && $src->weekStartLocal instanceof \DateTimeImmutable) {
-		$boardStartLocal = $src->weekStartLocal;
+		$boardStartLocal = $src->weekStartLocal->setTimezone($journalTz)->setTime(0, 0, 0);
 	} else {
 		$boardStartLocal = $todayLocal->modify('-' . $pastDays . ' day');
 	}
@@ -249,6 +258,10 @@ for ($offset = 0; $offset < $dayCount; $offset++) {
 		'is_today' => $dateKey === $todayLocal->format('Y-m-d'),
 		'events' => [],
 	];
+}
+$todayIndex = array_search($todayLocal->format('Y-m-d'), array_keys($boardDays), true);
+if ($todayIndex === false) {
+	$todayIndex = max(0, (int) $pastDays);
 }
 
 $gridStart = 8 * 60;
@@ -451,15 +464,8 @@ if ($journalRangeChunk) {
 	.com_orders.orders-journal .journal-today-btn {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		min-height: 36px;
-		padding: 8px 16px;
-		border: 0;
-		border-radius: 8px;
-		background: #e8e8e8;
-		color: #333;
-		font-weight: 600;
-		cursor: pointer;
+		gap: 6px;
+		margin: 0;
 	}
 	.com_orders.orders-journal .journal-meta {
 		margin: 0;
@@ -789,7 +795,9 @@ if ($journalRangeChunk) {
 			<h1 class="page-title">Журнал</h1>
 			<p class="journal-meta">Часовой пояс: <strong><?php echo $this->escape($journalTimezone); ?></strong>. Листайте влево к прошедшим дням и вправо к следующим.</p>
 			<?php else : ?>
-			<button type="button" class="journal-today-btn" id="journal-today-btn"><?php echo $this->escape($todayLocal->format('d.m.Y')); ?></button>
+			<button type="button" class="btn btn-xs btn-default journal-today-btn" id="journal-today-btn">
+				<i class="jsn-icon jsn-icon-calendar"></i> Текущая дата
+			</button>
 			<?php endif; ?>
 		</div>
 		<div class="journal-nav">
@@ -802,7 +810,7 @@ if ($journalRangeChunk) {
 		<div
 			class="journal-board__scroll"
 			id="journal-board-scroll"
-			data-today-index="<?php echo (int) $pastDays; ?>"
+			data-today-index="<?php echo (int) $todayIndex; ?>"
 			data-from="<?php echo $this->escape($boardStartLocal->format('Y-m-d')); ?>"
 			data-days="<?php echo (int) $dayCount; ?>"
 			data-grid-start="<?php echo (int) $gridStart; ?>"
@@ -978,13 +986,43 @@ if ($journalRangeChunk) {
 		if (dir === 'next' && nearEnd()) return loadRange(shiftYmd(loadedFrom, loadedDays), false);
 		return Promise.resolve();
 	}
-	function scrollToToday() {
-		if (!scroller) return;
+	function todayScrollLeft() {
+		if (!scroller) return 0;
 		var todayCol = scroller.querySelector('.journal-day-col.is-today');
-		if (!todayCol) return;
-		var gutter = scroller.querySelector('.journal-time-gutter');
-		var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
-		scroller.scrollTo({ left: Math.max(0, todayCol.offsetLeft - gutterW), behavior: 'smooth' });
+		if (todayCol && todayCol.getBoundingClientRect().width > 1) {
+			var gutter = scroller.querySelector('.journal-time-gutter');
+			var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
+			return Math.max(0, todayCol.offsetLeft - gutterW);
+		}
+		var idx = parseInt(scroller.getAttribute('data-today-index') || '0', 10);
+		var colW = dayWidth();
+		if (colW < 8 && root) {
+			colW = parseFloat(window.getComputedStyle(root).getPropertyValue('--journal-col')) || 148;
+		}
+		return Math.max(0, idx * colW);
+	}
+	function scrollToToday(smooth) {
+		if (!scroller) return false;
+		var left = todayScrollLeft();
+		if (smooth) {
+			scroller.scrollTo({ left: left, behavior: 'smooth' });
+		} else {
+			scroller.scrollLeft = left;
+		}
+		return true;
+	}
+	function scheduleScrollToToday() {
+		var tries = 0;
+		function tick() {
+			tries += 1;
+			scrollToToday(false);
+			var todayCol = scroller && scroller.querySelector('.journal-day-col.is-today');
+			var ready = todayCol && todayCol.getBoundingClientRect().width > 1;
+			if (!ready && tries < 30) {
+				window.requestAnimationFrame(tick);
+			}
+		}
+		tick();
 	}
 	if (prevBtn && scroller) {
 		prevBtn.addEventListener('click', function(){
@@ -1001,7 +1039,7 @@ if ($journalRangeChunk) {
 		});
 	}
 	if (todayBtn) {
-		todayBtn.addEventListener('click', scrollToToday);
+		todayBtn.addEventListener('click', function(){ scrollToToday(true); });
 	}
 	if (scroller) {
 		scroller.addEventListener('scroll', function(){
@@ -1009,12 +1047,13 @@ if ($journalRangeChunk) {
 			if (nearStart()) ensureEdge('prev');
 			if (nearEnd()) ensureEdge('next');
 		});
-		var todayCol = scroller.querySelector('.journal-day-col.is-today');
-		if (todayCol) {
-			var gutter = scroller.querySelector('.journal-time-gutter');
-			var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
-			scroller.scrollLeft = Math.max(0, todayCol.offsetLeft - gutterW);
-		}
+		scheduleScrollToToday();
+		window.addEventListener('load', function(){ scheduleScrollToToday(); });
+		window.addEventListener('vigling:tab-shown', function(e){
+			if (e && e.detail && e.detail.name === 'profile-tab11') {
+				scheduleScrollToToday();
+			}
+		});
 		syncNav();
 	}
 
