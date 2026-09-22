@@ -5214,58 +5214,17 @@ body#home .home-search-links a.homepage-link-btn:focus {
   }
 }
 
-/* Promotions «Записаться»: 50% taller than the catalog oval, 1px smaller type. */
+/* Promotions «Записаться»: half the catalog oval height, text centered. */
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.btn__time-zapis {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   font-size: 11px !important;
-  height: calc((13px * 1.4 + 12px) * 1.35 * 1.5) !important;
-  line-height: calc((13px * 1.4 + 12px) * 1.35 * 1.5) !important;
+  height: calc((13px * 1.4 + 12px) * 1.35 * 0.5) !important;
+  line-height: 1 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   border-radius: 999px !important;
-}
-
-/* Mobile and installed app: promotions master cards share the list width. */
-@media (max-width: 1020px) {
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog),
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__masters {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-    float: none;
-  }
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item,
-  div.category.jsn_stockList:not(.search-catalog):not(.course-catalog) div.category__item {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    float: none !important;
-    box-sizing: border-box !important;
-  }
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* Mobile and installed app: pin each specialty while its services scroll,
-   and show only the service name. */
-@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
-  .master__services .service-name__specialty {
-    display: none;
-  }
-  .master__services,
-  .master__services > .container,
-  .master__services .accordionWrapper,
-  .master__services .accordionItem,
-  .master__services .accordionItemContent {
-    overflow: visible !important;
-  }
-  .master__services .accordionItemHeading {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background: #fff;
-    margin-top: 0 !important;
-  }
 }
 

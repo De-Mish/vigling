@@ -2093,7 +2093,7 @@ if (empty($isLkEmbed)) {
 								&& $serviceMatchesSearchFilter($cat, $item, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 						?>
 						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>" data-legacy-cat-id="<?php echo $itemLegacyCatId; ?>">
-							<div class="priceList__item-coll price__coll1 service-name"><span class="service-name__specialty"><?php echo $this->escape($catTitle); ?> - </span><?php echo $this->escape((string) ($item['name'] ?? '')); ?></div>
+							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo (int) ($item['price'] ?? 0); ?> <span class="price_span">руб.</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
 							<button type="button" id="btn_order" class="btn_add-master plus" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
