@@ -4243,10 +4243,8 @@ div[role="tooltip"][id^="tip-"] {
     text-align: left;
   }
 
- /* Keep name/list to the right of the 67px avatar + 20px gap + former 15px pad */
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info,
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
-  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
+ /* Name and address stay to the right of the 67px avatar. */
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info {
     align-self: stretch;
     padding-left: calc(67px + 20px + 15px) !important;
     padding-top: 0 !important;
@@ -4255,15 +4253,31 @@ div[role="tooltip"][id^="tip-"] {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    min-height: 67px;
+  }
+
+  /* Promotional services use the card width. They begin under the avatar,
+     so the old 102px indent only left an empty column. */
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
+    align-self: stretch;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
   }
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
     position: static;
     align-self: flex-start !important;
-    margin-left: 0 !important;
+    margin-left: 16px !important;
     margin-right: 0 !important;
     float: none !important;
-    transform: translate(4px, -4px);
+    transform: translate(0, -4px);
   }
 }
 

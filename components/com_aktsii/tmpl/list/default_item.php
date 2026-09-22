@@ -274,9 +274,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         padding-top: 0 !important;
         text-align: left;
     }
-    .category.jsn_stockList .category__content-info,
-    .category.jsn_stockList .category__content-info-list,
-    .category.jsn_stockList .category__content-info-list--stocks {
+    .category.jsn_stockList .category__content-info {
         align-self: stretch;
         padding-left: calc(67px + 20px + 15px) !important;
         padding-top: 0 !important;
@@ -285,14 +283,27 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        min-height: 67px;
+    }
+    .category.jsn_stockList .category__content-info-list,
+    .category.jsn_stockList .category__content-info-list--stocks {
+        align-self: stretch;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
         position: static;
         align-self: flex-start !important;
-        margin-left: 0 !important;
+        margin-left: 16px !important;
         margin-right: 0 !important;
         float: none !important;
-        transform: translate(4px, -4px);
+        transform: translate(0, -4px);
     }
 }
 .category__content-info-list {
