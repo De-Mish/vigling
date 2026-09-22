@@ -452,4 +452,109 @@ class PoiskHelper
 
 		return self::CATEGORY_FILTER_TITLES[$normalized] ?? trim($title);
 	}
+
+	/**
+	 * Active promotion rows for the current masters page.
+	 *
+	 * @param  array<int>  $userIds
+	 * @return array<int, array<int, array<string, mixed>>>
+	 */
+	public static function getActiveStocksForUsers(array $userIds): array
+	{
+		$ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static function (int $id): bool {
+			return $id > 0;
+		})));
+		if ($ids === []) {
+			return [];
+		}
+
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$prefix = $db->getPrefix();
+		$select = 's.user_id, s.legacy_cat_id, s.legacy_tag_id, s.price, s.old_price, s.count_stock, s.about_stock, s.duration_min';
+		$hasRecommendation = class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserServicesService')
+			&& \Joomla\Plugin\User\Vigling\Service\UserServicesService::ensureRecommendationColumn();
+		if ($hasRecommendation) {
+			$select .= ', s.recommendation';
+		}
+
+		try {
+			$query = $db->getQuery(true)
+				->select($select)
+				->from($db->quoteName($prefix . 'vigling_user_stock_services', 's'))
+				->whereIn('s.user_id', $ids)
+				->where('s.is_active = 1')
+				->where('s.count_stock > 0');
+			$db->setQuery($query);
+			$rows = $db->loadObjectList() ?: [];
+		} catch (\Throwable $e) {
+			return [];
+		}
+
+		$result = [];
+		foreach ($rows as $row) {
+			if ((int) $row->count_stock <= 0) {
+				continue;
+			}
+			$userId = (int) $row->user_id;
+			$recommendation = '';
+			if ($hasRecommendation) {
+				$recommendation = \Joomla\Plugin\User\Vigling\Service\UserServicesService::sanitizeRecommendation($row->recommendation ?? '');
+			}
+			$result[$userId][] = [
+				'cat_id' => (int) $row->legacy_cat_id,
+				'tag_id' => (int) $row->legacy_tag_id,
+				'price' => (float) $row->price,
+				'old_price' => $row->old_price !== null ? (float) $row->old_price : null,
+				'stock_count' => (int) $row->count_stock,
+				'comment' => (string) $row->about_stock,
+				'duration' => (int) $row->duration_min,
+				'recommendation' => $recommendation,
+			];
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @param  array<int>  $ids
+	 * @return array<int, array{id:int, title:string}>
+	 */
+	public static function getTitlesByIds(string $table, array $ids): array
+	{
+		$ids = array_values(array_unique(array_filter(array_map('intval', $ids), static function (int $id): bool {
+			return $id > 0;
+		})));
+		if ($ids === [] || !in_array($table, ['content', 'tags'], true)) {
+			return [];
+		}
+
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$prefix = $db->getPrefix();
+		$query = $db->getQuery(true)
+			->select('id, title')
+			->from($db->quoteName($prefix . $table))
+			->whereIn($db->quoteName('id'), $ids);
+		if ($table === 'content') {
+			$query->where($db->quoteName('state') . ' = 1');
+		} else {
+			$query->where($db->quoteName('published') . ' = 1');
+		}
+
+		try {
+			$db->setQuery($query);
+			$rows = $db->loadAssocList('id') ?: [];
+		} catch (\Throwable $e) {
+			return [];
+		}
+
+		$result = [];
+		foreach ($rows as $id => $row) {
+			$result[(int) $id] = [
+				'id' => (int) ($row['id'] ?? $id),
+				'title' => (string) ($row['title'] ?? ''),
+			];
+		}
+
+		return $result;
+	}
 }

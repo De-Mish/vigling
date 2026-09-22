@@ -205,7 +205,7 @@ if (is_file($geocodeHelperFile)) {
 }
 if (class_exists(\Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::class)) {
 	$yandexMapsKey = \Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::API_KEY;
-	$resolvedCenter = \Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::resolveCenter($mapAddressCandidates, empty($isLkEmbed));
+	$resolvedCenter = \Viglin\Template\Ryba\Helper\ProfileMapGeocodeHelper::resolveCenter($mapAddressCandidates, false);
 	if (is_array($resolvedCenter) && isset($resolvedCenter['lat'], $resolvedCenter['lon'])) {
 		$mapCenter = [(float) $resolvedCenter['lat'], (float) $resolvedCenter['lon']];
 		$mapCenterAddress = trim((string) ($resolvedCenter['address'] ?? ''));
@@ -2671,7 +2671,14 @@ if (empty($isLkEmbed)) {
 			</div>
 		</div>
 		<div class="master__about-right">
-			<div id="map" style="width:100%; height:380px"></div>
+			<div id="map" class="vg-profile-map is-static-fallback" data-profile-map="1">
+				<div class="vg-profile-map__canvas"></div>
+				<div class="vg-profile-map__preview">
+					<div class="vg-profile-map__overlay">
+						<button type="button" class="vg-profile-map__btn">Показать на карте</button>
+					</div>
+				</div>
+			</div>
 		</div>
 		<div class="clearFloat"></div>
 	</div>
@@ -3978,8 +3985,20 @@ if (empty($isLkEmbed)) {
 	var mapCenterAddress = <?php echo json_encode($mapCenterAddress, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 	var yandexMapsKey = <?php echo json_encode($yandexMapsKey); ?>;
 	var mapEl = document.getElementById('map');
-	if (!mapEl) {
+	if (!mapEl || mapEl.getAttribute('data-profile-map') !== '1') {
 		return;
+	}
+	var mapBtn = mapEl.querySelector('.vg-profile-map__btn');
+	function revealProfileMap() {
+		mapEl.classList.add('is-open');
+		var preview = mapEl.querySelector('.vg-profile-map__preview');
+		if (preview) {
+			preview.hidden = true;
+		}
+		if (mapBtn) {
+			mapBtn.disabled = true;
+			mapBtn.textContent = 'Загрузка…';
+		}
 	}
 	function initMap() {
 		if (!window.ymaps) {
@@ -3989,13 +4008,17 @@ if (empty($isLkEmbed)) {
 			var fallbackCenter = [55.751244, 37.618423];
 			var map = null;
 			var geoStorePrefix = 'vigling_geocode_v1:';
+			var canvas = mapEl.querySelector('.vg-profile-map__canvas') || mapEl;
 
 			function buildMap(center, balloonText) {
-				map = new window.ymaps.Map('map', { center: center, zoom: balloonText ? 14 : 11, controls: [] });
+				map = new window.ymaps.Map(canvas, { center: center, zoom: balloonText ? 14 : 11, controls: [] });
 				if (balloonText) {
 					map.geoObjects.add(new window.ymaps.Placemark(center, {
 						balloonContent: balloonText
 					}));
+				}
+				if (map.container && typeof map.container.fitToViewport === 'function') {
+					map.container.fitToViewport();
 				}
 			}
 
@@ -4059,15 +4082,35 @@ if (empty($isLkEmbed)) {
 			geocodeNext(0);
 		});
 	}
-	if (window.ymaps) {
-		initMap();
-	} else {
+	function loadProfileMap() {
+		if (mapEl.getAttribute('data-open') === '1') {
+			return;
+		}
+		mapEl.setAttribute('data-open', '1');
+		revealProfileMap();
+		if (window.ymaps) {
+			initMap();
+			return;
+		}
 		var script = document.createElement('script');
 		script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=' + encodeURIComponent(yandexMapsKey);
 		script.async = true;
 		script.defer = true;
 		script.onload = initMap;
+		script.onerror = function () {
+			if (mapBtn) {
+				mapBtn.disabled = false;
+				mapBtn.textContent = 'Показать на карте';
+			}
+			mapEl.removeAttribute('data-open');
+		};
 		document.head.appendChild(script);
+	}
+	if (mapBtn) {
+		mapBtn.addEventListener('click', function (event) {
+			event.preventDefault();
+			loadProfileMap();
+		});
 	}
 })();
 </script>

@@ -28,6 +28,11 @@ class HtmlView extends BaseHtmlView
 	protected $currentTag = 0;
 	protected $pricesByUser = [];
 	protected $recommendationsByUser = [];
+	protected $stocksByUser = [];
+	protected $allCategories = [];
+	protected $allServices = [];
+	protected $allTags = [];
+	protected $categoryByUser = [];
 	protected $listOrder = 'id';
 	protected $listDirn = 'ASC';
 
@@ -126,6 +131,32 @@ class HtmlView extends BaseHtmlView
 		}
 		$this->pricesByUser = [];
 		$this->recommendationsByUser = [];
+		$this->stocksByUser = [];
+		$this->allCategories = $this->categories;
+		$this->allServices = [];
+		$this->allTags = [];
+		$this->categoryByUser = [];
+		if (!empty($userIds)) {
+			$this->stocksByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getActiveStocksForUsers($userIds);
+			$serviceIds = [];
+			$tagIds = [];
+			foreach ($this->stocksByUser as $offers) {
+				foreach ($offers as $offer) {
+					$serviceIds[] = (int) ($offer['cat_id'] ?? 0);
+					$tagIds[] = (int) ($offer['tag_id'] ?? 0);
+				}
+			}
+			$this->allServices = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getTitlesByIds('content', $serviceIds);
+			$this->allTags = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getTitlesByIds('tags', $tagIds);
+			foreach ($this->fieldsByUser as $userId => $userFields) {
+				$rawSpec = (string) ($userFields['vyberite_spetsialnos'] ?? '');
+				$decodedSpec = json_decode($rawSpec, true);
+				$specId = is_array($decodedSpec) ? (int) reset($decodedSpec) : (int) $rawSpec;
+				if ($specId > 0) {
+					$this->categoryByUser[(int) $userId] = $specId;
+				}
+			}
+		}
 		if ($catId > 0 && $this->currentService > 0 && $this->currentTag > 0 && !empty($userIds)) {
 			$serviceDetails = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFilteredServiceDetailsForUsers(
 				$userIds,
