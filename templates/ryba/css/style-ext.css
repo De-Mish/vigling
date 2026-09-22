@@ -5138,3 +5138,134 @@ body#home .home-search-links a.homepage-link-btn:focus {
   align-self: flex-start;
 }
 
+/* Profile map stays closed until «Показать на карте». Same gray preview
+   as the catalog map; Yandex loads only after the click. */
+.vg-profile-map {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  margin: 0;
+  overflow: hidden;
+  background: #d7e0e8;
+  border-radius: 0;
+}
+.vg-profile-map.is-open {
+  height: 420px;
+}
+.vg-profile-map__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vg-profile-map__preview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
+    repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(90, 120, 150, 0.1) 32px),
+    repeating-linear-gradient(90deg, transparent, transparent 31px, rgba(90, 120, 150, 0.1) 32px),
+    #c5d3de;
+}
+.vg-profile-map.is-open .vg-profile-map__preview,
+.vg-profile-map__preview[hidden] {
+  display: none !important;
+}
+.vg-profile-map__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+}
+.vg-profile-map__btn {
+  height: 44px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 22px;
+  background: #fff;
+  color: #111;
+  font-family: "GothamPro-Bold", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  line-height: 44px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+.vg-profile-map__btn:hover,
+.vg-profile-map__btn:focus {
+  background: #fff;
+  color: #111;
+  outline: none;
+}
+.vg-profile-map__btn:disabled {
+  opacity: 0.85;
+  cursor: wait;
+}
+@media (max-width: 820px) {
+  .vg-profile-map {
+    height: 200px;
+  }
+  .vg-profile-map.is-open {
+    height: 320px;
+  }
+}
+
+/* Promotions «Записаться»: 50% taller than the catalog oval, 1px smaller type. */
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.btn__time-zapis {
+  font-size: 11px !important;
+  height: calc((13px * 1.4 + 12px) * 1.35 * 1.5) !important;
+  line-height: calc((13px * 1.4 + 12px) * 1.35 * 1.5) !important;
+  border-radius: 999px !important;
+}
+
+/* Mobile and installed app: promotions master cards share the list width. */
+@media (max-width: 1020px) {
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog),
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__masters {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    float: none;
+  }
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item,
+  div.category.jsn_stockList:not(.search-catalog):not(.course-catalog) div.category__item {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    float: none !important;
+    box-sizing: border-box !important;
+  }
+  .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Mobile and installed app: pin each specialty while its services scroll,
+   and show only the service name. */
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+  .master__services .service-name__specialty {
+    display: none;
+  }
+  .master__services,
+  .master__services > .container,
+  .master__services .accordionWrapper,
+  .master__services .accordionItem,
+  .master__services .accordionItemContent {
+    overflow: visible !important;
+  }
+  .master__services .accordionItemHeading {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: #fff;
+    margin-top: 0 !important;
+  }
+}
+
