@@ -81,7 +81,7 @@ $showOptions = in_array($vgExtraFieldsPart, ['all', 'options'], true);
 	</div>
 </div>
 <div class="control-group suitable_for_children-group vg-profile-extra-group<?php echo $vgExtraMasterClass; ?>">
-	<div class="control-label"><label for="jform_suitable_for_children">Подходит для детей</label></div>
+	<div class="control-label"><label for="jform_suitable_for_children">Можно с детьми</label></div>
 	<div class="controls">
 		<fieldset class="checkboxes vg-profile-checkboxes">
 			<label for="jform_suitable_for_children" class="checkbox<?php echo $vgChildren ? ' active' : ''; ?>">

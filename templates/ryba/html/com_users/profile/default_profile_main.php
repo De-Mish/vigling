@@ -52,7 +52,7 @@ if ($profileIsClient) {
 		'firstname' => 'Имя', 'lastname' => 'Фамилия', 'telefon' => 'Телефон',
 		'email' => 'E-mail', 'sity' => 'Город', 'area' => 'Район', 'street' => 'Улица', 'house_number' => 'Номер дома',
 		'doorway' => 'Подъезд', 'floor' => 'Этаж', 'apartment' => 'Квартира',
-		'home' => 'Форма работы', 'payment_method' => 'Способ оплаты', 'suitable_for_children' => 'Подходит для детей',
+		'home' => 'Форма работы', 'payment_method' => 'Способ оплаты', 'suitable_for_children' => 'Можно с детьми',
 		'link' => 'Vk', 'telegram' => 'Телеграм', 'max' => 'Макс', 'o_sebe' => 'О себе',
 	];
 }

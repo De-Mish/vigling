@@ -33,5 +33,5 @@ $childrenYes = in_array($childrenRaw, ['1', 'yes', 'true', 'on', 'да'], true);
 	<span class="attr_left3">Способ оплаты: <b><?php echo htmlspecialchars(implode(', ', $paymentParts), ENT_QUOTES, 'UTF-8'); ?></b></span>
 <?php endif; ?>
 <?php if ($childrenYes) : ?>
-	<span class="attr_left3">Подходит для детей</span>
+	<span class="attr_left3">Можно с детьми</span>
 <?php endif; ?>
