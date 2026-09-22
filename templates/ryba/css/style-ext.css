@@ -4806,7 +4806,8 @@ body#home .home-search-links a.homepage-link-btn:focus {
 }
 
 /* Catalog cards only: «Записаться» width matches .category__item-master
-   (85px desktop, 67px mobile). PWA/auth/journal buttons are not matched. */
+   (85px, same as the avatar box on desktop and mobile). PWA/auth/journal
+   buttons are not matched. */
 .category .category__item a.btn__time-zapis {
   box-sizing: border-box !important;
   width: 85px !important;
@@ -4819,12 +4820,11 @@ body#home .home-search-links a.homepage-link-btn:focus {
   font-size: 12px !important;
   white-space: nowrap;
 }
-@media (max-width: 768px) {
-  .category .category__item a.btn__time-zapis {
-    width: 67px !important;
-    min-width: 67px !important;
-    max-width: 67px !important;
-    font-size: 10px !important;
+/* Specialists phone: the old -83px pull was for a wide pill starting at the
+   avatar. An 85px button would cover the photo; leave it in the text column. */
+@media (max-width: 720px) {
+  .category.jsn_list .category__item a.btn__time-zapis {
+    margin-left: 0 !important;
   }
 }
 
