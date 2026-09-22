@@ -5214,17 +5214,85 @@ body#home .home-search-links a.homepage-link-btn:focus {
   }
 }
 
-/* Promotions «Записаться»: half the catalog oval height, text centered. */
+/* Promotions «Записаться»: 25% taller than the half-height oval, text centered. */
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.btn__time-zapis {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
   font-size: 11px !important;
-  height: calc((13px * 1.4 + 12px) * 1.35 * 0.5) !important;
+  height: calc((13px * 1.4 + 12px) * 1.35 * 0.5 * 1.25) !important;
   line-height: 1 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   border-radius: 999px !important;
+}
+
+/* Mobile menu and the installed app: icons left of three links. */
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+  .header-mobile__nav a[href="/poisk-spetsialistov"],
+  .header-mobile__nav a[href$="/poisk-spetsialistov"],
+  .header-mobile__nav a[href="/poisk-aktsij"],
+  .header-mobile__nav a[href$="/poisk-aktsij"],
+  .header-mobile__nav a[href="/lk"],
+  .header-mobile__nav a[href="/lk/"],
+  .header--desktop .header__menu a[href="/poisk-spetsialistov"],
+  .header--desktop .header__menu a[href$="/poisk-spetsialistov"],
+  .header--desktop .header__menu a[href="/poisk-aktsij"],
+  .header--desktop .header__menu a[href$="/poisk-aktsij"],
+  .header--desktop .header__menu a[href="/lk"],
+  .header--desktop .header__menu a[href="/lk/"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-mobile__nav a[href="/poisk-spetsialistov"],
+  .header-mobile__nav a[href$="/poisk-spetsialistov"],
+  .header-mobile__nav a[href="/poisk-aktsij"],
+  .header-mobile__nav a[href$="/poisk-aktsij"],
+  .header-mobile__nav a[href="/lk"],
+  .header-mobile__nav a[href="/lk/"] {
+    display: flex !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .header-mobile__nav a[href="/poisk-spetsialistov"]::before,
+  .header-mobile__nav a[href$="/poisk-spetsialistov"]::before,
+  .header--desktop .header__menu a[href="/poisk-spetsialistov"]::before,
+  .header--desktop .header__menu a[href$="/poisk-spetsialistov"]::before,
+  .header-mobile__nav a[href="/poisk-aktsij"]::before,
+  .header-mobile__nav a[href$="/poisk-aktsij"]::before,
+  .header--desktop .header__menu a[href="/poisk-aktsij"]::before,
+  .header--desktop .header__menu a[href$="/poisk-aktsij"]::before,
+  .header-mobile__nav a[href="/lk"]::before,
+  .header-mobile__nav a[href="/lk/"]::before,
+  .header--desktop .header__menu a[href="/lk"]::before,
+  .header--desktop .header__menu a[href="/lk/"]::before {
+    content: "";
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+  .header-mobile__nav a[href="/poisk-spetsialistov"]::before,
+  .header-mobile__nav a[href$="/poisk-spetsialistov"]::before,
+  .header--desktop .header__menu a[href="/poisk-spetsialistov"]::before,
+  .header--desktop .header__menu a[href$="/poisk-spetsialistov"]::before {
+    background-image: url("/templates/ryba/images/poisk.png");
+  }
+  .header-mobile__nav a[href="/poisk-aktsij"]::before,
+  .header-mobile__nav a[href$="/poisk-aktsij"]::before,
+  .header--desktop .header__menu a[href="/poisk-aktsij"]::before,
+  .header--desktop .header__menu a[href$="/poisk-aktsij"]::before {
+    background-image: url("/templates/ryba/images/aktsii.png");
+  }
+  .header-mobile__nav a[href="/lk"]::before,
+  .header-mobile__nav a[href="/lk/"]::before,
+  .header--desktop .header__menu a[href="/lk"]::before,
+  .header--desktop .header__menu a[href="/lk/"]::before {
+    background-image: url("/templates/ryba/images/profile.png");
+  }
 }
 
