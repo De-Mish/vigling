@@ -214,7 +214,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
     width: 100% !important;
     flex: 1 1 auto;
     box-sizing: border-box;
@@ -222,13 +222,16 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     padding-top: 0 !important;
 }
 .category.jsn_stockList .category__item-content-left {
-    align-self: flex-start;
+    align-self: stretch;
     text-align: left;
 }
 .category.jsn_stockList .category__content-info,
 .category.jsn_stockList .category__content-info-list,
 .category.jsn_stockList .category__content-info-list--stocks {
-    align-self: flex-start;
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
@@ -237,7 +240,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     align-self: flex-start;
     float: none !important;
     margin-left: 0 !important;
-    text-align: left;
+    text-align: center;
     font-size: 13px !important;
 }
 @media (max-width: 768px) {
@@ -260,7 +263,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         display: flex !important;
         flex-direction: column;
         justify-content: flex-start;
-        align-items: flex-start;
+        align-items: stretch;
         float: none !important;
         width: 100% !important;
         margin-top: 0 !important;
@@ -274,11 +277,13 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     .category.jsn_stockList .category__content-info,
     .category.jsn_stockList .category__content-info-list,
     .category.jsn_stockList .category__content-info-list--stocks {
+        align-self: stretch;
         padding-left: calc(67px + 20px + 15px) !important;
         padding-top: 0 !important;
         margin-top: 0 !important;
         margin-left: 0 !important;
         width: 100%;
+        max-width: 100%;
         box-sizing: border-box;
     }
     .category.jsn_stockList .category__item .btn__time-zapis {
@@ -371,7 +376,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         display: flex !important;
         flex-direction: column;
         justify-content: flex-start;
-        align-items: flex-start;
+        align-items: stretch;
         flex: 1 1 auto;
         float: none !important;
         box-sizing: border-box;
@@ -387,8 +392,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         display: flex !important;
         flex-direction: column;
         justify-content: flex-start;
-        align-items: flex-start;
-        align-self: flex-start;
+        align-items: stretch;
+        align-self: stretch;
         flex: 1 1 auto;
         float: none !important;
         width: 100% !important;
@@ -415,16 +420,17 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
         z-index: 3;
         display: inline-block !important;
         float: none !important;
-        width: auto;
+        align-self: flex-start;
         margin: 0 !important;
         transform: none !important;
         font-size: 14px !important;
-        text-align: left;
+        text-align: center;
     }
     .category.jsn_stockList .category__content-info-list,
     .category.jsn_stockList .category__content-info-list--stocks {
         clear: none !important;
         float: none !important;
+        align-self: stretch;
         margin-left: 0 !important;
         padding-left: calc(231px + 55px) !important;
         padding-top: 0 !important;
@@ -435,8 +441,12 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
     }
     .category.jsn_stockList .category__content-info-list ul,
     .category.jsn_stockList .category__content-info-list ul li {
+        display: block;
         padding-left: 0 !important;
         margin-left: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         white-space: normal;
     }
 }

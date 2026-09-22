@@ -36,6 +36,6 @@ $vgListPayLabels = [
 	<?php endforeach; ?>
 	<label class="vg-list-check vg-list-check-children">
 		<input type="checkbox" name="children" value="1"<?php echo !empty($currentChildren) ? ' checked' : ''; ?>>
-		Подходит для детей
+		Можно с детьми
 	</label>
 </div>

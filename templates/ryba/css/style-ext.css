@@ -4076,7 +4076,7 @@ div[role="tooltip"][id^="tip-"] {
     display: flex !important;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
     flex: 1 1 auto;
     float: none !important;
     box-sizing: border-box;
@@ -4093,8 +4093,8 @@ div[role="tooltip"][id^="tip-"] {
     display: flex !important;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
-    align-self: flex-start;
+    align-items: stretch;
+    align-self: stretch;
     flex: 1 1 auto;
     float: none !important;
     width: 100% !important;
@@ -4116,16 +4116,17 @@ div[role="tooltip"][id^="tip-"] {
     z-index: 3;
     display: inline-block !important;
     float: none !important;
-    width: auto;
+    align-self: flex-start;
     margin: 0 !important;
     transform: none !important;
-    text-align: left;
+    text-align: center;
   }
   
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
     clear: none !important;
     float: none !important;
+    align-self: stretch;
     margin-left: 0 !important;
     padding-left: calc(231px + 55px) !important;
     padding-top: 0 !important;
@@ -4137,8 +4138,12 @@ div[role="tooltip"][id^="tip-"] {
 
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list ul,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list ul li {
+    display: block;
     padding-left: 0 !important;
     margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     white-space: normal;
   }
 }
@@ -4159,7 +4164,7 @@ div[role="tooltip"][id^="tip-"] {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100% !important;
   flex: 1 1 auto;
   box-sizing: border-box;
@@ -4168,19 +4173,31 @@ div[role="tooltip"][id^="tip-"] {
 }
 
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item-content-left {
-  align-self: flex-start;
+  align-self: stretch;
   text-align: left;
 }
 
 /* Promotions: pin name/address and stock list to the top of the card.
    Avatar (.category__item-master) is not restyled — desktop top:0 and
-   mobile top:60% stay as they are. */
+   mobile top:60% stay as they are. Stretch the stock list to the same
+   left/right edges as .category__item-content / content-left / content-info. */
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info,
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
-  align-self: flex-start;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin-top: 0 !important;
   padding-top: 0 !important;
+}
+
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks ul,
+.category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks li {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .btn__time-zapis {
@@ -4188,7 +4205,7 @@ div[role="tooltip"][id^="tip-"] {
   align-self: flex-start;
   float: none !important;
   margin-left: 0 !important;
-  text-align: left;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
@@ -4213,7 +4230,7 @@ div[role="tooltip"][id^="tip-"] {
       display: flex !important;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
     float: none !important;
     width: 100% !important;
     margin-top: 0 !important;
@@ -4230,11 +4247,13 @@ div[role="tooltip"][id^="tip-"] {
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list,
   .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__content-info-list--stocks {
+    align-self: stretch;
     padding-left: calc(67px + 20px + 15px) !important;
     padding-top: 0 !important;
     margin-top: 0 !important;
     margin-left: 0 !important;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
   }
 
@@ -4783,6 +4802,29 @@ body#home .home-search-links a.homepage-link-btn:focus {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     border-radius: calc((13px * 1.4 + 12px) * 1.35 / 2) !important;
+  }
+}
+
+/* Catalog cards only: «Записаться» width matches .category__item-master
+   (85px desktop, 67px mobile). PWA/auth/journal buttons are not matched. */
+.category .category__item a.btn__time-zapis {
+  box-sizing: border-box !important;
+  width: 85px !important;
+  min-width: 85px !important;
+  max-width: 85px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+  letter-spacing: 0 !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .category .category__item a.btn__time-zapis {
+    width: 67px !important;
+    min-width: 67px !important;
+    max-width: 67px !important;
+    font-size: 10px !important;
   }
 }
 

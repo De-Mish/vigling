@@ -1364,7 +1364,7 @@ if (empty($isLkEmbed)) {
 				<?php if ($addr !== '') : ?><span class="attr_left2"><i class="fa fa-map-marker" aria-hidden="true"></i><?php echo $this->escape($addr); ?></span><?php endif; ?>
 				<?php if ($homeDisplay !== '') : ?><span class="attr_left3">Форма работы: <b><?php echo $this->escape($homeDisplay); ?></b></span><?php endif; ?>
 				<?php if ($paymentDisplay !== '') : ?><span class="attr_left3">Способ оплаты: <b><?php echo $this->escape($paymentDisplay); ?></b></span><?php endif; ?>
-				<?php if (!empty($childrenYes)) : ?><span class="attr_left3">Подходит для детей</span><?php endif; ?>
+				<?php if (!empty($childrenYes)) : ?><span class="attr_left3">Можно с детьми</span><?php endif; ?>
 			</div>
 			<div class="masters__attr-right">
 				<span class="attr-rating"><?php echo number_format($profileRatingAvg !== null ? $profileRatingAvg : 0, 1, '.', ''); ?></span>

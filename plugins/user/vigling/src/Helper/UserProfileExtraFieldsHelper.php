@@ -34,7 +34,7 @@ final class UserProfileExtraFieldsHelper
 			'apartment' => 'Квартира',
 			'home' => 'Форма работы',
 			'payment_method' => 'Способ оплаты',
-			'suitable_for_children' => 'Подходит для детей',
+			'suitable_for_children' => 'Можно с детьми',
 		];
 	}
 
