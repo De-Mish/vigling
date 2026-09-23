@@ -186,10 +186,30 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	.appointments-page .appointments-cal__day:nth-child(7n) { border-right: 0; }
 	.appointments-page .appointments-cal__num { display: block; font-size: 16px; font-weight: 600; }
 	.appointments-page .appointments-cal__count {
-		display: inline-block;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
 		margin-top: 8px;
-		font-size: 12px;
 		color: #666;
+		line-height: 1.15;
+		container-type: inline-size;
+	}
+	.appointments-page .appointments-cal__count-num {
+		display: block;
+		font-size: 12px;
+		line-height: 1.2;
+		white-space: nowrap;
+	}
+	.appointments-page .appointments-cal__count-word {
+		display: block;
+		max-width: 100%;
+		font-size: 12px;
+		font-size: min(12px, 24cqi);
+		line-height: 1.15;
+		white-space: nowrap;
 	}
 	.appointments-page .appointments-cal__day.is-today { background: #fff8df; }
 	.appointments-page .appointments-cal__day.is-past,
@@ -675,7 +695,11 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 					>
 						<span class="appointments-cal__num"><?php echo (int) $day->format('j'); ?></span>
 						<?php if ($count > 0) : ?>
-							<span class="appointments-cal__count"><?php echo $this->escape(viglingAppointmentsCountLabel($count)); ?></span>
+							<?php [$countNum, $countWord] = viglingAppointmentsCountParts($count); ?>
+							<span class="appointments-cal__count">
+								<span class="appointments-cal__count-num"><?php echo $this->escape($countNum); ?></span>
+								<span class="appointments-cal__count-word"><?php echo $this->escape($countWord); ?></span>
+							</span>
 						<?php endif; ?>
 					</button>
 				<?php endfor; ?>
