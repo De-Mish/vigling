@@ -85,10 +85,14 @@ class FcmHelper
 			if ($link === '' && class_exists(\Joomla\CMS\Uri\Uri::class)) {
 				$link = rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/lk';
 			}
-			$webPushNotification = ['title' => $title, 'body' => $body];
+			$webPushNotification = [
+				'title' => $title,
+				'body' => $body,
+				'silent' => false,
+			];
 			if (!empty($dataStrings['notification_tag'])) {
 				$webPushNotification['tag'] = $dataStrings['notification_tag'];
-				$webPushNotification['renotify'] = false;
+				$webPushNotification['renotify'] = true;
 			}
 			$webPushArray = [
 				'notification' => $webPushNotification,
