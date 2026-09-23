@@ -1598,9 +1598,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 			});
 		}).then(function(swRegistration) {
 			var app = window.firebase.app().name ? window.firebase.app() : window.firebase.initializeApp(window.FIREBASE_CONFIG);
-			var messaging = app.messaging();
-			if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
-			return messaging.getToken({
+			return app.messaging().getToken({
 				vapidKey: window.FIREBASE_VAPID_KEY || undefined,
 				serviceWorkerRegistration: swRegistration
 			});
@@ -1634,9 +1632,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 		}).then(function(reg) {
 			var app;
 			try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
-			var messaging = app.messaging();
-			if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
-			return messaging.getToken({
+			return app.messaging().getToken({
 				vapidKey: window.FIREBASE_VAPID_KEY || undefined,
 				serviceWorkerRegistration: reg
 			});
@@ -1677,9 +1673,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 				});
 			}).then(function(swRegistration) {
 				var app = window.firebase.app().name ? window.firebase.app() : window.firebase.initializeApp(window.FIREBASE_CONFIG);
-				var messaging = app.messaging();
-				if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
-				return messaging.getToken({
+				return app.messaging().getToken({
 					vapidKey: window.FIREBASE_VAPID_KEY || undefined,
 					serviceWorkerRegistration: swRegistration
 				}).then(function(t) { if (t) console.log('FCM token', t); return t; });
