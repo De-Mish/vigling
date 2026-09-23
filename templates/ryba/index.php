@@ -608,7 +608,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	$pushnotifyUser = $app->getIdentity();
 	$pushnotifyLoggedIn = $pushnotifyUser && (int) $pushnotifyUser->id > 0;
 	$pushnotifyBase = $pushnotifyLoggedIn ? Route::_('index.php?option=com_pushnotify') : '';
-	$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js';
+	$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c';
 	$pushnotifyRoot = rtrim(Uri::root(), '/');
 	$pushnotifyTokenName = $pushnotifyLoggedIn ? Session::getFormToken() : '';
 	$pushnotifyTokenValue = $pushnotifyLoggedIn ? '1' : '';
@@ -975,12 +975,37 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<?php endif; ?>
 	<script>
 		if ('serviceWorker' in navigator) {
-			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js'; ?>';
+			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c'; ?>';
 			var registerSw = function () {
 				navigator.serviceWorker.register(u, { scope: '/' }).catch(function () {});
 			};
 			registerSw();
 			window.addEventListener('load', registerSw);
+			navigator.serviceWorker.addEventListener('message', function (event) {
+				var data = event.data || {};
+				if (data.type !== 'vigling-push-sound') return;
+				try {
+					var Ctx = window.AudioContext || window.webkitAudioContext;
+					if (!Ctx) return;
+					var ctx = new Ctx();
+					var play = function () {
+						var osc = ctx.createOscillator();
+						var gain = ctx.createGain();
+						osc.type = 'sine';
+						osc.frequency.value = 880;
+						osc.connect(gain);
+						gain.connect(ctx.destination);
+						gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+						gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+						gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+						osc.start();
+						osc.stop(ctx.currentTime + 0.36);
+						osc.onended = function () { ctx.close(); };
+					};
+					if (ctx.state === 'suspended') ctx.resume().then(play).catch(function () {});
+					else play();
+				} catch (e) {}
+			});
 		}
 		(function(){
 			function formatTimeUtc(el) {
