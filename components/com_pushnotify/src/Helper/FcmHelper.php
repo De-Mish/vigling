@@ -122,7 +122,7 @@ class FcmHelper
 				} catch (\Throwable $e) {
 					$msg = $e->getMessage();
 					self::log($userId, $notificationType, $title, $body, 'failed', $msg, $recipientRole);
-					if (stripos($msg, 'NotRegistered') !== false || stripos($msg, 'invalid') !== false || stripos($msg, 'INVALID_ARGUMENT') !== false || stripos($msg, 'unregistered') !== false) {
+					if (self::isDeadToken($msg)) {
 						self::removeToken($db, $token);
 					}
 				}
@@ -131,6 +131,23 @@ class FcmHelper
 			self::log($userId, $notificationType, $title, $body, 'failed', $e->getMessage(), $recipientRole);
 		}
 		return ['sent' => $sent, 'failed' => count($tokens) - $sent];
+	}
+
+	private static function isDeadToken(string $msg): bool
+	{
+		foreach ([
+			'NotRegistered',
+			'UNREGISTERED',
+			'registration-token-not-registered',
+			'invalid-registration-token',
+			'InvalidRegistration',
+			'Requested entity was not found',
+		] as $needle) {
+			if (stripos($msg, $needle) !== false) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static function removeToken($db, $token)

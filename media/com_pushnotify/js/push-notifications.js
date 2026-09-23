@@ -47,30 +47,6 @@
 				notifications_enabled: enabled ? 1 : 0
 			}, callback || function () {});
 		},
-		bindForeground: function (messaging) {
-			if (!messaging || typeof messaging.onMessage !== 'function' || window.__viglingPushBound) return;
-			window.__viglingPushBound = true;
-			messaging.onMessage(function (payload) {
-				var n = payload && payload.notification ? payload.notification : {};
-				var d = payload && payload.data ? payload.data : {};
-				var title = n.title || d.title || 'Уведомление';
-				var body = n.body || d.body || '';
-				var tag = d.notification_tag || '';
-				var url = d.url || (window.location.origin + '/lk');
-				var options = { body: body, silent: false, data: { url: url } };
-				if (tag) {
-					options.tag = tag;
-					options.renotify = true;
-				}
-				if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-					navigator.serviceWorker.ready.then(function (reg) {
-						return reg.showNotification(title, options);
-					}).catch(function () {});
-					return;
-				}
-				try { new Notification(title, options); } catch (e) {}
-			});
-		},
 		swUrl: apiBase.split('?')[0] + '?option=com_pushnotify&task=display.sw'
 	};
 })();
