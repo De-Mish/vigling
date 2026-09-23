@@ -41,6 +41,19 @@ if (!function_exists('viglingAppointmentsCountLabel')) {
 	}
 }
 
+if (!function_exists('viglingAppointmentsCountParts')) {
+	function viglingAppointmentsCountParts(int $count): array
+	{
+		$label = viglingAppointmentsCountLabel($count);
+		$space = strrpos($label, ' ');
+		if ($space === false) {
+			return [$label, ''];
+		}
+
+		return [substr($label, 0, $space), substr($label, $space + 1)];
+	}
+}
+
 if (!function_exists('viglingAppointmentsProfileUrl')) {
 	function viglingAppointmentsProfileUrl(int $userId): string
 	{
