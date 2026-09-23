@@ -630,6 +630,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		|| ($pushnotifyIsZapisiTab && $pushnotifyUserIsMaster);
 	?>
 	<?php if ($pushnotifyHasFirebase) : ?>
+	<script src="<?php echo $pushnotifyRoot; ?>/media/com_pushnotify/js/push-notifications.js"></script>
 	<script>
 		window.PUSHNOTIFY_GLOBAL = true;
 		window.PUSHNOTIFY_BASE = <?php echo json_encode($pushnotifyBase); ?>;
@@ -842,7 +843,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						return reg;
 					}).then(function(reg) {
 						var app = window.firebase.app();
-						return app.messaging().getToken({ vapidKey: window.FIREBASE_VAPID_KEY || undefined, serviceWorkerRegistration: reg });
+						var messaging = app.messaging();
+						if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
+						return messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY || undefined, serviceWorkerRegistration: reg });
 					});
 				}
 				if (window.firebase && window.firebase.messaging) {
@@ -944,7 +947,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						}).then(function(reg) {
 							var app;
 							try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
-							return app.messaging().getToken({
+							var messaging = app.messaging();
+							if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
+							return messaging.getToken({
 								vapidKey: window.FIREBASE_VAPID_KEY || undefined,
 								serviceWorkerRegistration: reg
 							});
@@ -958,7 +963,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				}).then(function(reg) {
 					var app;
 					try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
-					return app.messaging().getToken({
+					var messaging = app.messaging();
+					if (window.PushNotify && window.PushNotify.bindForeground) window.PushNotify.bindForeground(messaging);
+					return messaging.getToken({
 						vapidKey: window.FIREBASE_VAPID_KEY || undefined,
 						serviceWorkerRegistration: reg
 					});
