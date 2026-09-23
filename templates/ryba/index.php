@@ -838,10 +838,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			}
 			function loadFirebaseAndSubscribe() {
 				function requestTokenWithCurrentFirebase() {
-					return navigator.serviceWorker.ready.then(function() { return navigator.serviceWorker.getRegistration('/'); }).then(function(reg) {
-						if (!reg) return navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/' });
-						return reg;
-					}).then(function(reg) {
+					return navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
 						var app = window.firebase.app();
 						return app.messaging().getToken({ vapidKey: window.FIREBASE_VAPID_KEY || undefined, serviceWorkerRegistration: reg });
 					});
@@ -939,10 +936,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						document.head.appendChild(s1);
 					};
 					load(function() {
-						navigator.serviceWorker.ready.then(function() { return navigator.serviceWorker.getRegistration('/'); }).then(function(reg) {
-							if (!reg) return navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/' });
-							return reg;
-						}).then(function(reg) {
+						navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
 							var app;
 							try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
 							return app.messaging().getToken({
@@ -953,10 +947,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					});
 					return;
 				}
-				navigator.serviceWorker.ready.then(function() { return navigator.serviceWorker.getRegistration('/'); }).then(function(reg) {
-					if (!reg) return navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/' });
-					return reg;
-				}).then(function(reg) {
+				navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
 					var app;
 					try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
 					return app.messaging().getToken({
@@ -976,35 +967,80 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<script>
 		if ('serviceWorker' in navigator) {
 			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c'; ?>';
+			var viglingAudio = null;
+			var viglingUnlockAudio = function () {
+				try {
+					var Ctx = window.AudioContext || window.webkitAudioContext;
+					if (!Ctx) return;
+					if (!viglingAudio) viglingAudio = new Ctx();
+					if (viglingAudio.state === 'suspended') viglingAudio.resume();
+				} catch (e) {}
+			};
+			window.addEventListener('pointerdown', viglingUnlockAudio, { passive: true });
+			var viglingBeep = function () {
+				viglingUnlockAudio();
+				if (!viglingAudio) return;
+				var play = function () {
+					try {
+						var osc = viglingAudio.createOscillator();
+						var gain = viglingAudio.createGain();
+						osc.type = 'sine';
+						osc.frequency.value = 880;
+						osc.connect(gain);
+						gain.connect(viglingAudio.destination);
+						var t = viglingAudio.currentTime;
+						gain.gain.setValueAtTime(0.0001, t);
+						gain.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+						gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+						osc.start(t);
+						osc.stop(t + 0.36);
+					} catch (e) {}
+				};
+				if (viglingAudio.state === 'suspended') viglingAudio.resume().then(play).catch(function () {});
+				else play();
+			};
+			var viglingBanner = function (title, body) {
+				var el = document.getElementById('vigling-push-banner');
+				if (!el) {
+					el = document.createElement('div');
+					el.id = 'vigling-push-banner';
+					el.setAttribute('role', 'status');
+					el.style.cssText = 'position:fixed;z-index:2147483000;left:12px;right:12px;top:max(12px, env(safe-area-inset-top));background:#f9ce54;color:#111;border-radius:14px;padding:12px 14px;box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:14px;line-height:1.35;';
+					document.body.appendChild(el);
+				}
+				el.replaceChildren();
+				var heading = document.createElement('div');
+				heading.style.fontWeight = '700';
+				heading.textContent = title || 'Уведомление';
+				el.appendChild(heading);
+				if (body) {
+					var text = document.createElement('div');
+					text.textContent = body;
+					el.appendChild(text);
+				}
+				el.style.display = 'block';
+				clearTimeout(el._hideTimer);
+				el._hideTimer = setTimeout(function () { el.style.display = 'none'; }, 8000);
+			};
 			var registerSw = function () {
-				navigator.serviceWorker.register(u, { scope: '/' }).catch(function () {});
+				navigator.serviceWorker.getRegistrations().then(function (regs) {
+					return Promise.all(regs.map(function (reg) {
+						var scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || '';
+						if (scriptUrl.indexOf('v=20260923c') === -1) return reg.unregister();
+					}));
+				}).catch(function () {}).then(function () {
+					return navigator.serviceWorker.register(u, { scope: '/', updateViaCache: 'none' });
+				}).then(function (reg) {
+					if (reg && reg.update) return reg.update();
+				}).catch(function () {});
 			};
 			registerSw();
 			window.addEventListener('load', registerSw);
 			navigator.serviceWorker.addEventListener('message', function (event) {
 				var data = event.data || {};
 				if (data.type !== 'vigling-push-sound') return;
-				try {
-					var Ctx = window.AudioContext || window.webkitAudioContext;
-					if (!Ctx) return;
-					var ctx = new Ctx();
-					var play = function () {
-						var osc = ctx.createOscillator();
-						var gain = ctx.createGain();
-						osc.type = 'sine';
-						osc.frequency.value = 880;
-						osc.connect(gain);
-						gain.connect(ctx.destination);
-						gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-						gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
-						gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-						osc.start();
-						osc.stop(ctx.currentTime + 0.36);
-						osc.onended = function () { ctx.close(); };
-					};
-					if (ctx.state === 'suspended') ctx.resume().then(play).catch(function () {});
-					else play();
-				} catch (e) {}
+				viglingBanner(data.title, data.body);
+				viglingBeep();
 			});
 		}
 		(function(){
