@@ -1588,7 +1588,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 		applyUI(r);
 		if (!('Notification' in window) || Notification.permission !== 'granted' || !window.firebase || !window.FIREBASE_CONFIG) return;
 		var swUrl = window.PUSHNOTIFY_SW_URL || window.PushNotify.swUrl;
-		navigator.serviceWorker.register(swUrl, { scope: '/' }).then(function(reg) {
+		navigator.serviceWorker.register(swUrl, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
 			return reg.active ? Promise.resolve(reg) : new Promise(function(resolve) {
 				reg.addEventListener('updatefound', function() {
 					var n = reg.installing;
@@ -1624,12 +1624,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 	function silentRefreshToken() {
 		if (!('Notification' in window) || Notification.permission !== 'granted' || !window.firebase || !window.FIREBASE_CONFIG) return;
 		var swUrl = window.PUSHNOTIFY_SW_URL || window.PushNotify.swUrl;
-		navigator.serviceWorker.ready.then(function() {
-			return navigator.serviceWorker.getRegistration('/');
-		}).then(function(reg) {
-			if (!reg) return navigator.serviceWorker.register(swUrl, { scope: '/' });
-			return reg;
-		}).then(function(reg) {
+		navigator.serviceWorker.register(swUrl, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
 			var app;
 			try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
 			return app.messaging().getToken({
@@ -1661,7 +1656,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 			navigator.serviceWorker.getRegistrations().then(function(regs) {
 				return Promise.all(regs.map(function(r) { return r.unregister(); }));
 			}).then(function() {
-				return navigator.serviceWorker.register(swUrl, { scope: '/' });
+				return navigator.serviceWorker.register(swUrl, { scope: '/', updateViaCache: 'none' });
 			}).then(function(reg) {
 				return new Promise(function(resolve) {
 					if (reg.active) return resolve(reg);
