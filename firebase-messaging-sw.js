@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2026-09-23c';
+const CACHE_VERSION = 'v2026-09-24a';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 
@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
   })());
 });
 
-importScripts('/index.php?option=com_pushnotify&task=display.sw&v=20260923c');
+importScripts('/index.php?option=com_pushnotify&task=display.sw&v=20260924a');
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
