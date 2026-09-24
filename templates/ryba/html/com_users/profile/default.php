@@ -274,7 +274,7 @@ if (!$isOwn && $pricesStructuredWithIds !== []) {
 }
 $displayName = isset($this->data->name) && (string) $this->data->name !== '' ? $this->data->name : $this->data->username;
 $pushnotifyBase = Route::_('index.php?option=com_pushnotify');
-$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c';
+$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260924a';
 $pushnotifyTokenName = Session::getFormToken();
 $pushnotifyTokenValue = '1';
 $pushnotifyRoot = rtrim(Uri::root(), '/');

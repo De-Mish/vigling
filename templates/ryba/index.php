@@ -608,7 +608,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	$pushnotifyUser = $app->getIdentity();
 	$pushnotifyLoggedIn = $pushnotifyUser && (int) $pushnotifyUser->id > 0;
 	$pushnotifyBase = $pushnotifyLoggedIn ? Route::_('index.php?option=com_pushnotify') : '';
-	$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c';
+	$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260924a';
 	$pushnotifyRoot = rtrim(Uri::root(), '/');
 	$pushnotifyTokenName = $pushnotifyLoggedIn ? Session::getFormToken() : '';
 	$pushnotifyTokenValue = $pushnotifyLoggedIn ? '1' : '';
@@ -966,7 +966,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<?php endif; ?>
 	<script>
 		if ('serviceWorker' in navigator) {
-			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260923c'; ?>';
+			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260924a'; ?>';
 			var viglingAudio = null;
 			var viglingUnlockAudio = function () {
 				try {
@@ -1026,7 +1026,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				navigator.serviceWorker.getRegistrations().then(function (regs) {
 					return Promise.all(regs.map(function (reg) {
 						var scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || '';
-						if (scriptUrl.indexOf('v=20260923c') === -1) return reg.unregister();
+						if (scriptUrl.indexOf('v=20260924a') === -1) return reg.unregister();
 					}));
 				}).catch(function () {}).then(function () {
 					return navigator.serviceWorker.register(u, { scope: '/', updateViaCache: 'none' });
