@@ -48,6 +48,20 @@ class FcmHelper
 			self::log($userId, $notificationType, $title, $body, 'failed', 'No credentials file', $recipientRole);
 			return ['sent' => 0, 'failed' => count($tokens)];
 		}
+		$credentialsProject = self::credentialsProjectId($credentialsPath);
+		$siteProject = self::siteProjectId();
+		if ($credentialsProject !== '' && $siteProject !== '' && $credentialsProject !== $siteProject) {
+			self::log(
+				$userId,
+				$notificationType,
+				$title,
+				$body,
+				'failed',
+				'Firebase key project ' . $credentialsProject . ' does not match site project ' . $siteProject,
+				$recipientRole
+			);
+			return ['sent' => 0, 'failed' => count($tokens)];
+		}
 
 		if (!class_exists('\Kreait\Firebase\Factory')) {
 			$autoload = JPATH_LIBRARIES . '/vendor/autoload.php';
@@ -131,6 +145,26 @@ class FcmHelper
 			self::log($userId, $notificationType, $title, $body, 'failed', $e->getMessage(), $recipientRole);
 		}
 		return ['sent' => $sent, 'failed' => count($tokens) - $sent];
+	}
+
+	private static function credentialsProjectId(string $path): string
+	{
+		$raw = @file_get_contents($path);
+		if (!is_string($raw) || $raw === '') {
+			return '';
+		}
+		$data = json_decode($raw, true);
+		return is_array($data) ? trim((string) ($data['project_id'] ?? '')) : '';
+	}
+
+	private static function siteProjectId(): string
+	{
+		$path = JPATH_ROOT . '/configuration/firebase-config.php';
+		if (!is_file($path)) {
+			return '';
+		}
+		$config = include $path;
+		return is_array($config) ? trim((string) ($config['projectId'] ?? '')) : '';
 	}
 
 	private static function isDeadToken(string $msg): bool
