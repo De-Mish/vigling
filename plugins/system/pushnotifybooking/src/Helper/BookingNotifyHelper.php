@@ -39,7 +39,14 @@ class BookingNotifyHelper
 		$bodyClient = self::resolveBody($type, $order, 'client', $bodyClient, ['time' => $timeStr]);
 		$bodyMaster = self::resolveBody($type, $order, 'master', $bodyMaster, ['time' => self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId))]);
 		$data = ['url' => self::getLkUrl()];
-		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
+		$pushTitle = null;
+		$pushBody = null;
+		if ($masterId > 0 && $masterId !== $clientId && in_array(self::resolveBookingKind($order), ['service', 'stock', 'course', 'search'], true)) {
+			$push = self::buildMasterAppPush($order, $serviceName);
+			$pushTitle = $push['title'];
+			$pushBody = $push['body'];
+		}
+		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster, $pushTitle, $pushBody);
 	}
 
 	public static function notifyCancelled(array $order)
@@ -151,7 +158,7 @@ class BookingNotifyHelper
 		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
 	}
 
-	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null)
+	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null, ?string $pushTitleMaster = null, ?string $pushBodyMaster = null)
 	{
 		$clientId = (int) ($order['user_id'] ?? 0);
 		$masterId = (int) ($order['master_id'] ?? 0);
@@ -171,7 +178,9 @@ class BookingNotifyHelper
 			}
 			if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
 				if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
-					self::sendWithRetry($masterId, $title, $bodyForMaster, self::withOrderData($data, $orderId), $notificationType, 'master');
+					$fcmTitle = ($pushTitleMaster !== null && $pushTitleMaster !== '') ? $pushTitleMaster : $title;
+					$fcmBody = ($pushBodyMaster !== null && $pushBodyMaster !== '') ? $pushBodyMaster : $bodyForMaster;
+					self::sendWithRetry($masterId, $fcmTitle, $fcmBody, self::withOrderData($data, $orderId), $notificationType, 'master');
 				}
 				if (NotificationSettingsHelper::isInboxEnabled($notificationType, $bookingKind)) {
 					InboxHelper::add($masterId, $notificationType, $title, $bodyForMaster, $orderId);
@@ -341,6 +350,63 @@ class BookingNotifyHelper
 			return $name !== '' ? $name : 'Мастер';
 		} catch (\Throwable $e) {
 			return 'Мастер';
+		}
+	}
+
+	/**
+	 * PWA banner for a new booking. The website inbox keeps the existing text.
+	 *
+	 * @return array{title:string, body:string}
+	 */
+	private static function buildMasterAppPush(array $order, string $serviceName): array
+	{
+		$clientId = (int) ($order['user_id'] ?? 0);
+		$masterId = (int) ($order['master_id'] ?? 0);
+		$name = $clientId > 0 ? self::getClientPersonName($clientId) : 'Клиент';
+		$kind = self::resolveBookingKind($order);
+		$time = self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId));
+		$lines = [];
+		if ($kind === 'course' || $kind === 'search') {
+			$lines[] = self::pushKindAndTitle($kind, $serviceName);
+		} else {
+			$lines[] = $kind === 'stock' ? 'Акция' : 'Простая услуга';
+			if ($serviceName !== '') {
+				$lines[] = $serviceName;
+			}
+		}
+		if ($time !== '') {
+			$lines[] = $time;
+		}
+		return [
+			'title' => $name,
+			'body' => implode("\n", $lines),
+		];
+	}
+
+	private static function pushKindAndTitle(string $kind, string $serviceName): string
+	{
+		$label = $kind === 'course' ? 'Курсы' : 'Поиск моделей';
+		$title = trim((string) preg_replace('/^\s*(?:Курс|Курсы|Поиск моделей)\s*:\s*/u', '', $serviceName));
+		if ($title === '' || $title === 'Курс' || $title === 'Курсы' || $title === 'Поиск моделей' || $title === $label) {
+			return $label;
+		}
+		return $label . ': ' . $title;
+	}
+
+	private static function getClientPersonName(int $userId): string
+	{
+		try {
+			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$db->setQuery(
+				$db->getQuery(true)
+					->select($db->quoteName('name'))
+					->from($db->quoteName('#__users'))
+					->where($db->quoteName('id') . ' = ' . (int) $userId)
+			);
+			$name = trim((string) ($db->loadResult() ?? ''));
+			return $name !== '' ? $name : 'Клиент';
+		} catch (\Throwable $e) {
+			return 'Клиент';
 		}
 	}
 

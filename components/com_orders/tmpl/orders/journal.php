@@ -746,7 +746,7 @@ if ($journalRangeChunk) {
 	.com_orders.orders-journal .order-comment { margin-top: 6px; white-space: pre-wrap; color: #555; }
 	#zapis-reschedule .modal-dialog { width: 96vw !important; max-width: 1180px !important; margin: 30px auto !important; }
 	#zapis-reschedule #reschedule-calendar { width: 100% !important; max-width: 800px; margin: 0 auto !important; }
-	#zapis-reschedule #reschedule-calendar.preload { visibility: hidden; }
+	#zapis-reschedule #reschedule-calendar.preload { visibility: visible; }
 	#zapis-reschedule .error-msg { color: #a94442; margin-top: 10px; display: none; }
 	@media (max-width: 768px) {
 		html {
@@ -1136,13 +1136,34 @@ if ($journalRangeChunk) {
 			try { jqCal.slick('unslick'); } catch (e) {}
 		}
 	}
-	function initRescheduleSlider(){
-		if (!window.jQuery || !rCal) return;
-		var jqCal = jQuery(rCal);
-		setTimeout(function(){
-			if (!rCal.querySelector('.calendar__master-item')) {
-				return;
+	function calendarHostWidth() {
+		if (!rCal) return 0;
+		var rect = rCal.getBoundingClientRect();
+		var width = rect ? rect.width : 0;
+		if (window.jQuery && modal) {
+			var dialog = jQuery(modal).find('.modal-dialog');
+			width = Math.max(width, jQuery(rCal).width() || 0, jQuery(rCal).parent().width() || 0, dialog.width() || 0);
+		}
+		return width;
+	}
+	function initRescheduleSlider(attempt){
+		attempt = attempt || 0;
+		if (!rCal) return;
+		rCal.classList.remove('preload');
+		if (!rCal.querySelector('.calendar__master-item')) {
+			return;
+		}
+		if (!window.jQuery || typeof jQuery.fn.slick !== 'function') {
+			return;
+		}
+		if (calendarHostWidth() < 40) {
+			if (attempt < 30) {
+				setTimeout(function() { initRescheduleSlider(attempt + 1); }, 50);
 			}
+			return;
+		}
+		var jqCal = jQuery(rCal);
+		try {
 			if (jqCal.hasClass('slick-initialized')) {
 				jqCal.slick('setPosition');
 			} else {
@@ -1159,8 +1180,14 @@ if ($journalRangeChunk) {
 					]
 				});
 			}
-			jqCal.removeClass('preload');
-		}, 0);
+		} catch (e) {
+			try {
+				if (jqCal.hasClass('slick-initialized')) {
+					jqCal.slick('unslick');
+				}
+			} catch (e2) {}
+		}
+		rCal.classList.remove('preload');
 	}
 	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
 		if (!rCal) return;
@@ -1236,6 +1263,7 @@ if ($journalRangeChunk) {
 			item.appendChild(wrap);
 			rCal.appendChild(item);
 		});
+		rCal.classList.remove('preload');
 	}
 	function readEmbeddedDays(orderId, courseSlotId, searchSlotId) {
 		var id = '';

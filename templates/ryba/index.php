@@ -323,7 +323,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			<div class="pwa-install-actions">
 				<button type="button" id="pwa-install-btn" class="btn btn__time-zapis">Установить приложение</button>
 			</div>
-			<img id="pwa-install-loader" class="pwa-install-loader" src="<?php echo htmlspecialchars(rtrim(Uri::root(), '/') . '/templates/ryba/images/Loading.gif'); ?>" alt="" hidden>
 			<div id="pwa-install-status" class="pwa-install-status"></div>
 		</div>
 	</div>
@@ -1154,14 +1153,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			align-items: center;
 			justify-content: center;
 		}
-		.pwa-install-loader {
-			display: none;
-			width: 72px;
-			height: 72px;
-			margin: 14px auto 0;
-			object-fit: contain;
-		}
-		.pwa-install-loader.is-visible { display: block; }
 		.pwa-install-status { margin-top: 12px; min-height: 22px; color: #444; }
 		@media (max-width: 768px) {
 			.pwa-install-page { padding: 12px; align-items: flex-end; }
@@ -1228,7 +1219,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			function initInstallPage() {
 				var btn = document.getElementById('pwa-install-btn');
 				var statusEl = document.getElementById('pwa-install-status');
-				var loaderEl = document.getElementById('pwa-install-loader');
 				var overlay = document.getElementById('pwa-install-overlay');
 				if (!btn || !statusEl || !overlay) return;
 				var installFinished = false;
@@ -1238,15 +1228,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				}
 
 				function setStatus(text) { statusEl.textContent = text || ''; }
-				function showLoader(on) {
-					if (!loaderEl) return;
-					loaderEl.hidden = !on;
-					loaderEl.classList.toggle('is-visible', !!on);
-				}
 				function markInstalled() {
 					if (installFinished) return;
 					installFinished = true;
-					showLoader(false);
 					setStatus('Приложение уже установлено.');
 				}
 				function isIos() {
@@ -1284,22 +1268,18 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						return;
 					}
 					if (isIos()) {
-						showLoader(false);
 						setStatus(unavailableMessage());
 						return;
 					}
 					function runPrompt() {
-						showLoader(true);
-						setStatus('');
+						setStatus('Ожидаем подтверждение установки...');
 						window.ViglingPwaInstall.requestInstall().then(function(res) {
 							if (res && res.success) {
 								markInstalled();
 							} else {
-								showLoader(false);
 								setStatus('Установка отменена.');
 							}
 						}).catch(function() {
-							showLoader(false);
 							setStatus('Не удалось запустить установку. Попробуйте меню браузера (⋮) → «Установить приложение».');
 						});
 					}
@@ -1307,15 +1287,13 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						runPrompt();
 						return;
 					}
-					showLoader(true);
-					setStatus('');
+					setStatus('Подготовка установки, подождите несколько секунд…');
 					waitForPrompt(8000).then(function(ready) {
 						if (installFinished) return;
 						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
 							runPrompt();
 							return;
 						}
-						showLoader(false);
 						setStatus(unavailableMessage());
 					});
 				}
@@ -1334,7 +1312,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				});
 				window.addEventListener('vigling:pwa-ready', function() {
 					if (installFinished) return;
-					showLoader(false);
 					setStatus('Установка доступна. Нажмите кнопку.');
 				});
 				if (isIos()) {

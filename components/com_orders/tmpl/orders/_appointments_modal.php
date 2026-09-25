@@ -96,20 +96,34 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 			try { jqCal.slick('unslick'); } catch (e) {}
 		}
 	}
-	function initSlider(){
-		if (!window.jQuery) {
-			cal.classList.remove('preload');
+	function calendarHostWidth() {
+		var rect = cal.getBoundingClientRect();
+		var width = rect ? rect.width : 0;
+		if (window.jQuery) {
+			var dialog = jQuery(modal).find('.modal-dialog');
+			width = Math.max(width, jQuery(cal).width() || 0, jQuery(cal).parent().width() || 0, dialog.width() || 0);
+		}
+		return width;
+	}
+	function initSlider(attempt) {
+		attempt = attempt || 0;
+		cal.classList.remove('preload');
+		if (!cal.querySelector('.calendar__master-item')) {
+			return;
+		}
+		if (!window.jQuery || typeof jQuery.fn.slick !== 'function') {
+			return;
+		}
+		if (calendarHostWidth() < 40) {
+			if (attempt < 30) {
+				setTimeout(function() { initSlider(attempt + 1); }, 50);
+			}
 			return;
 		}
 		var jqCal = jQuery(cal);
-		if (!cal.querySelector('.calendar__master-item')) {
-			jqCal.removeClass('preload');
-			return;
-		}
-		setTimeout(function(){
+		try {
 			if (jqCal.hasClass('slick-initialized')) {
 				jqCal.slick('setPosition');
-				jqCal.slick('refresh');
 			} else {
 				jqCal.slick({
 					infinite: false,
@@ -120,8 +134,14 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 					accessibility: false
 				});
 			}
-			jqCal.removeClass('preload');
-		}, 0);
+		} catch (e) {
+			try {
+				if (jqCal.hasClass('slick-initialized')) {
+					jqCal.slick('unslick');
+				}
+			} catch (e2) {}
+		}
+		cal.classList.remove('preload');
 	}
 	function readJson(id){
 		var node = document.getElementById(id);
@@ -155,6 +175,7 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 			emptyItem.appendChild(emptyNo);
 			cal.appendChild(emptyItem);
 			if (submitBtn) submitBtn.disabled = true;
+			cal.classList.remove('preload');
 			return;
 		}
 		(days || []).forEach(function(day, dayIdx){
@@ -199,6 +220,7 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 			cal.querySelector('.btns-m input').checked = true;
 		}
 		if (submitBtn) submitBtn.disabled = !cal.querySelector('input[name="reschedule_slot"]');
+		cal.classList.remove('preload');
 	}
 	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
 		var requestId = ++slotsRequestId;
