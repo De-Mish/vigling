@@ -322,8 +322,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			<p>Нажмите кнопку ниже. Если браузер поддерживает установку PWA, появится системное окно добавления приложения.</p>
 			<div class="pwa-install-actions">
 				<button type="button" id="pwa-install-btn" class="btn btn__time-zapis">Установить приложение</button>
-				<a class="pwa-install-back" href="<?php echo htmlspecialchars(rtrim(Uri::root(), '/') . '/'); ?>">На главную</a>
 			</div>
+			<img id="pwa-install-loader" class="pwa-install-loader" src="<?php echo htmlspecialchars(rtrim(Uri::root(), '/') . '/templates/ryba/images/Loading.gif'); ?>" alt="" hidden>
 			<div id="pwa-install-status" class="pwa-install-status"></div>
 		</div>
 	</div>
@@ -1154,13 +1154,14 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			align-items: center;
 			justify-content: center;
 		}
-		.pwa-install-actions .pwa-install-back {
-			display: inline-flex;
-			align-items: center;
-			min-height: 42px;
+		.pwa-install-loader {
+			display: none;
+			width: 72px;
+			height: 72px;
+			margin: 14px auto 0;
+			object-fit: contain;
 		}
-		.pwa-install-back { color: #222; text-decoration: none; }
-		.pwa-install-back:hover { text-decoration: underline; }
+		.pwa-install-loader.is-visible { display: block; }
 		.pwa-install-status { margin-top: 12px; min-height: 22px; color: #444; }
 		@media (max-width: 768px) {
 			.pwa-install-page { padding: 12px; align-items: flex-end; }
@@ -1178,8 +1179,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				margin-left: 0 !important;
 				margin-right: 0 !important;
 			}
-			.pwa-install-actions #pwa-install-btn,
-			.pwa-install-actions .pwa-install-back {
+			.pwa-install-actions #pwa-install-btn {
 				width: 100%;
 				justify-content: center;
 			}
@@ -1228,21 +1228,26 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			function initInstallPage() {
 				var btn = document.getElementById('pwa-install-btn');
 				var statusEl = document.getElementById('pwa-install-status');
+				var loaderEl = document.getElementById('pwa-install-loader');
 				var overlay = document.getElementById('pwa-install-overlay');
 				if (!btn || !statusEl || !overlay) return;
+				var installFinished = false;
 
 				function closeOverlay() {
 					window.location.href = <?php echo json_encode(rtrim(Uri::root(), '/') . '/'); ?>;
 				}
 
 				function setStatus(text) { statusEl.textContent = text || ''; }
-				function isStandalone() {
-					return (window.matchMedia && (
-							window.matchMedia('(display-mode: standalone)').matches
-							|| window.matchMedia('(display-mode: fullscreen)').matches
-							|| window.matchMedia('(display-mode: minimal-ui)').matches
-						))
-						|| window.navigator.standalone === true;
+				function showLoader(on) {
+					if (!loaderEl) return;
+					loaderEl.hidden = !on;
+					loaderEl.classList.toggle('is-visible', !!on);
+				}
+				function markInstalled() {
+					if (installFinished) return;
+					installFinished = true;
+					showLoader(false);
+					setStatus('Приложение уже установлено.');
 				}
 				function isIos() {
 					var ua = String(navigator.userAgent || '');
@@ -1269,32 +1274,32 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					});
 				}
 				function unavailableMessage() {
-					if (isStandalone()) {
-						return 'Приложение уже установлено. Откройте его с экрана «Домой».';
-					}
 					if (isIos()) {
 						return 'На iPhone/iPad: откройте сайт в Safari → Поделиться → На экран «Домой».';
 					}
 					return 'Если окно установки не появилось: меню Chrome (⋮) → «Установить приложение» или «Добавить на главный экран». Если ярлык уже есть, удалите его и установите снова. Chrome предлагает установку после нескольких секунд на сайте.';
 				}
 				function tryInstall() {
-					if (isStandalone()) {
-						setStatus(unavailableMessage());
+					if (installFinished) {
 						return;
 					}
 					if (isIos()) {
+						showLoader(false);
 						setStatus(unavailableMessage());
 						return;
 					}
 					function runPrompt() {
-						setStatus('Ожидаем подтверждение установки...');
+						showLoader(true);
+						setStatus('');
 						window.ViglingPwaInstall.requestInstall().then(function(res) {
 							if (res && res.success) {
-								setStatus('Приложение установлено.');
+								markInstalled();
 							} else {
+								showLoader(false);
 								setStatus('Установка отменена.');
 							}
 						}).catch(function() {
+							showLoader(false);
 							setStatus('Не удалось запустить установку. Попробуйте меню браузера (⋮) → «Установить приложение».');
 						});
 					}
@@ -1302,12 +1307,15 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						runPrompt();
 						return;
 					}
-					setStatus('Подготовка установки, подождите несколько секунд…');
+					showLoader(true);
+					setStatus('');
 					waitForPrompt(8000).then(function(ready) {
+						if (installFinished) return;
 						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
 							runPrompt();
 							return;
 						}
+						showLoader(false);
 						setStatus(unavailableMessage());
 					});
 				}
@@ -1321,18 +1329,22 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						closeOverlay();
 					}
 				});
+				window.addEventListener('appinstalled', function() {
+					markInstalled();
+				});
 				window.addEventListener('vigling:pwa-ready', function() {
+					if (installFinished) return;
+					showLoader(false);
 					setStatus('Установка доступна. Нажмите кнопку.');
 				});
-				if (isStandalone()) {
-					setStatus('Приложение уже установлено.');
-				} else if (isIos()) {
+				if (isIos()) {
 					setStatus('На iPhone откройте этот сайт в Safari и добавьте на экран «Домой» через Поделиться.');
 				} else if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
 					setStatus('Установка доступна. Нажмите кнопку.');
 				} else {
-					setStatus('Подготовка установки… Если кнопка не сработает сразу, подождите 10–20 секунд или используйте меню Chrome (⋮).');
+					setStatus('');
 					waitForPrompt(8000).then(function(ready) {
+						if (installFinished) return;
 						if (ready) {
 							setStatus('Установка доступна. Нажмите кнопку.');
 						}

@@ -1101,6 +1101,34 @@ if ($journalRangeChunk) {
 	var slotsUrl = <?php echo json_encode($rescheduleSlotsAction); ?>;
 	var slotsToken = <?php echo json_encode($token); ?>;
 	var slotsRequestId = 0;
+	if (rCal) bindRescheduleSlotPick(rCal);
+	function bindRescheduleSlotPick(root) {
+		if (!root || root.getAttribute('data-slot-pick') === '1') return;
+		root.setAttribute('data-slot-pick', '1');
+		var startX = 0;
+		var startY = 0;
+		root.addEventListener('touchstart', function(e) {
+			var t = e.changedTouches && e.changedTouches[0];
+			if (!t) return;
+			startX = t.clientX;
+			startY = t.clientY;
+		}, true);
+		function pick(e) {
+			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
+			if (!label || !root.contains(label)) return;
+			if (e.type === 'touchend' && e.changedTouches && e.changedTouches[0]) {
+				var t = e.changedTouches[0];
+				if (Math.abs(t.clientX - startX) > 12 || Math.abs(t.clientY - startY) > 12) return;
+			}
+			var inputId = label.getAttribute('for') || '';
+			var input = inputId ? document.getElementById(inputId) : null;
+			if (!input) input = label.querySelector('input[type="radio"]');
+			if (!input || input.disabled) return;
+			input.checked = true;
+		}
+		root.addEventListener('click', pick, true);
+		root.addEventListener('touchend', pick, true);
+	}
 	function destroySlider(){
 		if (!window.jQuery || !rCal) return;
 		var jqCal = jQuery(rCal);

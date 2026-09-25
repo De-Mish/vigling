@@ -402,7 +402,74 @@ class BookingNotifyHelper
 			}
 			return preg_match('/^\s*Поиск моделей\s*:/u', $serviceName) ? $serviceName : ('Поиск моделей: ' . $serviceName);
 		}
-		return $serviceName !== '' ? $serviceName : 'Услуга';
+		if ($serviceName === '') {
+			return 'Услуга';
+		}
+		return self::withCategoryPrefix((int) ($order['master_id'] ?? 0), $serviceName, $bookingKind);
+	}
+
+	/**
+	 * PUSH text uses the same three levels as the price list:
+	 * specialty - service / method.
+	 */
+	private static function withCategoryPrefix(int $masterId, string $serviceName, string $bookingKind): string
+	{
+		if ($masterId <= 0) {
+			return $serviceName;
+		}
+		$helperClass = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::class;
+		if (!class_exists($helperClass)) {
+			$path = JPATH_SITE . '/plugins/user/vigling/src/Helper/JsnDecodeHelper.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+		if (!class_exists($helperClass)) {
+			return $serviceName;
+		}
+		try {
+			$catalogs = [];
+			if ($bookingKind === 'stock') {
+				$catalogs[] = $helperClass::getUserStockServicesStructuredWithIds($masterId);
+				$catalogs[] = $helperClass::getUserArchivedStockServicesStructuredWithIds($masterId);
+			}
+			$catalogs[] = $helperClass::getUserServicesStructuredWithIds($masterId);
+			if ($bookingKind !== 'stock') {
+				$catalogs[] = $helperClass::getUserStockServicesStructuredWithIds($masterId);
+				$catalogs[] = $helperClass::getUserArchivedStockServicesStructuredWithIds($masterId);
+			}
+			foreach ($catalogs as $grouped) {
+				$resolved = self::matchCategoryPrefix($grouped, $serviceName);
+				if ($resolved !== '') {
+					return $resolved;
+				}
+			}
+		} catch (\Throwable $e) {
+			return $serviceName;
+		}
+		return $serviceName;
+	}
+
+	private static function matchCategoryPrefix(array $grouped, string $serviceName): string
+	{
+		$needle = mb_strtolower($serviceName);
+		foreach ($grouped as $category) {
+			$title = trim((string) ($category['title'] ?? ''));
+			if ($title === '') {
+				continue;
+			}
+			$prefix = $title . ' - ';
+			if (mb_stripos($serviceName, $prefix) === 0) {
+				return $serviceName;
+			}
+			foreach ((array) ($category['items'] ?? []) as $item) {
+				$name = trim((string) ($item['name'] ?? ''));
+				if ($name !== '' && mb_strtolower($name) === $needle) {
+					return $prefix . $serviceName;
+				}
+			}
+		}
+		return '';
 	}
 
 	private static function getLkUrl(): string
