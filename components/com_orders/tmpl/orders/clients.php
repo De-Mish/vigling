@@ -655,7 +655,35 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	var errorEl = document.getElementById('reschedule-modal-error');
 	var submitBtn = document.getElementById('reschedule-modal-submit');
 	var defaultAction = form.getAttribute('action') || '';
+	if (cal) bindRescheduleSlotPick(cal);
 
+	function bindRescheduleSlotPick(root) {
+		if (!root || root.getAttribute('data-slot-pick') === '1') return;
+		root.setAttribute('data-slot-pick', '1');
+		var startX = 0;
+		var startY = 0;
+		root.addEventListener('touchstart', function(e) {
+			var t = e.changedTouches && e.changedTouches[0];
+			if (!t) return;
+			startX = t.clientX;
+			startY = t.clientY;
+		}, true);
+		function pick(e) {
+			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
+			if (!label || !root.contains(label)) return;
+			if (e.type === 'touchend' && e.changedTouches && e.changedTouches[0]) {
+				var t = e.changedTouches[0];
+				if (Math.abs(t.clientX - startX) > 12 || Math.abs(t.clientY - startY) > 12) return;
+			}
+			var inputId = label.getAttribute('for') || '';
+			var input = inputId ? document.getElementById(inputId) : null;
+			if (!input) input = label.querySelector('input[type="radio"]');
+			if (!input || input.disabled) return;
+			input.checked = true;
+		}
+		root.addEventListener('click', pick, true);
+		root.addEventListener('touchend', pick, true);
+	}
 	function destroySlider(){
 		if (!window.jQuery) return;
 		var jqCal = jQuery(cal);

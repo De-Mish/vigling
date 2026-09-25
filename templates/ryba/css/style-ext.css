@@ -1877,6 +1877,19 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   background-color: #ddd;
   pointer-events: auto
 }
+
+#zapis-reschedule .slick-slide {
+  pointer-events: none;
+}
+
+#zapis-reschedule .slick-slide.slick-active {
+  pointer-events: auto;
+}
+
+#zapis-reschedule label.btn-select {
+  cursor: pointer;
+  touch-action: manipulation;
+}
 #zapis .zapis-reserved-notice {
   display: none;
   position: relative;

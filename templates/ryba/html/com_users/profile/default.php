@@ -930,6 +930,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 												</label>
 												<span id="pushnotify-status">—</span>
 											</div>
+											<p class="push-notify-hint"><strong>Если вы не получаете PUSH-уведомления, выключите их и включите снова.</strong></p>
 										</div>
 										<?php else : ?>
 										<span>—</span>
@@ -957,6 +958,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 												</label>
 												<span id="pushnotify-status">—</span>
 											</div>
+											<p class="push-notify-hint"><strong>Если вы не получаете PUSH-уведомления, выключите их и включите снова.</strong></p>
 										</div>
 										<?php else : ?>
 										<span>—</span>
@@ -1144,6 +1146,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 .push-notify-switch input:checked + .push-notify-slider:before { transform: translateX(20px); }
 .push-notify-switch input:disabled + .push-notify-slider { opacity: 0.6; cursor: not-allowed; }
 .push-notify-row-status { display: flex; align-items: center; gap: 4px; }
+.push-notify-hint { margin: 10px 0 0; font-size: 14px; line-height: 1.4; color: #222; }
 @media (max-width: 576px) {
 	.view_profile-tabs .service__item--readonly,
 	.view_profile-tabs .course__item--readonly {
