@@ -62,6 +62,27 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 	var slotsRequestId = 0;
 	bindRescheduleSlotPick(cal);
 
+	function presentRescheduleModal() {
+		if (modal.parentNode !== document.body) {
+			document.body.appendChild(modal);
+		}
+		modal.classList.add('show', 'in');
+		modal.style.opacity = '1';
+		modal.style.filter = 'none';
+		modal.style.zIndex = '10000050';
+		if (window.jQuery) {
+			jQuery(modal).modal('show');
+		}
+		window.setTimeout(function() {
+			modal.classList.add('show', 'in');
+			modal.style.opacity = '1';
+			var backs = document.querySelectorAll('.modal-backdrop');
+			if (backs.length) {
+				backs[backs.length - 1].style.zIndex = '10000040';
+			}
+		}, 0);
+	}
+
 	function bindRescheduleSlotPick(root) {
 		if (!root || root.getAttribute('data-slot-pick') === '1') return;
 		root.setAttribute('data-slot-pick', '1');
@@ -179,7 +200,7 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
 		var requestId = ++slotsRequestId;
 		hideError();
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 		cal.innerHTML = '';
 		if (submitBtn) submitBtn.disabled = true;
 		var fd = new FormData();
@@ -230,13 +251,13 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 		searchSlotInp.value = String(searchSlotId > 0 ? searchSlotId : 0);
 		durationInp.value = String(isNaN(duration) ? 60 : duration);
 		timeUtcInp.value = '';
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 		cal.innerHTML = '';
 		var highlightUtc = modalMode === 'repeat' ? '' : currentUtc;
 		var embeddedDays = searchSlotId > 0
 			? readJson('reschedule-search-slot-' + searchSlotId)
 			: (courseSlotId > 0 ? readJson('reschedule-course-slot-' + courseSlotId) : readJson('reschedule-slots-' + orderId));
-		jQuery(modal).modal('show');
+		presentRescheduleModal();
 		if (btn.getAttribute('data-slots-embedded') === '1' && embeddedDays.length) {
 			renderCalendar(embeddedDays, highlightUtc);
 			initSlider();
@@ -277,7 +298,7 @@ $rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.resch
 		}
 		destroySlider();
 		cal.innerHTML = '';
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 	});
 	form.addEventListener('submit', function(e){
 		hideError();

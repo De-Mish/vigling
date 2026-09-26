@@ -447,15 +447,22 @@ if ($journalRangeChunk) {
 		text-decoration: none;
 		color: #111;
 	}
-	.com_orders.orders-journal .journal-time-gutter {
+	.com_orders.orders-journal .journal-scale {
 		position: sticky;
 		left: 0;
-		z-index: 5;
+		z-index: 6;
+		flex: 0 0 var(--journal-gutter);
+		width: var(--journal-gutter);
 		background: #fff;
 		border-right: 1px solid #ececec;
 	}
-	.com_orders.orders-journal .journal-board__head .journal-time-gutter {
-		z-index: 6;
+	.com_orders.orders-journal .journal-scale__head {
+		position: sticky;
+		top: 0;
+		z-index: 7;
+		visibility: hidden;
+		pointer-events: none;
+		background: #fff;
 	}
 	.com_orders.orders-journal .journal-nav button:disabled {
 		opacity: .4;
@@ -502,13 +509,19 @@ if ($journalRangeChunk) {
 		background: #888;
 		border-radius: 8px;
 	}
-	.com_orders.orders-journal .journal-board__inner {
+	.com_orders.orders-journal .journal-board__frame {
+		display: flex;
+		align-items: flex-start;
 		min-width: max(100%, calc(var(--journal-gutter) + var(--journal-days) * var(--journal-col)));
+	}
+	.com_orders.orders-journal .journal-board__days {
+		flex: 1 1 auto;
+		min-width: calc(var(--journal-days) * var(--journal-col));
 	}
 	.com_orders.orders-journal .journal-board__head,
 	.com_orders.orders-journal .journal-board__body {
 		display: grid;
-		grid-template-columns: var(--journal-gutter) repeat(var(--journal-days), minmax(var(--journal-col), 1fr));
+		grid-template-columns: repeat(var(--journal-days), minmax(var(--journal-col), 1fr));
 	}
 	.com_orders.orders-journal .journal-board__head {
 		position: sticky;
@@ -685,8 +698,8 @@ if ($journalRangeChunk) {
 		color: #3b3636 !important;
 		border-color: #f9ce54 !important;
 	}
-	.com_orders.orders-journal #journal-calendar { width: 100% !important; max-width: 800px; margin: 0 auto !important; }
-	.com_orders.orders-journal #journal-calendar.preload { visibility: hidden; }
+	.com_orders.orders-journal #journal-calendar { width: 100% !important; max-width: none; margin: 0 !important; }
+	.com_orders.orders-journal #journal-calendar.preload { visibility: visible; }
 	.com_orders.orders-journal .error-msg { display: none; margin-top: 12px; color: #a94442; }
 	.com_orders.orders-journal .journal-backdrop {
 		display: none;
@@ -819,18 +832,26 @@ if ($journalRangeChunk) {
 			data-token="<?php echo $this->escape($token); ?>"
 			data-load-more="<?php echo $appointmentsEmbed ? '1' : '0'; ?>"
 		>
-			<div class="journal-board__inner">
-				<div class="journal-board__head">
-					<div class="journal-time-gutter"></div>
-					<?php $journalCellPart = 'heads'; include __DIR__ . '/_journal_cells.php'; ?>
-				</div>
-				<div class="journal-board__body" style="min-height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
+			<div class="journal-board__frame">
+				<div class="journal-scale">
+					<div class="journal-day-head journal-scale__head" aria-hidden="true">
+						<span class="dow">пн</span>
+						<span class="date">00</span>
+						<span class="month">янв</span>
+					</div>
 					<div class="journal-time-gutter journal-hours" style="height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
 						<?php foreach ($hourMarks as $mark) : ?>
 							<div class="journal-hour" style="top: <?php echo (int) round(($mark - $gridStart) * $pxPerMin); ?>px;"><?php echo $this->escape($formatMinutes($mark)); ?></div>
 						<?php endforeach; ?>
 					</div>
-					<?php $journalCellPart = 'cols'; include __DIR__ . '/_journal_cells.php'; ?>
+				</div>
+				<div class="journal-board__days">
+					<div class="journal-board__head">
+						<?php $journalCellPart = 'heads'; include __DIR__ . '/_journal_cells.php'; ?>
+					</div>
+					<div class="journal-board__body" style="min-height: <?php echo (int) round($gridHeight * $pxPerMin); ?>px;">
+						<?php $journalCellPart = 'cols'; include __DIR__ . '/_journal_cells.php'; ?>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -923,6 +944,13 @@ if ($journalRangeChunk) {
 		if (root) root.style.setProperty('--journal-days', String(n));
 		if (scroller) scroller.setAttribute('data-days', String(n));
 	}
+	function syncScaleHead() {
+		if (!scroller) return;
+		var head = scroller.querySelector('.journal-board__head');
+		var scaleHead = scroller.querySelector('.journal-scale__head');
+		if (!head || !scaleHead) return;
+		scaleHead.style.height = head.getBoundingClientRect().height + 'px';
+	}
 	function syncNav() {
 		if (!scroller || !prevBtn || !nextBtn) return;
 		if (canLoadMore) {
@@ -990,9 +1018,10 @@ if ($journalRangeChunk) {
 		if (!scroller) return 0;
 		var todayCol = scroller.querySelector('.journal-day-col.is-today');
 		if (todayCol && todayCol.getBoundingClientRect().width > 1) {
-			var gutter = scroller.querySelector('.journal-time-gutter');
-			var gutterW = gutter ? gutter.getBoundingClientRect().width : 0;
-			return Math.max(0, todayCol.offsetLeft - gutterW);
+			var scale = scroller.querySelector('.journal-scale');
+			var scaleW = scale ? scale.getBoundingClientRect().width : 0;
+			var delta = todayCol.getBoundingClientRect().left - scroller.getBoundingClientRect().left - scaleW;
+			return Math.max(0, scroller.scrollLeft + delta);
 		}
 		var idx = parseInt(scroller.getAttribute('data-today-index') || '0', 10);
 		var colW = dayWidth();
@@ -1047,8 +1076,13 @@ if ($journalRangeChunk) {
 			if (nearStart()) ensureEdge('prev');
 			if (nearEnd()) ensureEdge('next');
 		});
+		syncScaleHead();
 		scheduleScrollToToday();
-		window.addEventListener('load', function(){ scheduleScrollToToday(); });
+		window.addEventListener('resize', syncScaleHead);
+		window.addEventListener('load', function(){
+			syncScaleHead();
+			scheduleScrollToToday();
+		});
 		window.addEventListener('vigling:tab-shown', function(e){
 			if (e && e.detail && e.detail.name === 'profile-tab11') {
 				scheduleScrollToToday();
@@ -1101,6 +1135,27 @@ if ($journalRangeChunk) {
 	var slotsUrl = <?php echo json_encode($rescheduleSlotsAction); ?>;
 	var slotsToken = <?php echo json_encode($token); ?>;
 	var slotsRequestId = 0;
+	function presentRescheduleModal() {
+		if (!modal) return;
+		if (modal.parentNode !== document.body) {
+			document.body.appendChild(modal);
+		}
+		modal.classList.add('show', 'in');
+		modal.style.opacity = '1';
+		modal.style.filter = 'none';
+		modal.style.zIndex = '10000050';
+		if (window.jQuery) {
+			jQuery(modal).modal('show');
+		}
+		window.setTimeout(function() {
+			modal.classList.add('show', 'in');
+			modal.style.opacity = '1';
+			var backs = document.querySelectorAll('.modal-backdrop');
+			if (backs.length) {
+				backs[backs.length - 1].style.zIndex = '10000040';
+			}
+		}, 0);
+	}
 	if (rCal) bindRescheduleSlotPick(rCal);
 	function bindRescheduleSlotPick(root) {
 		if (!root || root.getAttribute('data-slot-pick') === '1') return;
@@ -1139,7 +1194,7 @@ if ($journalRangeChunk) {
 	}
 	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
 		if (!rCal) return;
-		rCal.classList.add('preload');
+		rCal.classList.remove('preload');
 		rCal.innerHTML = '';
 		var requestId = ++slotsRequestId;
 		if (rError) { rError.style.display = 'none'; rError.textContent = ''; }
@@ -1244,9 +1299,9 @@ if ($journalRangeChunk) {
 		durationInp.value = String(isNaN(duration) ? 60 : duration);
 		timeUtcInp.value = '';
 		rForm.setAttribute('action', btn.getAttribute('data-reschedule-action') || defaultAction);
-		rCal.classList.add('preload');
+		rCal.classList.remove('preload');
 		if (rCal) rCal.innerHTML = '';
-		jQuery(modal).modal('show');
+		presentRescheduleModal();
 		if (btn.getAttribute('data-slots-embedded') === '1') {
 			renderCalendar(readEmbeddedDays(orderId, courseSlotId, searchSlotId), currentUtc);
 			initRescheduleSlider();
@@ -1266,7 +1321,7 @@ if ($journalRangeChunk) {
 			rForm.setAttribute('action', defaultAction);
 			destroySlider();
 			rCal.innerHTML = '';
-			rCal.classList.add('preload');
+			rCal.classList.remove('preload');
 		});
 	}
 	if (rForm) {

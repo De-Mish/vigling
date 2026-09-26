@@ -90,18 +90,15 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 	}
 	@media (min-width: 768px) {
 		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			display: flex;
-			flex-wrap: wrap;
-			justify-content: flex-start;
-			align-items: flex-start;
-			gap: 6px 8px;
-			grid-template-columns: none;
+			display: grid !important;
+			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+			gap: 6px;
 		}
 		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-			width: auto !important;
-			flex: 0 0 auto;
-			padding-left: 3ch !important;
-			padding-right: 3ch !important;
+			width: 100% !important;
+			flex: none;
+			padding-left: 2px !important;
+			padding-right: 2px !important;
 		}
 	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
@@ -362,6 +359,27 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 	var repeatAction = form ? (form.getAttribute('data-repeat-action') || '') : '';
 	var modalMode = 'reschedule';
 	var activeSlots = [];
+	function presentRescheduleModal() {
+		if (!modal) return;
+		if (modal.parentNode !== document.body) {
+			document.body.appendChild(modal);
+		}
+		modal.classList.add('show', 'in');
+		modal.style.opacity = '1';
+		modal.style.filter = 'none';
+		modal.style.zIndex = '10000050';
+		if (window.jQuery) {
+			jQuery(modal).modal('show');
+		}
+		window.setTimeout(function() {
+			modal.classList.add('show', 'in');
+			modal.style.opacity = '1';
+			var backs = document.querySelectorAll('.modal-backdrop');
+			if (backs.length) {
+				backs[backs.length - 1].style.zIndex = '10000040';
+			}
+		}, 0);
+	}
 	if (cal) bindRescheduleSlotPick(cal);
 
 	function bindRescheduleSlotPick(root) {
@@ -514,9 +532,9 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 		idInp.value = String(orderId);
 		durationInp.value = String(isNaN(duration) ? 60 : duration);
 		timeUtcInp.value = '';
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 		renderCalendar(readSlots(orderId), currentUtc);
-		jQuery(modal).modal('show');
+		presentRescheduleModal();
 	}
 
 	document.querySelectorAll('.reschedule-open').forEach(function(btn){
@@ -550,7 +568,7 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 		timeUtcInp.value = '';
 		destroySlider();
 		cal.innerHTML = '';
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 		modalMode = 'reschedule';
 		if (form && rescheduleAction) {
 			form.setAttribute('action', rescheduleAction);

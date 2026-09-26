@@ -7292,8 +7292,7 @@ input[type=text] {
     text-align: center !important;
 }
 @media only screen and (min-width: 768px) {
-    #zapis .calendar__master-item .btns-m,
-    #zapis-reschedule .calendar__master-item .btns-m {
+    #zapis .calendar__master-item .btns-m {
         display: flex !important;
         flex-wrap: wrap;
         justify-content: flex-start;
@@ -7301,8 +7300,7 @@ input[type=text] {
         gap: 6px 8px;
         grid-template-columns: none;
     }
-    #zapis .calendar__master-item .btns-m .btn-select,
-    #zapis-reschedule .calendar__master-item .btns-m .btn-select {
+    #zapis .calendar__master-item .btns-m .btn-select {
         width: auto !important;
         min-width: 0 !important;
         flex: 0 0 auto;
@@ -7310,6 +7308,18 @@ input[type=text] {
         padding-bottom: 6px !important;
         padding-left: 3ch !important;
         padding-right: 3ch !important;
+    }
+    #zapis-reschedule .calendar__master-item .btns-m {
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 6px;
+    }
+    #zapis-reschedule .calendar__master-item .btns-m .btn-select {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: none;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
     }
 }
 #zapis .calendar__master-item .btns-m .btn-select.reserved,

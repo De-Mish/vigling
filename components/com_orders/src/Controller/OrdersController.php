@@ -1113,24 +1113,30 @@ class OrdersController extends BaseController
 		}
 
 		$startUtcStr = trim((string) $this->input->get('time_utc', '', 'string'));
-		$durationRaw = trim((string) $this->input->get('duration', '', 'string'));
+		$endUtcStr = trim((string) $this->input->get('time_to_utc', '', 'string'));
 		$commentRaw = trim((string) $this->input->get('comment', '', 'string'));
 		$start = self::parseUtcDateTime($startUtcStr);
-		if (!$start) {
-			$this->setMessage('Выберите время в журнале', 'error');
+		$end = self::parseUtcDateTime($endUtcStr);
+		if (!$start || !$end) {
+			$this->setMessage('Выберите временные слоты, которые хотите заблокировать', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
 
-		$durationMin = self::parseDurationMinutes($durationRaw);
-		if ($durationMin <= 0) {
-			$durationMin = 60;
-		}
-		$durationMin = max(15, min(720, $durationMin));
-
 		$utc = new \DateTimeZone('UTC');
 		$startUtc = $start;
-		$endUtc = $startUtc->modify('+' . $durationMin . ' minutes');
+		$endUtc = $end;
+		if ($endUtc <= $startUtc) {
+			$this->setMessage('Выберите временные слоты, которые хотите заблокировать', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$durationMin = (int) round(($endUtc->getTimestamp() - $startUtc->getTimestamp()) / 60);
+		if ($durationMin < 15 || $durationMin > 720) {
+			$this->setMessage('Выберите непрерывный интервал не длиннее 12 часов', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
 		$nowUtc = new \DateTimeImmutable('now', $utc);
 		if ($startUtc <= $nowUtc) {
 			$this->setMessage('Нельзя блокировать прошедшее время', 'error');
@@ -1178,18 +1184,26 @@ class OrdersController extends BaseController
 				$serviceName .= ' | Комментарий: ' . $comment;
 			}
 
+			$columns = array_change_key_case($db->getTableColumns($tableName, false), CASE_LOWER);
+			$insertColumns = ['user_id', 'master_id', 'time', 'time_to', 'service_name', 'completed', 'time_sum'];
+			$insertValues = [
+				'0',
+				(string) $masterId,
+				$db->quote($startDb),
+				$db->quote($endDb),
+				$db->quote($serviceName),
+				'0',
+				(string) (int) $durationMin,
+			];
+			if (isset($columns['booking_kind'])) {
+				$insertColumns[] = 'booking_kind';
+				$insertValues[] = $db->quote('journal');
+			}
+
 			$query = $db->getQuery(true)
 				->insert($db->quoteName($tableName))
-				->columns($db->quoteName(['user_id', 'master_id', 'time', 'time_to', 'service_name', 'completed', 'time_sum']))
-				->values(
-					'0, '
-					. $masterId . ', '
-					. $db->quote($startDb) . ', '
-					. $db->quote($endDb) . ', '
-					. $db->quote($serviceName) . ', '
-					. '0, '
-					. (int) $durationMin
-				);
+				->columns($db->quoteName($insertColumns))
+				->values(implode(', ', $insertValues));
 
 			try {
 				$db->setQuery($query)->execute();
