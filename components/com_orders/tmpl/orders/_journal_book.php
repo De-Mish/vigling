@@ -53,6 +53,15 @@
 		gap: 6px;
 		margin: 0;
 	}
+	@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+		#journal-calendar .calendar__master-item {
+			flex-basis: min(100%, 340px);
+			width: min(100%, 340px);
+		}
+		#journal-calendar .btns-m {
+			grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+		}
+	}
 	#journal-calendar .btn-select {
 		width: 100%;
 		margin: 0;
@@ -66,9 +75,10 @@
 		cursor: pointer;
 	}
 	#journal-calendar .btn-select.is-picked {
-		background: #f9ce54;
-		border-color: #f7cc53;
-		box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.35);
+		background: #e4e4e4;
+		border-color: #d0d0d0;
+		color: #555;
+		box-shadow: none;
 	}
 </style>
 <div class="journal-card journal-card--calendar">

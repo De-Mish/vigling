@@ -35,6 +35,7 @@ final class UserProfileExtraFieldsHelper
 			'home' => 'Форма работы',
 			'payment_method' => 'Способ оплаты',
 			'suitable_for_children' => 'Можно с детьми',
+			'phone_public' => 'Телефон общедоступен',
 		];
 	}
 
@@ -242,7 +243,7 @@ final class UserProfileExtraFieldsHelper
 
 		$forceAll = array_key_exists('vigling_profile_extra', $jform);
 		$posted = $forceAll;
-		foreach (array_merge(self::TEXT_FIELDS, ['home', 'payment_method', 'suitable_for_children']) as $name) {
+		foreach (array_merge(self::TEXT_FIELDS, ['home', 'payment_method', 'suitable_for_children', 'phone_public']) as $name) {
 			if (array_key_exists($name, $comFields) || array_key_exists($name, $jform)) {
 				$posted = true;
 				break;
@@ -306,6 +307,14 @@ final class UserProfileExtraFieldsHelper
 				$raw = reset($raw);
 			}
 			$toSave['suitable_for_children'] = self::isChildrenYes((string) $raw) ? '1' : '';
+		}
+
+		if (array_key_exists('phone_public', $comFields) || array_key_exists('phone_public', $jform)) {
+			$raw = $comFields['phone_public'] ?? $jform['phone_public'] ?? '0';
+			if (is_array($raw)) {
+				$raw = end($raw);
+			}
+			$toSave['phone_public'] = ((string) $raw === '1') ? '1' : '0';
 		}
 
 		if ($toSave === []) {

@@ -173,6 +173,13 @@ if ($profileOwnerId > 0 && class_exists(\Joomla\Plugin\User\Vigling\Helper\UserP
 	}
 }
 $phone = $phone !== '' ? $phone : $profileValue($profileData, 'phone');
+$phonePublic = $fieldValue($jcfields, 'phone_public') !== '0';
+if ($phonePublic && $profileOwnerId > 0 && class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$storedPhonePublic = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues($profileOwnerId, ['phone_public']);
+	if (isset($storedPhonePublic['phone_public']) && trim((string) $storedPhonePublic['phone_public']) === '0') {
+		$phonePublic = false;
+	}
+}
 $vk = $vk !== '' ? $vk : $profileValue($profileData, 'website');
 $socialLinks = [];
 if ($vk !== '') {
@@ -2690,10 +2697,12 @@ if (empty($isLkEmbed)) {
 		<div class="master__about-left">
 			<h2>О мастере</h2>
 			<p><span><?php echo $this->escape('Обо мне: "' . $aboutText . '"'); ?></span></p><br>
+			<?php if ($phonePublic && $phone !== '') : ?>
 			<div class="master__about-call">
 				<img src="/templates/ryba/images/iphone1.png" alt="">
 				<a href="tel:<?php echo $this->escape(preg_replace('/[^\d\+]/', '', $phone)); ?>" target="_blank" rel="noopener noreferrer">Позвонить мастеру</a>
 			</div>
+			<?php endif; ?>
 			<?php if ($socialLinks !== []) : ?>
 			<div class="master__about-socials">
 				<?php foreach ($socialLinks as $social) : ?>
