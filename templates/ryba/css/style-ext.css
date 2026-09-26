@@ -1872,10 +1872,17 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   cursor: pointer
 }
 
-.calendar__master-item label.btn-select.reserved {
-  cursor: pointer;
-  background-color: #ddd;
-  pointer-events: auto
+#zapis .calendar__master-item .btns-m label.btn-select.reserved {
+  display: none !important
+}
+
+#zapis .calendar__master-item .btns-m label.btn-select.owner-block {
+  background-color: #e4e4e4 !important;
+  color: #777 !important;
+  border-color: #d0d0d0 !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  pointer-events: none !important
 }
 
 #zapis-reschedule.in .calendar__master.preload,
@@ -1903,6 +1910,25 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   min-width: 0 !important;
   box-sizing: border-box;
   opacity: 1 !important;
+}
+
+#zapis-reschedule .calendar__master-item,
+#zapis-reschedule .calendar__master.preload .calendar__master-item {
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+}
+
+#zapis-reschedule #reschedule-calendar .btn-select,
+#zapis-reschedule #reschedule-calendar button.btn-select {
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-color: #fff !important;
+  color: #111 !important;
+  pointer-events: auto !important;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 #zapis-reschedule .modal-content {

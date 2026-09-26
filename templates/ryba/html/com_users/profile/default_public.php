@@ -545,8 +545,10 @@ foreach ($workRangeByDay as $range) {
 
 $calendarDays = [];
 $bookedRangesByDate = [];
+$ownerBlockRangesByDate = [];
 $reservedRangesByDate = [];
 $anytimeOccupancyByDate = [];
+$viewerIsProfileOwner = (int) ($currentUser->id ?? 0) > 0 && (int) ($currentUser->id ?? 0) === (int) $profileOwnerId;
 $siteOffset = (string) $app->get('offset', 'UTC');
 $masterTz = new \DateTimeZone($siteOffset !== '' ? $siteOffset : 'UTC');
 $utcTz = new \DateTimeZone('UTC');
@@ -685,9 +687,13 @@ if ($profileOwnerId > 0) {
 			$hasBookingKind = isset($tableColumns['booking_kind']);
 			$hasCourseId = isset($tableColumns['course_id']);
 			$hasCourseSlotId = isset($tableColumns['course_slot_id']);
+			$hasServiceName = isset($tableColumns['service_name']);
 			$selectCols = [$db->quoteName('time'), $db->quoteName('time_to')];
 			if ($hasBookingKind) {
 				$selectCols[] = $db->quoteName('booking_kind');
+			}
+			if ($hasServiceName) {
+				$selectCols[] = $db->quoteName('service_name');
 			}
 			if ($hasCourseId) {
 				$selectCols[] = $db->quoteName('course_id');
@@ -706,12 +712,38 @@ if ($profileOwnerId > 0) {
 			$anytimeGroupsRaw = [];
 			foreach ($rows as $row) {
 				$bookingKind = $hasBookingKind ? strtolower(trim((string) ($row['booking_kind'] ?? ''))) : '';
+				$serviceName = $hasServiceName ? trim((string) ($row['service_name'] ?? '')) : '';
+				$isOwnerBlock = $bookingKind === 'journal' || strpos($serviceName, '[journal]') === 0;
+				if ($isOwnerBlock) {
+					$appendUtcRangeToLocalDays(
+						$ownerBlockRangesByDate,
+						(string) ($row['time'] ?? ''),
+						(string) ($row['time_to'] ?? ''),
+						$utcTz,
+						$masterTz
+					);
+					continue;
+				}
 				if ($bookingKind === 'search') {
+					$appendUtcRangeToLocalDays(
+						$bookedRangesByDate,
+						(string) ($row['time'] ?? ''),
+						(string) ($row['time_to'] ?? ''),
+						$utcTz,
+						$masterTz
+					);
 					continue;
 				}
 				if ($bookingKind === 'course') {
 					$courseSlotId = $hasCourseSlotId ? (int) ($row['course_slot_id'] ?? 0) : 0;
 					if ($courseSlotId > 0) {
+						$appendUtcRangeToLocalDays(
+							$bookedRangesByDate,
+							(string) ($row['time'] ?? ''),
+							(string) ($row['time_to'] ?? ''),
+							$utcTz,
+							$masterTz
+						);
 						continue;
 					}
 					$courseId = $hasCourseId ? (int) ($row['course_id'] ?? 0) : 0;
@@ -842,6 +874,7 @@ if ($profileOwnerId > 0) {
 		}
 	} catch (\Throwable $e) {
 		$bookedRangesByDate = [];
+		$ownerBlockRangesByDate = [];
 		$reservedRangesByDate = [];
 		$anytimeOccupancyByDate = [];
 	}
@@ -856,10 +889,12 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 	$slotUtcByTime = [];
 	$slotMinutes = [];
 	$slotReservedByTime = [];
+	$slotOwnerBlockByTime = [];
 	$slotAnytimeByTime = [];
 	$range = $workRangeByDay[$dow] ?? null;
 	if (is_array($range)) {
 		$dayBookedRanges = $bookedRangesByDate[$dateKey] ?? [];
+		$dayOwnerBlocks = $ownerBlockRangesByDate[$dateKey] ?? [];
 		$dayOfferRanges = $reservedRangesByDate[$dateKey] ?? [];
 		$dayAnytimeGroups = $anytimeOccupancyByDate[$dateKey] ?? [];
 		for ($minute = (int) $range[0]; $minute <= (int) $range[1]; $minute += 15) {
@@ -875,6 +910,18 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 			if ($isBooked) {
 				continue;
 			}
+			$isOwnerBlock = false;
+			foreach ($dayOwnerBlocks as $blockRange) {
+				$blockStart = (int) ($blockRange[0] ?? 0);
+				$blockEnd = (int) ($blockRange[1] ?? 0);
+				if ($minute >= $blockStart && $minute < $blockEnd) {
+					$isOwnerBlock = true;
+					break;
+				}
+			}
+			if ($isOwnerBlock && !$viewerIsProfileOwner) {
+				continue;
+			}
 			$offerKind = '';
 			foreach ($dayOfferRanges as $offerRange) {
 				$offerStart = (int) ($offerRange[0] ?? 0);
@@ -885,13 +932,16 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 					break;
 				}
 			}
+			if ($offerKind !== '' && !$isOwnerBlock) {
+				continue;
+			}
 			$slotLabel = $formatMinutes($minute);
 			$slotDateTimeLocal = $currentDay->setTime((int) floor($minute / 60), $minute % 60, 0);
 			$slotUtcByTime[$slotLabel] = $slotDateTimeLocal->setTimezone($utcTz)->format(\DateTimeInterface::ATOM);
 			$slots[] = $slotLabel;
 			$slotMinutes[] = (int) $minute;
-			if ($offerKind !== '') {
-				$slotReservedByTime[$slotLabel] = $offerKind;
+			if ($isOwnerBlock) {
+				$slotOwnerBlockByTime[$slotLabel] = '1';
 			}
 			foreach ($dayAnytimeGroups as $anytimeGroup) {
 				$anytimeStart = (int) ($anytimeGroup['start'] ?? 0);
@@ -918,6 +968,7 @@ for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
 		'slot_utc' => $slotUtcByTime,
 		'slot_minutes' => $slotMinutes,
 		'slot_reserved' => $slotReservedByTime,
+		'slot_owner_block' => $slotOwnerBlockByTime,
 		'slot_anytime' => $slotAnytimeByTime,
 		'range_from_min' => is_array($range) ? (int) $range[0] : null,
 		'range_to_min' => is_array($range) ? (int) $range[1] : null,
@@ -2419,6 +2470,7 @@ if (empty($isLkEmbed)) {
 											$slotId = preg_replace('/[^a-zA-Z0-9\-_]/', '-', (string) ($calendarDay['date'] ?? '') . '-' . str_replace(':', '-', (string) $slotTime));
 											$slotUtc = (string) (($calendarDay['slot_utc'][(string) $slotTime] ?? ''));
 											$slotReserved = (string) (($calendarDay['slot_reserved'][(string) $slotTime] ?? ''));
+											$slotOwnerBlock = (string) (($calendarDay['slot_owner_block'][(string) $slotTime] ?? ''));
 											$slotAnytime = (array) (($calendarDay['slot_anytime'][(string) $slotTime] ?? []));
 											$anytimeCourseId = (int) ($slotAnytime['course_id'] ?? 0);
 											$anytimeUsed = (int) ($slotAnytime['used'] ?? 0);
@@ -2431,9 +2483,14 @@ if (empty($isLkEmbed)) {
 													$anytimeAttrs .= ' data-anytime-cover="1"';
 												}
 											}
-											$labelClass = $slotReserved !== '' ? 'btn-select reserved' : 'btn-select';
+											$labelClass = 'btn-select';
+											if ($slotOwnerBlock === '1') {
+												$labelClass .= ' owner-block';
+											} elseif ($slotReserved !== '') {
+												$labelClass .= ' reserved';
+											}
 										?>
-										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="time" value="<?php echo $this->escape($slotValue); ?>" data-time-utc="<?php echo $this->escape($slotUtc); ?>"<?php echo $slotReserved !== '' ? ' data-reserved="' . $this->escape($slotReserved) . '"' : ''; ?><?php echo $anytimeAttrs; ?>>
+										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="time" value="<?php echo $this->escape($slotValue); ?>" data-time-utc="<?php echo $this->escape($slotUtc); ?>"<?php echo $slotOwnerBlock === '1' ? ' data-owner-block="1" disabled' : ''; ?><?php echo $slotReserved !== '' ? ' data-reserved="' . $this->escape($slotReserved) . '"' : ''; ?><?php echo $anytimeAttrs; ?>>
 										<label for="<?php echo $this->escape($slotId); ?>" class="<?php echo $this->escape($labelClass); ?>"><?php echo $this->escape((string) $slotTime); ?></label>
 										<?php endforeach; ?>
 									</p>
@@ -2866,7 +2923,7 @@ if (empty($isLkEmbed)) {
 					}
 					dayDate = parsed.date;
 					slotInfos.push({ radio: radio, parsed: parsed });
-					if (String(radio.getAttribute('data-reserved') || '').trim()) {
+					if (String(radio.getAttribute('data-reserved') || '').trim() || String(radio.getAttribute('data-owner-block') || '') === '1') {
 						return;
 					}
 					var anytimeMeta = anytimeMetaOf(radio);
@@ -2888,16 +2945,28 @@ if (empty($isLkEmbed)) {
 					var reservedKind = String(radio.getAttribute('data-reserved') || '').trim();
 					var visible = slotTs > minFutureTs;
 
-					if (reservedKind) {
-						if (!visible && radio.checked) {
+					if (String(radio.getAttribute('data-owner-block') || '') === '1') {
+						radio.disabled = true;
+						if (radio.checked) {
 							radio.checked = false;
 						}
 						if (label) {
 							label.style.display = visible ? '' : 'none';
-							label.classList.add('reserved');
+							label.classList.add('owner-block');
 						}
 						if (visible) {
 							visibleCount++;
+						}
+						return;
+					}
+
+					if (reservedKind) {
+						radio.disabled = true;
+						if (radio.checked) {
+							radio.checked = false;
+						}
+						if (label) {
+							label.style.display = 'none';
 						}
 						return;
 					}

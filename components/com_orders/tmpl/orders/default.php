@@ -334,7 +334,7 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 					<div class="calc__body">
 						<h2>Выберите дату и время</h2>
 						<div class="calendar-hint">Прокрутите даты и нажмите подходящее время</div>
-						<div class="calendar__master calendar__master--manual preload" id="reschedule-calendar"></div>
+						<div class="calendar__master calendar__master--manual" id="reschedule-calendar"></div>
 						<div class="error-msg" id="reschedule-modal-error"></div>
 					</div>
 					<div class="calc__btn">
@@ -368,15 +368,16 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 		if (!root || root.getAttribute('data-slot-pick') === '1') return;
 		root.setAttribute('data-slot-pick', '1');
 		function pick(e) {
-			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
+			var label = e.target && e.target.closest ? e.target.closest('.btn-select') : null;
 			if (!label || !root.contains(label)) return;
+			e.preventDefault();
 			e.stopPropagation();
-			var inputId = label.getAttribute('for') || '';
+			var inputId = label.getAttribute('data-slot-for') || label.getAttribute('for') || '';
 			var input = inputId ? document.getElementById(inputId) : null;
 			if (!input) input = label.querySelector('input[type="radio"]');
 			if (!input || input.disabled) return;
 			input.checked = true;
-			root.querySelectorAll('label.btn-select.is-picked').forEach(function(node) {
+			root.querySelectorAll('.btn-select.is-picked').forEach(function(node) {
 				node.classList.remove('is-picked');
 			});
 			label.classList.add('is-picked');
@@ -471,9 +472,10 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 				inp.name = 'reschedule_slot';
 				inp.id = inputId;
 				inp.value = utc;
-				var lbl = document.createElement('label');
+				var lbl = document.createElement('button');
+				lbl.type = 'button';
 				lbl.className = 'btn-select';
-				lbl.setAttribute('for', inputId);
+				lbl.setAttribute('data-slot-for', inputId);
 				lbl.textContent = String(slot.label || '');
 				wrap.appendChild(inp);
 				wrap.appendChild(lbl);
