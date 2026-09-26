@@ -443,7 +443,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	#zapis-reschedule .modal-dialog {
 		width: 96vw !important;
 		max-width: 1180px !important;
-		margin: 30px auto !important;
+		margin: 12px auto !important;
 	}
 	#zapis-reschedule .modal-content { overflow: hidden; }
 	#zapis-reschedule .modal-body { overflow: hidden; padding: 20px 28px 28px; }
@@ -593,8 +593,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			flex-direction: column;
 		}
 		#zapis-reschedule .modal-body {
-			overflow-y: auto;
-			-webkit-overflow-scrolling: touch;
+			overflow: hidden;
 		}
 		#zapis-reschedule .calc__body { padding-bottom: 8px; }
 		#zapis-reschedule #reschedule-calendar .calendar__master-item { max-height: calc(100vh - 260px); overflow: hidden; }

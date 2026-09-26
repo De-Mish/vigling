@@ -757,7 +757,7 @@ if ($journalRangeChunk) {
 	.com_orders.orders-journal .course-participants { display: grid; gap: 12px; margin-top: 18px; }
 	.com_orders.orders-journal .course-participant { border: 1px solid #ece4b6; border-radius: 10px; padding: 12px; background: #fffdf6; }
 	.com_orders.orders-journal .order-comment { margin-top: 6px; white-space: pre-wrap; color: #555; }
-	#zapis-reschedule .modal-dialog { width: 96vw !important; max-width: 1180px !important; margin: 30px auto !important; }
+	#zapis-reschedule .modal-dialog { width: 96vw !important; max-width: 1180px !important; margin: 12px auto !important; }
 	#zapis-reschedule #reschedule-calendar { width: 100% !important; max-width: 800px; margin: 0 auto !important; }
 	#zapis-reschedule #reschedule-calendar.preload { visibility: visible; }
 	#zapis-reschedule .error-msg { color: #a94442; margin-top: 10px; display: none; }

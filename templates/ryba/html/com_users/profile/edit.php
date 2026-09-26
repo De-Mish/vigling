@@ -912,6 +912,25 @@ try {
 	$existingSearchRows = [];
 }
 
+$phonePublicChecked = true;
+$phonePublicRaw = '';
+if (isset($jcfields['phone_public']->rawvalue) && is_scalar($jcfields['phone_public']->rawvalue)) {
+	$phonePublicRaw = trim((string) $jcfields['phone_public']->rawvalue);
+}
+if ($phonePublicRaw === '' && (int) $userId > 0 && class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$storedPhonePublic = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues((int) $userId, ['phone_public']);
+	$phonePublicRaw = trim((string) ($storedPhonePublic['phone_public'] ?? ''));
+}
+if ($phonePublicRaw === '0') {
+	$phonePublicChecked = false;
+}
+$phonePublicToggle = '<label class="phone-public-toggle">'
+	. '<input type="hidden" name="jform[com_fields][phone_public]" value="0">'
+	. '<input type="checkbox" id="jform_phone_public" name="jform[com_fields][phone_public]" value="1"' . ($phonePublicChecked ? ' checked' : '') . '>'
+	. '<span class="phone-public-toggle__wide">Сделать номер публичным</span>'
+	. '<span class="phone-public-toggle__narrow">Сделать номер общедоступным</span>'
+	. '</label>';
+
 $jsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
 $missingServiceOptionsJson = json_encode(array_map('array_values', $missingServiceOptionsByCategory), $jsJsonFlags) ?: '{}';
 $servicesJson = json_encode($servicesByCategory, $jsJsonFlags) ?: '{}';
@@ -1012,6 +1031,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 										</div>
 										<div class="controls">
 											<input type="text" name="jform[profile][phone]" id="jform_telefon" value="<?php echo $this->escape($phoneValue); ?>" class="js-phone-mask" placeholder="Телефон">
+											<?php echo $phonePublicToggle; ?>
 										</div>
 									</div>
 									<?php
@@ -1084,7 +1104,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 									<div class="control-group mail-group">
 										<div class="control-group telefon-group">
 											<div class="control-label"><label for="jform_telefon">Телефон</label></div>
-											<div class="controls"><input type="text" name="jform[profile][phone]" id="jform_telefon" value="<?php echo $this->escape($phoneValue); ?>" class="js-phone-mask" placeholder="Телефон"></div>
+											<div class="controls"><input type="text" name="jform[profile][phone]" id="jform_telefon" value="<?php echo $this->escape($phoneValue); ?>" class="js-phone-mask" placeholder="Телефон"><?php echo $phonePublicToggle; ?></div>
 										</div>
 										<div class="control-group email1-group">
 											<div class="control-label"><label for="jform_email1">E-mail <span class="star" aria-hidden="true">*</span></label></div>
@@ -2283,6 +2303,35 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	flex: 1 1 auto !important;
 	max-width: none !important;
 	width: auto !important;
+}
+.profile-edit #jsn-form .phone-public-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex: 0 0 auto;
+	margin: 0;
+	font-weight: 500;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.profile-edit #jsn-form .phone-public-toggle input[type="checkbox"] {
+	flex: 0 0 16px !important;
+	width: 16px !important;
+	height: 16px !important;
+	margin: 0 !important;
+}
+.profile-edit #jsn-form .phone-public-toggle__narrow { display: none; }
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+	.profile-edit #jsn-form .telefon-group .controls {
+		flex-wrap: wrap !important;
+	}
+	.profile-edit #jsn-form .phone-public-toggle {
+		flex: 1 0 100%;
+		margin-top: 8px;
+		white-space: normal;
+	}
+	.profile-edit #jsn-form .phone-public-toggle__wide { display: none; }
+	.profile-edit #jsn-form .phone-public-toggle__narrow { display: inline; }
 }
 .profile-edit #jsn-form .address-group { display: flex; flex-wrap: wrap; gap: 12px; }
 .profile-edit #jsn-form .address-group .control-group { flex: 1 1 220px; min-width: 200px; }
