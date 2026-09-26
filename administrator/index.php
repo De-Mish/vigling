@@ -29,4 +29,26 @@ if (version_compare(PHP_VERSION, JOOMLA_MINIMUM_PHP, '<')) {
 \define('_JEXEC', 1);
 
 // Run the application - All executable code should be triggered through this file
+if (PHP_SAPI !== 'cli') {
+    $viglingForwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    $viglingHttps = (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || $viglingForwardedProto === 'https'
+        || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && (string) $_SERVER['SERVER_PORT'] === '443')
+    );
+    if (!headers_sent()) {
+        header_remove('X-Powered-By');
+        header('X-Frame-Options: SAMEORIGIN');
+        header("Content-Security-Policy-Report-Only: default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self'");
+        if ($viglingHttps) {
+            header('Strict-Transport-Security: max-age=31536000');
+        }
+    }
+    register_shutdown_function(static function () {
+        if (!headers_sent()) {
+            header_remove('X-Powered-By');
+        }
+    });
+}
 require_once __DIR__ . '/includes/app.php';

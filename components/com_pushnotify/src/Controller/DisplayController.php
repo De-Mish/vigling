@@ -218,7 +218,9 @@ class DisplayController extends BaseController
 			'test'
 		);
 
-		if (($result['sent'] ?? 0) > 0) {
+		if (($result['queued'] ?? 0) > 0) {
+			$this->jsonResponse(['success' => true, 'message' => 'Тест поставлен в очередь. Уведомление уйдёт в течение минуты, когда отработает cron.']);
+		} elseif (($result['sent'] ?? 0) > 0) {
 			$this->jsonResponse(['success' => true, 'message' => 'Тестовое уведомление отправлено. Проверьте рабочий стол браузера.']);
 		} else {
 			$this->jsonResponse(['success' => false, 'message' => 'Не отправлено. Проверьте: подписка активна, включены уведомления, установлен kreait/firebase-php в libraries.']);
@@ -378,6 +380,11 @@ class DisplayController extends BaseController
 	{
 		$userId = $this->requireUser();
 		if ($userId === null) return;
+
+		if (strtoupper((string) $this->input->getMethod()) !== 'POST' || !Session::checkToken('post')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверный токен']);
+			return;
+		}
 
 		$tz = trim((string) $this->input->getString('timezone', ''));
 		if ($tz === '') {

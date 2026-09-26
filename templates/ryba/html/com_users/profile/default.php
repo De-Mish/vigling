@@ -10,8 +10,14 @@ use Joomla\CMS\Access\Access;
 
 $user = Factory::getApplication()->getIdentity();
 $isOwn = $user->id == $this->data->id;
+$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+if (is_file($masterHelper)) {
+	require_once $masterHelper;
+}
 $userGroups = $user->id ? $user->getAuthorisedGroups() : [];
-$isMaster = in_array(3, $userGroups) || in_array(8, $userGroups);
+$isMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($userGroups)
+	: (in_array(3, array_map('intval', (array) $userGroups), true) || in_array(8, array_map('intval', (array) $userGroups), true));
 $profileOwnerId = (int) ($this->data->id ?? 0);
 if (!$isOwn && $profileOwnerId > 0) {
 	echo $this->loadTemplate('public');
@@ -31,7 +37,9 @@ $modeliListUrl = '';
 $modeliArchiveUrl = '';
 $repeatStockBase = '';
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
-$profileIsMaster = in_array(3, $profileGroups) || in_array(8, $profileGroups);
+$profileIsMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($profileGroups)
+	: (in_array(3, array_map('intval', (array) $profileGroups), true) || in_array(8, array_map('intval', (array) $profileGroups), true));
 $profileIsAdministrator = in_array(8, $profileGroups, true) || in_array(7, $profileGroups, true) || in_array(6, $profileGroups, true);
 $showMasterPublicCard = $isOwn && $profileIsMaster;
 $profileMasterType = '';
@@ -324,6 +332,22 @@ if ($isOwn && $profileOwnerId > 0) {
 		$emailVerificationGraceUntil = '';
 	}
 }
+$showActivationTab = in_array($emailVerificationStatus, ['pending', 'blocked'], true);
+$activationTabName = $profileIsClient ? 'profile-tab7' : 'profile-tab9';
+$activationTabIndex = $profileIsClient ? '7' : '9';
+$activationDeadlineLabel = '';
+if ($emailVerificationGraceUntil !== '') {
+	$graceDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $emailVerificationGraceUntil, new \DateTimeZone('UTC'));
+	$activationDeadlineLabel = $graceDate instanceof \DateTimeImmutable
+		? $graceDate->format('d.m.Y')
+		: $emailVerificationGraceUntil;
+}
+$activationTabLabel = 'Активировать аккаунт';
+if ($emailVerificationStatus === 'blocked') {
+	$activationTabLabel = 'Аккаунт заблокирован';
+} elseif ($emailVerificationStatus === 'pending' && $activationDeadlineLabel !== '') {
+	$activationTabLabel = 'Активировать до ' . $activationDeadlineLabel;
+}
 $defaultImg = Uri::root() . 'templates/ryba/images/master.png';
 if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 	$defaultImg = Uri::root() . 'components/com_jsn/assets/img/default.jpg';
@@ -575,7 +599,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					$openAktsiiArchive = Factory::getApplication()->getInput()->getCmd('aktsii', '') === 'archive';
 					$openKursyArchive = Factory::getApplication()->getInput()->getCmd('kursy', '') === 'archive';
 					$openModeliArchive = Factory::getApplication()->getInput()->getCmd('modeli', '') === 'archive';
-					$lkVisibleTabCount = $profileIsClient ? 4 : 8;
+					$lkVisibleTabCount = $profileIsClient ? ($showActivationTab ? 4 : 3) : ($showActivationTab ? 8 : 7);
 					$lkTabWidth = rtrim(rtrim(number_format(100 / $lkVisibleTabCount, 4, '.', ''), '0'), '.') . '%';
 					$lkDefaultTab = 'profile-tab11';
 					if ($openAktsiiArchive) {
@@ -584,6 +608,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 						$lkDefaultTab = 'profile-tab5';
 					} elseif ($openModeliArchive) {
 						$lkDefaultTab = 'profile-tab6';
+					} elseif ($showActivationTab && !$openZapisi) {
+						$lkDefaultTab = $activationTabName;
 					}
 					$zapisiUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 					$aktsiiListUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl();
@@ -676,21 +702,56 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 				<ul class="z-tabs-nav z-tabs-mobile" style="display: none;"><li><a class="z-link" style="text-align: left;"><span class="z-title">Профиль</span><span class="z-arrow"></span></a></li></ul>
 				<i class="z-dropdown-arrow"></i>
 				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
-					<?php if ($profileIsClient) : ?>
-					<li data-index="11" data-link="profile-tab11" class="z-tab z-first<?php echo $lkDefaultTab === 'profile-tab11' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab z-last" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<?php else : ?>
-					<li data-index="11" data-link="profile-tab11" class="z-tab z-first<?php echo $lkDefaultTab === 'profile-tab11' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
-					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
-					<li data-index="4" data-link="profile-tab4" class="z-tab<?php echo $lkDefaultTab === 'profile-tab4' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab<?php echo $lkDefaultTab === 'profile-tab5' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab<?php echo $lkDefaultTab === 'profile-tab6' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
-					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
-					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
-					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
-					<?php endif; ?>
+					<?php
+					$lkTabs = $profileIsClient
+						? [
+							['index' => '11', 'link' => 'profile-tab11', 'label' => 'Записи'],
+							['index' => '5', 'link' => 'profile-tab5', 'label' => 'Уведомления'],
+							['index' => '10', 'link' => 'profile-tab10', 'label' => 'Избранное'],
+						]
+						: [
+							['index' => '11', 'link' => 'profile-tab11', 'label' => 'Записи'],
+							['index' => '3', 'link' => 'profile-tab3', 'label' => 'Услуги и цены'],
+							['index' => '4', 'link' => 'profile-tab4', 'label' => 'Акции'],
+							['index' => '5', 'link' => 'profile-tab5', 'label' => 'Курсы'],
+							['index' => '6', 'link' => 'profile-tab6', 'label' => 'Поиск моделей'],
+							['index' => '7', 'link' => 'profile-tab7', 'label' => 'Уведомления'],
+							['index' => '10', 'link' => 'profile-tab10', 'label' => 'Избранное'],
+						];
+					if ($showActivationTab) {
+						$activationTab = [
+							'index' => $activationTabIndex,
+							'link' => $activationTabName,
+							'label' => $activationTabLabel,
+							'activation' => true,
+						];
+						if ($emailVerificationStatus === 'blocked') {
+							array_unshift($lkTabs, $activationTab);
+						} elseif ($profileIsClient) {
+							$lkTabs[] = $activationTab;
+						} else {
+							$favoritesPos = count($lkTabs) - 1;
+							array_splice($lkTabs, $favoritesPos, 0, [$activationTab]);
+						}
+					}
+					$lkTabLast = count($lkTabs) - 1;
+					foreach ($lkTabs as $lkTabPos => $lkTab) :
+						$lkTabClass = 'z-tab';
+						if ($lkTabPos === 0) {
+							$lkTabClass .= ' z-first';
+						}
+						if ($lkTabPos === $lkTabLast) {
+							$lkTabClass .= ' z-last';
+						}
+						if ($lkDefaultTab === $lkTab['link']) {
+							$lkTabClass .= ' z-active';
+						}
+						if (!empty($lkTab['activation'])) {
+							$lkTabClass .= ' z-tab-activation';
+						}
+					?>
+					<li data-index="<?php echo $this->escape($lkTab['index']); ?>" data-link="<?php echo $this->escape($lkTab['link']); ?>" class="<?php echo $lkTabClass; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;"><?php echo $this->escape($lkTab['label']); ?><span></span></a></li>
+					<?php endforeach; ?>
 				</ul>
 				<div class="z-container">
 					<?php echo $this->loadTemplate('appointments'); ?>
@@ -1103,9 +1164,10 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					</div>
 						<?php echo $this->loadTemplate('favorites'); ?>
 					<?php endif; ?>
-					<div class="z-content" data-index="<?php echo !$profileIsClient ? '9' : '7'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '7'; ?>" style="display: none;">
+					<?php if ($showActivationTab) : ?>
+					<div class="z-content" data-index="<?php echo $this->escape($activationTabIndex); ?>" data-name="<?php echo $this->escape($activationTabName); ?>" style="display: none;">
 						<div class="z-content-inner">
-							<fieldset id="jsn_activate" class="jsn-form-fieldset" data-index="<?php echo !$profileIsClient ? '9' : '7'; ?>" data-name="profile-tab<?php echo !$profileIsClient ? '9' : '7'; ?>">
+							<fieldset id="jsn_activate" class="jsn-form-fieldset" data-index="<?php echo $this->escape($activationTabIndex); ?>" data-name="<?php echo $this->escape($activationTabName); ?>">
 								<legend style="display: none;">Активировать аккаунт</legend>
 								<dl class="dl-horizontal">
 									<dt>Статус</dt>
@@ -1137,6 +1199,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 							</fieldset>
 						</div>
 					</div>
+					<?php endif; ?>
 					<?php if (!$profileIsClient) : ?>
 						<?php echo $this->loadTemplate('favorites'); ?>
 					<?php endif; ?>
@@ -1280,6 +1343,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 .push-notify-switch input:disabled + .push-notify-slider { opacity: 0.6; cursor: not-allowed; }
 .push-notify-row-status { display: flex; align-items: center; gap: 4px; }
 .push-notify-hint { margin: 10px 0 0; font-size: 14px; line-height: 1.4; color: #222; }
+#jsn-profile-tabs > li.z-tab-activation .z-link { white-space: normal; line-height: 1.2; }
 @media (max-width: 576px) {
 	.view_profile-tabs .service__item--readonly,
 	.view_profile-tabs .course__item--readonly {
@@ -1309,7 +1373,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 	}
 	var zapisiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab11"]');
 	var aktsiiTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab4"]');
-	var activeTab = tabs[0];
+	var markedTab = document.querySelector('#jsn-profile-tabs > li.z-tab.z-active');
+	var activeTab = markedTab || tabs[0];
 	try {
 		var params = new URLSearchParams(window.location.search);
 		if (zapisiTab && params.has('zapisi')) {
@@ -1691,8 +1756,13 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 	try {
 		var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		if (tz && window.PUSHNOTIFY_BASE) {
-			var u = window.PUSHNOTIFY_BASE + (window.PUSHNOTIFY_BASE.indexOf('?') === -1 ? '?' : '&') + 'task=display.setTimezone&format=json&timezone=' + encodeURIComponent(tz);
-			fetch(u, { method: 'GET', credentials: 'same-origin' }).catch(function(){});
+			var u = window.PUSHNOTIFY_BASE + (window.PUSHNOTIFY_BASE.indexOf('?') === -1 ? '?' : '&') + 'task=display.setTimezone&format=json';
+			var body = new FormData();
+			body.append('timezone', tz);
+			if (window.PUSHNOTIFY_TOKEN_NAME) {
+				body.append(window.PUSHNOTIFY_TOKEN_NAME, window.PUSHNOTIFY_TOKEN_VALUE || '1');
+			}
+			fetch(u, { method: 'POST', body: body, credentials: 'same-origin' }).catch(function(){});
 		}
 	} catch (e) {}
 })();

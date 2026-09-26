@@ -27,6 +27,9 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
+	# Cron and the old mail form are not web pages.
+	RewriteRule ^components/com_pushnotify/cron/ - [F,L]
+	RewriteRule ^templates/ryba/feedback/ - [F,L]
 	# Правило для коротких URL профилей по ID
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -1290,7 +1290,13 @@ try {
 	}
 	$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
 	$profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
-	$isMasterProfile = in_array(3, $profileGroups, true) || in_array(8, $profileGroups, true);
+	$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+	if (is_file($masterHelper)) {
+		require_once $masterHelper;
+	}
+	$isMasterProfile = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+		? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($profileGroups)
+		: (in_array(3, array_map('intval', (array) $profileGroups), true) || in_array(8, array_map('intval', (array) $profileGroups), true));
 	$reviewDirection = $isMasterProfile
 		? \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
 		: \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT;

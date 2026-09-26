@@ -78,8 +78,16 @@ class AppointmentsHelper
 		$app = Factory::getApplication();
 		$user = $app->getIdentity();
 		$input = $input ?? $app->getInput();
-		$groups = $user && $user->id ? $user->getAuthorisedGroups() : [];
-		$target->canBookTime = in_array(3, $groups, true) || in_array(8, $groups, true);
+		$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+		if (is_file($masterHelper)) {
+			require_once $masterHelper;
+		}
+		if (class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)) {
+			$target->canBookTime = \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMaster($user);
+		} else {
+			$groups = $user && $user->id ? array_map('intval', (array) $user->getAuthorisedGroups()) : [];
+			$target->canBookTime = in_array(3, $groups, true) || in_array(8, $groups, true);
+		}
 
 		$layout = $input->getCmd('layout', 'default');
 		$mode = $input->getCmd('zapisi', '');

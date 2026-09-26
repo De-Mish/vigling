@@ -622,7 +622,13 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	$pushnotifyUserIsMaster = false;
 	if ($pushnotifyLoggedIn) {
 		$pushnotifyGroups = $pushnotifyUser->getAuthorisedGroups();
-		$pushnotifyUserIsMaster = in_array(3, $pushnotifyGroups, true) || in_array(8, $pushnotifyGroups, true);
+		$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+		if (is_file($masterHelper)) {
+			require_once $masterHelper;
+		}
+		$pushnotifyUserIsMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+			? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($pushnotifyGroups)
+			: (in_array(3, array_map('intval', (array) $pushnotifyGroups), true) || in_array(8, array_map('intval', (array) $pushnotifyGroups), true));
 	}
 	$pushnotifyIsZapisiTab = $pushnotifyIsLkProfile && in_array($pushnotifyZapisi, ['day', 'week', 'month'], true);
 	$pushnotifyIsClientsPage = ($option === 'com_orders' && $view === 'orders' && $layout === 'clients')
@@ -1651,6 +1657,12 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					</div>
 					<input type="hidden" name="jform[username]" id="quick-auth-username" value="">
 					<input type="hidden" name="jform[registration_type]" value="client">
+					<div class="quick-auth-field">
+						<label class="quick-auth-remember" for="quick-auth-remember-reg">
+							<input type="checkbox" id="quick-auth-remember-reg" name="remember" value="1">
+							Запомнить меня
+						</label>
+					</div>
 					<div class="quick-auth-field quick-auth-msg" id="quick-auth-msg-reg"></div>
 					<button type="submit" class="btn btn__time-zapis">Зарегистрироваться и записаться</button>
 				</form>
@@ -1669,6 +1681,12 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					<div class="quick-auth-field">
 						<label for="quick-auth-login-password">Пароль</label>
 						<input type="password" id="quick-auth-login-password" name="password" required>
+					</div>
+					<div class="quick-auth-field">
+						<label class="quick-auth-remember" for="quick-auth-remember-login">
+							<input type="checkbox" id="quick-auth-remember-login" name="remember" value="1">
+							Запомнить меня
+						</label>
 					</div>
 					<div class="quick-auth-field quick-auth-msg" id="quick-auth-msg-login"></div>
 					<button type="submit" class="btn btn__time-zapis">Войти и перейти к записи</button>

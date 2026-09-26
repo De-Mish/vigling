@@ -3,6 +3,17 @@
  * Общий cron напоминаний по записям.
  * Крон (раз в минуту): * * * * * cd /path/to/public_html && php components/com_pushnotify/cron/booking_reminders.php
  */
+if (PHP_SAPI !== 'cli') {
+	if (!headers_sent()) {
+		header('HTTP/1.1 404 Not Found');
+		header('Content-Type: text/plain; charset=utf-8');
+	}
+	echo "Not found\n";
+	exit;
+}
+if (!\defined('VIGLING_PUSH_DRAIN')) {
+	\define('VIGLING_PUSH_DRAIN', true);
+}
 $log = function ($msg) {
 	if (php_sapi_name() !== 'cli') return;
 	$f = @fopen(dirname(__DIR__) . '/cron_reminders.log', 'a');
@@ -214,4 +225,28 @@ foreach ($offsets as $offset) {
 
 if (php_sapi_name() === 'cli') {
 	echo "Отправлено напоминаний: {$totalSent}\n";
+}
+
+try {
+	$maintenanceFile = $base . '/components/com_pushnotify/src/Helper/DailyMaintenance.php';
+	if (is_file($maintenanceFile)) {
+		require_once $maintenanceFile;
+		\Viglin\Component\Pushnotify\Site\Helper\DailyMaintenance::runDaily($db);
+		$log('daily maintenance checked');
+	}
+} catch (\Throwable $e) {
+	$log('maintenance failed: ' . $e->getMessage());
+}
+
+try {
+	$fcmFile = $base . '/components/com_pushnotify/src/Helper/FcmHelper.php';
+	if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\FcmHelper::class, false) && is_file($fcmFile)) {
+		require_once $fcmFile;
+	}
+	if (class_exists(\Viglin\Component\Pushnotify\Site\Helper\FcmHelper::class, false)) {
+		$drained = \Viglin\Component\Pushnotify\Site\Helper\FcmHelper::drainQueue();
+		$log('push queue drained ' . (int) $drained);
+	}
+} catch (\Throwable $e) {
+	$log('push drain failed: ' . $e->getMessage());
 }

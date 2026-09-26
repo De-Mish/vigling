@@ -6,9 +6,14 @@ namespace Viglin\Component\Aktsii\Site\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel as BaseListModel;
+use Joomla\Plugin\User\Vigling\Helper\CatalogCacheTrait;
+
+require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogCacheTrait.php';
 
 class ListModel extends BaseListModel
 {
+	use CatalogCacheTrait;
+
 	private const MAP_ITEMS_LIMIT = 500;
 
 	private $totalCache = [];
@@ -41,9 +46,12 @@ class ListModel extends BaseListModel
 			return (int) $this->totalCache[$store];
 		}
 		try {
-			$db = $this->getDatabase();
-			$db->setQuery($this->buildCountQuery());
-			$this->totalCache[$store] = (int) $db->loadResult();
+			$this->totalCache[$store] = (int) $this->rememberCatalog('aktsii', $store, function () {
+				$db = $this->getDatabase();
+				$db->setQuery($this->buildCountQuery());
+
+				return (int) $db->loadResult();
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 			return 0;
@@ -66,10 +74,13 @@ class ListModel extends BaseListModel
 			if ($limit > 50) {
 				$limit = 50;
 			}
-			$query = $this->buildListQuery();
-			$query->setLimit($limit, $start);
-			$this->getDatabase()->setQuery($query);
-			$this->itemsCache[$store] = $this->getDatabase()->loadObjectList() ?: [];
+			$this->itemsCache[$store] = $this->rememberCatalog('aktsii', $store, function () use ($limit, $start) {
+				$query = $this->buildListQuery();
+				$query->setLimit($limit, $start);
+				$this->getDatabase()->setQuery($query);
+
+				return $this->getDatabase()->loadObjectList() ?: [];
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 			return [];
@@ -84,10 +95,13 @@ class ListModel extends BaseListModel
 			return (array) $this->mapItemsCache[$store];
 		}
 		try {
-			$query = $this->buildListQuery();
-			$query->setLimit(self::MAP_ITEMS_LIMIT, 0);
-			$this->getDatabase()->setQuery($query);
-			$this->mapItemsCache[$store] = $this->getDatabase()->loadObjectList() ?: [];
+			$this->mapItemsCache[$store] = $this->rememberCatalog('aktsii', $store, function () {
+				$query = $this->buildListQuery();
+				$query->setLimit(self::MAP_ITEMS_LIMIT, 0);
+				$this->getDatabase()->setQuery($query);
+
+				return $this->getDatabase()->loadObjectList() ?: [];
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 			return [];

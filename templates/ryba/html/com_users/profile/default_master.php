@@ -32,7 +32,13 @@ $isProfileOwner = ($currentUserId === $profileUserId);
 
 // Проверка что это мастер
 $profileGroups = Access::getGroupsByUser($profileUserId, false);
-$isMasterProfile = in_array(3, $profileGroups) || in_array(8, $profileGroups);
+$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+if (is_file($masterHelper)) {
+	require_once $masterHelper;
+}
+$isMasterProfile = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($profileGroups)
+	: (in_array(3, array_map('intval', (array) $profileGroups), true) || in_array(8, array_map('intval', (array) $profileGroups), true));
 
 if (!$isMasterProfile) {
     echo '<div class="container"><p>Это не профиль мастера</p></div>';

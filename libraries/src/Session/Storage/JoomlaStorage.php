@@ -257,7 +257,21 @@ class JoomlaStorage extends NativeStorage
             $cookie['path'] = $this->cookiePath;
         }
 
-        session_set_cookie_params($cookie['lifetime'], $cookie['path'], $cookie['domain'], $cookie['secure'], true);
+        $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        $secure = !empty($cookie['secure']) || $this->forceSSL
+            || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || $forwardedProto === 'https'
+            || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https')
+            || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+
+        session_set_cookie_params([
+            'lifetime' => (int) $cookie['lifetime'],
+            'path' => (string) $cookie['path'],
+            'domain' => (string) $cookie['domain'],
+            'secure' => (bool) $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     }
 
     /**
