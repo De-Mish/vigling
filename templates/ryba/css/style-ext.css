@@ -2032,19 +2032,6 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   pointer-events: auto !important;
 }
 
-@media only screen and (min-width: 768px) {
-  #zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m,
-  #zapis-reschedule .calendar__master-item .btns-m {
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-  }
-  #zapis-reschedule #reschedule-calendar .btns-m .btn-select,
-  #zapis-reschedule .calendar__master-item .btns-m .btn-select {
-    width: 100% !important;
-    flex: none !important;
-  }
-}
 #zapis .zapis-reserved-notice {
   display: none;
   position: relative;
@@ -4716,6 +4703,46 @@ div[role="tooltip"][id^="tip-"] {
   }
 }
 
+/* Specialists on mobile and in the installed app: pin «Записаться» to the
+   bottom-left of the card, the same place as the model-search button. */
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+  .category.jsn_list .category__item {
+    position: relative !important;
+    box-sizing: border-box;
+    padding-bottom: 50px !important;
+  }
+
+  .category.jsn_list .category__item .category__item-content,
+  .category.jsn_list .category__item .category__item-content-right {
+    position: static;
+  }
+
+  .category.jsn_list .category__item .category__item-content-right {
+    display: block;
+    width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+    overflow: visible;
+    border: 0;
+    clear: none;
+  }
+
+  .category.jsn_list .category__item a.btn__time-zapis {
+    position: absolute !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    right: auto !important;
+    top: auto !important;
+    z-index: 3;
+    margin: 0 !important;
+    float: none !important;
+    transform: none !important;
+  }
+}
+
 .master__services .priceList__item-coll.price__coll1.service-name {
   background: none !important;
   background-color: transparent !important;
@@ -4980,15 +5007,15 @@ body#home .home-search-links a.homepage-link-btn:focus {
   font-weight: 600;
 }
 
-/* Desktop catalog «Записаться»: 35% taller oval, same width/position. */
+/* Desktop catalog «Записаться»: 10% shorter than the previous oval, same width. */
 @media (min-width: 769px) {
   .category a.btn__time-zapis {
     box-sizing: border-box !important;
-    height: calc((13px * 1.4 + 12px) * 1.35) !important;
-    line-height: calc((13px * 1.4 + 12px) * 1.35) !important;
+    height: calc((13px * 1.4 + 12px) * 1.215) !important;
+    line-height: calc((13px * 1.4 + 12px) * 1.215) !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
-    border-radius: calc((13px * 1.4 + 12px) * 1.35 / 2) !important;
+    border-radius: calc((13px * 1.4 + 12px) * 1.215 / 2) !important;
   }
 }
 

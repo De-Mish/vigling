@@ -49,7 +49,7 @@
 	}
 	#journal-calendar .btns-m {
 		display: grid !important;
-		grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+		grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 		gap: 6px;
 		margin: 0;
 	}
@@ -57,9 +57,6 @@
 		#journal-calendar .calendar__master-item {
 			flex-basis: min(100%, 340px);
 			width: min(100%, 340px);
-		}
-		#journal-calendar .btns-m {
-			grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 		}
 	}
 	#journal-calendar .btn-select {

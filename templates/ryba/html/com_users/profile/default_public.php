@@ -1774,23 +1774,6 @@ if (empty($isLkEmbed)) {
 			border: 1px solid #e0e0e0 !important;
 			text-align: center !important;
 		}
-		@media (min-width: 768px) {
-			#zapis .screen1 .calendar__master-item .btns-m {
-				display: flex;
-				flex-wrap: wrap;
-				justify-content: flex-start;
-				align-items: flex-start;
-				gap: 6px 8px;
-				grid-template-columns: none;
-			}
-			#zapis .screen1 .calendar__master-item .btns-m .btn-select {
-				width: max-content !important;
-				flex: 0 0 auto;
-				box-sizing: content-box !important;
-				padding-left: 0 !important;
-				padding-right: 0 !important;
-			}
-		}
 		#zapis .screen1 .calendar__master-item .btns-m .btn-select.reserved {
 			background-color: #f0f0f0 !important;
 			color: #555 !important;
