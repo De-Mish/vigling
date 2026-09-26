@@ -125,6 +125,7 @@ class AppointmentsHelper
 		$target->monthCursor = $monthStart;
 		$target->appointmentsBaseUrl = self::profileUrl(['zapisi' => 'day']);
 		$target->dayUrl = self::profileUrl(['zapisi' => 'day']);
+		$target->dayArchiveUrl = self::profileUrl(['zapisi' => 'day', 'entries' => 'archive']);
 		$target->weekUrl = self::profileUrl(['zapisi' => 'week']);
 		$target->monthUrl = self::profileUrl(['zapisi' => 'month']);
 		$target->monthCurrentUrl = self::profileUrl(['zapisi' => 'month']);

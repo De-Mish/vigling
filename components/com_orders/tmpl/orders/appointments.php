@@ -37,6 +37,8 @@ try {
 	$tz = new \DateTimeZone('UTC');
 }
 $todayLocal = new \DateTimeImmutable('today', $tz);
+$entriesArchive = $mode === 'day' && Factory::getApplication()->getInput()->getCmd('entries', '') === 'archive';
+$dayArchiveUrl = (string) ($src->dayArchiveUrl ?? '');
 $monthNames = [1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель', 5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август', 9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь'];
 $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
 ?>
@@ -51,6 +53,32 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		margin: 0 0 18px;
 	}
 	.appointments-page .appointments-toolbar h1 { margin: 0; }
+	.appointments-page .appointments-day-heading {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.appointments-page .appointments-archive-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 32px;
+		padding: 4px 14px;
+		border: 1px solid #d8d8d8;
+		border-radius: 999px;
+		background: #fff;
+		color: #222;
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 1.2;
+		text-decoration: none;
+	}
+	.appointments-page .appointments-archive-btn.is-active {
+		background: #f9ce54;
+		border-color: #f9ce54;
+		color: #111;
+	}
 	.appointments-page .appointments-lead { margin: 6px 0 0; color: #707070; font-size: 13px; }
 	.appointments-page .appointments-jump-btn {
 		display: inline-flex;
@@ -135,10 +163,17 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	.appointments-page .appointments-month-head {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
 		gap: 12px;
 		margin: 0 0 12px;
+	}
+	.appointments-page .appointments-month-title-block {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 8px;
+		min-width: 0;
 	}
 	.appointments-page .appointments-month-title { margin: 0; font-size: 20px; font-weight: 700; }
 	.appointments-page .appointments-month-nav { display: flex; gap: 8px; }
@@ -479,19 +514,6 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		border: 1px solid #e0e0e0 !important;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	}
-	@media (min-width: 768px) {
-		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			display: grid !important;
-			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-			gap: 6px;
-		}
-		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-			width: 100% !important;
-			flex: none;
-			padding-left: 2px !important;
-			padding-right: 2px !important;
-		}
-	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
 		background-color: #f0f0f0 !important;
 		color: #555 !important;
@@ -612,16 +634,15 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 
 	<div class="appointments-toolbar">
 		<div>
-			<?php if ($mode === 'month') : ?>
-			<a class="btn btn-xs btn-default appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">
-				<i class="jsn-icon jsn-icon-calendar"></i> Текущий месяц
-			</a>
-			<?php elseif ($mode !== 'week') : ?>
-			<h1 class="page-title">Записи</h1>
+			<?php if ($mode === 'day') : ?>
+			<div class="appointments-day-heading">
+				<h1 class="page-title">Записи</h1>
+				<a class="appointments-archive-btn<?php echo $entriesArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($entriesArchive ? $dayUrl : $dayArchiveUrl); ?>">Архив</a>
+			</div>
 			<?php endif; ?>
 		</div>
 		<nav class="appointments-modes" aria-label="Режим записей">
-			<a href="<?php echo $this->escape($dayUrl); ?>" class="<?php echo $mode === 'day' ? 'is-active' : ''; ?>">День</a>
+			<a href="<?php echo $this->escape($dayUrl); ?>" class="<?php echo ($mode === 'day' && !$entriesArchive) ? 'is-active' : ''; ?>">День</a>
 			<a href="<?php echo $this->escape($weekUrl); ?>" class="<?php echo $mode === 'week' ? 'is-active' : ''; ?>">Неделя</a>
 			<a href="<?php echo $this->escape($monthUrl); ?>" class="<?php echo $mode === 'month' ? 'is-active' : ''; ?>">Месяц</a>
 		</nav>
@@ -655,7 +676,12 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		?>
 		<div class="appointments-month-wrap">
 			<div class="appointments-month-head">
-				<h2 class="appointments-month-title"><?php echo $this->escape(($monthNames[(int) $monthStart->format('n')] ?? '') . ' ' . $monthStart->format('Y')); ?></h2>
+				<div class="appointments-month-title-block">
+					<h2 class="appointments-month-title"><?php echo $this->escape(($monthNames[(int) $monthStart->format('n')] ?? '') . ' ' . $monthStart->format('Y')); ?></h2>
+					<a class="btn btn-xs btn-default appointments-jump-btn" href="<?php echo $this->escape($monthCurrentUrl); ?>">
+						<i class="jsn-icon jsn-icon-calendar"></i> Текущий месяц
+					</a>
+				</div>
 				<div class="appointments-month-nav">
 					<a href="<?php echo $this->escape((string) ($src->monthPrevUrl ?? '')); ?>" aria-label="Назад">‹</a>
 					<a href="<?php echo $this->escape((string) ($src->monthNextUrl ?? '')); ?>" aria-label="Вперёд">›</a>
@@ -776,9 +802,31 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		</script>
 	<?php else : ?>
 		<?php
-		$displayRows = viglingAppointmentsBuildDisplayRows($items, $viewerId);
+		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+		$futureItems = [];
+		$pastItems = [];
+		foreach ($items as $item) {
+			$stamp = null;
+			if (!empty($item->time)) {
+				try {
+					$stamp = new \DateTimeImmutable((string) $item->time, new \DateTimeZone('UTC'));
+				} catch (\Throwable $e) {
+					$stamp = null;
+				}
+			}
+			if ($stamp instanceof \DateTimeImmutable && $stamp < $nowUtc) {
+				$pastItems[] = $item;
+			} else {
+				$futureItems[] = $item;
+			}
+		}
+		usort($pastItems, static function ($a, $b): int {
+			return strcmp((string) ($b->time ?? ''), (string) ($a->time ?? ''));
+		});
+		$listItems = $entriesArchive ? $pastItems : $futureItems;
+		$displayRows = viglingAppointmentsBuildDisplayRows($listItems, $viewerId);
 		$rescheduleAction = $rescheduleClientAction;
-		$emptyMessage = 'У вас пока нет записей.';
+		$emptyMessage = $entriesArchive ? 'Архив пуст' : 'У вас пока нет записей.';
 		include __DIR__ . '/_appointments_list.php';
 		$rescheduleAction = $rescheduleMasterAction;
 		include __DIR__ . '/_appointments_modal.php';

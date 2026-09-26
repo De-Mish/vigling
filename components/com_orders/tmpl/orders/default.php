@@ -88,19 +88,6 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 		border: 1px solid #e0e0e0 !important;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	}
-	@media (min-width: 768px) {
-		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			display: grid !important;
-			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-			gap: 6px;
-		}
-		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-			width: 100% !important;
-			flex: none;
-			padding-left: 2px !important;
-			padding-right: 2px !important;
-		}
-	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
 		background-color: #f0f0f0 !important;
 		color: #555 !important;
