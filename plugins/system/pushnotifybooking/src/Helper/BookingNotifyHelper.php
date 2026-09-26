@@ -39,14 +39,7 @@ class BookingNotifyHelper
 		$bodyClient = self::resolveBody($type, $order, 'client', $bodyClient, ['time' => $timeStr]);
 		$bodyMaster = self::resolveBody($type, $order, 'master', $bodyMaster, ['time' => self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId))]);
 		$data = ['url' => self::getLkUrl()];
-		$pushTitle = null;
-		$pushBody = null;
-		if ($masterId > 0 && $masterId !== $clientId && in_array(self::resolveBookingKind($order), ['service', 'stock', 'course', 'search'], true)) {
-			$push = self::buildMasterAppPush($order, $serviceName);
-			$pushTitle = $push['title'];
-			$pushBody = $push['body'];
-		}
-		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster, $pushTitle, $pushBody);
+		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
 	}
 
 	public static function notifyCancelled(array $order)
@@ -158,7 +151,7 @@ class BookingNotifyHelper
 		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
 	}
 
-	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null, ?string $pushTitleMaster = null, ?string $pushBodyMaster = null)
+	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null, ?string $pushTitleMaster = null)
 	{
 		$clientId = (int) ($order['user_id'] ?? 0);
 		$masterId = (int) ($order['master_id'] ?? 0);
@@ -168,23 +161,36 @@ class BookingNotifyHelper
 		}
 		$bodyForMaster = $bodyMaster !== null ? $bodyMaster : $body;
 		$bookingKind = self::resolveBookingKind($order);
-			if ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
-				if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
-					self::sendWithRetry($clientId, $title, $body, self::withOrderData($data, $orderId), $notificationType, 'client');
-				}
-				if (NotificationSettingsHelper::isInboxEnabled($notificationType, $bookingKind)) {
-					InboxHelper::add($clientId, $notificationType, $title, $body, $orderId);
-				}
+		$serviceName = self::resolveOfferingName($order);
+		$inboxClient = self::withKindLine($notificationType, $bookingKind, $body);
+		$inboxMaster = self::withKindLine($notificationType, $bookingKind, $bodyForMaster);
+		$clientPushBody = self::buildAppBody($order, $serviceName, $notificationType, self::getUserTimezone($clientId));
+		$masterPushBody = self::buildAppBody($order, $serviceName, $notificationType, self::getUserTimezone($masterId));
+		$masterPushTitle = ($pushTitleMaster !== null && $pushTitleMaster !== '') ? $pushTitleMaster : $title;
+		if (
+			$notificationType === 'booking_confirmed'
+			&& $masterId > 0
+			&& $masterId !== $clientId
+			&& $clientId > 0
+			&& in_array($bookingKind, ['service', 'stock', 'course', 'search'], true)
+		) {
+			$masterPushTitle = self::getClientPersonName($clientId);
+		}
+		if ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
+			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
+				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
 			}
-			if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
-				if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
-					$fcmTitle = ($pushTitleMaster !== null && $pushTitleMaster !== '') ? $pushTitleMaster : $title;
-					$fcmBody = ($pushBodyMaster !== null && $pushBodyMaster !== '') ? $pushBodyMaster : $bodyForMaster;
-					self::sendWithRetry($masterId, $fcmTitle, $fcmBody, self::withOrderData($data, $orderId), $notificationType, 'master');
-				}
-				if (NotificationSettingsHelper::isInboxEnabled($notificationType, $bookingKind)) {
-					InboxHelper::add($masterId, $notificationType, $title, $bodyForMaster, $orderId);
-				}
+			if (NotificationSettingsHelper::isInboxEnabled($notificationType, $bookingKind)) {
+				InboxHelper::add($clientId, $notificationType, $title, $inboxClient, $orderId);
+			}
+		}
+		if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
+			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
+				self::sendWithRetry($masterId, $masterPushTitle, $masterPushBody, self::withOrderData($data, $orderId), $notificationType, 'master');
+			}
+			if (NotificationSettingsHelper::isInboxEnabled($notificationType, $bookingKind)) {
+				InboxHelper::add($masterId, $notificationType, $title, $inboxMaster, $orderId);
+			}
 		}
 	}
 
@@ -353,23 +359,58 @@ class BookingNotifyHelper
 		}
 	}
 
-	/**
-	 * PWA banner for a new booking. The website inbox keeps the existing text.
-	 *
-	 * @return array{title:string, body:string}
-	 */
-	private static function buildMasterAppPush(array $order, string $serviceName): array
+	private static function emojiForEvent(string $event): string
 	{
-		$clientId = (int) ($order['user_id'] ?? 0);
-		$masterId = (int) ($order['master_id'] ?? 0);
-		$name = $clientId > 0 ? self::getClientPersonName($clientId) : 'Клиент';
+		if (strpos($event, 'cancel') !== false) {
+			return '🔴';
+		}
+		if (strpos($event, 'reschedul') !== false || $event === 'course_created') {
+			return '🟡';
+		}
+		return '🟢';
+	}
+
+	private static function kindLabel(string $kind): string
+	{
+		if ($kind === 'stock') {
+			return 'Акция';
+		}
+		if ($kind === 'course') {
+			return 'Курсы';
+		}
+		if ($kind === 'search') {
+			return 'Поиск моделей';
+		}
+		if ($kind === 'journal') {
+			return 'Запись';
+		}
+		return 'Простая услуга';
+	}
+
+	private static function withKindLine(string $event, string $kind, string $body): string
+	{
+		$line = self::emojiForEvent($event) . ' ' . self::kindLabel($kind);
+		if ($body === '' || strpos($body, $line) === 0) {
+			return $body !== '' ? $body : $line;
+		}
+		return $line . "\n" . $body;
+	}
+
+	/**
+	 * Compact PWA text. Service banners omit the words «Простая услуга».
+	 */
+	private static function buildAppBody(array $order, string $serviceName, string $event, ?string $timezone): string
+	{
+		$emoji = self::emojiForEvent($event);
 		$kind = self::resolveBookingKind($order);
-		$time = self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId));
+		$time = self::formatDateTime((string) ($order['time'] ?? ''), (string) ($order['time_to'] ?? ''), $timezone);
 		$lines = [];
-		if ($kind === 'course' || $kind === 'search') {
-			$lines[] = self::pushKindAndTitle($kind, $serviceName);
+		if ($kind === 'service' || $kind === 'journal') {
+			$lines[] = trim($emoji . ' ' . $serviceName);
+		} elseif ($kind === 'course' || $kind === 'search') {
+			$lines[] = $emoji . ' ' . self::pushKindAndTitle($kind, $serviceName);
 		} else {
-			$lines[] = $kind === 'stock' ? 'Акция' : 'Простая услуга';
+			$lines[] = $emoji . ' ' . self::kindLabel($kind);
 			if ($serviceName !== '') {
 				$lines[] = $serviceName;
 			}
@@ -377,10 +418,7 @@ class BookingNotifyHelper
 		if ($time !== '') {
 			$lines[] = $time;
 		}
-		return [
-			'title' => $name,
-			'body' => implode("\n", $lines),
-		];
+		return implode("\n", $lines);
 	}
 
 	private static function pushKindAndTitle(string $kind, string $serviceName): string

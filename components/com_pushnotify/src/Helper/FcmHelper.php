@@ -108,9 +108,15 @@ class FcmHelper
 				$webPushNotification['tag'] = $dataStrings['notification_tag'];
 				$webPushNotification['renotify'] = true;
 			}
+			$topicSource = (string) ($dataStrings['notification_tag'] ?? ($title . "\n" . $body));
+			$topic = substr(preg_replace('/[^A-Za-z0-9_-]/', '', hash('sha256', $topicSource)) ?? '', 0, 32);
 			$webPushArray = [
 				'notification' => $webPushNotification,
-				'headers' => ['Urgency' => 'high'],
+				'headers' => [
+					'Urgency' => 'high',
+					'TTL' => '2419200',
+					'Topic' => $topic !== '' ? $topic : substr(hash('sha256', $topicSource), 0, 32),
+				],
 			];
 			if ($link !== '') {
 				$webPushArray['fcm_options'] = ['link' => $link];

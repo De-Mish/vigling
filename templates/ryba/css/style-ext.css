@@ -1891,40 +1891,49 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
 }
 
 #zapis-reschedule .calendar__master:not(.slick-initialized) {
-  display: flex !important;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  display: block !important;
+  overflow: visible !important;
   width: 100% !important;
   max-width: 100% !important;
 }
 
 #zapis-reschedule .calendar__master:not(.slick-initialized) .calendar__master-item {
-  flex: 0 0 100%;
-  width: 100%;
-  min-width: 100%;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box;
   opacity: 1 !important;
 }
 
-#zapis-reschedule .slick-initialized .slick-list,
-#zapis-reschedule .slick-initialized .slick-track,
-#zapis-reschedule .slick-initialized .slick-slide,
-#zapis-reschedule .slick-initialized .slick-slide > div {
-  height: auto !important;
+#zapis-reschedule .modal-content {
+  overflow: auto !important;
+  max-height: calc(100vh - 24px);
 }
 
-#zapis-reschedule .slick-slide {
-  pointer-events: none;
+#zapis-reschedule .modal-body {
+  overflow: auto !important;
 }
 
-#zapis-reschedule .slick-slide.slick-active {
-  pointer-events: auto;
+#zapis-reschedule #reschedule-calendar .calendar__master-item {
+  display: block !important;
+  float: none !important;
+  width: 100% !important;
+  pointer-events: auto !important;
 }
 
-#zapis-reschedule label.btn-select {
+#zapis-reschedule label.btn-select,
+#zapis-reschedule label.btn-select.is-picked {
   cursor: pointer;
   touch-action: manipulation;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2 !important;
+}
+
+#zapis-reschedule label.btn-select.is-picked {
+  background-color: #f7cc53 !important;
+  border-color: #f7cc53 !important;
+  box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
 }
 #zapis .zapis-reserved-notice {
   display: none;

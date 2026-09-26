@@ -1014,6 +1014,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				el.appendChild(heading);
 				if (body) {
 					var text = document.createElement('div');
+					text.style.whiteSpace = 'pre-line';
 					text.textContent = body;
 					el.appendChild(text);
 				}
