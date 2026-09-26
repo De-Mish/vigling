@@ -17,11 +17,121 @@ final class UserCoursesService
      */
     public static function getUserCoursesStructured(int $userId): array
     {
-        if ($userId <= 0) {
-            return [];
+        return self::partitionUserCourses($userId)['active'];
+    }
+
+    /**
+     * Full or finished courses, kept for the profile archive and Repeat.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function getUserArchivedCoursesStructured(int $userId): array
+    {
+        return self::partitionUserCourses($userId)['archived'];
+    }
+
+    /**
+     * @return array{active: array<int, array<string, mixed>>, archived: array<int, array<string, mixed>>}
+     */
+    public static function partitionUserCourses(int $userId): array
+    {
+        $all = $userId > 0 ? (self::getCoursesForUsers([$userId])[$userId] ?? []) : [];
+        $active = [];
+        $archived = [];
+        foreach ($all as $item) {
+            if (self::isArchivedOffer($item)) {
+                $archived[] = $item;
+            } else {
+                $active[] = $item;
+            }
         }
 
-        return self::getCoursesForUsers([$userId])[$userId] ?? [];
+        return ['active' => $active, 'archived' => $archived];
+    }
+
+    /**
+     * A course leaves the active list when every seat is taken or its fixed time has ended.
+     *
+     * @param array<string, mixed> $item
+     */
+    public static function isArchivedOffer(array $item): bool
+    {
+        $mode = self::normalizeBookingMode((string) ($item['booking_mode'] ?? 'free'));
+        $capacity = max(1, (int) ($item['capacity'] ?? 1));
+        if ($mode === 'fixed') {
+            $slotCapacity = (int) ($item['slot_capacity_total'] ?? 0);
+            if ($slotCapacity > 0) {
+                $capacity = $slotCapacity;
+            }
+        }
+        if (max(0, (int) ($item['booking_count'] ?? 0)) >= $capacity) {
+            return true;
+        }
+        if ($mode !== 'fixed') {
+            return false;
+        }
+
+        $endRaw = trim((string) ($item['slot_end_utc'] ?? ''));
+        try {
+            if ($endRaw !== '') {
+                $end = new \DateTimeImmutable($endRaw, new \DateTimeZone('UTC'));
+            } else {
+                $startRaw = trim((string) ($item['slot_start_utc'] ?? ''));
+                if ($startRaw === '') {
+                    return false;
+                }
+                $start = new \DateTimeImmutable($startRaw, new \DateTimeZone('UTC'));
+                $end = $start->modify('+' . max(0, (int) ($item['duration_min'] ?? 0)) . ' minutes');
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return $end < new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function getUserCourseForRepeat(int $userId, int $courseId): ?array
+    {
+        if ($userId <= 0 || $courseId <= 0) {
+            return null;
+        }
+        foreach (self::getCoursesForUsers([$userId])[$userId] ?? [] as $course) {
+            if ((int) ($course['id'] ?? 0) !== $courseId) {
+                continue;
+            }
+            $course['id'] = 0;
+            $course['booking_count'] = 0;
+
+            return $course;
+        }
+
+        return null;
+    }
+
+    public static function activeListWhereSql(DatabaseInterface $db, string $alias = 'c', string $slotAlias = 'slot'): string
+    {
+        return self::buildActiveListWhereSql($db, $alias, $slotAlias, 'course', 'course_id');
+    }
+
+    private static function buildActiveListWhereSql(DatabaseInterface $db, string $alias, string $slotAlias, string $bookingKind, string $idColumn): string
+    {
+        $booked = '(SELECT COUNT(*) FROM ' . $db->quoteName('#__vigling_bookings')
+            . ' WHERE ' . $db->quoteName('booking_kind') . ' = ' . $db->quote($bookingKind)
+            . ' AND ' . $db->quoteName($idColumn) . ' = ' . $db->quoteName($alias) . '.' . $db->quoteName('id') . ')';
+        $capacity = 'CASE WHEN ' . $db->quoteName($alias) . '.' . $db->quoteName('booking_mode') . ' = ' . $db->quote('fixed')
+            . ' AND ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total') . ' > 0 THEN '
+            . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total')
+            . ' ELSE ' . $db->quoteName($alias) . '.' . $db->quoteName('capacity') . ' END';
+        $endExpr = 'COALESCE(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('ends_at_utc')
+            . ', DATE_ADD(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('starts_at_utc')
+            . ', INTERVAL ' . $db->quoteName($alias) . '.' . $db->quoteName('duration_min') . ' MINUTE))';
+        $notPast = '(' . $db->quoteName($alias) . '.' . $db->quoteName('booking_mode') . ' <> ' . $db->quote('fixed')
+            . ' OR ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('starts_at_utc') . ' IS NULL OR ' . $endExpr . ' >= UTC_TIMESTAMP())';
+
+        return '(' . $booked . ' < ' . $capacity . ' AND ' . $notPast . ')';
     }
 
     /**
@@ -156,6 +266,9 @@ final class UserCoursesService
 
         foreach ($existingCourses as $courseId => $courseInfo) {
             if (isset($seenExistingIds[$courseId])) {
+                continue;
+            }
+            if (self::isArchivedOffer($courseInfo)) {
                 continue;
             }
             self::deleteCourseWithBookings($db, $userId, (int) $courseId, $orderTable);

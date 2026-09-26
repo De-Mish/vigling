@@ -7301,13 +7301,14 @@ input[type=text] {
         grid-template-columns: none;
     }
     #zapis .calendar__master-item .btns-m .btn-select {
-        width: auto !important;
+        width: max-content !important;
         min-width: 0 !important;
         flex: 0 0 auto;
+        box-sizing: content-box !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;
-        padding-left: 3ch !important;
-        padding-right: 3ch !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     #zapis-reschedule .calendar__master-item .btns-m {
         display: grid !important;

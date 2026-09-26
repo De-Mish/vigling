@@ -5235,7 +5235,9 @@ body#home .home-search-links a.homepage-link-btn:focus {
   width: auto !important;
   max-width: 100% !important;
 }
-#easyprofile #jsn_stocks [hidden] {
+#easyprofile #jsn_stocks [hidden],
+#easyprofile #jsn_courses [hidden],
+#easyprofile #jsn_searches [hidden] {
   display: none !important;
 }
 #easyprofile #jsn_stocks .stocks-subnav,

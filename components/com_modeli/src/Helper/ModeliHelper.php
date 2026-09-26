@@ -51,8 +51,10 @@ class ModeliHelper
 			->select('DISTINCT ' . $db->quoteName('c.user_id'))
 			->from($db->quoteName('#__vigling_user_searches', 'c'))
 			->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('c.user_id'))
+			->join('LEFT', $db->quoteName('#__vigling_search_slots', 'slot') . ' ON ' . $db->quoteName('slot.search_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
 			->where($db->quoteName('c.is_active') . ' = 1')
 			->where($db->quoteName('u.block') . ' = 0')
+			->where(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::activeListWhereSql($db))
 			->order($db->quoteName('c.user_id') . ' ASC');
 		$db->setQuery($query);
 
@@ -76,9 +78,11 @@ class ModeliHelper
 			->select('DISTINCT ' . $db->quoteName('c.category_id'))
 			->from($db->quoteName('#__vigling_user_searches', 'c'))
 			->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('c.user_id'))
+			->join('LEFT', $db->quoteName('#__vigling_search_slots', 'slot') . ' ON ' . $db->quoteName('slot.search_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
 			->where($db->quoteName('c.is_active') . ' = 1')
 			->where($db->quoteName('u.block') . ' = 0')
-			->where($db->quoteName('c.category_id') . ' > 0');
+			->where($db->quoteName('c.category_id') . ' > 0')
+			->where(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::activeListWhereSql($db));
 		$db->setQuery($query);
 
 		try {

@@ -19,10 +19,16 @@ if (!$isOwn && $profileOwnerId > 0) {
 }
 $openZapisi = false;
 $openAktsiiArchive = false;
+$openKursyArchive = false;
+$openModeliArchive = false;
 $lkTabWidth = '25%';
 $lkDefaultTab = 'profile-tab11';
 $aktsiiListUrl = '';
 $aktsiiArchiveUrl = '';
+$kursyListUrl = '';
+$kursyArchiveUrl = '';
+$modeliListUrl = '';
+$modeliArchiveUrl = '';
 $repeatStockBase = '';
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
 $profileIsMaster = in_array(3, $profileGroups) || in_array(8, $profileGroups);
@@ -119,7 +125,9 @@ $pricesStructuredWithIds = [];
 $stockPricesStructuredWithIds = [];
 $archivedStockPricesStructuredWithIds = [];
 $coursesStructured = [];
+$archivedCoursesStructured = [];
 $searchesStructured = [];
+$archivedSearchesStructured = [];
 $formatProfileServiceDisplayName = static function (string $categoryTitle, string $itemName): string {
 	$categoryTitle = trim($categoryTitle);
 	$itemName = trim($itemName);
@@ -144,9 +152,13 @@ if ($profileOwnerId > 0) {
 	$stockPricesStructured = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructured($profileOwnerId);
 	$stockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($profileOwnerId);
 	$archivedStockPricesStructuredWithIds = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserArchivedStockServicesStructuredWithIds($profileOwnerId);
-	$coursesStructured = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCoursesStructured($profileOwnerId);
+	$courseParts = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::partitionUserCourses($profileOwnerId);
+	$coursesStructured = $courseParts['active'];
+	$archivedCoursesStructured = $courseParts['archived'];
 	if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserSearchesService')) {
-		$searchesStructured = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::getUserSearchesStructured($profileOwnerId);
+		$searchParts = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::partitionUserSearches($profileOwnerId);
+		$searchesStructured = $searchParts['active'];
+		$archivedSearchesStructured = $searchParts['archived'];
 	}
 }
 if ($avatarRaw === '' && !empty($this->data->id)) {
@@ -561,12 +573,25 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					}
 					$openZapisi = in_array(Factory::getApplication()->getInput()->getCmd('zapisi', ''), ['day', 'week', 'month'], true);
 					$openAktsiiArchive = Factory::getApplication()->getInput()->getCmd('aktsii', '') === 'archive';
+					$openKursyArchive = Factory::getApplication()->getInput()->getCmd('kursy', '') === 'archive';
+					$openModeliArchive = Factory::getApplication()->getInput()->getCmd('modeli', '') === 'archive';
 					$lkVisibleTabCount = $profileIsClient ? 4 : 8;
 					$lkTabWidth = rtrim(rtrim(number_format(100 / $lkVisibleTabCount, 4, '.', ''), '0'), '.') . '%';
-					$lkDefaultTab = $openAktsiiArchive ? 'profile-tab4' : 'profile-tab11';
+					$lkDefaultTab = 'profile-tab11';
+					if ($openAktsiiArchive) {
+						$lkDefaultTab = 'profile-tab4';
+					} elseif ($openKursyArchive) {
+						$lkDefaultTab = 'profile-tab5';
+					} elseif ($openModeliArchive) {
+						$lkDefaultTab = 'profile-tab6';
+					}
 					$zapisiUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day']);
 					$aktsiiListUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl();
 					$aktsiiArchiveUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['aktsii' => 'archive']);
+					$kursyListUrl = $aktsiiListUrl;
+					$kursyArchiveUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['kursy' => 'archive']);
+					$modeliListUrl = $aktsiiListUrl;
+					$modeliArchiveUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['modeli' => 'archive']);
 					$repeatStockBase = Route::_('index.php?option=com_users&view=profile&layout=edit', false);
 					?>
 					<div class="lk-notify-wrap" style="display:inline-block; position:relative; vertical-align:middle;">
@@ -660,8 +685,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<li data-index="11" data-link="profile-tab11" class="z-tab z-first<?php echo $lkDefaultTab === 'profile-tab11' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Записи<span></span></a></li>
 					<li data-index="3" data-link="profile-tab3" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Услуги и цены<span></span></a></li>
 					<li data-index="4" data-link="profile-tab4" class="z-tab<?php echo $lkDefaultTab === 'profile-tab4' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Акции<span></span></a></li>
-					<li data-index="5" data-link="profile-tab5" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
-					<li data-index="6" data-link="profile-tab6" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
+					<li data-index="5" data-link="profile-tab5" class="z-tab<?php echo $lkDefaultTab === 'profile-tab5' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Курсы<span></span></a></li>
+					<li data-index="6" data-link="profile-tab6" class="z-tab<?php echo $lkDefaultTab === 'profile-tab6' ? ' z-active' : ''; ?>" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Поиск моделей<span></span></a></li>
 					<li data-index="7" data-link="profile-tab7" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Уведомления<span></span></a></li>
 					<li data-index="9" data-link="profile-tab9" class="z-tab" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Активировать аккаунт<span></span></a></li>
 					<li data-index="10" data-link="profile-tab10" class="z-tab z-last" style="width: <?php echo $lkTabWidth; ?>;"><a class="z-link" style="min-height: 18px;">Избранное<span></span></a></li>
@@ -793,11 +818,15 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 								</fieldset>
 							</div>
 						</div>
-						<div class="z-content" data-index="5" data-name="profile-tab5" style="display: none;">
+						<div class="z-content<?php echo $openKursyArchive ? ' z-active' : ''; ?>" data-index="5" data-name="profile-tab5"<?php echo $openKursyArchive ? '' : ' style="display: none;"'; ?>>
 							<div class="z-content-inner">
 							<fieldset id="jsn_courses" class="jsn-form-fieldset" data-index="5" data-name="profile-tab5">
 								<legend style="display: none;">Курсы</legend>
-								<div class="coursesValue">
+								<div class="stocks-subnav" role="navigation" aria-label="Курсы">
+									<a class="stocks-subnav__btn<?php echo $openKursyArchive ? '' : ' is-active'; ?>" href="<?php echo $this->escape($kursyListUrl !== '' ? $kursyListUrl : Route::_('index.php?option=com_users&view=profile', false)); ?>">Курсы</a>
+									<a class="stocks-subnav__btn<?php echo $openKursyArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($kursyArchiveUrl !== '' ? $kursyArchiveUrl : Route::_('index.php?option=com_users&view=profile&kursy=archive', false)); ?>">Архив</a>
+								</div>
+								<div class="coursesValue"<?php echo $openKursyArchive ? ' hidden' : ''; ?>>
 									<?php if (!empty($coursesStructured)) : ?>
 										<?php foreach ((array) $coursesStructured as $course) : ?>
 										<?php
@@ -851,14 +880,68 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 										<fieldset id="jform_courses_servis" class="readonly">Курсы не заполнены</fieldset>
 									<?php endif; ?>
 								</div>
+								<div class="stocks-archive"<?php echo $openKursyArchive ? '' : ' hidden'; ?>>
+									<?php if ($archivedCoursesStructured === []) : ?>
+										<p class="stocks-archive__empty">Архив пуст</p>
+									<?php else : ?>
+										<div class="stocks-archive__list">
+											<?php foreach ($archivedCoursesStructured as $archivedCourse) :
+												$archivedTitle = trim((string) ($archivedCourse['title'] ?? $archivedCourse['description'] ?? ''));
+												$archivedId = (int) ($archivedCourse['id'] ?? 0);
+												$archivedCapacity = max(1, (int) ($archivedCourse['capacity'] ?? 1));
+												if ((string) ($archivedCourse['booking_mode'] ?? '') === 'fixed' && (int) ($archivedCourse['slot_capacity_total'] ?? 0) > 0) {
+													$archivedCapacity = (int) $archivedCourse['slot_capacity_total'];
+												}
+												$archivedBooked = max(0, (int) ($archivedCourse['booking_count'] ?? 0));
+												$repeatHref = $repeatStockBase !== ''
+													? $repeatStockBase . (strpos($repeatStockBase, '?') === false ? '?' : '&') . 'repeat_course=' . $archivedId
+													: Route::_('index.php?option=com_users&view=profile&layout=edit&repeat_course=' . $archivedId, false);
+												$archivedSlot = trim((string) ($archivedCourse['slot_start_utc'] ?? ''));
+												$archivedSlotLabel = '';
+												if ($archivedSlot !== '') {
+													try {
+														$archivedSlotLabel = (new \DateTimeImmutable($archivedSlot, new \DateTimeZone('UTC')))->format('d.m.Y H:i');
+													} catch (\Throwable $e) {
+														$archivedSlotLabel = $archivedSlot;
+													}
+												}
+											?>
+											<article class="stocks-archive__card">
+												<div class="stocks-archive__card-body">
+													<div class="stocks-archive__name"><?php echo $this->escape($archivedTitle !== '' ? $archivedTitle : 'Курс'); ?></div>
+													<?php if (trim((string) ($archivedCourse['category_title'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Категория:</label> <?php echo $this->escape(trim((string) $archivedCourse['category_title'])); ?></div>
+													<?php endif; ?>
+													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedCourse['description'])); ?></div>
+													<?php endif; ?>
+													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo (int) ($archivedCourse['price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedCourse['duration_min'] ?? 0); ?> мин.</div>
+													<div class="stocks-archive__row"><label>Лимит мест:</label> <?php echo $archivedCapacity; ?></div>
+													<div class="stocks-archive__row"><label>Записано:</label> <?php echo $archivedBooked; ?></div>
+													<div class="stocks-archive__row"><label>Режим:</label> <?php echo $this->escape((string) ($archivedCourse['booking_mode'] ?? '') === 'fixed' ? 'Фиксированная дата' : 'Любое время'); ?></div>
+													<?php if ($archivedSlotLabel !== '') : ?>
+													<div class="stocks-archive__row"><label>Дата и время:</label> <?php echo $this->escape($archivedSlotLabel); ?></div>
+													<?php endif; ?>
+												</div>
+												<a class="stocks-archive__repeat" href="<?php echo $this->escape($repeatHref); ?>">Повторить</a>
+											</article>
+											<?php endforeach; ?>
+										</div>
+									<?php endif; ?>
+								</div>
 								</fieldset>
 							</div>
 						</div>
-						<div class="z-content" data-index="6" data-name="profile-tab6" style="display: none;">
+						<div class="z-content<?php echo $openModeliArchive ? ' z-active' : ''; ?>" data-index="6" data-name="profile-tab6"<?php echo $openModeliArchive ? '' : ' style="display: none;"'; ?>>
 							<div class="z-content-inner">
 							<fieldset id="jsn_searches" class="jsn-form-fieldset" data-index="6" data-name="profile-tab6">
 								<legend style="display: none;">Поиск моделей</legend>
-								<div class="searchesValue">
+								<div class="stocks-subnav" role="navigation" aria-label="Поиск моделей">
+									<a class="stocks-subnav__btn<?php echo $openModeliArchive ? '' : ' is-active'; ?>" href="<?php echo $this->escape($modeliListUrl !== '' ? $modeliListUrl : Route::_('index.php?option=com_users&view=profile', false)); ?>">Поиск моделей</a>
+									<a class="stocks-subnav__btn<?php echo $openModeliArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($modeliArchiveUrl !== '' ? $modeliArchiveUrl : Route::_('index.php?option=com_users&view=profile&modeli=archive', false)); ?>">Архив</a>
+								</div>
+								<div class="searchesValue"<?php echo $openModeliArchive ? ' hidden' : ''; ?>>
 									<?php if (!empty($searchesStructured)) : ?>
 										<?php foreach ((array) $searchesStructured as $search) : ?>
 										<?php
@@ -907,6 +990,56 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 										<?php endforeach; ?>
 									<?php else : ?>
 										<fieldset id="jform_searches_servis" class="readonly">Поиск моделей не заполнен</fieldset>
+									<?php endif; ?>
+								</div>
+								<div class="stocks-archive"<?php echo $openModeliArchive ? '' : ' hidden'; ?>>
+									<?php if ($archivedSearchesStructured === []) : ?>
+										<p class="stocks-archive__empty">Архив пуст</p>
+									<?php else : ?>
+										<div class="stocks-archive__list">
+											<?php foreach ($archivedSearchesStructured as $archivedSearch) :
+												$archivedTitle = trim((string) ($archivedSearch['title'] ?? $archivedSearch['description'] ?? ''));
+												$archivedId = (int) ($archivedSearch['id'] ?? 0);
+												$archivedCapacity = max(1, (int) ($archivedSearch['capacity'] ?? 1));
+												if ((string) ($archivedSearch['booking_mode'] ?? '') === 'fixed' && (int) ($archivedSearch['slot_capacity_total'] ?? 0) > 0) {
+													$archivedCapacity = (int) $archivedSearch['slot_capacity_total'];
+												}
+												$archivedBooked = max(0, (int) ($archivedSearch['booking_count'] ?? 0));
+												$repeatHref = $repeatStockBase !== ''
+													? $repeatStockBase . (strpos($repeatStockBase, '?') === false ? '?' : '&') . 'repeat_search=' . $archivedId
+													: Route::_('index.php?option=com_users&view=profile&layout=edit&repeat_search=' . $archivedId, false);
+												$archivedSlot = trim((string) ($archivedSearch['slot_start_utc'] ?? ''));
+												$archivedSlotLabel = '';
+												if ($archivedSlot !== '') {
+													try {
+														$archivedSlotLabel = (new \DateTimeImmutable($archivedSlot, new \DateTimeZone('UTC')))->format('d.m.Y H:i');
+													} catch (\Throwable $e) {
+														$archivedSlotLabel = $archivedSlot;
+													}
+												}
+											?>
+											<article class="stocks-archive__card">
+												<div class="stocks-archive__card-body">
+													<div class="stocks-archive__name"><?php echo $this->escape($archivedTitle !== '' ? $archivedTitle : 'Поиск моделей'); ?></div>
+													<?php if (trim((string) ($archivedSearch['category_title'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Категория:</label> <?php echo $this->escape(trim((string) $archivedSearch['category_title'])); ?></div>
+													<?php endif; ?>
+													<?php if (trim((string) ($archivedSearch['description'] ?? '')) !== '') : ?>
+													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedSearch['description'])); ?></div>
+													<?php endif; ?>
+													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo (int) ($archivedSearch['price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedSearch['duration_min'] ?? 0); ?> мин.</div>
+													<div class="stocks-archive__row"><label>Лимит мест:</label> <?php echo $archivedCapacity; ?></div>
+													<div class="stocks-archive__row"><label>Записано:</label> <?php echo $archivedBooked; ?></div>
+													<div class="stocks-archive__row"><label>Режим:</label> <?php echo $this->escape((string) ($archivedSearch['booking_mode'] ?? '') === 'fixed' ? 'Фиксированная дата' : 'Любое время'); ?></div>
+													<?php if ($archivedSlotLabel !== '') : ?>
+													<div class="stocks-archive__row"><label>Дата и время:</label> <?php echo $this->escape($archivedSlotLabel); ?></div>
+													<?php endif; ?>
+												</div>
+												<a class="stocks-archive__repeat" href="<?php echo $this->escape($repeatHref); ?>">Повторить</a>
+											</article>
+											<?php endforeach; ?>
+										</div>
 									<?php endif; ?>
 								</div>
 								</fieldset>
@@ -1183,6 +1316,12 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 			activeTab = zapisiTab;
 		} else if (aktsiiTab && params.get('aktsii') === 'archive') {
 			activeTab = aktsiiTab;
+		} else if (document.getElementById('jsn_courses') && params.get('kursy') === 'archive') {
+			var coursesTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab5"]');
+			if (coursesTab) activeTab = coursesTab;
+		} else if (document.getElementById('jsn_searches') && params.get('modeli') === 'archive') {
+			var searchesTab = document.querySelector('#jsn-profile-tabs [data-link="profile-tab6"]');
+			if (searchesTab) activeTab = searchesTab;
 		}
 	} catch (e) {}
 	function showTab(tab) {

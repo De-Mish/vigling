@@ -17,11 +17,85 @@ final class UserSearchesService
      */
     public static function getUserSearchesStructured(int $userId): array
     {
-        if ($userId <= 0) {
-            return [];
+        return self::partitionUserSearches($userId)['active'];
+    }
+
+    /**
+     * Full or finished model searches, kept for the profile archive and Repeat.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function getUserArchivedSearchesStructured(int $userId): array
+    {
+        return self::partitionUserSearches($userId)['archived'];
+    }
+
+    /**
+     * @return array{active: array<int, array<string, mixed>>, archived: array<int, array<string, mixed>>}
+     */
+    public static function partitionUserSearches(int $userId): array
+    {
+        $all = $userId > 0 ? (self::getSearchesForUsers([$userId])[$userId] ?? []) : [];
+        $active = [];
+        $archived = [];
+        foreach ($all as $item) {
+            if (self::isArchivedOffer($item)) {
+                $archived[] = $item;
+            } else {
+                $active[] = $item;
+            }
         }
 
-        return self::getSearchesForUsers([$userId])[$userId] ?? [];
+        return ['active' => $active, 'archived' => $archived];
+    }
+
+    /**
+     * A search leaves the active list when every seat is taken or its fixed time has ended.
+     *
+     * @param array<string, mixed> $item
+     */
+    public static function isArchivedOffer(array $item): bool
+    {
+        return UserCoursesService::isArchivedOffer($item);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function getUserSearchForRepeat(int $userId, int $searchId): ?array
+    {
+        if ($userId <= 0 || $searchId <= 0) {
+            return null;
+        }
+        foreach (self::getSearchesForUsers([$userId])[$userId] ?? [] as $search) {
+            if ((int) ($search['id'] ?? 0) !== $searchId) {
+                continue;
+            }
+            $search['id'] = 0;
+            $search['booking_count'] = 0;
+
+            return $search;
+        }
+
+        return null;
+    }
+
+    public static function activeListWhereSql(DatabaseInterface $db, string $alias = 'c', string $slotAlias = 'slot'): string
+    {
+        $booked = '(SELECT COUNT(*) FROM ' . $db->quoteName('#__vigling_bookings')
+            . ' WHERE ' . $db->quoteName('booking_kind') . ' = ' . $db->quote('search')
+            . ' AND ' . $db->quoteName('search_id') . ' = ' . $db->quoteName($alias) . '.' . $db->quoteName('id') . ')';
+        $capacity = 'CASE WHEN ' . $db->quoteName($alias) . '.' . $db->quoteName('booking_mode') . ' = ' . $db->quote('fixed')
+            . ' AND ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total') . ' > 0 THEN '
+            . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total')
+            . ' ELSE ' . $db->quoteName($alias) . '.' . $db->quoteName('capacity') . ' END';
+        $endExpr = 'COALESCE(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('ends_at_utc')
+            . ', DATE_ADD(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('starts_at_utc')
+            . ', INTERVAL ' . $db->quoteName($alias) . '.' . $db->quoteName('duration_min') . ' MINUTE))';
+        $notPast = '(' . $db->quoteName($alias) . '.' . $db->quoteName('booking_mode') . ' <> ' . $db->quote('fixed')
+            . ' OR ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('starts_at_utc') . ' IS NULL OR ' . $endExpr . ' >= UTC_TIMESTAMP())';
+
+        return '(' . $booked . ' < ' . $capacity . ' AND ' . $notPast . ')';
     }
 
     /**
@@ -144,6 +218,9 @@ final class UserSearchesService
 
         foreach ($existingSearches as $searchId => $searchInfo) {
             if (isset($seenExistingIds[$searchId])) {
+                continue;
+            }
+            if (self::isArchivedOffer($searchInfo)) {
                 continue;
             }
             self::deleteSearchWithBookings($db, $userId, (int) $searchId, $orderTable);
