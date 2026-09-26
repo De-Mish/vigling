@@ -1784,10 +1784,11 @@ if (empty($isLkEmbed)) {
 				grid-template-columns: none;
 			}
 			#zapis .screen1 .calendar__master-item .btns-m .btn-select {
-				width: auto !important;
+				width: max-content !important;
 				flex: 0 0 auto;
-				padding-left: 3ch !important;
-				padding-right: 3ch !important;
+				box-sizing: content-box !important;
+				padding-left: 0 !important;
+				padding-right: 0 !important;
 			}
 		}
 		#zapis .screen1 .calendar__master-item .btns-m .btn-select.reserved {

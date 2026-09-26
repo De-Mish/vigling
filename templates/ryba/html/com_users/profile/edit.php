@@ -888,6 +888,30 @@ try {
 	$existingCourseRows = [];
 }
 
+$repeatCourseId = (int) Factory::getApplication()->getInput()->getInt('repeat_course', 0);
+$openCoursesTab = false;
+$coursesTabIndex = array_search('courses', $tabs, true);
+if ($repeatCourseId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling\Service\UserCoursesService::class)) {
+	$repeatCourse = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCourseForRepeat((int) $userId, $repeatCourseId);
+	if (is_array($repeatCourse) && (int) ($repeatCourse['category_id'] ?? 0) > 0) {
+		$existingCourseRows[] = [
+			'id' => 0,
+			'categoryId' => (int) ($repeatCourse['category_id'] ?? 0),
+			'title' => (string) ($repeatCourse['title'] ?? $repeatCourse['description'] ?? ''),
+			'description' => (string) ($repeatCourse['description'] ?? ''),
+			'mediaPath' => (string) ($repeatCourse['media_path'] ?? ''),
+			'price' => (int) ($repeatCourse['price'] ?? 0),
+			'duration' => (int) ($repeatCourse['duration_min'] ?? 60),
+			'capacity' => (int) ($repeatCourse['capacity'] ?? 1),
+			'concurrentParticipants' => (int) ($repeatCourse['concurrent_participants'] ?? 1),
+			'bookingMode' => (string) ($repeatCourse['booking_mode'] ?? 'free'),
+			'bookingCount' => 0,
+			'slotStartUtc' => (string) ($repeatCourse['slot_start_utc'] ?? ''),
+		];
+		$openCoursesTab = true;
+	}
+}
+
 $existingSearchRows = [];
 try {
 	if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserSearchesService')) {
@@ -912,6 +936,29 @@ try {
 	$existingSearchRows = [];
 }
 
+$repeatSearchId = (int) Factory::getApplication()->getInput()->getInt('repeat_search', 0);
+$openSearchesTab = false;
+$searchesTabIndex = array_search('searches', $tabs, true);
+if ($repeatSearchId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::class)) {
+	$repeatSearch = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::getUserSearchForRepeat((int) $userId, $repeatSearchId);
+	if (is_array($repeatSearch) && (int) ($repeatSearch['category_id'] ?? 0) > 0) {
+		$existingSearchRows[] = [
+			'id' => 0,
+			'categoryId' => (int) ($repeatSearch['category_id'] ?? 0),
+			'title' => (string) ($repeatSearch['title'] ?? $repeatSearch['description'] ?? ''),
+			'description' => (string) ($repeatSearch['description'] ?? ''),
+			'mediaPath' => (string) ($repeatSearch['media_path'] ?? ''),
+			'price' => (int) ($repeatSearch['price'] ?? 0),
+			'duration' => (int) ($repeatSearch['duration_min'] ?? 60),
+			'capacity' => (int) ($repeatSearch['capacity'] ?? 1),
+			'bookingMode' => (string) ($repeatSearch['booking_mode'] ?? 'free'),
+			'bookingCount' => 0,
+			'slotStartUtc' => (string) ($repeatSearch['slot_start_utc'] ?? ''),
+		];
+		$openSearchesTab = true;
+	}
+}
+
 $phonePublicChecked = true;
 $phonePublicRaw = '';
 if (isset($jcfields['phone_public']->rawvalue) && is_scalar($jcfields['phone_public']->rawvalue)) {
@@ -927,8 +974,8 @@ if ($phonePublicRaw === '0') {
 $phonePublicToggle = '<label class="phone-public-toggle">'
 	. '<input type="hidden" name="jform[com_fields][phone_public]" value="0">'
 	. '<input type="checkbox" id="jform_phone_public" name="jform[com_fields][phone_public]" value="1"' . ($phonePublicChecked ? ' checked' : '') . '>'
-	. '<span class="phone-public-toggle__wide">Сделать номер публичным</span>'
-	. '<span class="phone-public-toggle__narrow">Сделать номер общедоступным</span>'
+	. '<span class="phone-public-toggle__wide">Сделать номер телефона публичным</span>'
+	. '<span class="phone-public-toggle__narrow">Сделать номер публичным</span>'
 	. '</label>';
 
 $jsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
@@ -2307,7 +2354,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jsn-form .phone-public-toggle {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	justify-content: flex-start;
+	gap: 16px;
 	flex: 0 0 auto;
 	margin: 0;
 	font-weight: 500;
@@ -2327,8 +2375,12 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	}
 	.profile-edit #jsn-form .phone-public-toggle {
 		flex: 1 0 100%;
-		margin-top: 8px;
-		white-space: normal;
+		align-self: flex-start;
+		width: max-content;
+		max-width: 100%;
+		margin-top: 0;
+		margin-left: 0;
+		white-space: nowrap;
 	}
 	.profile-edit #jsn-form .phone-public-toggle__wide { display: none; }
 	.profile-edit #jsn-form .phone-public-toggle__narrow { display: inline; }
@@ -4319,6 +4371,16 @@ function addStockRow(categoryLabel, rowData) {
 	<?php if (!empty($openStocksTab) && $stocksTabIndex !== false) : ?>
 	if (typeof window.viglingActivateProfileEditTab === 'function') {
 		window.viglingActivateProfileEditTab(<?php echo (int) $stocksTabIndex; ?>);
+	}
+	<?php endif; ?>
+	<?php if (!empty($openCoursesTab) && $coursesTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $coursesTabIndex; ?>);
+	}
+	<?php endif; ?>
+	<?php if (!empty($openSearchesTab) && $searchesTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $searchesTabIndex; ?>);
 	}
 	<?php endif; ?>
 	document.addEventListener('change', function(e){

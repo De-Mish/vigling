@@ -119,7 +119,8 @@ class ListModel extends BaseListModel
 			->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('c.user_id'))
 			->join('LEFT', $db->quoteName('#__vigling_search_slots', 'slot') . ' ON ' . $db->quoteName('slot.search_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
 			->where($db->quoteName('c.is_active') . ' = 1')
-			->where($db->quoteName('u.block') . ' = 0');
+			->where($db->quoteName('u.block') . ' = 0')
+			->where(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::activeListWhereSql($db));
 
 		$this->applyFiltersToQuery($query, $db);
 
@@ -154,7 +155,8 @@ class ListModel extends BaseListModel
 			->join('LEFT', $db->quoteName('#__categories', 'cat') . ' ON ' . $db->quoteName('cat.id') . ' = ' . $db->quoteName('c.category_id'))
 			->join('LEFT', $db->quoteName('#__vigling_search_slots', 'slot') . ' ON ' . $db->quoteName('slot.search_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
 			->where($db->quoteName('c.is_active') . ' = 1')
-			->where($db->quoteName('u.block') . ' = 0');
+			->where($db->quoteName('u.block') . ' = 0')
+			->where(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::activeListWhereSql($db));
 
 		$this->applyFiltersToQuery($query, $db);
 
