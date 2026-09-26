@@ -447,7 +447,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	#zapis-reschedule .modal-content { overflow: hidden; }
 	#zapis-reschedule .modal-body { overflow: hidden; padding: 20px 28px 28px; }
-	#zapis-reschedule .calendar__master.preload { visibility: hidden; }
+	#zapis-reschedule .calendar__master.preload { visibility: visible; }
 	#zapis-reschedule #reschedule-calendar {
 		width: 100% !important;
 		max-width: 800px;
