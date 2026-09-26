@@ -14,5 +14,13 @@ $list = ryba_filter_appointment_menu_items(is_array($list ?? null) ? $list : [],
 if ($list === []) {
 	return;
 }
+foreach ($list as $item) {
+	if (!is_object($item)) {
+		continue;
+	}
+	if ((string) ($item->title ?? '') === 'Нужна помощь в установке приложение?') {
+		$item->title = 'Нужна помощь в установке приложения?';
+	}
+}
 
 include JPATH_SITE . '/modules/mod_menu/tmpl/default.php';
