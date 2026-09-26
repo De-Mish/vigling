@@ -91,31 +91,25 @@ class FcmHelper
 		try {
 			$factory = (new \Kreait\Firebase\Factory)->withServiceAccount($credentialsPath);
 			$messaging = $factory->createMessaging();
-			$notification = \Kreait\Firebase\Messaging\Notification::fromArray([
-				'title' => $title,
-				'body' => $body,
-			]);
 			$link = isset($data['url']) ? (string) $data['url'] : '';
 			if ($link === '' && class_exists(\Joomla\CMS\Uri\Uri::class)) {
 				$link = rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/lk';
 			}
-			$webPushNotification = [
-				'title' => $title,
-				'body' => $body,
-				'silent' => false,
-			];
-			if (!empty($dataStrings['notification_tag'])) {
-				$webPushNotification['tag'] = $dataStrings['notification_tag'];
-				$webPushNotification['renotify'] = true;
-			}
 			$topicSource = (string) ($dataStrings['notification_tag'] ?? ($title . "\n" . $body));
 			$topic = substr(preg_replace('/[^A-Za-z0-9_-]/', '', hash('sha256', $topicSource)) ?? '', 0, 32);
+			if ($topic === '') {
+				$topic = substr(hash('sha256', $topicSource), 0, 32);
+			}
+			// Data-only: a notification payload is collapsible, so an idle phone keeps just one banner.
 			$webPushArray = [
-				'notification' => $webPushNotification,
 				'headers' => [
 					'Urgency' => 'high',
 					'TTL' => '2419200',
-					'Topic' => $topic !== '' ? $topic : substr(hash('sha256', $topicSource), 0, 32),
+					'Topic' => $topic,
+				],
+				'data' => [
+					'title' => $title,
+					'body' => $body,
 				],
 			];
 			if ($link !== '') {
@@ -124,14 +118,27 @@ class FcmHelper
 			$webPush = \Kreait\Firebase\Messaging\WebPushConfig::fromArray($webPushArray)->withHighUrgency();
 			$androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
 				'priority' => 'high',
-				'notification' => ['notification_priority' => 'PRIORITY_HIGH'],
+				'ttl' => '2419200s',
 			]);
-			$apnsConfig = \Kreait\Firebase\Messaging\ApnsConfig::new()->withPriority('10');
+			$apnsConfig = \Kreait\Firebase\Messaging\ApnsConfig::fromArray([
+				'headers' => [
+					'apns-priority' => '10',
+					'apns-push-type' => 'alert',
+				],
+				'payload' => [
+					'aps' => [
+						'alert' => [
+							'title' => $title,
+							'body' => $body,
+						],
+						'sound' => 'default',
+					],
+				],
+			]);
 			foreach ($tokens as $token) {
 				try {
 					$message = \Kreait\Firebase\Messaging\CloudMessage::new()
 						->toToken($token)
-						->withNotification($notification)
 						->withData($dataStrings)
 						->withWebPushConfig($webPush)
 						->withAndroidConfig($androidConfig)
