@@ -628,7 +628,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 					<input type="hidden" name="time_utc" id="reschedule-modal-time-utc" value="">
 					<div class="calc__body">
 						<h2>Выберите дату и время</h2>
-						<div class="calendar-hint">Листайте <i>вправо/влево</i> или используйте стрелки для других дат</div>
+						<div class="calendar-hint">Прокрутите даты и нажмите подходящее время</div>
 						<div class="calendar__master calendar__master--manual preload" id="reschedule-calendar"></div>
 						<div class="error-msg" id="reschedule-modal-error"></div>
 					</div>
@@ -660,29 +660,22 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	function bindRescheduleSlotPick(root) {
 		if (!root || root.getAttribute('data-slot-pick') === '1') return;
 		root.setAttribute('data-slot-pick', '1');
-		var startX = 0;
-		var startY = 0;
-		root.addEventListener('touchstart', function(e) {
-			var t = e.changedTouches && e.changedTouches[0];
-			if (!t) return;
-			startX = t.clientX;
-			startY = t.clientY;
-		}, true);
 		function pick(e) {
 			var label = e.target && e.target.closest ? e.target.closest('label.btn-select') : null;
 			if (!label || !root.contains(label)) return;
-			if (e.type === 'touchend' && e.changedTouches && e.changedTouches[0]) {
-				var t = e.changedTouches[0];
-				if (Math.abs(t.clientX - startX) > 12 || Math.abs(t.clientY - startY) > 12) return;
-			}
+			e.stopPropagation();
 			var inputId = label.getAttribute('for') || '';
 			var input = inputId ? document.getElementById(inputId) : null;
 			if (!input) input = label.querySelector('input[type="radio"]');
 			if (!input || input.disabled) return;
 			input.checked = true;
+			root.querySelectorAll('label.btn-select.is-picked').forEach(function(node) {
+				node.classList.remove('is-picked');
+			});
+			label.classList.add('is-picked');
 		}
+		root.addEventListener('pointerdown', pick, true);
 		root.addEventListener('click', pick, true);
-		root.addEventListener('touchend', pick, true);
 	}
 	function destroySlider(){
 		if (!window.jQuery) return;
@@ -692,52 +685,12 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		}
 	}
 
-	function calendarHostWidth() {
-		var rect = cal.getBoundingClientRect();
-		var width = rect ? rect.width : 0;
-		if (window.jQuery) {
-			var dialog = jQuery(modal).find('.modal-dialog');
-			width = Math.max(width, jQuery(cal).width() || 0, jQuery(cal).parent().width() || 0, dialog.width() || 0);
-		}
-		return width;
-	}
-	function initSlider(attempt) {
-		attempt = attempt || 0;
+	function initSlider() {
+		if (!cal) return;
 		cal.classList.remove('preload');
-		if (!cal.querySelector('.calendar__master-item')) {
-			return;
+		if (window.jQuery && jQuery(cal).hasClass('slick-initialized')) {
+			try { jQuery(cal).slick('unslick'); } catch (e) {}
 		}
-		if (!window.jQuery || typeof jQuery.fn.slick !== 'function') {
-			return;
-		}
-		if (calendarHostWidth() < 40) {
-			if (attempt < 30) {
-				setTimeout(function() { initSlider(attempt + 1); }, 50);
-			}
-			return;
-		}
-		var jqCal = jQuery(cal);
-		try {
-			if (jqCal.hasClass('slick-initialized')) {
-				jqCal.slick('setPosition');
-			} else {
-				jqCal.slick({
-					infinite: false,
-					slidesToShow: 1,
-					slidesToScroll: 1,
-					dots: false,
-					arrows: true,
-					accessibility: false
-				});
-			}
-		} catch (e) {
-			try {
-				if (jqCal.hasClass('slick-initialized')) {
-					jqCal.slick('unslick');
-				}
-			} catch (e2) {}
-		}
-		cal.classList.remove('preload');
 	}
 
 	function readSlots(orderId){
