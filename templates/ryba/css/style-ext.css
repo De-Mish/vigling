@@ -1956,10 +1956,47 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   z-index: 2 !important;
 }
 
-#zapis-reschedule label.btn-select.is-picked {
+#zapis-reschedule label.btn-select.is-picked,
+#zapis-reschedule button.btn-select.is-picked {
   background-color: #f7cc53 !important;
+  color: #111 !important;
   border-color: #f7cc53 !important;
   box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
+  opacity: 1 !important;
+}
+
+#zapis-reschedule.modal,
+#zapis-reschedule.modal.fade,
+#zapis-reschedule.modal.fade.show,
+#zapis-reschedule.modal.show,
+#zapis-reschedule.modal.in {
+  opacity: 1 !important;
+  filter: none !important;
+  z-index: 10000050 !important;
+}
+
+#zapis-reschedule .modal-dialog,
+#zapis-reschedule .modal-content,
+#zapis-reschedule .modal-body,
+#zapis-reschedule .calc__body,
+#zapis-reschedule #reschedule-calendar {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+}
+
+@media only screen and (min-width: 768px) {
+  #zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m,
+  #zapis-reschedule .calendar__master-item .btns-m {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  #zapis-reschedule #reschedule-calendar .btns-m .btn-select,
+  #zapis-reschedule .calendar__master-item .btns-m .btn-select {
+    width: 100% !important;
+    flex: none !important;
+  }
 }
 #zapis .zapis-reserved-notice {
   display: none;

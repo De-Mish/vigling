@@ -276,18 +276,15 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	}
 	@media (min-width: 768px) {
 		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			display: flex;
-			flex-wrap: wrap;
-			justify-content: flex-start;
-			align-items: flex-start;
-			gap: 6px 8px;
-			grid-template-columns: none;
+			display: grid !important;
+			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+			gap: 6px;
 		}
 		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-			width: auto !important;
-			flex: 0 0 auto;
-			padding-left: 3ch !important;
-			padding-right: 3ch !important;
+			width: 100% !important;
+			flex: none;
+			padding-left: 2px !important;
+			padding-right: 2px !important;
 		}
 	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
@@ -655,6 +652,27 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	var errorEl = document.getElementById('reschedule-modal-error');
 	var submitBtn = document.getElementById('reschedule-modal-submit');
 	var defaultAction = form.getAttribute('action') || '';
+	function presentRescheduleModal() {
+		if (!modal) return;
+		if (modal.parentNode !== document.body) {
+			document.body.appendChild(modal);
+		}
+		modal.classList.add('show', 'in');
+		modal.style.opacity = '1';
+		modal.style.filter = 'none';
+		modal.style.zIndex = '10000050';
+		if (window.jQuery) {
+			jQuery(modal).modal('show');
+		}
+		window.setTimeout(function() {
+			modal.classList.add('show', 'in');
+			modal.style.opacity = '1';
+			var backs = document.querySelectorAll('.modal-backdrop');
+			if (backs.length) {
+				backs[backs.length - 1].style.zIndex = '10000040';
+			}
+		}, 0);
+	}
 	if (cal) bindRescheduleSlotPick(cal);
 
 	function bindRescheduleSlotPick(root) {
@@ -824,12 +842,12 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			durationInp.value = String(isNaN(duration) ? 60 : duration);
 			timeUtcInp.value = '';
 			form.setAttribute('action', (courseSlotId > 0 || searchSlotId > 0) ? (this.getAttribute('data-reschedule-action') || defaultAction) : defaultAction);
-			cal.classList.add('preload');
+			cal.classList.remove('preload');
 			renderCalendar(
 				searchSlotId > 0 ? readSearchSlots(searchSlotId) : (courseSlotId > 0 ? readCourseSlots(courseSlotId) : readSlots(orderId)),
 				currentUtc
 			);
-			jQuery(modal).modal('show');
+			presentRescheduleModal();
 		});
 	});
 
@@ -857,7 +875,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		form.setAttribute('action', defaultAction);
 		destroySlider();
 		cal.innerHTML = '';
-		cal.classList.add('preload');
+		cal.classList.remove('preload');
 	});
 
 	form.addEventListener('submit', function(e){

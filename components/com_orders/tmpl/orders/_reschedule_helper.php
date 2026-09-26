@@ -375,9 +375,12 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 				if ($slotUtc->getTimestamp() <= $nowUtcTs + 60) {
 					continue;
 				}
+				$endLocal = $slotLocal->modify('+' . $durationMin . ' minutes');
 				$daySlots[] = [
 					'label' => $slotLocal->format('H:i'),
 					'utc' => $slotUtc->format(\DateTimeInterface::ATOM),
+					'end_label' => $endLocal->format('H:i'),
+					'end_utc' => $endLocal->setTimezone($utcTz)->format(\DateTimeInterface::ATOM),
 				];
 			}
 

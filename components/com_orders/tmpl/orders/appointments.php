@@ -126,8 +126,8 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		color: #3b3636 !important;
 		border-color: #f9ce54 !important;
 	}
-	.appointments-page #journal-calendar { width: 100% !important; max-width: 800px; margin: 0 auto !important; }
-	.appointments-page #journal-calendar.preload { visibility: hidden; }
+	.appointments-page #journal-calendar { width: 100% !important; max-width: none; margin: 0 !important; }
+	.appointments-page #journal-calendar.preload { visibility: visible; }
 	.appointments-page .error-msg { display: none; margin-top: 12px; color: #a94442; }
 	.appointments-page .appointments-month-wrap {
 		width: 55%;
@@ -481,18 +481,15 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 	}
 	@media (min-width: 768px) {
 		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			display: flex;
-			flex-wrap: wrap;
-			justify-content: flex-start;
-			align-items: flex-start;
-			gap: 6px 8px;
-			grid-template-columns: none;
+			display: grid !important;
+			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+			gap: 6px;
 		}
 		#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-			width: auto !important;
-			flex: 0 0 auto;
-			padding-left: 3ch !important;
-			padding-right: 3ch !important;
+			width: 100% !important;
+			flex: none;
+			padding-left: 2px !important;
+			padding-right: 2px !important;
 		}
 	}
 	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
