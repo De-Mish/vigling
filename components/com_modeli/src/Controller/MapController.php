@@ -22,7 +22,7 @@ class MapController extends BaseController
 				return (int) ($item->master_id ?? 0);
 			}, $items)));
 			$fieldsByUser = $userIds !== []
-				? ModeliHelper::getFieldsForUserIds($userIds, ['sity', 'area', 'street', 'house_number'])
+				? ModeliHelper::getFieldsForUserIds($userIds, ['sity', 'area'])
 				: [];
 
 			$pins = [];

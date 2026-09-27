@@ -143,18 +143,37 @@ class AppointmentsHelper
 		$target->monthNextUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->modify('+1 month')->format('Y-m')]);
 		$target->weekRangeUrl = Route::_('index.php?option=com_orders&task=orders.weekRange&format=json');
 
+		$dayScope = '';
+		$dayOrder = 'ASC';
+		$listLimit = 500;
 		if ($mode === 'week') {
 			$fromLocal = $weekStart;
 			$toLocal = $weekStart->modify('+' . $weekDayCount . ' days');
+			$fromUtc = $fromLocal->setTimezone($utc)->format('Y-m-d H:i:s');
+			$toUtc = $toLocal->setTimezone($utc)->format('Y-m-d H:i:s');
 		} elseif ($mode === 'month') {
 			$fromLocal = self::mondayOf($monthStart);
 			$monthEndExclusive = $monthStart->modify('+1 month');
 			$lastDay = $monthEndExclusive->modify('-1 day');
 			$dow = (int) $lastDay->format('N');
 			$toLocal = $lastDay->modify('+' . (7 - $dow) . ' days')->modify('+1 day');
+			$fromUtc = $fromLocal->setTimezone($utc)->format('Y-m-d H:i:s');
+			$toUtc = $toLocal->setTimezone($utc)->format('Y-m-d H:i:s');
 		} else {
-			$fromLocal = $todayLocal->modify('-90 days');
-			$toLocal = $todayLocal->modify('+2 years');
+			$nowUtc = new \DateTimeImmutable('now', $utc);
+			if ($input->getCmd('entries', '') === 'archive') {
+				$fromUtc = $todayLocal->modify('-90 days')->setTimezone($utc)->format('Y-m-d H:i:s');
+				$toUtc = $nowUtc->format('Y-m-d H:i:s');
+				$dayScope = 'archive';
+				$dayOrder = 'DESC';
+				$listLimit = 500;
+			} else {
+				$fromUtc = $nowUtc->format('Y-m-d H:i:s');
+				$toUtc = $todayLocal->modify('+2 years')->setTimezone($utc)->format('Y-m-d H:i:s');
+				$dayScope = 'future';
+				$dayOrder = 'ASC';
+				$listLimit = 0;
+			}
 		}
 
 		$target->items = [];
@@ -162,11 +181,13 @@ class AppointmentsHelper
 			$model = $app->bootComponent('com_orders')->getMVCFactory()->createModel('Orders', 'Site', ['ignore_request' => true]);
 			if ($model) {
 				$model->setState('layout', 'appointments');
-				$model->setState('list.limit', 500);
+				$model->setState('list.limit', $listLimit);
 				$model->setState('list.start', 0);
 				$model->setState('as_master', 0);
-				$model->setState('journal.from_utc', $fromLocal->setTimezone($utc)->format('Y-m-d H:i:s'));
-				$model->setState('journal.to_utc', $toLocal->setTimezone($utc)->format('Y-m-d H:i:s'));
+				$model->setState('journal.from_utc', $fromUtc);
+				$model->setState('journal.to_utc', $toUtc);
+				$model->setState('journal.day_scope', $dayScope);
+				$model->setState('journal.order', $dayOrder);
 				$items = $model->getItems();
 				$target->items = is_array($items) ? $items : [];
 			}

@@ -32,6 +32,24 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 
+		if ((string) $input->post->get('action', '', 'cmd') === 'public_calendar') {
+			$calendarMasterId = (int) $input->post->get('master_id', 0);
+			$viewerId = (int) ($app->getIdentity()->id ?? 0);
+			$calendarHelper = JPATH_SITE . '/components/com_orders/src/Helper/PublicBookingCalendarHelper.php';
+			if ($calendarMasterId <= 0 || !is_file($calendarHelper)) {
+				$event->updateEventResult(['success' => false, 'message' => 'Не удалось загрузить свободное время']);
+				return;
+			}
+			require_once $calendarHelper;
+			$payload = \Viglin\Component\Orders\Site\Helper\PublicBookingCalendarHelper::build($calendarMasterId, $viewerId);
+			$event->updateEventResult([
+				'success' => true,
+				'days' => $payload['days'] ?? [],
+				'has_schedule' => !empty($payload['has_schedule']),
+			]);
+			return;
+		}
+
 		$user = $app->getIdentity();
 		if (!$user->id) {
 			$event->updateEventResult(['success' => false, 'message' => 'Нужна авторизация']);
