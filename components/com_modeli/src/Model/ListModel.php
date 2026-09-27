@@ -16,9 +16,16 @@ class ListModel extends BaseListModel
 
 	private const MAP_ITEMS_LIMIT = 800;
 
+	/** @var array<string, int> */
 	private array $totalCache = [];
+
+	/** @var array<string, list<\stdClass>> */
 	private array $itemsCache = [];
+
+	/** @var array<string, list<\stdClass>> */
 	private array $mapItemsCache = [];
+
+	/** @var array<string, int>|null */
 	private ?array $fieldIdsCache = null;
 
 	protected function getStoreId($id = '')
