@@ -525,12 +525,6 @@ $parseScheduleTimeToMinutes = static function (string $raw): ?int {
 	return null;
 };
 
-$formatMinutes = static function (int $minutes): string {
-	$h = (int) floor($minutes / 60);
-	$m = $minutes % 60;
-	return sprintf('%02d:%02d', $h, $m);
-};
-
 $workRangeByDay = array_fill(1, 7, null);
 foreach ($workDayLabels as $wd => $label) {
 	$fromRaw = trim((string) (($fromByDay[$wd] ?? '')));
@@ -549,440 +543,6 @@ foreach ($workRangeByDay as $range) {
 		break;
 	}
 }
-
-$calendarDays = [];
-$bookedRangesByDate = [];
-$ownerBlockRangesByDate = [];
-$reservedRangesByDate = [];
-$anytimeOccupancyByDate = [];
-$viewerIsProfileOwner = (int) ($currentUser->id ?? 0) > 0 && (int) ($currentUser->id ?? 0) === (int) $profileOwnerId;
-$siteOffset = (string) $app->get('offset', 'UTC');
-$masterTz = new \DateTimeZone($siteOffset !== '' ? $siteOffset : 'UTC');
-$utcTz = new \DateTimeZone('UTC');
-$dowShort = [1 => 'пн.', 2 => 'вт.', 3 => 'ср.', 4 => 'чт.', 5 => 'пт.', 6 => 'сб.', 7 => 'вс.'];
-
-$appendUtcRangeToLocalDays = static function (
-	array &$target,
-	string $fromRaw,
-	string $toRaw,
-	\DateTimeZone $utcTz,
-	\DateTimeZone $masterTz,
-	string $kind = ''
-): void {
-	$fromRaw = trim($fromRaw);
-	$toRaw = trim($toRaw);
-	if ($fromRaw === '') {
-		return;
-	}
-	try {
-		$fromUtc = new \DateTimeImmutable($fromRaw, $utcTz);
-		$toUtc = $toRaw !== '' ? new \DateTimeImmutable($toRaw, $utcTz) : $fromUtc->modify('+60 minutes');
-	} catch (\Throwable $e) {
-		return;
-	}
-	$fromLocal = $fromUtc->setTimezone($masterTz);
-	$toLocal = $toUtc->setTimezone($masterTz);
-	if ($toLocal <= $fromLocal) {
-		$toLocal = $fromLocal->modify('+15 minutes');
-	}
-
-	$cursor = $fromLocal;
-	$lastDay = $toLocal->format('Y-m-d');
-	while (true) {
-		$dayKey = $cursor->format('Y-m-d');
-		$dayStart = new \DateTimeImmutable($dayKey . ' 00:00:00', $masterTz);
-		$dayEnd = $dayStart->modify('+1 day');
-		$rangeStart = $cursor > $dayStart ? $cursor : $dayStart;
-		$rangeEnd = $toLocal < $dayEnd ? $toLocal : $dayEnd;
-		if ($rangeEnd > $rangeStart) {
-			$startMinutes = ((int) $rangeStart->format('H')) * 60 + (int) $rangeStart->format('i');
-			$endMinutes = ((int) $rangeEnd->format('H')) * 60 + (int) $rangeEnd->format('i');
-			$entry = [$startMinutes, $endMinutes];
-			if ($kind !== '') {
-				$entry[] = $kind;
-			}
-			$target[$dayKey][] = $entry;
-		}
-		if ($dayKey >= $lastDay) {
-			break;
-		}
-		$cursor = $dayStart->modify('+1 day');
-	}
-};
-
-$appendAnytimeOccupancyToLocalDays = static function (
-	array &$target,
-	string $fromRaw,
-	string $toRaw,
-	\DateTimeZone $utcTz,
-	\DateTimeZone $masterTz,
-	int $courseId,
-	int $used,
-	int $max
-): void {
-	$fromRaw = trim($fromRaw);
-	$toRaw = trim($toRaw);
-	if ($fromRaw === '' || $courseId <= 0) {
-		return;
-	}
-	try {
-		$fromUtc = new \DateTimeImmutable($fromRaw, $utcTz);
-		$toUtc = $toRaw !== '' ? new \DateTimeImmutable($toRaw, $utcTz) : $fromUtc->modify('+60 minutes');
-	} catch (\Throwable $e) {
-		return;
-	}
-	$fromLocal = $fromUtc->setTimezone($masterTz);
-	$toLocal = $toUtc->setTimezone($masterTz);
-	if ($toLocal <= $fromLocal) {
-		$toLocal = $fromLocal->modify('+15 minutes');
-	}
-
-	$originStartMin = ((int) $fromLocal->format('H')) * 60 + (int) $fromLocal->format('i');
-	$originDayKey = $fromLocal->format('Y-m-d');
-	$cursor = $fromLocal;
-	$lastDay = $toLocal->format('Y-m-d');
-	while (true) {
-		$dayKey = $cursor->format('Y-m-d');
-		$dayStart = new \DateTimeImmutable($dayKey . ' 00:00:00', $masterTz);
-		$dayEnd = $dayStart->modify('+1 day');
-		$rangeStart = $cursor > $dayStart ? $cursor : $dayStart;
-		$rangeEnd = $toLocal < $dayEnd ? $toLocal : $dayEnd;
-		if ($rangeEnd > $rangeStart) {
-			$startMinutes = ((int) $rangeStart->format('H')) * 60 + (int) $rangeStart->format('i');
-			$endMinutes = ((int) $rangeEnd->format('H')) * 60 + (int) $rangeEnd->format('i');
-			$target[$dayKey][] = [
-				'start' => $startMinutes,
-				'end' => $endMinutes,
-				'course_id' => $courseId,
-				'used' => $used,
-				'max' => $max,
-				'origin_start' => $dayKey === $originDayKey ? $originStartMin : -1,
-			];
-		}
-		if ($dayKey >= $lastDay) {
-			break;
-		}
-		$cursor = $dayStart->modify('+1 day');
-	}
-};
-
-if ($profileOwnerId > 0) {
-	try {
-		$db = Factory::getContainer()->get(DatabaseInterface::class);
-		$userParamsQuery = $db->getQuery(true)
-			->select($db->quoteName('params'))
-			->from($db->quoteName('#__users'))
-			->where($db->quoteName('id') . ' = ' . (int) $profileOwnerId);
-		$db->setQuery($userParamsQuery);
-		$userParamsRaw = (string) ($db->loadResult() ?? '');
-		$userParams = json_decode($userParamsRaw, true);
-		if (is_array($userParams) && !empty($userParams['timezone']) && is_string($userParams['timezone'])) {
-			$tzCandidate = trim((string) $userParams['timezone']);
-			if ($tzCandidate !== '') {
-				try {
-					$masterTz = new \DateTimeZone($tzCandidate);
-				} catch (\Throwable $ignore) {
-				}
-			}
-		}
-		$calendarUntilUtc = (new \DateTimeImmutable('today', $masterTz))
-			->modify('+46 days')
-			->setTimezone($utcTz)
-			->format('Y-m-d H:i:s');
-		try {
-			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			$hasBookingKind = isset($tableColumns['booking_kind']);
-			$hasCourseId = isset($tableColumns['course_id']);
-			$hasCourseSlotId = isset($tableColumns['course_slot_id']);
-			$hasServiceName = isset($tableColumns['service_name']);
-			$selectCols = [$db->quoteName('time'), $db->quoteName('time_to')];
-			if ($hasBookingKind) {
-				$selectCols[] = $db->quoteName('booking_kind');
-			}
-			if ($hasServiceName) {
-				$selectCols[] = $db->quoteName('service_name');
-			}
-			if ($hasCourseId) {
-				$selectCols[] = $db->quoteName('course_id');
-			}
-			if ($hasCourseSlotId) {
-				$selectCols[] = $db->quoteName('course_slot_id');
-			}
-			$query = $db->getQuery(true)
-				->select($selectCols)
-				->from($db->quoteName('#__vigling_bookings'))
-				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
-				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()')
-				->where($db->quoteName('time') . ' < ' . $db->quote($calendarUntilUtc));
-			$db->setQuery($query);
-			$rows = $db->loadAssocList() ?: [];
-			$anytimeGroupsRaw = [];
-			foreach ($rows as $row) {
-				$bookingKind = $hasBookingKind ? strtolower(trim((string) ($row['booking_kind'] ?? ''))) : '';
-				$serviceName = $hasServiceName ? trim((string) ($row['service_name'] ?? '')) : '';
-				$isOwnerBlock = $bookingKind === 'journal' || strpos($serviceName, '[journal]') === 0;
-				if ($isOwnerBlock) {
-					$appendUtcRangeToLocalDays(
-						$ownerBlockRangesByDate,
-						(string) ($row['time'] ?? ''),
-						(string) ($row['time_to'] ?? ''),
-						$utcTz,
-						$masterTz
-					);
-					continue;
-				}
-				if ($bookingKind === 'search') {
-					$appendUtcRangeToLocalDays(
-						$bookedRangesByDate,
-						(string) ($row['time'] ?? ''),
-						(string) ($row['time_to'] ?? ''),
-						$utcTz,
-						$masterTz
-					);
-					continue;
-				}
-				if ($bookingKind === 'course') {
-					$courseSlotId = $hasCourseSlotId ? (int) ($row['course_slot_id'] ?? 0) : 0;
-					if ($courseSlotId > 0) {
-						$appendUtcRangeToLocalDays(
-							$bookedRangesByDate,
-							(string) ($row['time'] ?? ''),
-							(string) ($row['time_to'] ?? ''),
-							$utcTz,
-							$masterTz
-						);
-						continue;
-					}
-					$courseId = $hasCourseId ? (int) ($row['course_id'] ?? 0) : 0;
-					if ($courseId <= 0) {
-						continue;
-					}
-					$startRaw = trim((string) ($row['time'] ?? ''));
-					$groupKey = $courseId . '|' . $startRaw;
-					if (!isset($anytimeGroupsRaw[$groupKey])) {
-						$anytimeGroupsRaw[$groupKey] = [
-							'course_id' => $courseId,
-							'time' => $startRaw,
-							'time_to' => trim((string) ($row['time_to'] ?? '')),
-							'used' => 0,
-						];
-					}
-					$anytimeGroupsRaw[$groupKey]['used']++;
-					continue;
-				}
-				$appendUtcRangeToLocalDays(
-					$bookedRangesByDate,
-					(string) ($row['time'] ?? ''),
-					(string) ($row['time_to'] ?? ''),
-					$utcTz,
-					$masterTz
-				);
-			}
-			if ($anytimeGroupsRaw !== []) {
-				$anytimeCourseIds = [];
-				foreach ($anytimeGroupsRaw as $group) {
-					$anytimeCourseIds[(int) $group['course_id']] = true;
-				}
-				$anytimeCourseIds = array_keys($anytimeCourseIds);
-				$concurrentByCourse = [];
-				try {
-					$hasConcurrentCol = class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserCoursesService')
-						&& \Joomla\Plugin\User\Vigling\Service\UserCoursesService::ensureConcurrentParticipantsColumn($db);
-					$courseSelect = [
-						$db->quoteName('id'),
-						$db->quoteName('capacity'),
-					];
-					if ($hasConcurrentCol) {
-						$courseSelect[] = $db->quoteName('concurrent_participants');
-					}
-					$courseQuery = $db->getQuery(true)
-						->select($courseSelect)
-						->from($db->quoteName('#__vigling_user_courses'))
-						->whereIn($db->quoteName('id'), $anytimeCourseIds);
-					$db->setQuery($courseQuery);
-					$courseRows = $db->loadAssocList() ?: [];
-					foreach ($courseRows as $courseRow) {
-						$cid = (int) ($courseRow['id'] ?? 0);
-						if ($cid <= 0) {
-							continue;
-						}
-						$capacity = max(1, (int) ($courseRow['capacity'] ?? 1));
-						$concurrent = $hasConcurrentCol ? max(1, (int) ($courseRow['concurrent_participants'] ?? 1)) : 1;
-						if ($concurrent > $capacity) {
-							$concurrent = $capacity;
-						}
-						$concurrentByCourse[$cid] = $concurrent;
-					}
-				} catch (\Throwable $ignore) {
-				}
-				foreach ($anytimeGroupsRaw as $group) {
-					$cid = (int) ($group['course_id'] ?? 0);
-					$used = max(0, (int) ($group['used'] ?? 0));
-					$max = max(1, (int) ($concurrentByCourse[$cid] ?? 1));
-					$appendAnytimeOccupancyToLocalDays(
-						$anytimeOccupancyByDate,
-						(string) ($group['time'] ?? ''),
-						(string) ($group['time_to'] ?? ''),
-						$utcTz,
-						$masterTz,
-						$cid,
-						$used,
-						$max
-					);
-				}
-			}
-		} catch (\Throwable $ignore) {
-		}
-
-		try {
-			$courseSlotQuery = $db->getQuery(true)
-				->select([$db->quoteName('starts_at_utc'), $db->quoteName('ends_at_utc')])
-				->from($db->quoteName('#__vigling_course_slots'))
-				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
-				->where($db->quoteName('is_active') . ' = 1')
-				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
-				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($calendarUntilUtc));
-			$db->setQuery($courseSlotQuery);
-			$courseSlotRows = $db->loadAssocList() ?: [];
-			foreach ($courseSlotRows as $slotRow) {
-				$appendUtcRangeToLocalDays(
-					$reservedRangesByDate,
-					(string) ($slotRow['starts_at_utc'] ?? ''),
-					(string) ($slotRow['ends_at_utc'] ?? ''),
-					$utcTz,
-					$masterTz,
-					'course'
-				);
-			}
-		} catch (\Throwable $ignore) {
-		}
-
-		try {
-			$searchSlotQuery = $db->getQuery(true)
-				->select([$db->quoteName('starts_at_utc'), $db->quoteName('ends_at_utc')])
-				->from($db->quoteName('#__vigling_search_slots'))
-				->where($db->quoteName('master_id') . ' = ' . (int) $profileOwnerId)
-				->where($db->quoteName('is_active') . ' = 1')
-				->where($db->quoteName('ends_at_utc') . ' >= UTC_TIMESTAMP()')
-				->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($calendarUntilUtc));
-			$db->setQuery($searchSlotQuery);
-			$searchSlotRows = $db->loadAssocList() ?: [];
-			foreach ($searchSlotRows as $slotRow) {
-				$appendUtcRangeToLocalDays(
-					$reservedRangesByDate,
-					(string) ($slotRow['starts_at_utc'] ?? ''),
-					(string) ($slotRow['ends_at_utc'] ?? ''),
-					$utcTz,
-					$masterTz,
-					'search'
-				);
-			}
-		} catch (\Throwable $ignore) {
-		}
-	} catch (\Throwable $e) {
-		$bookedRangesByDate = [];
-		$ownerBlockRangesByDate = [];
-		$reservedRangesByDate = [];
-		$anytimeOccupancyByDate = [];
-	}
-}
-
-$startDay = new \DateTimeImmutable('today', $masterTz);
-for ($dayOffset = 0; $dayOffset < 45; $dayOffset++) {
-	$currentDay = $startDay->modify('+' . $dayOffset . ' day');
-	$dow = (int) $currentDay->format('N');
-	$dateKey = $currentDay->format('Y-m-d');
-	$slots = [];
-	$slotUtcByTime = [];
-	$slotMinutes = [];
-	$slotReservedByTime = [];
-	$slotOwnerBlockByTime = [];
-	$slotAnytimeByTime = [];
-	$range = $workRangeByDay[$dow] ?? null;
-	if (is_array($range)) {
-		$dayBookedRanges = $bookedRangesByDate[$dateKey] ?? [];
-		$dayOwnerBlocks = $ownerBlockRangesByDate[$dateKey] ?? [];
-		$dayOfferRanges = $reservedRangesByDate[$dateKey] ?? [];
-		$dayAnytimeGroups = $anytimeOccupancyByDate[$dateKey] ?? [];
-		for ($minute = (int) $range[0]; $minute <= (int) $range[1]; $minute += 15) {
-			$isBooked = false;
-			foreach ($dayBookedRanges as $bookedRange) {
-				$bookedStart = (int) ($bookedRange[0] ?? 0);
-				$bookedEnd = (int) ($bookedRange[1] ?? 0);
-				if ($minute >= $bookedStart && $minute < $bookedEnd) {
-					$isBooked = true;
-					break;
-				}
-			}
-			if ($isBooked) {
-				continue;
-			}
-			$isOwnerBlock = false;
-			foreach ($dayOwnerBlocks as $blockRange) {
-				$blockStart = (int) ($blockRange[0] ?? 0);
-				$blockEnd = (int) ($blockRange[1] ?? 0);
-				if ($minute >= $blockStart && $minute < $blockEnd) {
-					$isOwnerBlock = true;
-					break;
-				}
-			}
-			if ($isOwnerBlock && !$viewerIsProfileOwner) {
-				continue;
-			}
-			$offerKind = '';
-			foreach ($dayOfferRanges as $offerRange) {
-				$offerStart = (int) ($offerRange[0] ?? 0);
-				$offerEnd = (int) ($offerRange[1] ?? 0);
-				if ($minute >= $offerStart && $minute < $offerEnd) {
-					$kind = strtolower(trim((string) ($offerRange[2] ?? '')));
-					$offerKind = ($kind === 'search') ? 'search' : 'course';
-					break;
-				}
-			}
-			if ($offerKind !== '' && !$isOwnerBlock) {
-				continue;
-			}
-			$slotLabel = $formatMinutes($minute);
-			$slotDateTimeLocal = $currentDay->setTime((int) floor($minute / 60), $minute % 60, 0);
-			$slotUtcByTime[$slotLabel] = $slotDateTimeLocal->setTimezone($utcTz)->format(\DateTimeInterface::ATOM);
-			$slots[] = $slotLabel;
-			$slotMinutes[] = (int) $minute;
-			if ($isOwnerBlock) {
-				$slotOwnerBlockByTime[$slotLabel] = '1';
-			}
-			foreach ($dayAnytimeGroups as $anytimeGroup) {
-				$anytimeStart = (int) ($anytimeGroup['start'] ?? 0);
-				$anytimeEnd = (int) ($anytimeGroup['end'] ?? 0);
-				if ($minute < $anytimeStart || $minute >= $anytimeEnd) {
-					continue;
-				}
-				$originStart = (int) ($anytimeGroup['origin_start'] ?? $anytimeStart);
-				$slotAnytimeByTime[$slotLabel] = [
-					'course_id' => (int) ($anytimeGroup['course_id'] ?? 0),
-					'used' => max(0, (int) ($anytimeGroup['used'] ?? 0)),
-					'max' => max(1, (int) ($anytimeGroup['max'] ?? 1)),
-					'cover' => $minute !== $originStart,
-				];
-				break;
-			}
-		}
-	}
-	$calendarDays[] = [
-		'date' => $dateKey,
-		'date_view' => $currentDay->format('d.m.Y'),
-		'dow' => $dowShort[$dow] ?? '',
-		'slots' => $slots,
-		'slot_utc' => $slotUtcByTime,
-		'slot_minutes' => $slotMinutes,
-		'slot_reserved' => $slotReservedByTime,
-		'slot_owner_block' => $slotOwnerBlockByTime,
-		'slot_anytime' => $slotAnytimeByTime,
-		'range_from_min' => is_array($range) ? (int) $range[0] : null,
-		'range_to_min' => is_array($range) ? (int) $range[1] : null,
-	];
-}
-
-$calendarDaysJson = json_encode($calendarDays, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 $displayName = trim((string) ($this->data->name ?? ''));
 if ($displayName === '') {
@@ -1290,7 +850,13 @@ try {
 	}
 	$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
 	$profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
-	$isMasterProfile = in_array(3, $profileGroups, true) || in_array(8, $profileGroups, true);
+	$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+	if (is_file($masterHelper)) {
+		require_once $masterHelper;
+	}
+	$isMasterProfile = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+		? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($profileGroups)
+		: (in_array(3, array_map('intval', (array) $profileGroups), true) || in_array(8, array_map('intval', (array) $profileGroups), true));
 	$reviewDirection = $isMasterProfile
 		? \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
 		: \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT;
@@ -2447,50 +2013,7 @@ if (empty($isLkEmbed)) {
 								<button type="button" class="zapis-reserved-notice__close" aria-label="Закрыть">&times;</button>
 							</div>
 							<div class="error-msg" style="display:none;"></div>
-							<div class="calendar__master calendar__master--manual preload">
-								<?php foreach ($calendarDays as $calendarDay) : ?>
-								<div class="calendar__master-item">
-									<span class="mas-date">
-										<?php echo $this->escape((string) ($calendarDay['date_view'] ?? '')); ?>
-										<b><?php echo $this->escape((string) ($calendarDay['dow'] ?? '')); ?></b>
-									</span>
-									<?php if (!empty($calendarDay['slots'])) : ?>
-									<p class="btns-m">
-										<?php foreach ((array) $calendarDay['slots'] as $slotTime) :
-											$slotValue = (string) ($calendarDay['date'] ?? '') . ' ' . (string) $slotTime;
-											$slotId = preg_replace('/[^a-zA-Z0-9\-_]/', '-', (string) ($calendarDay['date'] ?? '') . '-' . str_replace(':', '-', (string) $slotTime));
-											$slotUtc = (string) (($calendarDay['slot_utc'][(string) $slotTime] ?? ''));
-											$slotReserved = (string) (($calendarDay['slot_reserved'][(string) $slotTime] ?? ''));
-											$slotOwnerBlock = (string) (($calendarDay['slot_owner_block'][(string) $slotTime] ?? ''));
-											$slotAnytime = (array) (($calendarDay['slot_anytime'][(string) $slotTime] ?? []));
-											$anytimeCourseId = (int) ($slotAnytime['course_id'] ?? 0);
-											$anytimeUsed = (int) ($slotAnytime['used'] ?? 0);
-											$anytimeMax = (int) ($slotAnytime['max'] ?? 0);
-											$anytimeCover = !empty($slotAnytime['cover']);
-											$anytimeAttrs = '';
-											if ($anytimeCourseId > 0) {
-												$anytimeAttrs = ' data-anytime-course-id="' . $anytimeCourseId . '" data-anytime-used="' . $anytimeUsed . '" data-anytime-max="' . max(1, $anytimeMax) . '"';
-												if ($anytimeCover) {
-													$anytimeAttrs .= ' data-anytime-cover="1"';
-												}
-											}
-											$labelClass = 'btn-select';
-											if ($slotOwnerBlock === '1') {
-												$labelClass .= ' owner-block';
-											} elseif ($slotReserved !== '') {
-												$labelClass .= ' reserved';
-											}
-										?>
-										<input type="radio" id="<?php echo $this->escape($slotId); ?>" name="time" value="<?php echo $this->escape($slotValue); ?>" data-time-utc="<?php echo $this->escape($slotUtc); ?>"<?php echo $slotOwnerBlock === '1' ? ' data-owner-block="1" disabled' : ''; ?><?php echo $slotReserved !== '' ? ' data-reserved="' . $this->escape($slotReserved) . '"' : ''; ?><?php echo $anytimeAttrs; ?>>
-										<label for="<?php echo $this->escape($slotId); ?>" class="<?php echo $this->escape($labelClass); ?>"><?php echo $this->escape((string) $slotTime); ?></label>
-										<?php endforeach; ?>
-									</p>
-									<?php else : ?>
-									<span class="line-no"></span>
-									<?php endif; ?>
-								</div>
-								<?php endforeach; ?>
-							</div>
+							<div class="calendar__master calendar__master--manual preload" data-calendar-lazy="1"></div>
 						</div>
 						<div class="calc__btn">
 							<div class="btn-next">Далее</div>
@@ -2798,15 +2321,11 @@ if (empty($isLkEmbed)) {
 		var quickAuthUrl = <?php echo json_encode(Route::_('index.php?option=com_ajax&plugin=Quickauth&format=json', false)); ?>;
 		var bookingMasterName = <?php echo json_encode($displayName); ?>;
 		var bookingAddress = <?php echo json_encode($addrExtraDisplay !== '' ? trim($addr . ', ' . $addrExtraDisplay, ', ') : $addr); ?>;
-		var bookingCalendarDays = <?php echo $calendarDaysJson ?: '[]'; ?>;
+		var bookingCalendarDays = [];
 		var bookingCalendarByDate = {};
-		if (Array.isArray(bookingCalendarDays)) {
-			bookingCalendarDays.forEach(function (day) {
-				if (day && day.date) {
-					bookingCalendarByDate[String(day.date)] = day;
-				}
-			});
-		}
+		var bookingCalendarRequest = null;
+		var bookingCalendarUrl = <?php echo json_encode(Route::_('index.php?option=com_ajax&group=ajax&plugin=lkbooking&format=json', false)); ?>;
+		var bookingCalendarMasterId = <?php echo (int) $profileOwnerId; ?>;
 		var activeBookingButton = null;
 		var lastPickedSlot = null;
 		var authMode = 'register';
@@ -3835,7 +3354,11 @@ if (empty($isLkEmbed)) {
 				activeBookingButton = this;
 				hideReservedNotice();
 				updateSummaryFromButton(this);
-				setTimeout(function () { initZapisCalendar(0); }, 350);
+				if (!isFixedCourseBooking()) {
+					ensureBookingCalendar().then(function () {
+						setTimeout(function () { initZapisCalendar(0); }, 350);
+					});
+				}
 			}, true);
 		});
 
@@ -3858,11 +3381,119 @@ if (empty($isLkEmbed)) {
 			return Math.max(listW, wrapW) >= 40;
 		}
 
+		function escapeBookingText(value) {
+			return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+				return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+			});
+		}
+
+		function renderBookingCalendar(days) {
+			var cal = bookingModal.querySelector('.calendar__master');
+			if (!cal) {
+				return;
+			}
+			if (window.jQuery) {
+				var $cal = jQuery(cal);
+				if ($cal.hasClass('slick-initialized') && typeof $cal.slick === 'function') {
+					try { $cal.slick('unslick'); } catch (e) {}
+				}
+			}
+			bookingCalendarDays = Array.isArray(days) ? days : [];
+			bookingCalendarByDate = {};
+			var html = '';
+			bookingCalendarDays.forEach(function (day) {
+				if (!day || !day.date) {
+					return;
+				}
+				bookingCalendarByDate[String(day.date)] = day;
+				var slots = Array.isArray(day.slots) ? day.slots : [];
+				html += '<div class="calendar__master-item">';
+				html += '<span class="mas-date">' + escapeBookingText(day.date_view) + ' <b>' + escapeBookingText(day.dow) + '</b></span>';
+				if (!slots.length) {
+					html += '<span class="line-no"></span></div>';
+					return;
+				}
+				html += '<p class="btns-m">';
+				slots.forEach(function (slotTime) {
+					var time = String(slotTime);
+					var slotId = String(day.date + '-' + time).replace(/[^a-zA-Z0-9\-_]/g, '-');
+					var utc = day.slot_utc && day.slot_utc[time] ? String(day.slot_utc[time]) : '';
+					var reserved = day.slot_reserved && day.slot_reserved[time] ? String(day.slot_reserved[time]) : '';
+					var ownerBlock = !!(day.slot_owner_block && String(day.slot_owner_block[time]) === '1');
+					var anytime = day.slot_anytime && day.slot_anytime[time] ? day.slot_anytime[time] : null;
+					var attrs = '';
+					if (ownerBlock) {
+						attrs += ' data-owner-block="1" disabled';
+					}
+					if (reserved) {
+						attrs += ' data-reserved="' + escapeBookingText(reserved) + '"';
+					}
+					if (anytime && parseInteger(anytime.course_id, 0) > 0) {
+						attrs += ' data-anytime-course-id="' + parseInteger(anytime.course_id, 0) + '"';
+						attrs += ' data-anytime-used="' + parseInteger(anytime.used, 0) + '"';
+						attrs += ' data-anytime-max="' + Math.max(1, parseInteger(anytime.max, 1)) + '"';
+						if (anytime.cover) {
+							attrs += ' data-anytime-cover="1"';
+						}
+					}
+					var labelClass = 'btn-select' + (ownerBlock ? ' owner-block' : (reserved ? ' reserved' : ''));
+					html += '<input type="radio" id="' + escapeBookingText(slotId) + '" name="time" value="' + escapeBookingText(String(day.date) + ' ' + time) + '" data-time-utc="' + escapeBookingText(utc) + '"' + attrs + '>';
+					html += '<label for="' + escapeBookingText(slotId) + '" class="' + labelClass + '">' + escapeBookingText(time) + '</label>';
+				});
+				html += '</p></div>';
+			});
+			cal.innerHTML = html;
+		}
+
+		function ensureBookingCalendar() {
+			if (bookingCalendarRequest) {
+				return bookingCalendarRequest;
+			}
+			var cal = bookingModal.querySelector('.calendar__master');
+			if (cal) {
+				cal.classList.add('preload');
+			}
+			var fd = new FormData();
+			applyRequestToken(fd);
+			fd.append('action', 'public_calendar');
+			fd.append('master_id', String(bookingCalendarMasterId));
+			bookingCalendarRequest = fetch(bookingCalendarUrl, {
+				method: 'POST',
+				body: fd,
+				credentials: 'same-origin'
+			})
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				var res = (data && data.data && typeof data.data.success !== 'undefined') ? data.data : (data && data.data ? data.data : data);
+				if (!res || !res.success) {
+					throw new Error((res && res.message) ? res.message : 'Не удалось загрузить свободное время');
+				}
+				renderBookingCalendar(res.days || []);
+				if (typeof res.has_schedule !== 'undefined') {
+					hasWorkSchedule = !!res.has_schedule;
+				}
+			})
+			.catch(function (err) {
+				bookingCalendarRequest = null;
+				if (cal) {
+					cal.classList.remove('preload');
+				}
+				setError(bookingModal.querySelector('.screen1'), (err && err.message) ? err.message : 'Не удалось загрузить свободное время');
+			});
+			return bookingCalendarRequest;
+		}
+
 		function initZapisCalendar(attempt) {
 			attempt = attempt || 0;
 			var cal = jQuery(bookingModal).find('.calendar__master');
 			if (!cal.length) {
 				applyAvailableSlotsFilter();
+				return;
+			}
+			if (!cal.children('.calendar__master-item').length) {
+				if (bookingCalendarRequest && attempt < 80) {
+					setTimeout(function () { initZapisCalendar(attempt + 1); }, 50);
+				}
 				return;
 			}
 			cal.removeClass('preload');
@@ -3921,7 +3552,9 @@ if (empty($isLkEmbed)) {
 				showScreen('screen2');
 				return;
 			}
-			setTimeout(function () { initZapisCalendar(0); }, 0);
+			ensureBookingCalendar().then(function () {
+				setTimeout(function () { initZapisCalendar(0); }, 0);
+			});
 		}
 
 		jQuery(document).off('shown.bs.modal.zapisCal').on('shown.bs.modal.zapisCal', '#zapis', openZapisCalendarScreen);

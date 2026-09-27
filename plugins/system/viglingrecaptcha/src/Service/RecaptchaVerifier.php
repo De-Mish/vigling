@@ -221,7 +221,7 @@ final class RecaptchaVerifier
             'secret_key' => trim((string) ($params['secret_key'] ?? '')),
             'score_threshold' => max(0.0, min(1.0, (float) ($params['score_threshold'] ?? 0.5))),
             'verify_timeout_ms' => max(1000, (int) ($params['verify_timeout_ms'] ?? 2500)),
-            'fail_policy' => ((string) ($params['fail_policy'] ?? 'open')) === 'closed' ? 'closed' : 'open',
+            'fail_policy' => 'closed',
             'protect_registration' => !empty($params['protect_registration']),
             'protect_quickauth_register' => !empty($params['protect_quickauth_register']),
             'protect_booking_quickauth_register' => !empty($params['protect_booking_quickauth_register']),

@@ -6,9 +6,14 @@ namespace Viglin\Component\Kurs\Site\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel as BaseListModel;
+use Joomla\Plugin\User\Vigling\Helper\CatalogCacheTrait;
+
+require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogCacheTrait.php';
 
 class ListModel extends BaseListModel
 {
+	use CatalogCacheTrait;
+
 	private const MAP_ITEMS_LIMIT = 800;
 
 	private array $totalCache = [];
@@ -30,6 +35,7 @@ class ListModel extends BaseListModel
 		$id .= ':' . $this->getState('list.direction');
 		$id .= ':' . (int) $this->getState('list.start');
 		$id .= ':' . (int) $this->getState('list.limit');
+		$id .= ':one-offer';
 
 		return parent::getStoreId($id);
 	}
@@ -43,9 +49,12 @@ class ListModel extends BaseListModel
 		}
 
 		try {
-			$db = $this->getDatabase();
-			$db->setQuery($this->buildCountQuery());
-			$this->totalCache[$store] = (int) $db->loadResult();
+			$this->totalCache[$store] = (int) $this->rememberCatalog('kurs', $store, function () {
+				$db = $this->getDatabase();
+				$db->setQuery($this->buildCountQuery());
+
+				return (int) $db->loadResult();
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 
@@ -75,10 +84,9 @@ class ListModel extends BaseListModel
 				$limit = 50;
 			}
 
-			$query = $this->buildListQuery();
-			$query->setLimit($limit, $start);
-			$this->getDatabase()->setQuery($query);
-			$this->itemsCache[$store] = $this->getDatabase()->loadObjectList() ?: [];
+			$this->itemsCache[$store] = $this->rememberCatalog('kurs', $store, function () use ($limit, $start) {
+				return $this->loadOneOfferPerRow($limit, $start, 'course_id');
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 
@@ -97,10 +105,9 @@ class ListModel extends BaseListModel
 		}
 
 		try {
-			$query = $this->buildListQuery();
-			$query->setLimit(self::MAP_ITEMS_LIMIT, 0);
-			$this->getDatabase()->setQuery($query);
-			$this->mapItemsCache[$store] = $this->getDatabase()->loadObjectList() ?: [];
+			$this->mapItemsCache[$store] = $this->rememberCatalog('kurs', $store, function () {
+				return $this->loadOneOfferPerRow(self::MAP_ITEMS_LIMIT, 0, 'course_id');
+			});
 		} catch (\Throwable $e) {
 			$this->setError($e->getMessage());
 
@@ -184,7 +191,63 @@ class ListModel extends BaseListModel
 				break;
 		}
 
+		$query->select(
+			'ROW_NUMBER() OVER (PARTITION BY ' . $db->quoteName('c.id')
+			. ' ORDER BY CASE WHEN ' . $db->quoteName('slot.starts_at_utc') . ' IS NULL THEN 1 ELSE 0 END ASC, '
+			. $db->quoteName('slot.starts_at_utc') . ' ASC, '
+			. $db->quoteName('slot.id') . ' ASC) AS ' . $db->quoteName('vg_row')
+		);
+
 		return $query;
+	}
+
+	/**
+	 * The slot join can repeat one course once per free date.
+	 * Keep the earliest remaining date and page by course, matching COUNT(DISTINCT c.id).
+	 *
+	 * @return array<int, object>
+	 */
+	private function loadOneOfferPerRow(int $limit, int $start, string $idColumn): array
+	{
+		$db = $this->getDatabase();
+		$query = $db->getQuery(true)
+			->select('deduped.*')
+			->from('(' . $this->buildListQuery() . ') AS ' . $db->quoteName('deduped'))
+			->where($db->quoteName('deduped.vg_row') . ' = 1');
+		$this->applyDedupedOrdering($query, $db, $idColumn);
+		if ($limit > 0) {
+			$query->setLimit($limit, max(0, $start));
+		}
+		$db->setQuery($query);
+
+		return $db->loadObjectList() ?: [];
+	}
+
+	private function applyDedupedOrdering($query, $db, string $idColumn): void
+	{
+		$orderCol = (string) $this->getState('list.ordering', 'newest');
+		$orderDir = strtoupper((string) $this->getState('list.direction', 'DESC'));
+		if ($orderDir !== 'ASC' && $orderDir !== 'DESC') {
+			$orderDir = 'DESC';
+		}
+
+		switch ($orderCol) {
+			case 'price':
+				$query->order($db->quoteName('deduped.price') . ' ' . $orderDir);
+				$query->order($db->quoteName('deduped.' . $idColumn) . ' DESC');
+				break;
+
+			case 'date':
+				$query->order('CASE WHEN ' . $db->quoteName('deduped.starts_at_utc') . ' IS NULL THEN 1 ELSE 0 END ASC');
+				$query->order($db->quoteName('deduped.starts_at_utc') . ' ' . $orderDir);
+				$query->order($db->quoteName('deduped.' . $idColumn) . ' DESC');
+				break;
+
+			default:
+				$query->order($db->quoteName('deduped.updated_at') . ' DESC');
+				$query->order($db->quoteName('deduped.' . $idColumn) . ' DESC');
+				break;
+		}
 	}
 
 	private function applyFiltersToQuery($query, $db): void

@@ -40,6 +40,7 @@ class SubscribersController extends BaseController
 			return;
 		}
 		$sent = 0;
+		$queued = 0;
 		foreach ($cid as $userId) {
 			$result = FcmHelper::sendNotification(
 				$userId,
@@ -50,8 +51,12 @@ class SubscribersController extends BaseController
 				''
 			);
 			$sent += (int) ($result['sent'] ?? 0);
+			$queued += (int) ($result['queued'] ?? 0);
 		}
-		$this->setRedirect(Route::_('index.php?option=com_pushnotify&view=subscribers', false), Text::sprintf('COM_PUSHNOTIFY_TEST_SENT', $sent));
+		$message = $queued > 0
+			? 'Тест поставлен в очередь (' . $queued . '). Уведомление уйдёт в течение минуты, когда отработает cron.'
+			: Text::sprintf('COM_PUSHNOTIFY_TEST_SENT', $sent);
+		$this->setRedirect(Route::_('index.php?option=com_pushnotify&view=subscribers', false), $message);
 	}
 
 	public function getModel($name = 'Subscribers', $prefix = 'Administrator', $config = ['ignore_request' => true])

@@ -2,18 +2,15 @@
 
 \defined('_JEXEC') or die;
 
-use Joomla\CMS\Factory;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
-
-require_once __DIR__ . '/_reschedule_helper.php';
 
 /** @var \Viglin\Component\Orders\Site\View\Orders\HtmlView $this */
 $items = $this->items;
 $token = Session::getFormToken();
 $returnEncoded = base64_encode(Uri::getInstance()->toString());
-$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+$rescheduleSlotsAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSlots');
 $rescheduleAction = Route::_('index.php?option=com_orders&task=orders.rescheduleByMaster');
 $rescheduleCourseAction = Route::_('index.php?option=com_orders&task=orders.rescheduleCourseSlotByMaster');
 $rescheduleSearchAction = Route::_('index.php?option=com_orders&task=orders.rescheduleSearchSlotByMaster');
@@ -55,7 +52,7 @@ foreach ($items as $item) {
 		'item' => $item,
 	];
 }
-$renderOrderActions = static function ($item, bool $isPast, bool $completed, string $token, string $returnEncoded, string $timeIso) use ($db): string {
+$renderOrderActions = static function ($item, bool $isPast, bool $completed, string $token, string $returnEncoded, string $timeIso): string {
 	$durationMin = 60;
 	$isFixedCourse = trim((string) ($item->booking_kind ?? 'service')) === 'course' && (int) ($item->course_slot_id ?? 0) > 0;
 	$isFixedSearch = trim((string) ($item->booking_kind ?? 'service')) === 'search' && (int) ($item->search_slot_id ?? 0) > 0;
@@ -68,8 +65,6 @@ $renderOrderActions = static function ($item, bool $isPast, bool $completed, str
 			$durationMin = max(15, min(480, $diff));
 		}
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, (int) $item->id, 0, 45);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	ob_start();
 	?>
 	<?php if ($isPast) : ?>
@@ -97,11 +92,10 @@ $renderOrderActions = static function ($item, bool $isPast, bool $completed, str
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('<?php echo ($isFixedCourse || $isFixedSearch) ? 'Отменить участие этого клиента? Ему придёт уведомление.' : 'Отменить запись? Клиенту придёт уведомление.'; ?>');">Отменить</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-slots-<?php echo (int) $item->id; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
-$renderCourseSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleCourseAction) use ($db): string {
+$renderCourseSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleCourseAction): string {
 	$courseSlotId = (int) ($item->course_slot_id ?? 0);
 	$durationMin = (int) ($item->course_slot_end_utc && $item->course_slot_start_utc
 		? max(15, min(480, (int) floor((strtotime((string) $item->course_slot_end_utc) - strtotime((string) $item->course_slot_start_utc)) / 60)))
@@ -109,8 +103,6 @@ $renderCourseSlotActions = static function ($item, bool $isPast, string $token, 
 	if ($durationMin <= 0) {
 		$durationMin = 60;
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, $courseSlotId, 45);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	$timeIso = '';
 	if (!empty($item->time)) {
 		try {
@@ -137,11 +129,10 @@ $renderCourseSlotActions = static function ($item, bool $isPast, string $token, 
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить курс для всех участников? Всем придёт уведомление.');">Отменить курс</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-course-slot-<?php echo $courseSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
-$renderSearchSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleSearchAction) use ($db): string {
+$renderSearchSlotActions = static function ($item, bool $isPast, string $token, string $returnEncoded, string $rescheduleSearchAction): string {
 	$searchSlotId = (int) ($item->search_slot_id ?? 0);
 	$durationMin = (int) ($item->search_slot_end_utc && $item->search_slot_start_utc
 		? max(15, min(480, (int) floor((strtotime((string) $item->search_slot_end_utc) - strtotime((string) $item->search_slot_start_utc)) / 60)))
@@ -149,8 +140,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	if ($durationMin <= 0) {
 		$durationMin = 60;
 	}
-	$slotPayload = viglingOrdersBuildRescheduleSlots($db, (int) $item->master_id, $durationMin, 0, 0, 45, $searchSlotId);
-	$slotsJson = json_encode($slotPayload['days'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	$timeIso = '';
 	if (!empty($item->time)) {
 		try {
@@ -177,7 +166,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			<button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Отменить поиск для всех участников? Всем придёт уведомление.');">Отменить поиск</button>
 		</form>
 	<?php endif; ?>
-	<script type="application/json" id="reschedule-search-slot-<?php echo $searchSlotId; ?>"><?php echo $slotsJson ?: '[]'; ?></script>
 	<?php
 	return (string) ob_get_clean();
 };
@@ -226,136 +214,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	.com_orders .order-feedback-inline { margin: 0 0 8px; }
 	.com_orders .order-review-card { margin-top: 8px; font-size: 13px; color: #555; }
 	.com_orders .order-review-card__head { font-weight: 600; color: #333; }
-	#zapis-reschedule .modal-dialog {
-		width: 96vw !important;
-		max-width: 1180px !important;
-		margin: 12px auto !important;
-	}
-	#zapis-reschedule .modal-content { overflow: hidden; }
-	#zapis-reschedule .modal-body { overflow: hidden; padding: 20px 28px 28px; }
-	#zapis-reschedule .calendar__master.preload { visibility: visible; }
-	#zapis-reschedule #reschedule-calendar {
-		width: 100% !important;
-		max-width: 800px;
-		margin: 0 auto !important;
-	}
-	#zapis-reschedule #reschedule-calendar .slick-list {
-		margin: 0 -8px;
-		padding: 4px 0 10px;
-		overflow: hidden;
-	}
-	#zapis-reschedule #reschedule-calendar .slick-slide,
-	#zapis-reschedule #reschedule-calendar .slick-slide > div {
-		height: auto !important;
-	}
-	#zapis-reschedule #reschedule-calendar .calendar__master-item {
-		padding: 0 8px;
-		box-sizing: border-box;
-	}
-	#zapis-reschedule #reschedule-calendar .btns-m { padding-top: 2px; }
-	#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 6px;
-		padding: 2px 2px 0;
-	}
-	#zapis-reschedule #reschedule-calendar .btns-m .btn-select {
-		width: 100% !important;
-		min-width: 0 !important;
-		height: auto !important;
-		margin: 0 !important;
-		padding: 6px 2px !important;
-		font-size: 11px !important;
-		line-height: 1.4 !important;
-		border-radius: 6px !important;
-		box-sizing: border-box !important;
-		text-align: center !important;
-		background-color: #fff !important;
-		border: 1px solid #e0e0e0 !important;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-	}
-	#zapis-reschedule #reschedule-calendar .btns-m .btn-select.reserved {
-		background-color: #f0f0f0 !important;
-		color: #555 !important;
-		border-color: #e8e8e8 !important;
-	}
-	#zapis-reschedule #reschedule-calendar .btns-m input:checked + .btn-select {
-		background-color: #f7cc53 !important;
-		border-color: #f7cc53 !important;
-		box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
-	}
-	#zapis-reschedule #reschedule-calendar .slick-prev,
-	#zapis-reschedule #reschedule-calendar .slick-next {
-		z-index: 5;
-	}
-	#zapis-reschedule .calc__btn {
-		padding-left: 0;
-		display: flex;
-		justify-content: center;
-		gap: 16px;
-	}
-	#zapis-reschedule .calc__btn .btn-next,
-	#zapis-reschedule .calc__btn .close__btn {
-		float: none;
-		margin: 0;
-	}
-	#zapis-reschedule .calendar-hint { margin: 6px 0 14px; font-size: 13px; color: #777; }
-	#zapis-reschedule .calendar-hint i { font-style: normal; color: #111; }
-	#zapis-reschedule .line-no { display: inline-block; color: #999; font-size: 13px; margin-top: 8px; }
-	#zapis-reschedule .error-msg { color: #a94442; margin-top: 10px; display: none; }
-	#zapis-reschedule .btn-next.is-loading { pointer-events: none; opacity: .9; }
-	#zapis-reschedule .btn-next .btn-spinner {
-		display: none;
-		width: 14px;
-		height: 14px;
-		margin-right: 8px;
-		border: 2px solid rgba(0, 0, 0, .25);
-		border-top-color: #000;
-		border-radius: 50%;
-		animation: rescheduleSpin .75s linear infinite;
-		vertical-align: middle;
-	}
-	#zapis-reschedule .btn-next.is-loading .btn-spinner { display: inline-block; }
-	@keyframes rescheduleSpin { to { transform: rotate(360deg); } }
 	@media (max-width: 768px) {
-		#zapis-reschedule .modal-dialog {
-			width: min(96vw, 520px) !important;
-			margin: 12px auto !important;
-		}
-		#zapis-reschedule .modal-content {
-			max-height: calc(100vh - 24px);
-			display: flex;
-			flex-direction: column;
-		}
-		#zapis-reschedule .modal-body {
-			overflow: hidden;
-		}
-		#zapis-reschedule .calc__body {
-			padding-bottom: 8px;
-		}
-		#zapis-reschedule #reschedule-calendar .calendar__master-item {
-			max-height: calc(100vh - 260px);
-			overflow: hidden;
-		}
-		#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m {
-			max-height: calc(100vh - 360px);
-			overflow-y: auto;
-			-webkit-overflow-scrolling: touch;
-			padding-right: 4px;
-			margin-bottom: 0;
-		}
-		#zapis-reschedule .calc__btn {
-			display: flex;
-			flex-direction: column;
-			gap: 12px;
-			padding-left: 0;
-		}
-		#zapis-reschedule .calc__btn .btn-next,
-		#zapis-reschedule .calc__btn .close__btn {
-			width: 100%;
-			margin: 0;
-			float: none;
-		}
 		.com_orders.orders-list--clients .orders-table { display: block; border: 0; background: transparent; }
 		.com_orders.orders-list--clients .orders-table thead { display: none; }
 		.com_orders.orders-list--clients .orders-table tbody { display: block; }
@@ -638,6 +497,9 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	var errorEl = document.getElementById('reschedule-modal-error');
 	var submitBtn = document.getElementById('reschedule-modal-submit');
 	var defaultAction = form.getAttribute('action') || '';
+	var slotsUrl = <?php echo json_encode($rescheduleSlotsAction); ?>;
+	var slotsToken = <?php echo json_encode($token); ?>;
+	var slotsRequestId = 0;
 	function presentRescheduleModal() {
 		if (!modal) return;
 		if (modal.parentNode !== document.body) {
@@ -695,39 +557,6 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		cal.classList.remove('preload');
 		if (window.jQuery && jQuery(cal).hasClass('slick-initialized')) {
 			try { jQuery(cal).slick('unslick'); } catch (e) {}
-		}
-	}
-
-	function readSlots(orderId){
-		var node = document.getElementById('reschedule-slots-' + orderId);
-		if (!node) return [];
-		try {
-			var parsed = JSON.parse(node.textContent || '[]');
-			return Array.isArray(parsed) ? parsed : [];
-		} catch (e) {
-			return [];
-		}
-	}
-
-	function readCourseSlots(courseSlotId){
-		var node = document.getElementById('reschedule-course-slot-' + courseSlotId);
-		if (!node) return [];
-		try {
-			var parsed = JSON.parse(node.textContent || '[]');
-			return Array.isArray(parsed) ? parsed : [];
-		} catch (e) {
-			return [];
-		}
-	}
-
-	function readSearchSlots(searchSlotId){
-		var node = document.getElementById('reschedule-search-slot-' + searchSlotId);
-		if (!node) return [];
-		try {
-			var parsed = JSON.parse(node.textContent || '[]');
-			return Array.isArray(parsed) ? parsed : [];
-		} catch (e) {
-			return [];
 		}
 	}
 
@@ -813,6 +642,38 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 		cal.classList.remove('preload');
 	}
 
+	function loadRescheduleDays(orderId, courseSlotId, searchSlotId, duration, currentUtc) {
+		var requestId = ++slotsRequestId;
+		hideError();
+		if (cal) {
+			cal.classList.remove('preload');
+			cal.innerHTML = '';
+		}
+		if (submitBtn) submitBtn.disabled = true;
+		var fd = new FormData();
+		fd.append(slotsToken, '1');
+		fd.append('id', String(orderId || 0));
+		fd.append('course_slot_id', String(courseSlotId || 0));
+		fd.append('search_slot_id', String(searchSlotId || 0));
+		fd.append('duration', String(duration || 60));
+		fetch(slotsUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(response){ return response.json(); })
+			.then(function(data){
+				if (requestId !== slotsRequestId) return;
+				var days = (data && data.success && Array.isArray(data.days)) ? data.days : [];
+				renderCalendar(days, currentUtc);
+				initSlider();
+				if ((!data || !data.success) && errorEl) {
+					showError((data && data.message) ? data.message : 'Не удалось загрузить свободное время');
+				}
+			})
+			.catch(function(){
+				if (requestId !== slotsRequestId) return;
+				renderCalendar([], currentUtc);
+				showError('Не удалось загрузить свободное время');
+			});
+	}
+
 	document.querySelectorAll('.reschedule-open').forEach(function(btn){
 		btn.addEventListener('click', function(){
 			hideError();
@@ -829,11 +690,8 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 			timeUtcInp.value = '';
 			form.setAttribute('action', (courseSlotId > 0 || searchSlotId > 0) ? (this.getAttribute('data-reschedule-action') || defaultAction) : defaultAction);
 			cal.classList.remove('preload');
-			renderCalendar(
-				searchSlotId > 0 ? readSearchSlots(searchSlotId) : (courseSlotId > 0 ? readCourseSlots(courseSlotId) : readSlots(orderId)),
-				currentUtc
-			);
 			presentRescheduleModal();
+			loadRescheduleDays(orderId, courseSlotId, searchSlotId, isNaN(duration) ? 60 : duration, currentUtc);
 		});
 	});
 
@@ -853,6 +711,7 @@ $renderSearchSlotActions = static function ($item, bool $isPast, string $token, 
 	});
 
 	jQuery(modal).on('hidden.bs.modal', function () {
+		slotsRequestId++;
 		hideError();
 		timeUtcInp.value = '';
 		idInp.value = '0';

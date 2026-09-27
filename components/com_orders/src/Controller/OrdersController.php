@@ -1165,6 +1165,16 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $startDb, $endDb)) {
+				$this->setMessage('Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $startDb, $endDb)) {
+				$this->setMessage('Это время занято поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $startDb, $endDb, 0)) {
 				$this->setMessage('Это время уже занято', 'error');
 				$this->setRedirectAndExit();
@@ -1358,8 +1368,7 @@ class OrdersController extends BaseController
 			return;
 		}
 		$viewerId = (int) $user->id;
-		$groups = $user->getAuthorisedGroups();
-		$isMasterGroup = in_array(3, $groups, true) || in_array(8, $groups, true);
+		$isMasterGroup = self::isMasterUser($user);
 
 		$orderId = (int) $this->input->getInt('id', 0);
 		$courseSlotId = (int) $this->input->getInt('course_slot_id', 0);
@@ -1737,7 +1746,16 @@ class OrdersController extends BaseController
 		if (!is_object($user) || empty($user->id)) {
 			return false;
 		}
+		$helper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+		if (is_file($helper)) {
+			require_once $helper;
+		}
+		if (class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)) {
+			return \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMaster($user);
+		}
 		$groups = method_exists($user, 'getAuthorisedGroups') ? (array) $user->getAuthorisedGroups() : [];
+		$groups = array_map('intval', $groups);
+
 		return in_array(3, $groups, true) || in_array(8, $groups, true);
 	}
 

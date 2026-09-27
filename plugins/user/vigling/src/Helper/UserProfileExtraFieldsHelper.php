@@ -145,6 +145,23 @@ final class UserProfileExtraFieldsHelper
 		return implode(', ', $parts);
 	}
 
+	public static function setPhonePublicIfAbsent(int $userId): void
+	{
+		if ($userId <= 0) {
+			return;
+		}
+		$existing = self::loadFieldValues($userId, ['phone_public']);
+		if (array_key_exists('phone_public', $existing) && trim((string) $existing['phone_public']) !== '') {
+			return;
+		}
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			self::ensureFieldsExist($db);
+			self::writeFieldValues($db, $userId, ['phone_public' => '0']);
+		} catch (\Throwable $e) {
+		}
+	}
+
 	/**
 	 * @param list<string> $names
 	 * @return array<string,string>

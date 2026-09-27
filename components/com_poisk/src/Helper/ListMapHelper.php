@@ -134,11 +134,10 @@ class ListMapHelper
 	): array {
 		$sity = self::decodeCityValue($fields['sity'] ?? '');
 		$area = trim((string) ($fields['area'] ?? ''));
-		$street = trim((string) ($fields['street'] ?? ''));
-		$house = trim((string) ($fields['house_number'] ?? ''));
-		$parts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$sity, $area, $street, $house])));
+		// Public pins stay at city and district. Street and house never leave the server.
+		$parts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$sity, $area])));
 		$addr = implode(', ', $parts);
-		$localParts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$area, $street, $house])));
+		$localParts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$area])));
 		$addrLocal = implode(', ', $localParts);
 		$queryParts = array_values(array_unique(array_filter($parts)));
 		$query = count($queryParts) >= 2 ? implode(', ', $queryParts) : ($sity !== '' ? $sity : '');

@@ -17,7 +17,13 @@ $user = Factory::getApplication()->getIdentity();
 $userId = (int) ($user->id ?? 0);
 $groups = $userId > 0 ? Access::getGroupsByUser($userId, false) : [];
 $isAdministrator = in_array(8, $groups, true) || in_array(7, $groups, true) || in_array(6, $groups, true);
-$isMaster = in_array(3, $groups, true);
+$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+if (is_file($masterHelper)) {
+	require_once $masterHelper;
+}
+$isMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($groups)
+	: (in_array(3, array_map('intval', (array) $groups), true) || in_array(8, array_map('intval', (array) $groups), true));
 $profileMasterType = '';
 
 $profileImage = '';
@@ -977,6 +983,9 @@ $phonePublicToggle = '<label class="phone-public-toggle">'
 	. '<span class="phone-public-toggle__wide">Сделать номер телефона публичным</span>'
 	. '<span class="phone-public-toggle__narrow">Сделать номер публичным</span>'
 	. '</label>';
+if ($phonePublicRaw === '') {
+	$phonePublicToggle .= '<p class="phone-public-legacy-note">Номер публичный, пока вы не снимете отметку и не сохраните.</p>';
+}
 
 $jsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
 $missingServiceOptionsJson = json_encode(array_map('array_values', $missingServiceOptionsByCategory), $jsJsonFlags) ?: '{}';

@@ -202,8 +202,25 @@ class HtmlView extends BaseHtmlView
 		return $result;
 	}
 
+	private function rememberTaxonomy(string $key, callable $loader): array
+	{
+		$path = JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogQueryCache.php';
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::class, false) && is_file($path)) {
+			require_once $path;
+		}
+		if (class_exists(\Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::class, false)) {
+			$value = \Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::remember('aktsii-taxonomy', $key, 3600, $loader);
+
+			return is_array($value) ? $value : [];
+		}
+		$value = $loader();
+
+		return is_array($value) ? $value : [];
+	}
+
 	private function loadAllCategories(): array
 	{
+		return $this->rememberTaxonomy('categories', function (): array {
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$prefix = $db->getPrefix();
 		$query = $db->getQuery(true)
@@ -215,10 +232,12 @@ class HtmlView extends BaseHtmlView
 		$db->setQuery($query);
 		$rows = $db->loadAssocList('id') ?: [];
 		return $rows;
+		});
 	}
 
 	private function loadAllServices(): array
 	{
+		return $this->rememberTaxonomy('services', function (): array {
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$prefix = $db->getPrefix();
 		$query = $db->getQuery(true)
@@ -232,10 +251,12 @@ class HtmlView extends BaseHtmlView
 			$result[$row['id']] = $row;
 		}
 		return $result;
+		});
 	}
 
 	private function loadAllTags(): array
 	{
+		return $this->rememberTaxonomy('tags', function (): array {
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$prefix = $db->getPrefix();
 		$query = $db->getQuery(true)
@@ -249,5 +270,6 @@ class HtmlView extends BaseHtmlView
 			$result[$row['id']] = $row;
 		}
 		return $result;
+		});
 	}
 }

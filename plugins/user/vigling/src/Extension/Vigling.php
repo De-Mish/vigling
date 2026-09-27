@@ -124,6 +124,9 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $this->saveProfileCityFromPost($userId);
         $this->saveProfileAddressFromPost($userId);
         UserProfileExtraFieldsHelper::saveFromPost($userId);
+        if ($event->getIsNew()) {
+            UserProfileExtraFieldsHelper::setPhonePublicIfAbsent($userId);
+        }
         $this->restoreOrphanedAvatar($userId);
         $this->validateVkProfileWebsite($userId);
 

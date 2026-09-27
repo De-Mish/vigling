@@ -98,17 +98,42 @@ class OrdersModel extends ListModel
 		if ($layout === 'appointments') {
 			$fromUtc = trim((string) $this->getState('journal.from_utc', ''));
 			$toUtc = trim((string) $this->getState('journal.to_utc', ''));
+			$dayScope = (string) $this->getState('journal.day_scope', '');
+			$orderDir = strtoupper((string) $this->getState('journal.order', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
+			$blankTime = $db->quoteName('o.time') . ' IS NULL';
 			$query = $db->getQuery(true)
 				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')
 				->from($db->quoteName('#__vigling_bookings', 'o'))
 				->where('(' . $db->quoteName('o.user_id') . ' = ' . (int) $user->id
 					. ' OR ' . $db->quoteName('o.master_id') . ' = ' . (int) $user->id . ')')
-				->order($db->quoteName('o.time') . ' ASC');
-			if ($fromUtc !== '') {
-				$query->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc));
-			}
-			if ($toUtc !== '') {
-				$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
+				->order($db->quoteName('o.time') . ' ' . $orderDir);
+			if ($dayScope === 'future') {
+				$futureParts = [];
+				if ($fromUtc !== '' && $toUtc !== '') {
+					$futureParts[] = '(' . $db->quoteName('o.time') . ' >= ' . $db->quote($fromUtc)
+						. ' AND ' . $db->quoteName('o.time') . ' < ' . $db->quote($toUtc) . ')';
+				} elseif ($fromUtc !== '') {
+					$futureParts[] = $db->quoteName('o.time') . ' >= ' . $db->quote($fromUtc);
+				} elseif ($toUtc !== '') {
+					$futureParts[] = $db->quoteName('o.time') . ' < ' . $db->quote($toUtc);
+				}
+				$futureParts[] = $blankTime;
+				$query->where('(' . implode(' OR ', $futureParts) . ')');
+			} elseif ($dayScope === 'archive') {
+				if ($fromUtc !== '') {
+					$query->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc));
+				}
+				if ($toUtc !== '') {
+					$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
+				}
+				$query->where($db->quoteName('o.time') . ' IS NOT NULL');
+			} else {
+				if ($fromUtc !== '') {
+					$query->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc));
+				}
+				if ($toUtc !== '') {
+					$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
+				}
 			}
 			if (isset($tableColumns['comment'])) {
 				$query->select($db->quoteName('o.comment'));

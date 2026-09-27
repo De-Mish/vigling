@@ -33,7 +33,13 @@ $profileFallback = [
 ];
 $profileOwnerId = (int) ($this->data->id ?? 0);
 $profileGroups = $profileOwnerId > 0 ? Access::getGroupsByUser($profileOwnerId, false) : [];
-$profileIsMaster = in_array(3, $profileGroups, true) || in_array(8, $profileGroups, true);
+$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+if (is_file($masterHelper)) {
+	require_once $masterHelper;
+}
+$profileIsMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($profileGroups)
+	: (in_array(3, array_map('intval', (array) $profileGroups), true) || in_array(8, array_map('intval', (array) $profileGroups), true));
 $profileMasterType = isset($jcfields['is_master']->rawvalue) && is_scalar($jcfields['is_master']->rawvalue)
 	? trim((string) $jcfields['is_master']->rawvalue)
 	: '';

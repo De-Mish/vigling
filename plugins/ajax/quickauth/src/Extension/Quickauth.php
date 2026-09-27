@@ -74,9 +74,22 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 			$event->updateEventResult(['success' => false, 'message' => Text::_('PLG_AJAX_QUICKAUTH_ERR_LOGIN')]);
 			return;
 		}
+		if ($this->loginAttemptBlocked($username)) {
+			$this->loadLanguage();
+			$event->updateEventResult([
+				'success' => false,
+				'message' => 'Слишком много попыток входа. Попробуйте через 15 минут.',
+				'reason_key' => 'rate_limited',
+			]);
+			return;
+		}
+		$remember = $this->wantsRemember($input);
 		$credentials = ['username' => $username, 'password' => $password];
-		if (true !== $app->login($credentials, ['remember' => true])) {
+		if (true !== $app->login($credentials, ['remember' => $remember])) {
 			$blockedByUnverified = $this->isBlockedByUnverified($username);
+			if (!$blockedByUnverified) {
+				$this->registerLoginFailure($username);
+			}
 			$this->loadLanguage();
 			$message = $blockedByUnverified
 				? Text::_('PLG_AJAX_QUICKAUTH_ERR_NOT_VERIFIED')
@@ -89,6 +102,7 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 			]);
 			return;
 		}
+		$this->clearLoginFailures($username);
 		$app->setUserState('users.login.form.data', []);
 		$redirect = $this->buildRedirectUrl($return);
 		$event->updateEventResult(['success' => true, 'redirect' => $redirect, 'form_token' => Session::getFormToken()]);
@@ -159,7 +173,7 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		$password = isset($jform['password1']) ? (string) $jform['password1'] : '';
 		if ($username !== '' && $password !== '') {
 			$credentials = ['username' => $username, 'password' => $password];
-			$app->login($credentials, ['remember' => true]);
+			$app->login($credentials, ['remember' => $this->wantsRemember($input)]);
 		}
 		$redirect = $this->buildRedirectUrl($return);
 		$event->updateEventResult(['success' => true, 'redirect' => $redirect, 'form_token' => Session::getFormToken()]);
@@ -502,5 +516,97 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 		} catch (\Throwable $e) {
 			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения']);
 		}
+	}
+
+	private function wantsRemember($input): bool
+	{
+		return (string) $input->post->get('remember', $input->get('remember', '', 'string'), 'string') === '1';
+	}
+
+	private function loginAttemptBlocked(string $username): bool
+	{
+		return $this->recentAttemptCount('user:' . strtolower($username)) >= 5
+			|| $this->recentAttemptCount('ip:' . $this->clientIp()) >= 5;
+	}
+
+	private function registerLoginFailure(string $username): void
+	{
+		$this->pushAttempt('user:' . strtolower($username));
+		$this->pushAttempt('ip:' . $this->clientIp());
+	}
+
+	private function clearLoginFailures(string $username): void
+	{
+		$this->writeAttempts('user:' . strtolower($username), []);
+	}
+
+	private function clientIp(): string
+	{
+		$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+		$forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+		if ($forwarded !== '') {
+			$candidate = trim(explode(',', $forwarded)[0]);
+			if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+				$ip = $candidate;
+			}
+		}
+
+		return $ip !== '' ? $ip : 'unknown';
+	}
+
+	private function recentAttemptCount(string $key): int
+	{
+		return count($this->readAttempts($key));
+	}
+
+	private function pushAttempt(string $key): void
+	{
+		$rows = $this->readAttempts($key);
+		$rows[] = time();
+		$this->writeAttempts($key, $rows);
+	}
+
+	private function attemptFile(string $key): string
+	{
+		$dir = (\defined('JPATH_CACHE') ? JPATH_CACHE : sys_get_temp_dir()) . '/vigling-login-limit';
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0775, true);
+		}
+
+		return $dir . '/' . hash('sha256', $key) . '.json';
+	}
+
+	private function readAttempts(string $key): array
+	{
+		$file = $this->attemptFile($key);
+		if (!is_file($file)) {
+			return [];
+		}
+		$decoded = json_decode((string) @file_get_contents($file), true);
+		if (!is_array($decoded)) {
+			return [];
+		}
+		$now = time();
+		$rows = [];
+		foreach ($decoded as $ts) {
+			$ts = (int) $ts;
+			if ($ts > 0 && ($now - $ts) < 900) {
+				$rows[] = $ts;
+			}
+		}
+
+		return $rows;
+	}
+
+	private function writeAttempts(string $key, array $rows): void
+	{
+		$file = $this->attemptFile($key);
+		if ($rows === []) {
+			if (is_file($file)) {
+				@unlink($file);
+			}
+			return;
+		}
+		@file_put_contents($file, json_encode(array_values($rows)), LOCK_EX);
 	}
 }
