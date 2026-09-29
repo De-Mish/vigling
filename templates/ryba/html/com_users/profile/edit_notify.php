@@ -32,7 +32,7 @@ $notifyRemind = static function (array $row): string {
 <div class="lk-notify-settings">
 	<div class="lk-notify-subnav" role="tablist">
 		<button type="button" class="lk-notify-subnav__btn is-active" data-notify-panel="push" aria-expanded="true">Push-уведомления</button>
-		<button type="button" class="lk-notify-subnav__btn" data-notify-panel="inbox" aria-expanded="false">Уведомления профиля</button>
+		<button type="button" class="lk-notify-subnav__btn" data-notify-panel="inbox" aria-expanded="false">Уведомления профиля <i class="fa fa-bell" aria-hidden="true"></i></button>
 	</div>
 
 	<div class="lk-notify-panel is-open" data-notify-panel="push">
@@ -44,7 +44,7 @@ $notifyRemind = static function (array $row): string {
 						<?php foreach (UserNotifyChoices::EVENTS as $eventKey => $eventLabel) : ?>
 						<th scope="col"><?php echo $this->escape($eventLabel); ?></th>
 						<?php endforeach; ?>
-						<th scope="col">Напоминание о начале за</th>
+						<th scope="col" class="lk-notify-grid__remind">Напоминание о начале записи</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -59,7 +59,7 @@ $notifyRemind = static function (array $row): string {
 						<?php endforeach; ?>
 						<td>
 							<span class="lk-notify-remind">
-								<select form="<?php echo $notifyFormId; ?>" name="push_<?php echo $this->escape($kindKey); ?>_remind" aria-label="<?php echo $this->escape($kindLabel . ', напоминание о начале за'); ?>">
+								<select form="<?php echo $notifyFormId; ?>" name="push_<?php echo $this->escape($kindKey); ?>_remind" aria-label="<?php echo $this->escape($kindLabel . ', напоминание о начале записи'); ?>">
 									<option value=""<?php echo $notifyRemind($pushRow) === '' ? ' selected' : ''; ?>>-</option>
 									<?php foreach (UserNotifyChoices::REMINDERS as $minutes => $reminderLabel) : ?>
 									<option value="<?php echo (int) $minutes; ?>"<?php echo $notifyRemind($pushRow) === (string) (int) $minutes ? ' selected' : ''; ?>><?php echo $this->escape($reminderLabel); ?></option>

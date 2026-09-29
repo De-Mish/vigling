@@ -177,7 +177,13 @@ class BookingNotifyHelper
 		) {
 			$masterPushTitle = self::getClientPersonName($clientId);
 		}
-		if ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
+		$bookedProfileReminder = self::isBookedProfileReminder($notificationType, $bookingKind);
+		if ($bookedProfileReminder) {
+			$profileId = $masterId > 0 ? $masterId : $clientId;
+			if ($clientId > 0 && $profileId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client') && NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind) && self::personalChannelAllows($profileId, 'push', $notificationType, $bookingKind, $reminderMinutes)) {
+				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
+			}
+		} elseif ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
 			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind) && self::personalChannelAllows($clientId, 'push', $notificationType, $bookingKind, $reminderMinutes)) {
 				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
 			}
@@ -185,7 +191,7 @@ class BookingNotifyHelper
 				InboxHelper::add($clientId, $notificationType, $title, $inboxClient, $orderId);
 			}
 		}
-		if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
+		if (!$bookedProfileReminder && $masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
 			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind) && self::personalChannelAllows($masterId, 'push', $notificationType, $bookingKind, $reminderMinutes)) {
 				self::sendWithRetry($masterId, $masterPushTitle, $masterPushBody, self::withOrderData($data, $orderId), $notificationType, 'master');
 			}
@@ -193,6 +199,21 @@ class BookingNotifyHelper
 				InboxHelper::add($masterId, $notificationType, $title, $inboxMaster, $orderId);
 			}
 		}
+	}
+
+	private static function isBookedProfileReminder(string $event, string $bookingKind): bool
+	{
+		if ($event !== 'booking_reminder' && $event !== 'booking_in_30min') {
+			return false;
+		}
+		if (!class_exists(UserNotifyChoices::class, false)) {
+			$path = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+
+		return class_exists(UserNotifyChoices::class, false) && UserNotifyChoices::isGridKind($bookingKind);
 	}
 
 	private static function personalChannelAllows(int $userId, string $channel, string $event, string $bookingKind, ?int $reminderMinutes): bool
