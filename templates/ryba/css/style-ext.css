@@ -5701,3 +5701,118 @@ body#home .home-search-links a.homepage-link-btn:focus {
 			float: none;
 		}
 }
+
+#easyprofile.profile-edit .lk-notify-settings {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 16px;
+	max-width: 100%;
+}
+#easyprofile.profile-edit .lk-notify-subnav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+#easyprofile.profile-edit .lk-notify-subnav__btn {
+	min-height: 30px;
+	margin: 0;
+	padding: 0 16px;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	background: #dfe6ed;
+	color: #55677d;
+	font-size: 12.5px;
+	line-height: 26px;
+	cursor: pointer;
+}
+#easyprofile.profile-edit .lk-notify-subnav__btn.is-active {
+	background: #f7cc53;
+	color: #343a40;
+	border-color: #343a40;
+}
+#easyprofile.profile-edit .lk-notify-panel {
+	display: none;
+	max-width: 100%;
+}
+#easyprofile.profile-edit .lk-notify-panel.is-open {
+	display: block;
+}
+#easyprofile.profile-edit .lk-notify-grid-wrap {
+	max-width: 100%;
+	overflow-x: auto;
+}
+#easyprofile.profile-edit .lk-notify-grid {
+	border-collapse: collapse;
+	background: #fff;
+	color: #343a40;
+	font-size: 14px;
+}
+#easyprofile.profile-edit .lk-notify-grid th,
+#easyprofile.profile-edit .lk-notify-grid td {
+	border: 1px solid #343a40;
+	padding: 10px 14px;
+	text-align: center;
+	vertical-align: middle;
+	font-weight: 600;
+	white-space: nowrap;
+}
+#easyprofile.profile-edit .lk-notify-grid th[scope="row"] {
+	text-align: left;
+	min-width: 92px;
+}
+#easyprofile.profile-edit .lk-notify-grid input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	border: 1px solid #343a40;
+	border-radius: 2px;
+	background: #fff;
+	box-shadow: none;
+}
+#easyprofile.profile-edit .lk-notify-remind {
+	position: relative;
+	display: inline-block;
+	min-width: 132px;
+}
+#easyprofile.profile-edit .lk-notify-remind select {
+	width: 100%;
+	min-height: 32px;
+	margin: 0;
+	padding: 4px 28px 4px 10px;
+	border: 1px solid #cfd6dd;
+	border-radius: 4px;
+	background: #fff;
+	color: #343a40;
+	font-size: 14px;
+	font-weight: 600;
+	appearance: none;
+	-webkit-appearance: none;
+}
+#easyprofile.profile-edit .lk-notify-remind::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	width: 0;
+	height: 0;
+	margin-top: -2px;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid #343a40;
+	pointer-events: none;
+}
+#easyprofile.profile-edit .lk-notify-save {
+	width: auto;
+	height: auto;
+	margin: 0;
+	padding: 4px 12px;
+	border: 2px solid #343a40;
+	border-radius: 4px;
+	background: #f7cc53;
+	color: #343a40;
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 20px;
+	box-shadow: none;
+}

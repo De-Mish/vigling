@@ -136,8 +136,8 @@ if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 }
 
 $tabs = $isMaster
-	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'login']
-	: ['profile', 'login'];
+	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'notifications', 'login']
+	: ['profile', 'notifications', 'login'];
 
 $tabTitles = [
 	'profile' => 'Профиль',
@@ -148,6 +148,7 @@ $tabTitles = [
 	'courses' => 'Курсы',
 	'searches' => 'Поиск моделей',
 	'schedule' => 'Расписание',
+	'notifications' => 'Уведомления',
 	'login' => 'Email и пароль',
 ];
 
@@ -160,6 +161,7 @@ $tabFields = [
 	'courses' => [],
 	'searches' => [],
 	'schedule' => [],
+	'notifications' => [],
 	'login' => [],
 ];
 
@@ -1410,6 +1412,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 									})();
 									</script>
 									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
+								<?php elseif ($tabKey === 'notifications') : ?>
+									<?php echo $this->loadTemplate('notify'); ?>
 								<?php elseif ($tabKey === 'login') : ?>
 									<p class="lk-login-hint">В качестве email для входа используется почта аккаунта</p>
 									<?php
@@ -1462,6 +1466,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				<button type="submit" class="dale validate" name="task" value="profile.save">Сохранить</button>
 				<button type="submit" class="dale" name="task" value="profile.cancel" formnovalidate>Отменить</button>
 			</div>
+		</form>
+		<form id="lk-notify-choices" method="post" action="<?php echo Route::_('index.php?option=com_pushnotify&task=display.saveChoices'); ?>">
+			<input type="hidden" name="<?php echo $this->escape(\Joomla\CMS\Session\Session::getFormToken()); ?>" value="1">
 		</form>
 	</div>
 </div>
@@ -2861,6 +2868,13 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		activateEditTab(idx);
 	}, true);
 	activateEditTab(0);
+	try {
+		if (new URLSearchParams(window.location.search).get('notify_saved') === '1') {
+			editTabs().forEach(function(tab, i){
+				if ((tab.textContent || '').indexOf('Уведомления') !== -1) activateEditTab(i);
+			});
+		}
+	} catch (err) {}
 	window.viglingActivateProfileEditTab = activateEditTab;
 })();
 </script>
