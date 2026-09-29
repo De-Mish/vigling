@@ -5814,17 +5814,44 @@ body#home .home-search-links a.homepage-link-btn:focus {
 	border-top: 6px solid #343a40;
 	pointer-events: none;
 }
-#easyprofile.profile-edit .lk-notify-save {
-	width: auto;
-	height: auto;
-	margin: 0;
-	padding: 4px 12px;
-	border: 2px solid #343a40;
-	border-radius: 4px;
-	background: #f7cc53;
-	color: #343a40;
-	font-size: 12.5px;
-	font-weight: 600;
-	line-height: 20px;
-	box-shadow: none;
+/* Transfer dialog: keep the small chips, center the row, and show eight cells on a wide screen. */
+@media (min-width: 768px) {
+	#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m,
+	#zapis-reschedule .calendar__master-item .btns-m {
+		width: min(100%, 340px);
+		max-width: 100%;
+		margin-left: auto !important;
+		margin-right: auto !important;
+	}
+}
+@media (min-width: 1025px) {
+	#zapis-reschedule #reschedule-calendar .calendar__master-item .btns-m,
+	#zapis-reschedule .calendar__master-item .btns-m {
+		display: grid !important;
+		grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+		width: min(100%, 688px);
+		max-width: 100%;
+		margin-left: auto !important;
+		margin-right: auto !important;
+		gap: 6px;
+		box-sizing: border-box;
+	}
+	#zapis-reschedule #reschedule-calendar .btns-m .btn-select,
+	#zapis-reschedule .calendar__master-item .btns-m .btn-select {
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: none !important;
+		flex: none !important;
+		box-sizing: border-box !important;
+		margin: 0 !important;
+		padding: 6px 2px !important;
+		font-size: 11px !important;
+		height: auto !important;
+		line-height: 1.4 !important;
+		border-radius: 6px !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+		background-color: #fff !important;
+		border: 1px solid #e0e0e0 !important;
+		text-align: center !important;
+	}
 }

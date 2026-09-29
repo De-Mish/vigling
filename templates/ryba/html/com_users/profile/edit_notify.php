@@ -18,7 +18,6 @@ if (!class_exists(UserNotifyChoices::class, false)) {
 $choiceUser = Factory::getApplication()->getIdentity();
 $choiceUserId = (int) ($choiceUser->id ?? 0);
 $notifyChoices = UserNotifyChoices::get($choiceUserId);
-$notifyFormId = 'lk-notify-choices';
 
 $notifyChecked = static function (array $row, string $key): string {
 	return !empty($row[$key]) ? ' checked' : '';
@@ -54,12 +53,12 @@ $notifyRemind = static function (array $row): string {
 						<th scope="row"><?php echo $this->escape($kindLabel); ?></th>
 						<?php foreach (UserNotifyChoices::EVENTS as $eventKey => $eventLabel) : ?>
 						<td>
-							<input type="checkbox" form="<?php echo $notifyFormId; ?>" name="push_<?php echo $this->escape($kindKey); ?>_<?php echo $this->escape($eventKey); ?>" value="1" aria-label="<?php echo $this->escape($kindLabel . ', ' . $eventLabel); ?>"<?php echo $notifyChecked($pushRow, $eventKey); ?>>
+							<input type="checkbox" name="push_<?php echo $this->escape($kindKey); ?>_<?php echo $this->escape($eventKey); ?>" value="1" aria-label="<?php echo $this->escape($kindLabel . ', ' . $eventLabel); ?>"<?php echo $notifyChecked($pushRow, $eventKey); ?>>
 						</td>
 						<?php endforeach; ?>
 						<td>
 							<span class="lk-notify-remind">
-								<select form="<?php echo $notifyFormId; ?>" name="push_<?php echo $this->escape($kindKey); ?>_remind" aria-label="<?php echo $this->escape($kindLabel . ', напоминание о начале записи'); ?>">
+								<select name="push_<?php echo $this->escape($kindKey); ?>_remind" aria-label="<?php echo $this->escape($kindLabel . ', напоминание о начале записи'); ?>">
 									<option value=""<?php echo $notifyRemind($pushRow) === '' ? ' selected' : ''; ?>>-</option>
 									<?php foreach (UserNotifyChoices::REMINDERS as $minutes => $reminderLabel) : ?>
 									<option value="<?php echo (int) $minutes; ?>"<?php echo $notifyRemind($pushRow) === (string) (int) $minutes ? ' selected' : ''; ?>><?php echo $this->escape($reminderLabel); ?></option>
@@ -92,7 +91,7 @@ $notifyRemind = static function (array $row): string {
 						<th scope="row"><?php echo $this->escape($kindLabel); ?></th>
 						<?php foreach (UserNotifyChoices::EVENTS as $eventKey => $eventLabel) : ?>
 						<td>
-							<input type="checkbox" form="<?php echo $notifyFormId; ?>" name="inbox_<?php echo $this->escape($kindKey); ?>_<?php echo $this->escape($eventKey); ?>" value="1" aria-label="<?php echo $this->escape($kindLabel . ', ' . $eventLabel); ?>"<?php echo $notifyChecked($inboxRow, $eventKey); ?>>
+							<input type="checkbox" name="inbox_<?php echo $this->escape($kindKey); ?>_<?php echo $this->escape($eventKey); ?>" value="1" aria-label="<?php echo $this->escape($kindLabel . ', ' . $eventLabel); ?>"<?php echo $notifyChecked($inboxRow, $eventKey); ?>>
 						</td>
 						<?php endforeach; ?>
 					</tr>
@@ -101,8 +100,6 @@ $notifyRemind = static function (array $row): string {
 			</table>
 		</div>
 	</div>
-
-	<button type="submit" class="btn btn-xs btn-primary lk-notify-save" form="<?php echo $notifyFormId; ?>">Сохранить</button>
 </div>
 <script>
 (function(){

@@ -131,6 +131,8 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $this->validateVkProfileWebsite($userId);
 
         $jform = $this->getPostedJform();
+        $this->saveNotifyChoicesFromPost($userId);
+
         $newPricesPayload = $this->getCatalogPayloadJson($jform, 'vigling_services_payload');
         $newStockPayload = $this->getCatalogPayloadJson($jform, 'vigling_stock_services_payload');
         $newCoursesPayload = $this->getCatalogPayloadJson($jform, 'vigling_courses_payload');
@@ -190,6 +192,67 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
                 Log::ERROR,
                 'plg_user_vigling'
             );
+        }
+    }
+
+    private function saveNotifyChoicesFromPost(int $userId): void
+    {
+        try {
+            $app = Factory::getApplication();
+        } catch (\Throwable $e) {
+            return;
+        }
+        if (!$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $task = $input->post->getCmd('task', $input->getCmd('task'));
+        if ($task !== 'profile.save') {
+            return;
+        }
+
+        $class = \Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class;
+        if (!class_exists($class, false)) {
+            $file = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        }
+        if (!class_exists($class, false)) {
+            return;
+        }
+
+        $post = $input->post;
+        $present = false;
+        foreach (array_keys($class::KINDS) as $kind) {
+            if ($post->exists('push_' . $kind . '_remind')) {
+                $present = true;
+                break;
+            }
+        }
+        if (!$present) {
+            return;
+        }
+
+        $choices = ['push' => [], 'inbox' => []];
+        foreach (array_keys($class::KINDS) as $kind) {
+            $choices['push'][$kind] = [];
+            $choices['inbox'][$kind] = [];
+            foreach (array_keys($class::EVENTS) as $eventKey) {
+                $choices['push'][$kind][$eventKey] = $post->get('push_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+                $choices['inbox'][$kind][$eventKey] = $post->get('inbox_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+            }
+            $choices['push'][$kind]['remind'] = $post->get('push_' . $kind . '_remind', '', 'cmd');
+        }
+
+        if ($class::save($userId, $choices)) {
+            return;
+        }
+
+        try {
+            $app->enqueueMessage('Не удалось сохранить настройки уведомлений.', 'error');
+        } catch (\Throwable $e) {
         }
     }
 
