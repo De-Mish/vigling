@@ -21,9 +21,9 @@ class UserNotifyChoices
 	];
 
 	public const EVENTS = [
+		'confirmed' => 'Запись',
 		'rescheduled' => 'Перенос',
 		'cancelled' => 'Отмена',
-		'confirmed' => 'Запись',
 	];
 
 	public const EVENT_TYPES = [
