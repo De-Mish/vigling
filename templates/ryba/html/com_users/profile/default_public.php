@@ -1672,6 +1672,48 @@ if (empty($isLkEmbed)) {
 				margin-top: 0;
 			}
 		}
+		@media (min-width: 821px) {
+			#zapis .screen1 .calendar__master .slick-list,
+			#zapis .screen1 .calendar__master .slick-track,
+			#zapis .screen1 .calendar__master .slick-slide,
+			#zapis .screen1 .calendar__master .slick-slide > div,
+			#zapis .screen1 .calendar__master-item {
+				height: auto !important;
+			}
+			#zapis .screen1 .calendar__master-item .btns-m {
+				display: flex !important;
+				flex-wrap: wrap !important;
+				justify-content: flex-start;
+				align-items: flex-start;
+				align-content: flex-start;
+				gap: 6px 8px;
+				width: 100% !important;
+				max-width: 100% !important;
+				max-height: none !important;
+				height: auto !important;
+				overflow: visible !important;
+				grid-template-columns: none !important;
+				margin-left: 0;
+				margin-right: 0;
+			}
+			#zapis .screen1 .calendar__master-item .btns-m .btn-select {
+				width: max-content !important;
+				min-width: 0 !important;
+				max-width: none !important;
+				flex: 0 0 auto !important;
+				box-sizing: border-box !important;
+				padding: 6px 8px !important;
+				font-size: 11px !important;
+				height: auto !important;
+				line-height: 1.4 !important;
+				margin: 0 !important;
+				border-radius: 6px !important;
+				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+				background-color: #fff !important;
+				border: 1px solid #e0e0e0 !important;
+				text-align: center !important;
+			}
+		}
 		</style>
 			<div class="accordionWrapper">
 				<?php

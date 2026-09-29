@@ -1467,9 +1467,6 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				<button type="submit" class="dale" name="task" value="profile.cancel" formnovalidate>Отменить</button>
 			</div>
 		</form>
-		<form id="lk-notify-choices" method="post" action="<?php echo Route::_('index.php?option=com_pushnotify&task=display.saveChoices'); ?>">
-			<input type="hidden" name="<?php echo $this->escape(\Joomla\CMS\Session\Session::getFormToken()); ?>" value="1">
-		</form>
 	</div>
 </div>
 
