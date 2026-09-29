@@ -1458,8 +1458,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 		});
 	});
 	if (new URLSearchParams(window.location.search).get('notify_saved') === '1') {
-		tabs.forEach(function(tab, index){
-			if ((tab.textContent || '').indexOf('Уведомления') !== -1) showTab(index);
+		tabs.forEach(function(tab){
+			if ((tab.textContent || '').indexOf('Уведомления') !== -1) showTab(tab);
 		});
 	}
 })();
