@@ -43,38 +43,19 @@ class PublicBookingCalendarHelper
 	private static function workRanges(DatabaseInterface $db, int $masterId): array
 	{
 		$ranges = array_fill(1, 7, null);
-		$raw = ['work_day' => '', 'work_from' => '', 'work_to' => ''];
+		$scheduleFile = JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
+		if (is_file($scheduleFile)) {
+			require_once $scheduleFile;
+		}
+		if (!function_exists('viglingOrdersLoadMasterSchedule')) {
+			return $ranges;
+		}
+
 		try {
-			$query = $db->getQuery(true)
-				->select([$db->quoteName('f.name'), $db->quoteName('fv.value')])
-				->from($db->quoteName('#__fields', 'f'))
-				->join('INNER', $db->quoteName('#__fields_values', 'fv') . ' ON ' . $db->quoteName('fv.field_id') . ' = ' . $db->quoteName('f.id'))
-				->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
-				->where($db->quoteName('fv.item_id') . ' = ' . (int) $masterId)
-				->where($db->quoteName('f.name') . ' IN (' . implode(',', array_map([$db, 'quote'], ['work_day', 'work_from', 'work_to'])) . ')');
-			$db->setQuery($query);
-			foreach (($db->loadObjectList() ?: []) as $row) {
-				if (isset($row->name) && is_scalar($row->value)) {
-					$raw[(string) $row->name] = trim((string) $row->value);
-				}
-			}
+			$parsed = viglingOrdersLoadMasterSchedule($db, $masterId);
 		} catch (\Throwable $e) {
 			return $ranges;
 		}
-
-		$helper = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false) && is_file($helper)) {
-			require_once $helper;
-		}
-		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-			return $ranges;
-		}
-
-		$parsed = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::rangesByDay(
-			$raw['work_day'],
-			$raw['work_from'],
-			$raw['work_to']
-		);
 		for ($wd = 1; $wd <= 7; $wd++) {
 			if (isset($parsed[$wd]) && is_array($parsed[$wd])) {
 				$ranges[$wd] = [(int) $parsed[$wd][0], (int) $parsed[$wd][1]];
