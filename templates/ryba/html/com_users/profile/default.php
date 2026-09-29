@@ -1126,6 +1126,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 											</div>
 											<p class="push-notify-hint"><strong>Если вы не получаете PUSH-уведомления, выключите их и включите снова.</strong></p>
 										</div>
+										<?php echo $this->loadTemplate('notify_choices'); ?>
 										<?php else : ?>
 										<span>—</span>
 										<?php endif; ?>
@@ -1154,6 +1155,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 											</div>
 											<p class="push-notify-hint"><strong>Если вы не получаете PUSH-уведомления, выключите их и включите снова.</strong></p>
 										</div>
+										<?php echo $this->loadTemplate('notify_choices'); ?>
 										<?php else : ?>
 										<span>—</span>
 										<?php endif; ?>
@@ -1455,6 +1457,11 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 			}
 		});
 	});
+	if (new URLSearchParams(window.location.search).get('notify_saved') === '1') {
+		tabs.forEach(function(tab, index){
+			if ((tab.textContent || '').indexOf('Уведомления') !== -1) showTab(index);
+		});
+	}
 })();
 </script>
 <script>

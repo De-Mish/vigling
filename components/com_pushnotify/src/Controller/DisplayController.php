@@ -200,6 +200,49 @@ class DisplayController extends BaseController
 		$this->jsonResponse(['success' => true, 'message' => 'Настройки обновлены']);
 	}
 
+	public function saveChoices()
+	{
+		$app = Factory::getApplication();
+		$user = $app->getIdentity();
+		$profileUrl = \Joomla\CMS\Router\Route::_('index.php?option=com_users&view=profile&notify_saved=1', false);
+		if (!$user || (int) $user->id <= 0) {
+			$app->enqueueMessage('Требуется авторизация', 'error');
+			$app->redirect($profileUrl);
+			return;
+		}
+		if (!Session::checkToken('post')) {
+			$app->enqueueMessage('Неверный токен', 'error');
+			$app->redirect($profileUrl);
+			return;
+		}
+
+		$helper = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class, false) && is_file($helper)) {
+			require_once $helper;
+		}
+		$postedEvents = array_map('strval', (array) $this->input->post->get('notify_events', [], 'array'));
+		$postedKinds = array_map('strval', (array) $this->input->post->get('notify_kinds', [], 'array'));
+		$postedReminders = array_map('strval', (array) $this->input->post->get('notify_reminders', [], 'array'));
+		$input = [
+			'events' => [],
+			'kinds' => [],
+			'reminders' => [],
+		];
+		foreach (array_keys(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::EVENTS) as $key) {
+			$input['events'][$key] = in_array($key, $postedEvents, true);
+		}
+		foreach (array_keys(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::KINDS) as $key) {
+			$input['kinds'][$key] = in_array($key, $postedKinds, true);
+		}
+		foreach (array_keys(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::REMINDERS) as $minutes) {
+			$input['reminders'][(string) $minutes] = in_array((string) $minutes, $postedReminders, true);
+		}
+
+		$saved = \Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::save((int) $user->id, $input);
+		$app->enqueueMessage($saved ? 'Настройки уведомлений сохранены.' : 'Не удалось сохранить настройки уведомлений.', $saved ? 'message' : 'error');
+		$app->redirect($profileUrl);
+	}
+
 	public function sendTest()
 	{
 		$userId = $this->requireUser();

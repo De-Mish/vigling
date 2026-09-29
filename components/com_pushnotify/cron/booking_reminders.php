@@ -139,6 +139,22 @@ if ($legacy === 'in_30min') {
 	$offsets = [['minutes' => 30, 'event' => 'booking_in_30min', 'reminder_type' => 'in_30min', 'label' => 'За 30 минут']];
 } elseif ($legacy === 'started') {
 	$offsets = [['minutes' => 0, 'event' => 'booking_started', 'reminder_type' => 'started', 'label' => 'В момент начала']];
+} else {
+	$byMinutes = [];
+	foreach ($offsets as $offset) {
+		$byMinutes[(int) ($offset['minutes'] ?? 0)] = $offset;
+	}
+	foreach ([30 => 'За 30 минут', 1440 => 'За 1 день'] as $choiceMinutes => $choiceLabel) {
+		if (!isset($byMinutes[$choiceMinutes])) {
+			$byMinutes[$choiceMinutes] = [
+				'minutes' => $choiceMinutes,
+				'event' => 'booking_reminder',
+				'reminder_type' => \Viglin\Component\Pushnotify\Site\Helper\NotificationSettingsHelper::reminderType($choiceMinutes),
+				'label' => $choiceLabel,
+			];
+		}
+	}
+	$offsets = array_values($byMinutes);
 }
 
 $nowObj = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));

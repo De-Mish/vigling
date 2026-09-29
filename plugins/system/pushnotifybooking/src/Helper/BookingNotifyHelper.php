@@ -8,6 +8,7 @@ use Joomla\CMS\Factory;
 use Viglin\Component\Pushnotify\Site\Helper\FcmHelper;
 use Viglin\Component\Pushnotify\Site\Helper\InboxHelper;
 use Viglin\Component\Pushnotify\Site\Helper\NotificationSettingsHelper;
+use Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices;
 
 class BookingNotifyHelper
 {
@@ -99,7 +100,7 @@ class BookingNotifyHelper
 		$bodyClient = self::resolveBody($type, $order, 'client', $bodyClient, ['time' => $timeStr, 'reminder' => 'Через 30 минут']);
 		$bodyMaster = self::resolveBody($type, $order, 'master', $bodyMaster, ['time' => self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId)), 'reminder' => 'Через 30 минут']);
 		$data = ['url' => self::getLkUrl()];
-		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
+		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster, null, 30);
 	}
 
 	public static function notifyStarted(array $order)
@@ -148,10 +149,10 @@ class BookingNotifyHelper
 		$bodyClient = self::resolveBody($type, $order, 'client', $bodyClient, ['time' => $timeStr, 'reminder' => $label]);
 		$bodyMaster = self::resolveBody($type, $order, 'master', $bodyMaster, ['time' => self::formatDateTime($order['time'] ?? '', $order['time_to'] ?? '', self::getUserTimezone($masterId)), 'reminder' => $label]);
 		$data = ['url' => self::getLkUrl()];
-		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
+		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster, null, $minutes);
 	}
 
-	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null, ?string $pushTitleMaster = null)
+	public static function sendToClientAndMaster(array $order, $title, $body, $notificationType, array $data = [], ?string $bodyMaster = null, ?string $pushTitleMaster = null, ?int $reminderMinutes = null)
 	{
 		$clientId = (int) ($order['user_id'] ?? 0);
 		$masterId = (int) ($order['master_id'] ?? 0);
@@ -176,7 +177,7 @@ class BookingNotifyHelper
 		) {
 			$masterPushTitle = self::getClientPersonName($clientId);
 		}
-		if ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
+		if ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client') && self::recipientAllows($clientId, $notificationType, $bookingKind, $reminderMinutes)) {
 			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
 				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
 			}
@@ -184,7 +185,7 @@ class BookingNotifyHelper
 				InboxHelper::add($clientId, $notificationType, $title, $inboxClient, $orderId);
 			}
 		}
-		if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master')) {
+		if ($masterId > 0 && $masterId !== $clientId && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'master') && self::recipientAllows($masterId, $notificationType, $bookingKind, $reminderMinutes)) {
 			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind)) {
 				self::sendWithRetry($masterId, $masterPushTitle, $masterPushBody, self::withOrderData($data, $orderId), $notificationType, 'master');
 			}
@@ -192,6 +193,21 @@ class BookingNotifyHelper
 				InboxHelper::add($masterId, $notificationType, $title, $inboxMaster, $orderId);
 			}
 		}
+	}
+
+	private static function recipientAllows(int $userId, string $event, string $bookingKind, ?int $reminderMinutes): bool
+	{
+		if (!class_exists(UserNotifyChoices::class, false)) {
+			$path = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+		if (!class_exists(UserNotifyChoices::class, false)) {
+			return true;
+		}
+
+		return UserNotifyChoices::allows($userId, $event, $bookingKind, $reminderMinutes);
 	}
 
 	private static function sendWithRetry(int $userId, string $title, string $body, array $data, string $type, string $recipientRole = ''): void
