@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `#__pushnotify_subscriptions` (
 CREATE TABLE IF NOT EXISTS `#__pushnotify_preferences` (
   `user_id` INT UNSIGNED PRIMARY KEY,
   `notifications_enabled` TINYINT(1) DEFAULT 1,
+  `choices` JSON NULL,
   KEY `idx_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

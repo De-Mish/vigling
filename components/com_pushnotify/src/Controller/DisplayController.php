@@ -200,6 +200,43 @@ class DisplayController extends BaseController
 		$this->jsonResponse(['success' => true, 'message' => 'Настройки обновлены']);
 	}
 
+	public function saveChoices()
+	{
+		$app = Factory::getApplication();
+		$user = $app->getIdentity();
+		$profileUrl = \Joomla\CMS\Router\Route::_('index.php?option=com_users&view=profile&layout=edit&notify_saved=1', false);
+		if (!$user || (int) $user->id <= 0) {
+			$app->enqueueMessage('Требуется авторизация', 'error');
+			$app->redirect($profileUrl);
+			return;
+		}
+		if (!Session::checkToken('post')) {
+			$app->enqueueMessage('Неверный токен', 'error');
+			$app->redirect($profileUrl);
+			return;
+		}
+
+		$helper = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class, false) && is_file($helper)) {
+			require_once $helper;
+		}
+		$choices = \Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class;
+		$input = ['push' => [], 'inbox' => []];
+		foreach (array_keys($choices::KINDS) as $kind) {
+			$input['push'][$kind] = [];
+			$input['inbox'][$kind] = [];
+			foreach (array_keys($choices::EVENTS) as $eventKey) {
+				$input['push'][$kind][$eventKey] = $this->input->post->get('push_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+				$input['inbox'][$kind][$eventKey] = $this->input->post->get('inbox_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+			}
+			$input['push'][$kind]['remind'] = $this->input->post->get('push_' . $kind . '_remind', '', 'cmd');
+		}
+
+		$saved = $choices::save((int) $user->id, $input);
+		$app->enqueueMessage($saved ? 'Настройки уведомлений сохранены.' : 'Не удалось сохранить настройки уведомлений.', $saved ? 'message' : 'error');
+		$app->redirect($profileUrl);
+	}
+
 	public function sendTest()
 	{
 		$userId = $this->requireUser();
