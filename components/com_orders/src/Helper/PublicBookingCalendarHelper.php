@@ -247,7 +247,11 @@ class PublicBookingCalendarHelper
 			$hasCourseId = isset($tableColumns['course_id']);
 			$hasCourseSlotId = isset($tableColumns['course_slot_id']);
 			$hasServiceName = isset($tableColumns['service_name']);
+			$hasTimeSum = isset($tableColumns['time_sum']);
 			$selectCols = [$db->quoteName('time'), $db->quoteName('time_to')];
+			if ($hasTimeSum) {
+				$selectCols[] = $db->quoteName('time_sum');
+			}
 			if ($hasBookingKind) {
 				$selectCols[] = $db->quoteName('booking_kind');
 			}
@@ -264,8 +268,16 @@ class PublicBookingCalendarHelper
 				->select($selectCols)
 				->from($db->quoteName('#__vigling_bookings'))
 				->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
-				->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()')
 				->where($db->quoteName('time') . ' < ' . $db->quote($calendarUntilUtc));
+			if ($hasTimeSum) {
+				$query->where(
+					'('
+					. $db->quoteName('time_to') . ' >= UTC_TIMESTAMP() OR DATE_ADD('
+					. $db->quoteName('time') . ', INTERVAL ' . $db->quoteName('time_sum') . ' MINUTE) >= UTC_TIMESTAMP())'
+				);
+			} else {
+				$query->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
+			}
 			$db->setQuery($query);
 			$rows = $db->loadAssocList() ?: [];
 			$anytimeGroupsRaw = [];
@@ -273,11 +285,16 @@ class PublicBookingCalendarHelper
 				$bookingKind = $hasBookingKind ? strtolower(trim((string) ($row['booking_kind'] ?? ''))) : '';
 				$serviceName = $hasServiceName ? trim((string) ($row['service_name'] ?? '')) : '';
 				$isOwnerBlock = $bookingKind === 'journal' || strpos($serviceName, '[journal]') === 0;
+				$occupiedTo = self::effectiveEndRaw(
+					(string) ($row['time'] ?? ''),
+					(string) ($row['time_to'] ?? ''),
+					$hasTimeSum ? (int) ($row['time_sum'] ?? 0) : 0
+				);
 				if ($isOwnerBlock) {
 					self::appendUtcRangeToLocalDays(
 						$ownerBlockRangesByDate,
 						(string) ($row['time'] ?? ''),
-						(string) ($row['time_to'] ?? ''),
+						$occupiedTo,
 						$utcTz,
 						$masterTz
 					);
@@ -287,7 +304,7 @@ class PublicBookingCalendarHelper
 					self::appendUtcRangeToLocalDays(
 						$bookedRangesByDate,
 						(string) ($row['time'] ?? ''),
-						(string) ($row['time_to'] ?? ''),
+						$occupiedTo,
 						$utcTz,
 						$masterTz
 					);
@@ -299,7 +316,7 @@ class PublicBookingCalendarHelper
 						self::appendUtcRangeToLocalDays(
 							$bookedRangesByDate,
 							(string) ($row['time'] ?? ''),
-							(string) ($row['time_to'] ?? ''),
+							$occupiedTo,
 							$utcTz,
 							$masterTz
 						);
@@ -315,9 +332,11 @@ class PublicBookingCalendarHelper
 						$anytimeGroupsRaw[$groupKey] = [
 							'course_id' => $courseId,
 							'time' => $startRaw,
-							'time_to' => trim((string) ($row['time_to'] ?? '')),
+							'time_to' => $occupiedTo,
 							'used' => 0,
 						];
+					} elseif (strcmp($occupiedTo, (string) $anytimeGroupsRaw[$groupKey]['time_to']) > 0) {
+						$anytimeGroupsRaw[$groupKey]['time_to'] = $occupiedTo;
 					}
 					$anytimeGroupsRaw[$groupKey]['used']++;
 					continue;
@@ -325,7 +344,7 @@ class PublicBookingCalendarHelper
 				self::appendUtcRangeToLocalDays(
 					$bookedRangesByDate,
 					(string) ($row['time'] ?? ''),
-					(string) ($row['time_to'] ?? ''),
+					$occupiedTo,
 					$utcTz,
 					$masterTz
 				);
@@ -419,6 +438,32 @@ class PublicBookingCalendarHelper
 			}
 		} catch (\Throwable $ignore) {
 		}
+	}
+
+	/**
+	 * Service length is time..time_to. time_sum is service plus the configured break.
+	 * The break stays occupied so the next client cannot start inside it.
+	 */
+	private static function effectiveEndRaw(string $fromRaw, string $toRaw, int $timeSumMin): string
+	{
+		$fromRaw = trim($fromRaw);
+		$toRaw = trim($toRaw);
+		if ($fromRaw === '' || $timeSumMin <= 0) {
+			return $toRaw;
+		}
+		try {
+			$utc = new \DateTimeZone('UTC');
+			$from = new \DateTimeImmutable($fromRaw, $utc);
+			$to = $toRaw !== '' ? new \DateTimeImmutable($toRaw, $utc) : $from->modify('+60 minutes');
+		} catch (\Throwable $e) {
+			return $toRaw;
+		}
+		$durationMin = (int) floor(($to->getTimestamp() - $from->getTimestamp()) / 60);
+		if ($timeSumMin <= $durationMin) {
+			return $to->format('Y-m-d H:i:s');
+		}
+
+		return $from->modify('+' . min(480, $timeSumMin) . ' minutes')->format('Y-m-d H:i:s');
 	}
 
 	private static function appendUtcRangeToLocalDays(

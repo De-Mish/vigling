@@ -314,9 +314,16 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 
+		$occupiedMin = $durationMin;
+		if (($bookingKind === 'service' || $bookingKind === 'stock') && $catalogTimeSum > $occupiedMin) {
+			$occupiedMin = min(480, $catalogTimeSum);
+		}
+		$occupiedTo = clone $time;
+		$occupiedTo->modify('+' . $occupiedMin . ' minutes');
+		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
 		$nowUtc = new \DateTimeImmutable('now', $utc);
 		$startUtc = \DateTimeImmutable::createFromMutable($time);
-		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
+		$endUtc = \DateTimeImmutable::createFromMutable($occupiedTo);
 		if ($startUtc <= $nowUtc) {
 			$event->updateEventResult(['success' => false, 'message' => 'Нельзя записаться на прошедшее время']);
 			return;
@@ -339,7 +346,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$searchId,
 			$searchSlotId,
 			$timeDb,
-			$timeToDb,
+			$occupiedToDb,
 			$courseContext,
 			$searchContext,
 			$hasCourseBookingColumns,
@@ -721,6 +728,20 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		return ['ok' => true, 'message' => ''];
 	}
 
+	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string
+	{
+		$columns = array_change_key_case($db->getTableColumns($tableName, false), CASE_LOWER);
+		$timeTo = $db->quoteName('time_to');
+		if (!isset($columns['time_sum'])) {
+			return $timeTo;
+		}
+		$time = $db->quoteName('time');
+		$timeSum = $db->quoteName('time_sum');
+
+		return '(CASE WHEN ' . $timeSum . ' > TIMESTAMPDIFF(MINUTE, ' . $time . ', ' . $timeTo . ')'
+			. ' THEN DATE_ADD(' . $time . ', INTERVAL ' . $timeSum . ' MINUTE) ELSE ' . $timeTo . ' END)';
+	}
+
 	private static function hasBookingsOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $masterId, string $startUtc, string $endUtc, string $bookingKind = 'service', int $courseSlotId = 0, int $searchSlotId = 0, bool $hasCourseBookingColumns = false, bool $hasSearchBookingColumns = false, int $courseId = 0): bool
 	{
 		$query = $db->getQuery(true)
@@ -728,7 +749,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			->from($db->quoteName($tableName))
 			->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
 			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
-			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+			->where(self::occupiedEndSql($db, $tableName) . ' > ' . $db->quote($startUtc));
 		if ($hasCourseBookingColumns && $bookingKind === 'course' && $courseId > 0) {
 			$query->where(
 				'NOT (' .

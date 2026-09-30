@@ -179,6 +179,30 @@ if (!function_exists('viglingOrdersLoadMasterSchedule')) {
 	}
 }
 
+if (!function_exists('viglingOrdersEffectiveEndRaw')) {
+	function viglingOrdersEffectiveEndRaw(string $fromRaw, string $toRaw, int $timeSumMin): string
+	{
+		$fromRaw = trim($fromRaw);
+		$toRaw = trim($toRaw);
+		if ($fromRaw === '' || $timeSumMin <= 0) {
+			return $toRaw;
+		}
+		try {
+			$utc = new \DateTimeZone('UTC');
+			$from = new \DateTimeImmutable($fromRaw, $utc);
+			$to = $toRaw !== '' ? new \DateTimeImmutable($toRaw, $utc) : $from->modify('+60 minutes');
+		} catch (\Throwable $e) {
+			return $toRaw;
+		}
+		$durationMin = (int) floor(($to->getTimestamp() - $from->getTimestamp()) / 60);
+		if ($timeSumMin <= $durationMin) {
+			return $to->format('Y-m-d H:i:s');
+		}
+
+		return $from->modify('+' . min(480, $timeSumMin) . ' minutes')->format('Y-m-d H:i:s');
+	}
+}
+
 if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 	function viglingOrdersBuildRescheduleSlots(
 		\Joomla\Database\DatabaseInterface $db,
@@ -210,12 +234,26 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 			return ['timezone' => $timezoneId, 'days' => []];
 		}
 
+		$bookingColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		$hasTimeSum = isset($bookingColumns['time_sum']);
+		$selectCols = [$db->quoteName('id'), $db->quoteName('time'), $db->quoteName('time_to')];
+		if ($hasTimeSum) {
+			$selectCols[] = $db->quoteName('time_sum');
+		}
 		$query = $db->getQuery(true)
-			->select([$db->quoteName('id'), $db->quoteName('time'), $db->quoteName('time_to')])
+			->select($selectCols)
 			->from($db->quoteName('#__vigling_bookings'))
 			->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
-			->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()')
 			->where($db->quoteName('time') . ' < ' . $db->quote($untilUtc));
+		if ($hasTimeSum) {
+			$query->where(
+				'('
+				. $db->quoteName('time_to') . ' >= UTC_TIMESTAMP() OR DATE_ADD('
+				. $db->quoteName('time') . ', INTERVAL ' . $db->quoteName('time_sum') . ' MINUTE) >= UTC_TIMESTAMP())'
+			);
+		} else {
+			$query->where($db->quoteName('time_to') . ' >= UTC_TIMESTAMP()');
+		}
 		if ($excludeOrderId > 0) {
 			$query->where($db->quoteName('id') . ' <> ' . (int) $excludeOrderId);
 		}
@@ -301,7 +339,11 @@ if (!function_exists('viglingOrdersBuildRescheduleSlots')) {
 		$bookedByDate = [];
 		foreach ($rows as $row) {
 			$fromRaw = trim((string) ($row['time'] ?? ''));
-			$toRaw = trim((string) ($row['time_to'] ?? ''));
+			$toRaw = viglingOrdersEffectiveEndRaw(
+				$fromRaw,
+				trim((string) ($row['time_to'] ?? '')),
+				isset($row['time_sum']) ? (int) $row['time_sum'] : 0
+			);
 			if ($fromRaw === '') {
 				continue;
 			}

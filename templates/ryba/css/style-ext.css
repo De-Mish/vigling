@@ -1872,7 +1872,9 @@ ul.content__right-times:not(.open)>li:nth-child(n+4) {
   cursor: pointer
 }
 
-#zapis .calendar__master-item .btns-m label.btn-select.reserved {
+#zapis .calendar__master-item .btns-m label.btn-select.reserved,
+#zapis .screen1 .calendar__master-item .btns-m label.btn-select[style*="display: none"],
+#zapis .screen1 .calendar__master-item .btns-m label.btn-select[style*="display:none"] {
   display: none !important
 }
 
