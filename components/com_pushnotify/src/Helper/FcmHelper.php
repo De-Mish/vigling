@@ -8,6 +8,9 @@ use Joomla\CMS\Factory;
 
 class FcmHelper
 {
+	/** @var list<int> */
+	private static array $immediateIds = [];
+
 	public static function sendNotification($userId, $title, $body, array $data = [], $notificationType = 'booking_confirmed', $recipientRole = '')
 	{
 		if (!class_exists(NotificationSettingsHelper::class)) {
@@ -230,16 +233,51 @@ class FcmHelper
 			$row->attempts = 0;
 			$row->created_at = (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
 
-			return (bool) $db->insertObject('#__vigling_push_queue', $row);
+			if (!$db->insertObject('#__vigling_push_queue', $row)) {
+				return false;
+			}
+			$id = (int) $db->insertid();
+			if ($id > 0) {
+				self::scheduleImmediateDrain($id);
+			}
+
+			return true;
 		} catch (\Throwable $e) {
 			return false;
 		}
 	}
 
-	public static function drainQueue(int $limit = 40): int
+	private static function scheduleImmediateDrain(int $id): void
+	{
+		self::$immediateIds[] = $id;
+		static $scheduled = false;
+		if ($scheduled) {
+			return;
+		}
+		$scheduled = true;
+		register_shutdown_function(static function (): void {
+			$ids = self::$immediateIds;
+			self::$immediateIds = [];
+			if ($ids === []) {
+				return;
+			}
+			if (\function_exists('fastcgi_finish_request')) {
+				@\fastcgi_finish_request();
+			}
+			self::drainQueue(\count($ids), $ids);
+		});
+	}
+
+	public static function drainQueue(int $limit = 40, array $onlyIds = []): int
 	{
 		if (!\defined('VIGLING_PUSH_DRAIN')) {
 			\define('VIGLING_PUSH_DRAIN', true);
+		}
+		$onlyIds = array_values(array_unique(array_filter(array_map('intval', $onlyIds), static function (int $id): bool {
+			return $id > 0;
+		})));
+		if ($onlyIds === [] && \func_num_args() > 1) {
+			return 0;
 		}
 		$sentRows = 0;
 		try {
@@ -250,6 +288,10 @@ class FcmHelper
 				->from($db->quoteName('#__vigling_push_queue'))
 				->where($db->quoteName('attempts') . ' < 3')
 				->order($db->quoteName('id') . ' ASC');
+			if ($onlyIds !== []) {
+				$query->where($db->quoteName('id') . ' IN (' . implode(',', $onlyIds) . ')');
+				$limit = \count($onlyIds);
+			}
 			$db->setQuery($query, 0, max(1, $limit));
 			$rows = $db->loadObjectList() ?: [];
 			foreach ($rows as $row) {
