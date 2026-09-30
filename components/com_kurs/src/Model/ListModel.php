@@ -28,6 +28,9 @@ class ListModel extends BaseListModel
 	/** @var array<string, int>|null */
 	private ?array $fieldIdsCache = null;
 
+	/** @var list<string>|null */
+	private ?array $busyTablesCache = null;
+
 	protected function getStoreId($id = '')
 	{
 		$id .= ':' . (int) $this->getState('cat_id');
@@ -357,30 +360,22 @@ class ListModel extends BaseListModel
 
 		$availDate = trim((string) $this->getState('avail_date'));
 		if ($availDate !== '') {
-			$dateOnly = '';
-			$time = '';
-			if (preg_match('/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/', $availDate, $m)) {
-				$dateOnly = $m[1];
-				$time = $m[2] ?? '';
-			}
-			if ($dateOnly !== '' && $time !== '') {
-				try {
-					$dt = new \DateTime($dateOnly);
-					$weekday = (int) $dt->format('N');
-					$timeCompare = $time . ':00';
-					$orParts = [
-						'(' . $db->quoteName('slot.id') . ' IS NOT NULL'
-						. ' AND DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
-					];
+			$this->requireWorkScheduleHelper();
+			if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+				$split = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::splitAvailFilter($availDate);
+				$dateOnly = $split['day'];
+				$time = $split['time'];
+				if ($dateOnly !== '' && $time !== '') {
+					try {
+						$dt = new \DateTime($dateOnly);
+						$weekday = (int) $dt->format('N');
+						$timeCompare = $time . ':00';
+						$orParts = [
+							'(' . $db->quoteName('slot.id') . ' IS NOT NULL'
+							. ' AND DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
+						];
 
-					if ($fieldWorkDay > 0) {
-						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-							$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-							if (is_file($vgWorkScheduleFile)) {
-								require_once $vgWorkScheduleFile;
-							}
-						}
-						if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+						if ($fieldWorkDay > 0) {
 							$scheduleSql = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
 								$db,
 								$db->quoteName('u.id'),
@@ -395,13 +390,58 @@ class ListModel extends BaseListModel
 								$this->busyMasterConditions($db, $dateOnly . ' ' . $time . ':00')
 							)) . ')';
 						}
-					}
 
+						$query->where('(' . implode(' OR ', $orParts) . ')');
+					} catch (\Throwable $e) {
+					}
+				} elseif ($dateOnly !== '') {
+					$orParts = [
+						'(DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
+					];
+					if ($fieldWorkDay > 0) {
+						try {
+							$weekday = (int) (new \DateTime($dateOnly))->format('N');
+							$orParts[] = '(' . '(' . $db->quoteName('c.booking_mode') . ' IS NULL OR ' . $db->quoteName('c.booking_mode') . ' <> ' . $db->quote('fixed') . ')'
+								. ' AND ' . \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksOnWeekday(
+									$db,
+									$db->quoteName('u.id'),
+									$fieldWorkDay,
+									$fieldWorkFrom,
+									$fieldWorkTo,
+									$weekday,
+									'#__fields_values',
+									\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::clockIfDateIsToday($dateOnly)
+								) . ')';
+						} catch (\Throwable $e) {
+						}
+					}
 					$query->where('(' . implode(' OR ', $orParts) . ')');
-				} catch (\Throwable $e) {
+				} elseif ($time !== '') {
+					$timeQ = $db->quote($time . ':00');
+					$orParts = [
+						'(' . $db->quoteName('c.booking_mode') . ' = ' . $db->quote('fixed')
+						. ' AND ' . $db->quoteName('slot.id') . ' IS NOT NULL'
+						. ' AND ' . $db->quoteName('slot.starts_at_utc') . ' >= UTC_TIMESTAMP()'
+						. ' AND ' . $db->quoteName('slot.starts_at_utc') . ' < DATE_ADD(UTC_TIMESTAMP(), INTERVAL 45 DAY)'
+						. ' AND TIME(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $timeQ . ')',
+					];
+					if ($fieldWorkDay > 0) {
+						$orParts[] = '(' . '(' . $db->quoteName('c.booking_mode') . ' IS NULL OR ' . $db->quoteName('c.booking_mode') . ' <> ' . $db->quote('fixed') . ')'
+							. ' AND ' . \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAtOnUpcoming(
+								$db,
+								$db->quoteName('u.id'),
+								$fieldWorkDay,
+								$fieldWorkFrom,
+								$fieldWorkTo,
+								$time,
+								'#__fields_values',
+								function (string $dt) use ($db): string {
+									return implode(' AND ', $this->busyMasterConditions($db, $dt));
+								}
+							) . ')';
+					}
+					$query->where('(' . implode(' OR ', $orParts) . ')');
 				}
-			} elseif ($dateOnly !== '') {
-				$query->where('DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly));
 			}
 		}
 	}
@@ -419,12 +459,14 @@ class ListModel extends BaseListModel
 			. ' AND ' . $db->quoteName('b.time_to') . ' > ' . $dtQ . ')',
 		];
 		try {
-			$tables = $db->getTableList();
+			if (!is_array($this->busyTablesCache)) {
+				$this->busyTablesCache = array_map('strtolower', (array) $db->getTableList());
+			}
 			$prefix = $db->getPrefix();
 			$prefixLc = strtolower($prefix);
 			$courseSlotsTable = $prefixLc . 'vigling_course_slots';
 			$searchSlotsTable = $prefixLc . 'vigling_search_slots';
-			$tablesLc = array_map('strtolower', (array) $tables);
+			$tablesLc = $this->busyTablesCache;
 			if (in_array($courseSlotsTable, $tablesLc, true)) {
 				$conds[] = 'NOT EXISTS (SELECT 1 FROM ' . $db->quoteName('#__vigling_course_slots', 'cs')
 					. ' WHERE ' . $db->quoteName('cs.master_id') . ' = ' . $db->quoteName('u.id')
@@ -443,6 +485,16 @@ class ListModel extends BaseListModel
 		}
 
 		return $conds;
+	}
+
+	private function requireWorkScheduleHelper(): void
+	{
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+			if (is_file($vgWorkScheduleFile)) {
+				require_once $vgWorkScheduleFile;
+			}
+		}
 	}
 
 	private function getUserFieldIds($db): array
@@ -488,11 +540,14 @@ class ListModel extends BaseListModel
 		$childrenRaw = strtolower(trim((string) $input->get('children', '', 'string')));
 		$this->setState('children', in_array($childrenRaw, ['1', 'yes', 'on', 'true', 'да'], true) ? 1 : 0);
 		$this->setState('booking_mode', trim((string) $input->getString('booking_mode', '')));
-		$availDate = $input->getString('avail_date', '');
-		if ($availDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T+]\d{2}:\d{2})?$/', $availDate)) {
-			$availDate = '';
-		}
-		$availDate = str_replace('+', ' ', $availDate);
+		$this->requireWorkScheduleHelper();
+		$availDate = class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)
+			? \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::composeAvailFilter(
+				$input->getString('avail_day', ''),
+				$input->getString('avail_time', ''),
+				$input->getString('avail_date', '')
+			)
+			: '';
 		$this->setState('avail_date', $availDate);
 
 		$orderCol = trim((string) $input->getString('filter_order', 'newest'));

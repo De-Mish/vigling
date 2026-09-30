@@ -45,10 +45,15 @@ foreach ((array) $input->get('payment', [], 'ARRAY') as $payKey) {
 $currentPayment = array_values(array_unique($currentPayment));
 $currentChildren = in_array(strtolower(trim((string) $input->get('children', '', 'STRING'))), ['1', 'yes', 'on', 'true', 'да'], true);
 $limit = (int) $input->getUint('limit', 20);
-$currentAvailDate = $input->get('avail_date', '', 'STRING');
-if ($currentAvailDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?$/', $currentAvailDate)) {
-	$currentAvailDate = '';
-}
+require_once JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+$currentAvailDate = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::composeAvailFilter(
+	(string) $input->getString('avail_day', ''),
+	(string) $input->getString('avail_time', ''),
+	(string) $input->getString('avail_date', '')
+);
+$vgAvailSplit = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::splitAvailFilter($currentAvailDate);
+$vgAvailDay = $vgAvailSplit['day'];
+$vgAvailTime = $vgAvailSplit['time'];
 $vgMapCity = $currentCity !== '' ? $currentCity : 'Москва';
 $vgMapCityLocked = $currentCity !== '';
 $vgMapTotal = $pagination ? (int) $pagination->total : 0;
@@ -98,7 +103,8 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 		.category__masters-sidebar .clearable { width: 100%; }
 		.category__masters-sidebar select { width: 100%; }
 		.category__masters-sidebar .chosen-container { width: 100% !important; }
-		.category__masters-sidebar input.filed__master.vg-datetime-picker { width: 100%; box-sizing: border-box; }
+		.category__masters-sidebar input.filed__master.vg-avail-day,
+		.category__masters-sidebar input.filed__master.vg-avail-time { width: 100%; box-sizing: border-box; }
 	</style>
 	<div class="category__head">
 		<h2><?php echo htmlspecialchars($pageTitle); ?></h2>
@@ -202,9 +208,11 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 						</select>
 					</span>
 					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
-					<span class="clearable<?php echo ($currentCity !== '' || $currentCatId > 0) ? '' : ' hidden'; ?>" id="poisk-avail-date-wrap">
-						<input type="text" name="avail_date" class="filed__master vg-datetime-picker" value="<?php echo htmlspecialchars($currentAvailDate); ?>" placeholder="Дата и время записи" autocomplete="off">
-					</span>
+					<?php
+					$vgAvailWrapId = 'poisk-avail-date-wrap';
+					$vgAvailHidden = !($currentCity !== '' || (int) $currentCatId > 0);
+					include JPATH_ROOT . '/templates/ryba/html/avail-when-filter.php';
+					?>
 				</div>
 				<input type="hidden" name="filter_order" value="<?php echo htmlspecialchars($listOrder); ?>">
 				<input type="hidden" name="filter_order_Dir" value="<?php echo htmlspecialchars($listDirn); ?>">
@@ -281,38 +289,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	var filterForm = document.querySelector('.filter');
 	if (filterForm) {
 		filterForm.addEventListener('submit', function(e) {
-			var availDateInput = this.querySelector('input[name="avail_date"]');
-			if (availDateInput && availDateInput.value) {
-				if (!validateAndCorrectTime(availDateInput)) {
-					e.preventDefault();
-					alert('Время должно быть кратно 15 минутам (00, 15, 30, 45)');
-					return false;
-				}
-			}
-		});
-	}
-
-	var availDateInput = document.querySelector('input[name="avail_date"]');
-	if (availDateInput) {
-		availDateInput.addEventListener('blur', function() {
-			validateAndCorrectTime(this);
-		});
-		availDateInput.addEventListener('change', function() {
-			validateAndCorrectTime(this);
-		});
-		availDateInput.addEventListener('input', function() {
-			var val = this.value;
-			if (val) {
-				var timeMatch = val.match(/\d{2}:\d{2}$/);
-				if (timeMatch) {
-					var parts = timeMatch[0].split(':');
-					var minutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-					if (minutes % 15 !== 0 && val.length >= 5) {
-						this.style.color = '#d93c3c';
-					} else {
-						this.style.color = '';
-					}
-				}
+			var timeInput = this.querySelector('input[name="avail_time"]');
+			if (timeInput && timeInput.value && !validateTimeStep(timeInput.value)) {
+				e.preventDefault();
+				alert('Время должно быть кратно 15 минутам (00, 15, 30, 45)');
+				return false;
 			}
 		});
 	}
@@ -478,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
             \$availDateWrap.removeClass('hidden');
         } else {
             \$availDateWrap.addClass('hidden');
-            \$availDateWrap.find('input[type=\"date\"]').val('');
+            \$availDateWrap.find('input.vg-avail-day, input.vg-avail-time').val('');
         }
     }
 
@@ -496,46 +477,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     syncFilterLevels();
     syncPoiskAvailDate();
-
-    if (typeof $.fn.datetimepicker === 'function') {
-        try {
-            if (typeof $.datetimepicker !== 'undefined' && $.datetimepicker.setLocale) {
-                $.datetimepicker.setLocale('ru');
-            }
-        } catch(e) {}
-        
-        $('input.vg-datetime-picker').datetimepicker({
-            format: 'Y-m-d H:i',
-            step: 15,
-            minDate: 0,
-            dayOfWeekStart: 1,
-            validateOnBlur: false,
-            closeOnDateSelect: false,
-            months: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
-            monthsShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
-            dayOfWeek: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
-            dayOfWeekShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-            dayOfWeekMin: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-            onChangeDateTime: function(dp, \$input) {
-                var val = \$input.val();
-                if (val) {
-                    var timeMatch = val.match(/\\d{2}:\\d{2}$/);
-                    if (timeMatch) {
-                        var parts = timeMatch[0].split(':');
-                        var minutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-                        if (minutes % 15 !== 0) {
-                            var rounded = Math.round(minutes / 15) * 15;
-                            var h = String(Math.floor(rounded / 60)).padStart(2, '0');
-                            var m = String(rounded % 60).padStart(2, '0');
-                            var newVal = val.replace(/\\d{2}:\\d{2}$/, h + ':' + m);
-                            \$input.val(newVal);
-                            \$input.trigger('change');
-                        }
-                    }
-                }
-            }
-        });
-    }
 });
 ");
 ?>

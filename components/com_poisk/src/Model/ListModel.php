@@ -314,26 +314,18 @@ class ListModel extends BaseListModel
 
 		$availDate = trim((string) $this->getState('avail_date'));
 		if ($availDate !== '') {
-			$dateOnly = '';
-			$time = '';
-			if (preg_match('/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/', $availDate, $m)) {
-				$dateOnly = $m[1];
-				$time = $m[2] ?? '';
-			}
-			if ($dateOnly !== '' && $time !== '') {
-				try {
-					$dt = new \DateTime($dateOnly);
-					$weekday = (int) $dt->format('N');
-					$timeCompare = $time . ':00';
-					
-					if ($fieldWorkDay > 0) {
-						if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
-							$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
-							if (is_file($vgWorkScheduleFile)) {
-								require_once $vgWorkScheduleFile;
-							}
-						}
-						if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			$this->requireWorkScheduleHelper();
+			if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+				$split = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::splitAvailFilter($availDate);
+				$dateOnly = $split['day'];
+				$time = $split['time'];
+				if ($dateOnly !== '' && $time !== '') {
+					try {
+						$dt = new \DateTime($dateOnly);
+						$weekday = (int) $dt->format('N');
+						$timeCompare = $time . ':00';
+
+						if ($fieldWorkDay > 0) {
 							$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAt(
 								$db,
 								$this->userIdAsFieldItemId(),
@@ -345,13 +337,47 @@ class ListModel extends BaseListModel
 								$prefix . 'fields_values'
 							));
 						}
+					} catch (\Throwable $e) {
 					}
-					
-				} catch (\Throwable $e) {
+				} elseif ($dateOnly !== '' && $fieldWorkDay > 0) {
+					try {
+						$weekday = (int) (new \DateTime($dateOnly))->format('N');
+						$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksOnWeekday(
+							$db,
+							$this->userIdAsFieldItemId(),
+							$fieldWorkDay,
+							$fieldWorkFrom,
+							$fieldWorkTo,
+							$weekday,
+							$prefix . 'fields_values',
+							\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::clockIfDateIsToday($dateOnly)
+						));
+					} catch (\Throwable $e) {
+					}
+				} elseif ($time !== '' && $fieldWorkDay > 0) {
+					$q->where(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::sqlWorksAtOnUpcoming(
+						$db,
+						$this->userIdAsFieldItemId(),
+						$fieldWorkDay,
+						$fieldWorkFrom,
+						$fieldWorkTo,
+						$time,
+						$prefix . 'fields_values'
+					));
 				}
 			}
 		}
 		
+	}
+
+	private function requireWorkScheduleHelper(): void
+	{
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+			$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+			if (is_file($vgWorkScheduleFile)) {
+				require_once $vgWorkScheduleFile;
+			}
+		}
 	}
 
 	private function userIdAsFieldItemId(): string
@@ -406,11 +432,14 @@ class ListModel extends BaseListModel
 		$this->setState('payment', array_values(array_unique($payment)));
 		$childrenRaw = strtolower(trim((string) $input->get('children', $input->get('filter_children', ''), 'string')));
 		$this->setState('children', in_array($childrenRaw, ['1', 'yes', 'on', 'true', 'да'], true) ? 1 : 0);
-		$availDate = $input->getString('avail_date', '');
-		if ($availDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T+]\d{2}:\d{2})?$/', $availDate)) {
-			$availDate = '';
-		}
-		$availDate = str_replace('+', ' ', $availDate);
+		$this->requireWorkScheduleHelper();
+		$availDate = class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)
+			? \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::composeAvailFilter(
+				$input->getString('avail_day', ''),
+				$input->getString('avail_time', ''),
+				$input->getString('avail_date', '')
+			)
+			: '';
 		$this->setState('avail_date', $availDate);
 		$order = $input->getString('filter_order', 'id');
 		if (!in_array($order, ['id', 'name', 'rate', 'price'], true)) {

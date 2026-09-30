@@ -155,6 +155,226 @@ final class WorkScheduleHelper
         return $sql;
     }
 
+    /**
+     * SQL fragment: this weekday is a working day with a real hour range.
+     * $endsAfter (H:i:s) keeps a day only when the shift is still open.
+     */
+    public static function sqlWorksOnWeekday(
+        $db,
+        string $itemIdSql,
+        int $fieldWorkDay,
+        int $fieldWorkFrom,
+        int $fieldWorkTo,
+        int $weekday,
+        string $fieldsTable = '#__fields_values',
+        string $endsAfter = ''
+    ): string {
+        if ($fieldWorkDay <= 0 || $weekday < 1 || $weekday > 7) {
+            return '1 = 0';
+        }
+
+        $fromSql = $fieldWorkFrom > 0
+            ? self::sqlExtractDayTime($db, 'wffv.value', 'wdfv.value', $weekday)
+            : $db->quote('00:00');
+        $toSql = $fieldWorkTo > 0
+            ? self::sqlExtractDayTime($db, 'wtfv.value', 'wdfv.value', $weekday)
+            : $db->quote('23:59');
+        $fromTime = 'STR_TO_DATE(REPLACE(' . $fromSql . ', ".", ":"), "%H:%i")';
+        $toTime = 'STR_TO_DATE(REPLACE(' . $toSql . ', ".", ":"), "%H:%i")';
+
+        $sql = 'EXISTS (SELECT 1 FROM ' . $db->quoteName($fieldsTable, 'wdfv');
+        if ($fieldWorkFrom > 0) {
+            $sql .= ' LEFT JOIN ' . $db->quoteName($fieldsTable, 'wffv')
+                . ' ON ' . $db->quoteName('wffv.item_id') . ' = ' . $db->quoteName('wdfv.item_id')
+                . ' AND ' . $db->quoteName('wffv.field_id') . ' = ' . $fieldWorkFrom;
+        }
+        if ($fieldWorkTo > 0) {
+            $sql .= ' LEFT JOIN ' . $db->quoteName($fieldsTable, 'wtfv')
+                . ' ON ' . $db->quoteName('wtfv.item_id') . ' = ' . $db->quoteName('wdfv.item_id')
+                . ' AND ' . $db->quoteName('wtfv.field_id') . ' = ' . $fieldWorkTo;
+        }
+        $sql .= ' WHERE ' . $db->quoteName('wdfv.item_id') . ' = ' . $itemIdSql
+            . ' AND ' . $db->quoteName('wdfv.field_id') . ' = ' . $fieldWorkDay
+            . ' AND ' . $db->quoteName('wdfv.value') . ' LIKE ' . $db->quote('%"' . $weekday . '"%')
+            . ' AND ' . $fromSql . ' IS NOT NULL AND ' . $fromSql . ' <> ' . $db->quote('')
+            . ' AND ' . $toSql . ' IS NOT NULL AND ' . $toSql . ' <> ' . $db->quote('')
+            . ' AND ' . $fromTime . ' < ' . $toTime;
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $endsAfter)) {
+            $sql .= ' AND ' . $toTime . ' >= STR_TO_DATE(' . $db->quote($endsAfter) . ', "%H:%i:%s")';
+        }
+        $sql .= ')';
+
+        return $sql;
+    }
+
+    /**
+     * @return array{day: string, time: string}
+     */
+    public static function splitAvailFilter(string $raw): array
+    {
+        $raw = str_replace('+', ' ', trim($raw));
+        $day = '';
+        $time = '';
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/', $raw, $matches)) {
+            $day = self::isRealDate($matches[1]) ? $matches[1] : '';
+            $time = isset($matches[2]) && self::isClock($matches[2]) ? $matches[2] : '';
+        } elseif (preg_match('/^(\d{2}:\d{2})$/', $raw, $matches) && self::isClock($matches[1])) {
+            $time = $matches[1];
+        }
+
+        return ['day' => $day, 'time' => $time];
+    }
+
+    public static function composeAvailFilter(string $dayInput, string $timeInput, string $legacy): string
+    {
+        $day = '';
+        $time = '';
+        $dayInput = trim($dayInput);
+        $timeInput = trim($timeInput);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dayInput) && self::isRealDate($dayInput)) {
+            $day = $dayInput;
+        }
+        if (self::isClock($timeInput)) {
+            $time = $timeInput;
+        }
+        if ($day === '' && $time === '') {
+            $split = self::splitAvailFilter($legacy);
+            $day = $split['day'];
+            $time = $split['time'];
+        }
+        if ($day !== '' && $time !== '') {
+            return $day . ' ' . $time;
+        }
+
+        return $day !== '' ? $day : $time;
+    }
+
+    public static function clockIfDateIsToday(string $day): string
+    {
+        if (!self::isRealDate($day)) {
+            return '';
+        }
+        $tz = self::siteTimezone();
+        $today = (new \DateTimeImmutable('now', $tz))->format('Y-m-d');
+        if ($day !== $today) {
+            return '';
+        }
+
+        return (new \DateTimeImmutable('now', $tz))->format('H:i:s');
+    }
+
+    /**
+     * The next 45 days, the same horizon as the public booking calendar.
+     *
+     * @return list<array{date: string, weekday: int, is_today: bool, now: string}>
+     */
+    public static function upcomingDateRows(int $days = 45): array
+    {
+        $days = max(1, min(45, $days));
+        $tz = self::siteTimezone();
+        $start = new \DateTimeImmutable('today', $tz);
+        $now = (new \DateTimeImmutable('now', $tz))->format('H:i');
+        $rows = [];
+        for ($offset = 0; $offset < $days; $offset++) {
+            $day = $start->modify('+' . $offset . ' days');
+            $rows[] = [
+                'date' => $day->format('Y-m-d'),
+                'weekday' => (int) $day->format('N'),
+                'is_today' => $offset === 0,
+                'now' => $now,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * $andSql receives "Y-m-d H:i:s" and returns an extra SQL predicate.
+     * Without it, each weekday is checked once.
+     */
+    public static function sqlWorksAtOnUpcoming(
+        $db,
+        string $itemIdSql,
+        int $fieldWorkDay,
+        int $fieldWorkFrom,
+        int $fieldWorkTo,
+        string $timeHi,
+        string $fieldsTable = '#__fields_values',
+        ?callable $andSql = null
+    ): string {
+        if (!self::isClock($timeHi) || $fieldWorkDay <= 0) {
+            return '1 = 0';
+        }
+        $parts = [];
+        $byWeekday = [];
+        foreach (self::upcomingDateRows(45) as $row) {
+            if ($row['is_today'] && strcmp($timeHi, $row['now']) < 0) {
+                continue;
+            }
+            $works = self::sqlWorksAt(
+                $db,
+                $itemIdSql,
+                $fieldWorkDay,
+                $fieldWorkFrom,
+                $fieldWorkTo,
+                (int) $row['weekday'],
+                $timeHi . ':00',
+                $fieldsTable
+            );
+            if ($andSql === null) {
+                $byWeekday[(int) $row['weekday']] = $works;
+                continue;
+            }
+            $extra = trim((string) $andSql($row['date'] . ' ' . $timeHi . ':00'));
+            if ($extra === '') {
+                $parts[] = '(' . $works . ')';
+                continue;
+            }
+            $parts[] = '(' . $works . ' AND ' . $extra . ')';
+        }
+        if ($andSql === null) {
+            $parts = array_values($byWeekday);
+        }
+        if ($parts === []) {
+            return '1 = 0';
+        }
+
+        return '(' . implode(' OR ', $parts) . ')';
+    }
+
+    private static function siteTimezone(): \DateTimeZone
+    {
+        $name = 'UTC';
+        try {
+            $offset = trim((string) \Joomla\CMS\Factory::getApplication()->get('offset', 'UTC'));
+            if ($offset !== '') {
+                $name = $offset;
+            }
+        } catch (\Throwable $e) {
+        }
+        try {
+            return new \DateTimeZone($name);
+        } catch (\Throwable $e) {
+            return new \DateTimeZone('UTC');
+        }
+    }
+
+    private static function isRealDate(string $day): bool
+    {
+        $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $day);
+
+        return $parsed instanceof \DateTimeImmutable && $parsed->format('Y-m-d') === $day;
+    }
+
+    private static function isClock(string $time): bool
+    {
+        if (!preg_match('/^(\d{2}):(\d{2})$/', $time, $matches)) {
+            return false;
+        }
+
+        return (int) $matches[1] <= 23 && (int) $matches[2] <= 59;
+    }
+
     public static function ensureLoaded(): void
     {
         // Class is already loaded when this method runs.
