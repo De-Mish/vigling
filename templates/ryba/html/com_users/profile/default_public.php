@@ -3576,6 +3576,32 @@ if (empty($isLkEmbed)) {
 				return;
 			}
 			applyAvailableSlotsFilter();
+			showFirstDayWithSlots(cal);
+		}
+
+		function showFirstDayWithSlots(cal) {
+			if (!cal || !cal.length || !cal.hasClass('slick-initialized')) {
+				return;
+			}
+			var startIndex = -1;
+			cal.find('.slick-slide:not(.slick-cloned) .calendar__master-item').each(function (idx) {
+				var chips = this.querySelectorAll('label.btn-select:not(.reserved)');
+				var visible = false;
+				for (var i = 0; i < chips.length; i++) {
+					if (chips[i].style.display !== 'none') {
+						visible = true;
+						break;
+					}
+				}
+				if (!visible) {
+					return;
+				}
+				startIndex = idx;
+				return false;
+			});
+			if (startIndex > 0) {
+				try { cal.slick('slickGoTo', startIndex, true); } catch (e) {}
+			}
 		}
 
 		function openZapisCalendarScreen() {
