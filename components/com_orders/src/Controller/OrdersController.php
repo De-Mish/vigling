@@ -172,10 +172,12 @@ class OrdersController extends BaseController
 		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
+		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, isset($table->time_sum) ? (int) $table->time_sum : 0);
 		$timeDb = $time->format('Y-m-d H:i:s');
 		$timeToDb = $timeTo->format('Y-m-d H:i:s');
+		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
 		$startUtc = \DateTimeImmutable::createFromMutable($time);
-		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
+		$endUtc = \DateTimeImmutable::createFromMutable($occupiedTo);
 		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 		if ($startUtc <= $nowUtc) {
 			$this->setMessage('Нельзя записаться на прошедшее время', 'error');
@@ -197,17 +199,17 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
-			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято поиском', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, 0)) {
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, 0)) {
 				$this->setMessage('Это время уже занято', 'error');
 				$this->setRedirectAndExit();
 				return;
@@ -319,8 +321,10 @@ class OrdersController extends BaseController
 		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
+		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, isset($table->time_sum) ? (int) $table->time_sum : 0);
 		$timeDb = $time->format('Y-m-d H:i:s');
 		$timeToDb = $timeTo->format('Y-m-d H:i:s');
+		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
 		if (!empty($table->time)) {
 			try {
 				$utc = new \DateTimeZone('UTC');
@@ -335,7 +339,7 @@ class OrdersController extends BaseController
 			}
 		}
 		$startUtc = \DateTimeImmutable::createFromMutable($time);
-		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
+		$endUtc = \DateTimeImmutable::createFromMutable($occupiedTo);
 		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 		if ($startUtc <= $nowUtc) {
 			$this->setMessage('Нельзя перенести запись на прошедшее время', 'error');
@@ -359,17 +363,17 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
-			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято поиском', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, (int) $table->id)) {
 				$this->setMessage('Это время уже занято', 'error');
 				$this->setRedirectAndExit();
 				return;
@@ -470,8 +474,10 @@ class OrdersController extends BaseController
 		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
+		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, isset($table->time_sum) ? (int) $table->time_sum : 0);
 		$timeDb = $time->format('Y-m-d H:i:s');
 		$timeToDb = $timeTo->format('Y-m-d H:i:s');
+		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
 		if (!empty($table->time)) {
 			try {
 				$currentTime = new \DateTime((string) $table->time, $utc);
@@ -485,7 +491,7 @@ class OrdersController extends BaseController
 			}
 		}
 		$startUtc = \DateTimeImmutable::createFromMutable($time);
-		$endUtc = \DateTimeImmutable::createFromMutable($timeTo);
+		$endUtc = \DateTimeImmutable::createFromMutable($occupiedTo);
 		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 		if ($startUtc <= $nowUtc) {
 			$this->setMessage('Нельзя перенести запись на прошедшее время', 'error');
@@ -509,17 +515,17 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
-			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb)) {
+			if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято поиском', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
-			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, (int) $table->id)) {
 				$this->setMessage('Это время уже занято', 'error');
 				$this->setRedirectAndExit();
 				return;
@@ -1443,6 +1449,13 @@ class OrdersController extends BaseController
 			return;
 		}
 
+		if ($orderId > 0 && isset($table->time_sum)) {
+			$timeSumMin = (int) $table->time_sum;
+			if ($timeSumMin > $durationMin) {
+				$durationMin = min(480, $timeSumMin);
+			}
+		}
+
 		$payload = viglingOrdersBuildRescheduleSlots($db, $masterId, $durationMin, $excludeOrderId, $excludeCourseSlotId, 45, $excludeSearchSlotId);
 		$this->jsonResponse([
 			'success' => true,
@@ -1516,6 +1529,29 @@ class OrdersController extends BaseController
 		return ['ok' => true, 'message' => ''];
 	}
 
+	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string
+	{
+		$columns = array_change_key_case($db->getTableColumns($tableName, false), CASE_LOWER);
+		$timeTo = $db->quoteName('time_to');
+		if (!isset($columns['time_sum'])) {
+			return $timeTo;
+		}
+		$time = $db->quoteName('time');
+		$timeSum = $db->quoteName('time_sum');
+
+		return '(CASE WHEN ' . $timeSum . ' > TIMESTAMPDIFF(MINUTE, ' . $time . ', ' . $timeTo . ')'
+			. ' THEN DATE_ADD(' . $time . ', INTERVAL ' . $timeSum . ' MINUTE) ELSE ' . $timeTo . ' END)';
+	}
+
+	private static function occupiedProbeEnd(\DateTime $start, int $serviceMin, int $timeSumMin): \DateTime
+	{
+		$blockMin = max($serviceMin, $timeSumMin > $serviceMin ? min(480, $timeSumMin) : $serviceMin);
+		$end = clone $start;
+		$end->modify('+' . $blockMin . ' minutes');
+
+		return $end;
+	}
+
 	private static function hasBookingsOverlap(
 		\Joomla\Database\DatabaseInterface $db,
 		string $tableName,
@@ -1530,7 +1566,7 @@ class OrdersController extends BaseController
 			->from($db->quoteName($tableName))
 			->where($db->quoteName('master_id') . ' = ' . (int) $masterId)
 			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
-			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+			->where(self::occupiedEndSql($db, $tableName) . ' > ' . $db->quote($startUtc));
 		if ($excludeId > 0) {
 			$query->where($db->quoteName('id') . ' <> ' . (int) $excludeId);
 		}

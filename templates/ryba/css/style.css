@@ -7182,8 +7182,9 @@ input[type=text] {
         border-color: #f7cc53 !important;
         box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
     }
-    .calendar__master-item .btns-m .btn-select[style*="display: none"] {
-        display: inline-block !important;
+    #zapis .calendar__master-item .btns-m .btn-select[style*="display: none"],
+    #zapis .calendar__master-item .btns-m .btn-select[style*="display:none"] {
+        display: none !important;
     }
     .calendar__master .slick-track {
         display: flex !important;
@@ -7262,8 +7263,9 @@ input[type=text] {
         border-color: #f7cc53 !important;
         box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3) !important;
     }
-    .calendar__master-item .btns-m .btn-select[style*="display: none"] {
-        display: inline-block !important;
+    #zapis .calendar__master-item .btns-m .btn-select[style*="display: none"],
+    #zapis .calendar__master-item .btns-m .btn-select[style*="display:none"] {
+        display: none !important;
     }
 }
 

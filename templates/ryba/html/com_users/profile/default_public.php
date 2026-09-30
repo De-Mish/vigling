@@ -2434,8 +2434,10 @@ if (empty($isLkEmbed)) {
 		}
 
 		function applyAvailableSlotsFilter() {
-			var requiredMin = parseInteger((bookingForm.querySelector('#zapis__duration-min') || {}).value, 60);
-			requiredMin = Math.max(15, Math.min(480, requiredMin));
+			var serviceMin = parseInteger((bookingForm.querySelector('#zapis__duration-min') || {}).value, 60);
+			serviceMin = Math.max(15, Math.min(480, serviceMin));
+			var timeSumMin = parseInteger((bookingForm.querySelector('#time_sum') || {}).value, serviceMin);
+			var requiredMin = Math.max(serviceMin, Math.min(480, timeSumMin > 0 ? timeSumMin : serviceMin));
 			var steps = Math.max(1, Math.ceil(requiredMin / 15));
 			var nowTs = Date.now();
 			var minFutureTs = nowTs + (60 * 1000);
