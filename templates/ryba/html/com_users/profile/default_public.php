@@ -1672,7 +1672,52 @@ if (empty($isLkEmbed)) {
 				margin-top: 0;
 			}
 		}
+		@media (max-width: 767px) {
+			#zapis .screen1 .calendar__master:not(.slick-initialized) {
+				gap: 8px;
+			}
+			#zapis .screen1 .calendar__master-item {
+				padding-bottom: 8px;
+			}
+			#zapis .screen1 .calendar__master.slick-initialized .slick-list {
+				margin-left: -4px;
+				margin-right: -4px;
+			}
+			#zapis .screen1 .calendar__master.slick-initialized .slick-slide {
+				box-sizing: border-box;
+				padding: 0 4px;
+			}
+		}
+		@media (min-width: 768px) and (max-width: 820px) {
+			#zapis .screen1 .calendar__master:not(.slick-initialized) {
+				gap: 30px;
+			}
+			#zapis .screen1 .calendar__master.slick-initialized .slick-list {
+				margin-left: -15px;
+				margin-right: -15px;
+			}
+			#zapis .screen1 .calendar__master.slick-initialized .slick-slide {
+				box-sizing: border-box;
+				padding: 0 15px;
+			}
+		}
 		@media (min-width: 821px) {
+			#zapis .screen1 .calendar__master {
+				width: 100% !important;
+				max-width: 100% !important;
+			}
+			#zapis .screen1 .calendar__master:not(.slick-initialized) {
+				gap: 8px;
+			}
+			#zapis .screen1 .calendar__master:not(.slick-initialized) .calendar__master-item {
+				flex: 0 0 calc((100% - 16px) / 3);
+				width: calc((100% - 16px) / 3);
+				min-width: 0;
+			}
+			#zapis .screen1 .calendar__master.slick-initialized .slick-slide {
+				box-sizing: border-box;
+				padding: 0 4px;
+			}
 			#zapis .screen1 .calendar__master .slick-list,
 			#zapis .screen1 .calendar__master .slick-track,
 			#zapis .screen1 .calendar__master .slick-slide,
@@ -1681,28 +1726,28 @@ if (empty($isLkEmbed)) {
 				height: auto !important;
 			}
 			#zapis .screen1 .calendar__master-item .btns-m {
-				display: flex !important;
-				flex-wrap: wrap !important;
-				justify-content: flex-start;
-				align-items: flex-start;
-				align-content: flex-start;
-				gap: 6px 8px;
+				display: grid !important;
+				grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+				justify-content: stretch;
+				align-items: start;
+				align-content: start;
+				gap: 6px;
 				width: 100% !important;
 				max-width: 100% !important;
 				max-height: none !important;
 				height: auto !important;
 				overflow: visible !important;
-				grid-template-columns: none !important;
 				margin-left: 0;
 				margin-right: 0;
+				padding: 0 2px;
 			}
 			#zapis .screen1 .calendar__master-item .btns-m .btn-select {
-				width: max-content !important;
+				width: 100% !important;
 				min-width: 0 !important;
 				max-width: none !important;
-				flex: 0 0 auto !important;
+				flex: none !important;
 				box-sizing: border-box !important;
-				padding: 6px 8px !important;
+				padding: 6px 2px !important;
 				font-size: 11px !important;
 				height: auto !important;
 				line-height: 1.4 !important;
@@ -3408,11 +3453,17 @@ if (empty($isLkEmbed)) {
 
 		var zapisCalendarSlick = {
 			infinite: false,
-			slidesToShow: 1,
+			slidesToShow: 3,
 			slidesToScroll: 1,
 			dots: false,
 			arrows: true,
-			accessibility: false
+			accessibility: false,
+			responsive: [
+				{
+					breakpoint: 820,
+					settings: { slidesToShow: 1, slidesToScroll: 1 }
+				}
+			]
 		};
 
 		function zapisCalendarHasWidth(cal) {
