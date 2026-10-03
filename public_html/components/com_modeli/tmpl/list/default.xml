@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+	<layout title="Поиск моделей" option="COM_MODELI_LIST_LAYOUT">
+		<message><![CDATA[Показывает отдельную витрину поиска моделей.]]></message>
+	</layout>
+</metadata>

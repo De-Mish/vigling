@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form>
+	<fieldset>
+		<field name="id" type="number" label="JGLOBAL_FIELD_ID_LABEL" default="0" readonly="true" class="readonly" />
+		<field name="title" type="text" label="COM_VIGLINGSERVICES_FIELD_TITLE_LABEL" required="true" size="80" />
+		<field
+			name="parent_id"
+			type="sql"
+			label="COM_VIGLINGSERVICES_FIELD_PARENT_LABEL"
+			query="SELECT id AS value, CONCAT(path, ' - ', title) AS text FROM #__vigling_service_nodes ORDER BY path"
+			key_field="value"
+			value_field="text"
+			default="0"
+		>
+			<option value="0">COM_VIGLINGSERVICES_PARENT_ROOT</option>
+		</field>
+		<field name="type" type="list" label="COM_VIGLINGSERVICES_FIELD_TYPE_LABEL" default="service">
+			<option value="group">COM_VIGLINGSERVICES_TYPE_GROUP</option>
+			<option value="service">COM_VIGLINGSERVICES_TYPE_SERVICE</option>
+			<option value="variant">COM_VIGLINGSERVICES_TYPE_VARIANT</option>
+		</field>
+		<field name="sort_order" type="number" label="COM_VIGLINGSERVICES_FIELD_SORT_ORDER_LABEL" default="0" min="0" />
+		<field name="is_active" type="radio" label="COM_VIGLINGSERVICES_FIELD_IS_ACTIVE_LABEL" default="1" class="btn-group btn-group-yesno">
+			<option value="1">JYES</option>
+			<option value="0">JNO</option>
+		</field>
+		<field name="slug" type="text" label="COM_VIGLINGSERVICES_FIELD_SLUG_LABEL" hint="COM_VIGLINGSERVICES_FIELD_SLUG_HINT" />
+		<field name="path" type="text" label="COM_VIGLINGSERVICES_FIELD_PATH_LABEL" readonly="true" class="readonly" />
+		<field name="level" type="number" label="COM_VIGLINGSERVICES_FIELD_LEVEL_LABEL" readonly="true" class="readonly" />
+		<field name="legacy_source" type="text" label="COM_VIGLINGSERVICES_FIELD_LEGACY_SOURCE_LABEL" />
+		<field name="legacy_id" type="text" label="COM_VIGLINGSERVICES_FIELD_LEGACY_ID_LABEL" />
+	</fieldset>
+</form>

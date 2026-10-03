@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+	<layout title="COM_POISK_LIST_VIEW" option="COM_POISK">
+		<message><![CDATA[COM_POISK_LIST_VIEW_DESC]]></message>
+	</layout>
+	<fields name="params">
+		<fieldset name="list_options" label="Настройки списка (Поиск специалистов)">
+			<field name="category_path" type="list" label="Ветка категорий" description="Пусто — все категории (услуги). «Заточка ремонт» — только специалисты из этой ветки." default="" filter="string">
+				<option value="">Все (услуги)</option>
+				<option value="zatochka-remont">Заточка ремонт</option>
+			</field>
+			<field name="list_page_title" type="text" label="Заголовок страницы" description="Переопределить заголовок (по умолчанию для «Заточка ремонт» — «Заточка ремонт»)." default="" filter="string" showon="params.category_path:zatochka-remont" />
+			<field name="list_filter_title" type="text" label="Подпись блока фильтра" description="Например: «Фильтр» или «Фильтр специалистов»." default="" filter="string" showon="params.category_path:zatochka-remont" />
+		</fieldset>
+	</fields>
+</metadata>

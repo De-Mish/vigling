@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="component" method="upgrade">
+	<name>com_pushnotify</name>
+	<author>Viglin</author>
+	<creationDate>2026-02</creationDate>
+	<copyright>Viglin</copyright>
+	<license>GNU General Public License version 2 or later</license>
+	<version>1.0.0</version>
+	<description>Управление push- и inbox-уведомлениями</description>
+	<namespace path="src">Viglin\Component\Pushnotify</namespace>
+	<files folder="site">
+		<folder>src</folder>
+	</files>
+	<administration>
+		<menu>COM_PUSHNOTIFY_MANAGEMENT</menu>
+		<files folder="admin">
+			<folder>services</folder>
+			<folder>src</folder>
+			<folder>sql</folder>
+		</files>
+	</administration>
+</extension>
