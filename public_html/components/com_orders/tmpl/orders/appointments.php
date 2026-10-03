@@ -38,7 +38,7 @@ try {
 	$tz = new \DateTimeZone('UTC');
 }
 $todayLocal = new \DateTimeImmutable('today', $tz);
-$entriesArchive = $mode === 'day' && Factory::getApplication()->getInput()->getCmd('entries', '') === 'archive';
+$entriesArchive = $mode === 'list' && Factory::getApplication()->getInput()->getCmd('entries', '') === 'archive';
 $dayArchiveUrl = (string) ($src->dayArchiveUrl ?? '');
 $monthNames = [1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель', 5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август', 9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь'];
 $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
@@ -606,8 +606,8 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			<?php if ($mode === 'day' || $mode === 'list') : ?>
 			<div class="appointments-day-heading">
 				<h1 class="page-title">Записи</h1>
-				<?php if ($mode === 'day') : ?>
-				<a class="appointments-archive-btn<?php echo $entriesArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($entriesArchive ? $dayUrl : $dayArchiveUrl); ?>">Архив</a>
+				<?php if ($mode === 'list') : ?>
+				<a class="appointments-archive-btn<?php echo $entriesArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($entriesArchive ? $listUrl : $dayArchiveUrl); ?>">Архив</a>
 				<?php endif; ?>
 			</div>
 			<?php endif; ?>
@@ -795,10 +795,10 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			: $todayLocal;
 		$stripStart = !empty($src->dayStripStart) && $src->dayStripStart instanceof \DateTimeImmutable
 			? $src->dayStripStart
-			: $todayLocal->modify('-14 days');
+			: $todayLocal;
 		$stripEnd = !empty($src->dayStripEnd) && $src->dayStripEnd instanceof \DateTimeImmutable
 			? $src->dayStripEnd
-			: $todayLocal->modify('+30 days');
+			: $todayLocal->modify('+45 days');
 		$selectedKey = $selectedDay->format('Y-m-d');
 		if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
 			require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
