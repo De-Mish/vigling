@@ -277,10 +277,14 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
         $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
         foreach ([
             JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/offline.php',
             $themes . '/ryba/helpers/WorkScheduleHelper.php',
         ] as $file) {
-            if (is_file($file)) {
-                require_once $file;
+            if (!is_file($file)) {
+                continue;
+            }
+            require_once $file;
+            if (class_exists($class, false)) {
                 break;
             }
         }

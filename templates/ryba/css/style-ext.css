@@ -5857,3 +5857,19 @@ body#home .home-search-links a.homepage-link-btn:focus {
 		text-align: center !important;
 	}
 }
+
+.category__masters-sidebar .vg-avail-day,
+.category__masters-sidebar .vg-avail-time {
+	width: 100%;
+	box-sizing: border-box;
+}
+.category__masters-sidebar .vg-avail-hint {
+	margin: 4px 0 0;
+	padding: 0;
+	color: #777;
+	font-size: 12px;
+	line-height: 1.35;
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+}
