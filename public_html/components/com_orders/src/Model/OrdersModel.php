@@ -26,7 +26,7 @@ class OrdersModel extends ListModel
 		$option = $input->getCmd('option', '');
 		$view = $input->getCmd('view', '');
 		$isAppointments = in_array($layout, ['default', 'clients', 'journal', 'appointments'], true)
-			|| in_array($zapisi, ['day', 'week', 'month'], true)
+			|| in_array($zapisi, ['day', 'week', 'month', 'list'], true)
 			|| ($option === 'com_users' && $view === 'profile');
 		if ($isAppointments) {
 			$this->setState('layout', 'appointments');
@@ -105,8 +105,13 @@ class OrdersModel extends ListModel
 				->select('o.id, o.user_id, o.master_id, o.time, o.time_to, o.service_name, o.completed')
 				->from($db->quoteName('#__vigling_bookings', 'o'))
 				->where('(' . $db->quoteName('o.user_id') . ' = ' . (int) $user->id
-					. ' OR ' . $db->quoteName('o.master_id') . ' = ' . (int) $user->id . ')')
-				->order($db->quoteName('o.time') . ' ' . $orderDir);
+					. ' OR ' . $db->quoteName('o.master_id') . ' = ' . (int) $user->id . ')');
+			if ($dayScope === 'archive' || $dayScope === 'all') {
+				$query->order('CASE WHEN ' . $db->quoteName('o.time') . ' IS NULL THEN 1 ELSE 0 END ASC');
+				$query->order($db->quoteName('o.time') . ' DESC');
+			} else {
+				$query->order($db->quoteName('o.time') . ' ' . $orderDir);
+			}
 			if ($dayScope === 'future') {
 				$futureParts = [];
 				if ($fromUtc !== '' && $toUtc !== '') {
@@ -127,7 +132,15 @@ class OrdersModel extends ListModel
 					$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
 				}
 				$query->where($db->quoteName('o.time') . ' IS NOT NULL');
-			} else {
+			} elseif ($dayScope === 'oneday') {
+				if ($fromUtc !== '') {
+					$query->where($db->quoteName('o.time') . ' >= ' . $db->quote($fromUtc));
+				}
+				if ($toUtc !== '') {
+					$query->where($db->quoteName('o.time') . ' < ' . $db->quote($toUtc));
+				}
+				$query->where($db->quoteName('o.time') . ' IS NOT NULL');
+			} elseif ($dayScope !== 'all') {
 				if ($fromUtc !== '') {
 					$query->where($db->quoteName('o.time_to') . ' >= ' . $db->quote($fromUtc));
 				}
