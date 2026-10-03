@@ -1,0 +1,1877 @@
+<?php
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\User\User;
+
+$app   = Factory::getApplication();
+$input = $app->getInput();
+$tpl   = $this->template;
+$tplPath = rtrim(Uri::root(), '/') . '/templates/' . $tpl . '/';
+$rybaAsset = static function (string $relative) use ($tplPath): string {
+	$relative = ltrim($relative, '/');
+	$full = __DIR__ . '/' . $relative;
+	$v = is_file($full) ? (string) filemtime($full) : '1';
+
+	return $tplPath . $relative . '?v=' . $v;
+};
+$manifestFile = JPATH_ROOT . '/manifest.json';
+$manifestVer = is_file($manifestFile) ? (string) filemtime($manifestFile) : '1';
+$templateParams = $app->getTemplate(true)->params;
+
+$option   = $input->getCmd('option', '');
+$view     = $input->getCmd('view', '');
+$layout   = $input->getCmd('layout', '');
+$task     = $input->getCmd('task', '');
+$itemid   = $input->getCmd('Itemid', '');
+$sitename = htmlspecialchars($app->get('sitename'), ENT_QUOTES, 'UTF-8');
+$menu     = $app->getMenu()->getActive();
+$pageclass = $menu !== null ? $menu->getParams()->get('pageclass_sfx', '') : '';
+
+$isHome = ($menu && (int) $menu->home === 1);
+$page  = $isHome ? 'home' : 'page';
+if ($option === 'com_poisk' || $option === 'com_specialists' || $option === 'com_kurs') {
+	$page = 'page';
+}
+if ($option === 'com_users' && $view === 'profile') {
+	$page = 'page';
+}
+$isPwaInstallPage = (int) $input->getInt('pwa_install', 0) === 1;
+$requestPath = trim((string) Uri::getInstance()->getPath(), '/');
+$requestUriPath = trim((string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: ''), '/');
+$pathAliases = array_values(array_unique(array_filter([
+	strtolower($requestPath),
+	strtolower($requestUriPath),
+])));
+$isApplicationGuidePage = ((int) $input->getInt('app_install_guide', 0) === 1)
+	|| in_array('priloshenie', $pathAliases, true);
+$contactsPageHtml = (string) $templateParams->get('contacts_page_html', '');
+$isContactsPage = ((int) $input->getInt('contacts_page', 0) === 1)
+	|| $option === 'com_contact'
+	|| in_array('kontakty', $pathAliases, true)
+	|| in_array('contacts', $pathAliases, true);
+$isPrivacyPolicyPage = ((int) $input->getInt('privacy_page', 0) === 1)
+	|| in_array('privacy-policy', $pathAliases, true);
+if ($isApplicationGuidePage) {
+	$page = 'page';
+}
+if ($isContactsPage) {
+	$page = 'page';
+}
+if ($isPrivacyPolicyPage) {
+	$page = 'page';
+	$this->setTitle('Политика конфиденциальности');
+	$this->setMetaData('description', 'Политика конфиденциальности сервиса онлайн-записи Vigling.');
+}
+
+$this->setMetaData('viewport', 'width=device-width, initial-scale=1');
+?>
+<!DOCTYPE html>
+<html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
+<head>
+	<meta content="width=device-width, initial-scale=1" name="viewport">
+	<meta content="IE=edge" http-equiv="X-UA-Compatible">
+	<link rel="icon" type="image/png" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-pwa-192.png?v=20261003o">
+	<link rel="apple-touch-icon" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-pwa-apple.png?v=20261003o">
+	<meta name="theme-color" content="#111111">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="VIGLING">
+	<meta name="apple-mobile-web-app-status-bar-style" content="default">
+	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=<?php echo htmlspecialchars($manifestVer, ENT_QUOTES, 'UTF-8'); ?>">
+	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
+	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
+	<script src="<?php echo $rybaAsset('js/client-error.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/phone-mask.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/jquery.min.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/slick.min.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/scripts.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/custom.js'); ?>"></script>
+	<script src="https://code.jquery.com/jquery-migrate-1.4.1.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.full.min.js"></script>
+<?php endif; ?>
+	<jdoc:include type="metas" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
+<?php endif; ?>
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/slick.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/slick-theme.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/tabs.min.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/font-awesome.min.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/style-ext.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
+	<style>
+		.header-mobile__logo img {
+			border-radius: 0 !important;
+			background: transparent !important;
+			object-fit: contain;
+		}
+	</style>
+	<jdoc:include type="styles" />
+	<?php if ($isHome) :
+		require_once __DIR__ . '/helpers/schema_ld.php';
+		vigling_print_website_json_ld((string) $app->get('sitename'));
+	endif; ?>
+</head>
+<body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
+	<a class="skip-to-content" href="#main">Перейти к содержимому</a>
+	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
+		<div class="container d-flex">
+			<div class="header__menu">
+				<?php if ($this->countModules('topmenu')) : ?>
+					<jdoc:include type="modules" name="topmenu" style="none" />
+				<?php else :
+					$jmenu = $app->getMenu();
+					$default = $jmenu->getDefault();
+					if ($default) :
+						$topItems = $jmenu->getItems(['menutype', 'parent_id', 'published'], [$default->menutype, 1, 1]);
+						$user = $app->getIdentity();
+						$levels = $user ? $user->getAuthorisedViewLevels() : [];
+						$topItems = $topItems ? array_filter($topItems, function ($it) use ($levels) {
+							return in_array((int) $it->access, $levels, true);
+						}) : [];
+						require_once __DIR__ . '/html/mod_menu/appointments_filter.php';
+						$topItems = ryba_filter_appointment_menu_items(array_values($topItems));
+						if (!empty($topItems)) : ?>
+					<nav class="jmoddiv jmodinside" id="mod-menu-ryba-fallback">
+						<ul class="mod-menu mod-list nav">
+							<?php foreach ($topItems as $mitem) :
+								$href = ($mitem->type === 'url' && $mitem->params->get('url')) ? $mitem->params->get('url') : Route::_($mitem->link);
+								$class = 'nav-item item-' . $mitem->id;
+								if ($menu && (int) $menu->id === (int) $mitem->id) $class .= ' current';
+							?>
+							<li class="<?php echo $class; ?>">
+								<a href="<?php echo htmlspecialchars($href); ?>"><?php echo htmlspecialchars($mitem->title); ?></a>
+							</li>
+							<?php endforeach; ?>
+						</ul>
+					</nav>
+						<?php endif;
+					endif;
+				endif; ?>
+			</div>
+			<div class="header__logo">
+				<a href="<?php echo Uri::root(); ?>"><img class="header__logo-img" src="/images/logo.jpg" width="65" alt="Лого Vigling.ru"><?php echo $sitename; ?></a>
+			</div>
+		</div>
+	</header>
+	<style>
+		@media (min-width: 769px) {
+			.header--desktop .container.d-flex {
+				align-items: center;
+				gap: 12px;
+			}
+			.header--desktop .header__menu {
+				margin: 0;
+				margin-left: 8px;
+				flex: 1 1 auto;
+				min-width: 0;
+			}
+			.header--desktop .header__menu .mod-menu,
+			.header--desktop .header__menu .nav {
+				display: flex;
+				flex-wrap: nowrap;
+				align-items: center;
+				justify-content: flex-start;
+				gap: 6px;
+				margin: 0;
+				padding: 0;
+			}
+			.header--desktop .header__menu .mod-menu > li,
+			.header--desktop .header__menu .nav > li {
+				display: block;
+				flex: 0 1 auto;
+				margin: 0;
+				position: relative;
+			}
+			.header--desktop .header__menu .mod-menu > li > a,
+			.header--desktop .header__menu .nav > li > a {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				box-sizing: border-box;
+				width: auto;
+				min-width: 0;
+				height: 42px;
+				padding: 0 12px;
+				margin: 0;
+				background: transparent;
+				border: 1px solid #f9ce54;
+				border-radius: 25px;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+				color: #000;
+				font-family: "GothamPro-Bold", sans-serif;
+				font-size: 13px;
+				font-weight: 500;
+				letter-spacing: 1.08px;
+				line-height: 1.2;
+				text-align: center;
+				text-decoration: none;
+				white-space: nowrap;
+				cursor: pointer;
+			}
+			.header--desktop .header__menu .mod-menu > li > a:hover,
+			.header--desktop .header__menu .mod-menu > li > a:focus,
+			.header--desktop .header__menu .nav > li > a:hover,
+			.header--desktop .header__menu .nav > li > a:focus {
+				background: transparent;
+				color: #000;
+				text-decoration: none;
+			}
+			.header--desktop .header__menu .mod-menu > li.current > a,
+			.header--desktop .header__menu .nav > li.current > a,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"],
+			.header--desktop .header__menu .nav > li > a[aria-current="page"] {
+				background-color: #f9ce54;
+				border: 0;
+				color: #000;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+			}
+			.header--desktop .header__menu .mod-menu > li.current > a:hover,
+			.header--desktop .header__menu .mod-menu > li.current > a:focus,
+			.header--desktop .header__menu .nav > li.current > a:hover,
+			.header--desktop .header__menu .nav > li.current > a:focus,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"]:hover,
+			.header--desktop .header__menu .mod-menu > li > a[aria-current="page"]:focus,
+			.header--desktop .header__menu .nav > li > a[aria-current="page"]:hover,
+			.header--desktop .header__menu .nav > li > a[aria-current="page"]:focus {
+				background-color: #f9ce54;
+				color: #000;
+				text-decoration: none;
+			}
+			body#home .home-search-links,
+			body#home .home-search-links a.homepage-link-btn {
+				display: none;
+			}
+		}
+	</style>
+	<header class="header header--mobile" id="header-mobile" aria-hidden="false">
+		<div class="header-mobile__bar">
+			<a class="header-mobile__logo" href="<?php echo Uri::root(); ?>">
+				<img src="/icons/vigling-pwa-192.png?v=20261003o" width="48" height="48" alt="Лого Vigling.ru">
+				<span class="header-mobile__sitename"><?php echo $sitename; ?></span>
+			</a>
+			<button type="button" class="header-mobile__toggle" id="header-mobile-toggle" aria-label="<?php echo htmlspecialchars($app->getLanguage()->_('JTOGGLE_NAVIGATION') ?: 'Меню'); ?>" aria-expanded="false" aria-controls="header-mobile-panel">
+				<span class="header-mobile__toggle-bar"></span>
+				<span class="header-mobile__toggle-bar"></span>
+				<span class="header-mobile__toggle-bar"></span>
+			</button>
+		</div>
+		<div class="header-mobile__overlay" id="header-mobile-overlay" aria-hidden="true"></div>
+		<div class="header-mobile__panel" id="header-mobile-panel" aria-hidden="true">
+			<div class="header-mobile__panel-head">
+				<button type="button" class="header-mobile__close" id="header-mobile-close" aria-label="<?php echo htmlspecialchars($app->getLanguage()->_('JCLOSE') ?: 'Закрыть'); ?>">&times;</button>
+			</div>
+			<div class="header-mobile__panel-body">
+			<nav class="header-mobile__nav">
+				<?php if ($this->countModules('topmenu')) : ?>
+					<jdoc:include type="modules" name="topmenu" style="none" />
+				<?php else :
+					$jmenu = $app->getMenu();
+					$default = $jmenu->getDefault();
+					if ($default) :
+						$topItems = $jmenu->getItems(['menutype', 'parent_id', 'published'], [$default->menutype, 1, 1]);
+						$user = $app->getIdentity();
+						$levels = $user ? $user->getAuthorisedViewLevels() : [];
+						$topItems = $topItems ? array_filter($topItems, function ($it) use ($levels) {
+							return in_array((int) $it->access, $levels, true);
+						}) : [];
+						require_once __DIR__ . '/html/mod_menu/appointments_filter.php';
+						$topItems = ryba_filter_appointment_menu_items(array_values($topItems));
+						if (!empty($topItems)) : ?>
+				<ul class="mod-menu mod-list nav">
+					<?php foreach ($topItems as $mitem) :
+						$href = ($mitem->type === 'url' && $mitem->params->get('url')) ? $mitem->params->get('url') : Route::_($mitem->link);
+						$class = 'nav-item item-' . $mitem->id;
+						if ($menu && (int) $menu->id === (int) $mitem->id) $class .= ' current';
+					?>
+					<li class="<?php echo $class; ?>">
+						<a href="<?php echo htmlspecialchars($href); ?>"><?php echo htmlspecialchars($mitem->title); ?></a>
+					</li>
+					<?php endforeach; ?>
+				</ul>
+						<?php endif;
+					endif;
+				endif; ?>
+			</nav>
+			</div>
+		</div>
+	</header>
+	<div id="main" class="skip-target" tabindex="-1"></div>
+	<style>
+		@media (max-width: 768px) {
+			#header-mobile-panel .header-mobile__nav li.current > a,
+			#header-mobile-panel .header-mobile__nav a[aria-current="page"] {
+				background-color: #f9ce54bf;
+				border-radius: 5px;
+			}
+		}
+	</style>
+	<?php if ($isPwaInstallPage) : ?>
+	<div class="pwa-install-page" id="pwa-install-overlay" role="dialog" aria-modal="true" aria-labelledby="pwa-install-title">
+		<div class="pwa-install-backdrop" data-close-pwa-install="1"></div>
+		<div class="pwa-install-card">
+			<button type="button" class="pwa-install-close" data-close-pwa-install="1" aria-label="Закрыть">&times;</button>
+			<h1 id="pwa-install-title">Установить приложение Vigling</h1>
+			<p>Нажмите кнопку ниже. Если браузер поддерживает установку PWA, появится системное окно добавления приложения.</p>
+			<div class="pwa-install-actions">
+				<button type="button" id="pwa-install-btn" class="btn btn__time-zapis">Установить приложение</button>
+			</div>
+			<div id="pwa-install-status" class="pwa-install-status"></div>
+		</div>
+	</div>
+	<?php endif; ?>
+	<?php if ($page === 'home' && $this->countModules('slider')) : ?>
+		<section class="slider__home slider-container">
+			<jdoc:include type="modules" name="slider" />
+		</section>
+	<?php endif; ?>
+	<?php if ($page !== 'home') : ?>
+		<?php $contentClass = ($option === 'com_users' && $view === 'profile') ? 'content content__single single__master view-profile view_profile' : 'content content__single single__master'; ?>
+		<section id="content" class="<?php echo $contentClass; ?>" role="main">
+			<div class="container">
+				<?php if ($this->countModules('breadcrumbs')) : ?>
+					<jdoc:include type="modules" name="breadcrumbs" style="none" />
+				<?php elseif ($option === 'com_users' && $view === 'profile') : ?>
+					<?php
+					$profileUserId = $input->getInt('user_id', 0);
+					$profileBreadName = 'Профиль';
+					$profileBreadExtra = null;
+					if ($profileUserId > 0) {
+						$profileUser = User::getInstance($profileUserId);
+						if ($profileUser && $profileUser->id) {
+							$profileBreadExtra = $profileUser->name;
+						}
+					}
+					$rootUrl = rtrim(Uri::root(), '/') . '/';
+					$profileUrl = Route::_('index.php?option=com_users&view=profile');
+					?>
+					<div aria-label="breadcrumbs" role="navigation">
+						<ul itemscope itemtype="https://schema.org/BreadcrumbList" class="breadcrumb breadcrumbs">
+							<li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+								<a itemprop="item" href="<?php echo htmlspecialchars($rootUrl); ?>" class="pathway"><span itemprop="name">Главная страница</span></a>
+								<meta itemprop="position" content="1">
+							</li>
+							<?php if ($profileBreadExtra) : ?>
+							<li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+								<a itemprop="item" href="<?php echo htmlspecialchars($profileUrl); ?>" class="pathway"><span itemprop="name"><?php echo $profileBreadName; ?></span></a>
+								<meta itemprop="position" content="2">
+							</li>
+							<li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="active">
+								<span itemprop="name"><?php echo htmlspecialchars($profileBreadExtra); ?></span>
+								<meta itemprop="position" content="3">
+							</li>
+							<?php else : ?>
+							<li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="active">
+								<span itemprop="name"><?php echo $profileBreadName; ?></span>
+								<meta itemprop="position" content="2">
+							</li>
+							<?php endif; ?>
+						</ul>
+					</div>
+				<?php endif; ?>
+				<jdoc:include type="message" />
+				<?php $sbar = (!$isApplicationGuidePage && !$isContactsPage && !$isPrivacyPolicyPage && $this->countModules('sidebar')) ? 'w_sidebar' : 'wo_sidebar'; ?>
+				<div class="cont_<?php echo $sbar; ?> ">
+					<div class="cont">
+						<?php if ($isApplicationGuidePage) : ?>
+						<section class="app-install-guide" aria-labelledby="app-install-guide-title">
+							<h1 id="app-install-guide-title">Как установить приложение Vigling</h1>
+							<p class="app-install-guide__lead">Сайт работает как SPA-приложение. Добавьте его на экран устройства через меню браузера.</p>
+							<div class="app-install-guide__actions">
+								<a class="btn btn__time-zapis app-install-guide__install-btn" href="<?php echo htmlspecialchars(rtrim(Uri::root(), '/') . '/?pwa_install=1'); ?>">Установить SPA приложение</a>
+							</div>
+							<div class="app-install-guide__grid">
+								<article class="app-install-guide__card">
+									<h2>iPhone / iPad (iOS)</h2>
+									<ol>
+										<li>Откройте сайт Vigling в Safari.</li>
+										<li>Нажмите кнопку <strong>Поделиться</strong> (квадрат со стрелкой вверх).</li>
+										<li>Выберите пункт <strong>На экран "Домой"</strong>.</li>
+										<li>Подтвердите кнопкой <strong>Добавить</strong>.</li>
+									</ol>
+									<a href="/images/1.jpg" data-fancybox="app-install-guide" data-caption="Установка Vigling на iOS" class="app-install-guide__image-link">
+										<img src="/images/1.jpg" alt="Инструкция установки Vigling на iOS через Safari" loading="lazy">
+									</a>
+								</article>
+								<article class="app-install-guide__card">
+									<h2>Android</h2>
+									<ol>
+										<li>Откройте сайт Vigling в Chrome.</li>
+										<li>Откройте меню браузера (три точки).</li>
+										<li>Выберите <strong>Установить приложение</strong> или <strong>Добавить на главный экран</strong>.</li>
+										<li>Подтвердите установку.</li>
+									</ol>
+									<a href="/images/2.jpg" data-fancybox="app-install-guide" data-caption="Установка Vigling на Android" class="app-install-guide__image-link">
+										<img src="/images/2.jpg" alt="Инструкция установки Vigling на Android через Chrome" loading="lazy">
+									</a>
+								</article>
+							</div>
+						</section>
+						<?php elseif ($isContactsPage) : ?>
+						<section class="contacts-settings-page" aria-labelledby="contacts-settings-title">
+							<h1 id="contacts-settings-title">Контакты</h1>
+							<?php if (trim($contactsPageHtml) !== '') : ?>
+								<?php echo $contactsPageHtml; ?>
+							<?php else : ?>
+								<p>Контент страницы контактов пока не заполнен.</p>
+							<?php endif; ?>
+							<div class="contacts-hover-tabs">
+								<a class="contacts-hover-tab" href="https://t.me/vigling" target="_blank" rel="noopener noreferrer">
+									<span class="contacts-hover-tab__label">Telegram</span>
+									<span class="contacts-hover-tab__panel">Написать в Telegram: @vigling</span>
+								</a>
+								<a class="contacts-hover-tab" href="https://vk.com/vigling" target="_blank" rel="noopener noreferrer">
+									<span class="contacts-hover-tab__label">Vkontakte</span>
+									<span class="contacts-hover-tab__panel">Открыть страницу Vkontakte</span>
+								</a>
+							</div>
+						</section>
+						<?php elseif ($isPrivacyPolicyPage) : ?>
+						<?php include __DIR__ . '/html/privacy-policy.php'; ?>
+						<?php else : ?>
+						<jdoc:include type="component" />
+						<?php endif; ?>
+					</div>
+					<div class="sbar"<?php echo ($isApplicationGuidePage || $isContactsPage || $isPrivacyPolicyPage) ? ' style="display:none;"' : ''; ?>>
+						<jdoc:include type="modules" name="sidebar" style="html5" />
+					</div>
+				</div>
+			</div>
+		</section>
+	<?php endif; ?>
+	<?php if ($page === 'home') : ?>
+		<?php
+		$homeSearchBase = rtrim(Uri::root(true), '/');
+		$homeSearchLinks = [
+			['label' => 'Поиск мастера', 'href' => $homeSearchBase . '/poisk-spetsialistov'],
+			['label' => 'Поиск акций', 'href' => $homeSearchBase . '/poisk-aktsij'],
+			['label' => 'Поиск курсов', 'href' => $homeSearchBase . '/kurs'],
+			['label' => 'Поиск моделей', 'href' => $homeSearchBase . '/modeli'],
+		];
+		?>
+		<section class="search__specialists search__section">
+			<style>
+				body#home .search__specialists .search__coll-left {
+					width: 100%;
+					float: none;
+					position: relative;
+					z-index: 2;
+				}
+				body#home .home-search-links {
+					display: flex;
+					flex-direction: row;
+					flex-wrap: wrap;
+					align-items: center;
+					gap: 12px;
+					list-style: none;
+					margin: 0;
+					padding: 0;
+				}
+				body#home .home-search-links li {
+					margin: 0;
+					padding: 0;
+				}
+				body#home .home-search-links a.homepage-link-btn {
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					box-sizing: border-box;
+					width: auto;
+					min-width: 142px;
+					height: 42px;
+					padding: 0 24px;
+					margin: 0;
+					background: transparent;
+					border: 1px solid #f9ce54;
+					border-radius: 25px;
+					box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+					color: #000;
+					font-family: "GothamPro-Bold", sans-serif;
+					font-size: 13px;
+					font-weight: 500;
+					letter-spacing: 1.08px;
+					line-height: 1.2;
+					text-align: center;
+					text-decoration: none;
+					cursor: pointer;
+				}
+				body#home .home-search-links a.homepage-link-btn:hover,
+				body#home .home-search-links a.homepage-link-btn:focus {
+					background: transparent;
+					color: #000;
+					text-decoration: none;
+				}
+				@media (max-width: 768px) {
+					body#home .home-search-links {
+						flex-direction: column;
+						align-items: center;
+					}
+					body#home .search__specialists .search__coll-left {
+						display: flex;
+						justify-content: center;
+					}
+				}
+				@media (min-width: 769px) {
+					body#home .home-search-links,
+					body#home .home-search-links a.homepage-link-btn {
+						display: none;
+					}
+				}
+			</style>
+			<div class="container">
+				<div class="search__coll-left">
+					<ul class="home-search-links">
+						<?php foreach ($homeSearchLinks as $homeSearchLink) : ?>
+						<li>
+							<a class="homepage-link-btn" href="<?php echo htmlspecialchars($homeSearchLink['href']); ?>"><?php echo htmlspecialchars($homeSearchLink['label']); ?></a>
+						</li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+				<p class="search__text"></p>
+				<div class="clearFloat"></div>
+			</div>
+		</section>
+		<section class="search__catalog">
+			<div class="container">
+				<h2>поиск по услугам</h2>
+				<span class="service__sub"></span>
+				<?php
+				$serviceLinks = [
+					16 => 'Волосы',
+					10 => 'Ресницы',
+					18 => 'Ногти',
+					12 => 'Косметология',
+					13 => 'Эпиляция',
+					14 => 'Визаж',
+				];
+				$serviceImages = ['service1.png', 'service2.png', 'service3.png', 'service4.png', 'service5.png', 'service6.png'];
+				$si = 0;
+				?>
+				<div>
+					<?php foreach ($serviceLinks as $catId => $label) : ?>
+					<?php $serviceUrl = Route::_('index.php?option=com_poisk&view=list&cat_id=' . (int) $catId); ?>
+					<div class="service__item">
+						<a class="service__img-link" href="<?php echo $serviceUrl; ?>">
+							<div style="background-image: url('/images/<?php echo $serviceImages[$si]; ?>')" class="service__img"><div></div></div>
+						</a>
+						<a class="service__title" href="<?php echo $serviceUrl; ?>"><?php echo htmlspecialchars($label); ?></a>
+					</div>
+					<?php $si++; endforeach; ?>
+					<div class="clearFloat"></div>
+				</div>
+			</div>
+		</section>
+	<?php endif; ?>
+	<?php if ($this->countModules('addmaster')) : ?>
+		<section class="info__box">
+			<div class="container">
+				<jdoc:include type="modules" name="addmaster" style="none" />
+			</div>
+		</section>
+	<?php endif; ?>
+	<?php if ($this->countModules('loadapps')) : ?>
+		<section class="app">
+			<div class="container">
+				<jdoc:include type="modules" name="loadapps" style="none" />
+				<div class="clearFloat"></div>
+			</div>
+		</section>
+	<?php endif; ?>
+	<?php if ($this->countModules('topposts')) : ?>
+		<section class="news">
+			<div class="container2">
+				<jdoc:include type="modules" name="topposts" style="none" />
+			</div>
+		</section>
+	<?php endif; ?>
+	<footer class="footer">
+		<div class="container">
+			<jdoc:include type="modules" name="bottommenu" style="none" />
+			<div class="clearFloat"></div>
+		</div>
+		<div class="container">
+			<span class="copy">@ Все права защищены. 2019-<?php echo date('Y'); ?></span>
+		</div>
+	</footer>
+	<jdoc:include type="modules" name="debug" style="none" />
+	<jdoc:include type="scripts" />
+	<?php
+	$pushnotifyUser = $app->getIdentity();
+	$pushnotifyLoggedIn = $pushnotifyUser && (int) $pushnotifyUser->id > 0;
+	$pushnotifyBase = $pushnotifyLoggedIn ? Route::_('index.php?option=com_pushnotify') : '';
+	$pushnotifySwUrl = rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260924a';
+	$pushnotifyRoot = rtrim(Uri::root(), '/');
+	$pushnotifyTokenName = $pushnotifyLoggedIn ? Session::getFormToken() : '';
+	$pushnotifyTokenValue = $pushnotifyLoggedIn ? '1' : '';
+	$pushnotifyFirebaseConfig = [];
+	if ($pushnotifyLoggedIn && is_file(JPATH_ROOT . '/configuration/firebase-config.php')) {
+		$pushnotifyFirebaseConfig = (include JPATH_ROOT . '/configuration/firebase-config.php');
+		if (!is_array($pushnotifyFirebaseConfig)) $pushnotifyFirebaseConfig = [];
+	}
+	$pushnotifyHasFirebase = $pushnotifyLoggedIn && !empty($pushnotifyFirebaseConfig['apiKey']);
+	$pushnotifyIsLkProfile = $option === 'com_users' && $view === 'profile';
+	$pushnotifyZapisi = $input->getCmd('zapisi', '');
+	$pushnotifyUserIsMaster = false;
+	if ($pushnotifyLoggedIn) {
+		$pushnotifyGroups = $pushnotifyUser->getAuthorisedGroups();
+		$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+		if (is_file($masterHelper)) {
+			require_once $masterHelper;
+		}
+		$pushnotifyUserIsMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+			? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($pushnotifyGroups)
+			: (in_array(3, array_map('intval', (array) $pushnotifyGroups), true) || in_array(8, array_map('intval', (array) $pushnotifyGroups), true));
+	}
+	$pushnotifyIsZapisiTab = $pushnotifyIsLkProfile && in_array($pushnotifyZapisi, ['day', 'week', 'month'], true);
+	$pushnotifyIsClientsPage = ($option === 'com_orders' && $view === 'orders' && $layout === 'clients')
+		|| ($pushnotifyIsZapisiTab && $pushnotifyUserIsMaster);
+	?>
+	<?php if ($pushnotifyHasFirebase) : ?>
+	<script src="<?php echo $pushnotifyRoot; ?>/media/com_pushnotify/js/push-notifications.js"></script>
+	<script>
+		window.PUSHNOTIFY_GLOBAL = true;
+		window.PUSHNOTIFY_BASE = <?php echo json_encode($pushnotifyBase); ?>;
+		window.PUSHNOTIFY_SW_URL = <?php echo json_encode($pushnotifySwUrl); ?>;
+		window.PUSHNOTIFY_TOKEN_NAME = <?php echo json_encode($pushnotifyTokenName); ?>;
+		window.PUSHNOTIFY_TOKEN_VALUE = <?php echo json_encode($pushnotifyTokenValue); ?>;
+		window.PUSHNOTIFY_IS_LK_PROFILE = <?php echo $pushnotifyIsLkProfile ? 'true' : 'false'; ?>;
+		window.PUSHNOTIFY_IS_CLIENTS_PAGE = <?php echo $pushnotifyIsClientsPage ? 'true' : 'false'; ?>;
+		window.PUSHNOTIFY_IS_MASTER = <?php echo $pushnotifyUserIsMaster ? 'true' : 'false'; ?>;
+		window.FIREBASE_VAPID_KEY = <?php echo json_encode($pushnotifyFirebaseConfig['vapidKey'] ?? ''); ?>;
+		window.FIREBASE_CONFIG = <?php echo json_encode([
+			'apiKey' => $pushnotifyFirebaseConfig['apiKey'] ?? '',
+			'authDomain' => $pushnotifyFirebaseConfig['authDomain'] ?? '',
+			'projectId' => $pushnotifyFirebaseConfig['projectId'] ?? '',
+			'storageBucket' => $pushnotifyFirebaseConfig['storageBucket'] ?? '',
+			'messagingSenderId' => $pushnotifyFirebaseConfig['messagingSenderId'] ?? '',
+			'appId' => $pushnotifyFirebaseConfig['appId'] ?? '',
+		]); ?>;
+	</script>
+	<div class="modal fade" id="pushnotify-prompt-modal" tabindex="-1" role="dialog" aria-labelledby="pushnotify-prompt-title" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="pushnotify-prompt-title">Уведомления</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Закрыть"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<p>Получайте напоминания о записях и приёмах. Включить push-уведомления?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal" id="pushnotify-prompt-later">Позже</button>
+					<button type="button" class="btn btn-primary" id="pushnotify-prompt-subscribe">Включить</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+		(function() {
+			var modalEl = document.getElementById('pushnotify-prompt-modal');
+			var laterBtn = document.getElementById('pushnotify-prompt-later');
+			var subscribeBtn = document.getElementById('pushnotify-prompt-subscribe');
+			var titleEl = document.getElementById('pushnotify-prompt-title');
+			var bodyEl = modalEl ? modalEl.querySelector('.modal-body p') : null;
+			if (!modalEl || !window.PUSHNOTIFY_BASE || !('Notification' in window)) return;
+			var base = window.PUSHNOTIFY_BASE;
+			var sep = base.indexOf('?') === -1 ? '?' : '&';
+			var tokenName = window.PUSHNOTIFY_TOKEN_NAME || '';
+			var tokenValue = window.PUSHNOTIFY_TOKEN_VALUE || '1';
+			var subscribeBtnText = subscribeBtn ? subscribeBtn.textContent : 'Включить';
+			var defaultTitle = titleEl ? titleEl.textContent : 'Уведомления';
+			var defaultBody = bodyEl ? bodyEl.textContent : 'Получайте напоминания о записях и приёмах. Включить push-уведомления?';
+			var activePromptKey = '';
+			var activePromptRemember = true;
+			var isLoggedIn = <?php echo $app->getIdentity()->guest ? 'false' : 'true'; ?>;
+			var isProfilePage = window.PUSHNOTIFY_IS_LK_PROFILE === true;
+			var isClientsPage = window.PUSHNOTIFY_IS_CLIENTS_PAGE === true;
+			var prefsUrl = base + sep + 'task=display.getPreferences&format=json&' + encodeURIComponent(tokenName) + '=' + encodeURIComponent(tokenValue);
+			function getStorageKey(reason) {
+				return 'pushnotify_prompt_seen:' + reason;
+			}
+			function markPromptHandled() {
+				if (!activePromptKey) return;
+				try { localStorage.setItem(getStorageKey(activePromptKey), '1'); } catch (e) {}
+			}
+			function wasPromptHandled(reason) {
+				try { return localStorage.getItem(getStorageKey(reason)) === '1'; } catch (e) { return false; }
+			}
+			function setPromptContent(opts) {
+				var options = opts || {};
+				if (titleEl) titleEl.textContent = options.title || defaultTitle;
+				if (bodyEl) bodyEl.textContent = options.body || defaultBody;
+			}
+			function normalizePromptOptions(reasonOrOptions) {
+				if (typeof reasonOrOptions === 'string') {
+					return { reason: reasonOrOptions };
+				}
+				return reasonOrOptions || {};
+			}
+			function getReasonDefaults(reason) {
+				if (reason === 'clients_first_visit') {
+					return {
+						title: 'Уведомления',
+						body: 'Чтобы не пропускать записи клиентов включите уведомления.'
+					};
+				}
+				if (reason === 'bell_click') {
+					return {
+						title: 'Уведомления',
+						body: 'Чтобы получать новые записи и напоминания, включите push-уведомления.'
+					};
+				}
+				if (reason === 'booking_success_modal') {
+					return {
+						title: 'Уведомления',
+						body: 'Чтобы не пропустить предстоящую запись, включите push-уведомления.'
+					};
+				}
+				return {
+					title: defaultTitle,
+					body: defaultBody
+				};
+			}
+			function buildPromptReason() {
+				try {
+					var url = new URL(window.location.href);
+					if (url.searchParams.get('booking_success') === '1') {
+						return Promise.resolve('booking_success');
+					}
+				} catch (e) {}
+				if (!isLoggedIn) {
+					return Promise.resolve('');
+				}
+				if (isClientsPage) {
+					return Promise.resolve('clients_first_visit');
+				}
+				if (isProfilePage) {
+					return Promise.resolve('lk_first_visit');
+				}
+				return Promise.resolve('');
+			}
+			function hidePrompt(remember) {
+				if (remember !== false && activePromptRemember !== false) {
+					markPromptHandled();
+				}
+				$(modalEl).modal('hide');
+			}
+			function setSubscribeLoading(isLoading) {
+				if (!subscribeBtn) return;
+				if (isLoading) {
+					subscribeBtn.disabled = true;
+					subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Подключаем...';
+				} else {
+					subscribeBtn.disabled = false;
+					subscribeBtn.textContent = subscribeBtnText;
+				}
+			}
+			function fetchPreferences() {
+				return fetch(prefsUrl, { credentials: 'same-origin' }).then(function(r) { return r.json(); });
+			}
+			function canShowPrompt(prefs, force) {
+				if (!prefs || !prefs.success) return false;
+				if (Notification.permission === 'denied') return false;
+				if (force) {
+					return Notification.permission === 'default' || !prefs.subscribed || prefs.notifications_enabled === false;
+				}
+				return Notification.permission === 'default' || (Notification.permission === 'granted' && (!prefs.subscribed || prefs.notifications_enabled === false));
+			}
+			function openPrompt(reasonOrOptions) {
+				var options = normalizePromptOptions(reasonOrOptions);
+				var reason = String(options.reason || '').trim();
+				if (!reason) return Promise.resolve(false);
+				return fetchPreferences().then(function(prefs) {
+					if (!canShowPrompt(prefs, !!options.force)) return false;
+					if (!options.force && options.remember !== false && wasPromptHandled(reason)) return false;
+					var defaults = getReasonDefaults(reason);
+					activePromptKey = reason;
+					activePromptRemember = options.remember !== false;
+					setPromptContent({
+						title: options.title || defaults.title,
+						body: options.body || defaults.body
+					});
+					$(modalEl).modal('show');
+					return true;
+				}).catch(function() {
+					return false;
+				});
+			}
+			window.ViglingPushPrompt = {
+				show: openPrompt,
+				getPreferences: fetchPreferences
+			};
+			Promise.all([
+				fetchPreferences().catch(function(){ return null; }),
+				buildPromptReason()
+			]).then(function(results) {
+				var prefs = results[0];
+				var promptReason = results[1] || '';
+				if (!prefs || !prefs.success) return;
+				if (!promptReason || wasPromptHandled(promptReason)) return;
+				if (Notification.permission === 'denied') return;
+				var needPrompt = Notification.permission === 'default' || (Notification.permission === 'granted' && (!prefs.subscribed || prefs.notifications_enabled === false));
+				if (!needPrompt) return;
+				activePromptKey = promptReason;
+				activePromptRemember = true;
+				setPromptContent(getReasonDefaults(promptReason));
+				$(modalEl).modal('show');
+			}).catch(function(){});
+			if (laterBtn) laterBtn.addEventListener('click', function() { hidePrompt(true); });
+			modalEl.addEventListener('hidden.bs.modal', function() {
+				if (activePromptRemember !== false) {
+					markPromptHandled();
+				}
+				activePromptKey = '';
+				activePromptRemember = true;
+				setPromptContent();
+			});
+			function sendToken(token) {
+				if (!token) return;
+				var fd = new FormData();
+				fd.append(window.PUSHNOTIFY_TOKEN_NAME, window.PUSHNOTIFY_TOKEN_VALUE);
+				fd.append('token', token);
+				fd.append('device_type', /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) ? 'android' : 'desktop');
+				fd.append('browser', navigator.userAgent.indexOf('Chrome') >= 0 ? 'chrome' : (navigator.userAgent.indexOf('Firefox') >= 0 ? 'firefox' : (navigator.userAgent.indexOf('Edg') >= 0 ? 'edge' : '')));
+				return fetch(base + sep + 'task=display.subscribe&format=json', { method: 'POST', body: fd, credentials: 'same-origin' }).catch(function(){});
+			}
+			function loadFirebaseAndSubscribe() {
+				function requestTokenWithCurrentFirebase() {
+					return navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
+						var app = window.firebase.app();
+						return app.messaging().getToken({ vapidKey: window.FIREBASE_VAPID_KEY || undefined, serviceWorkerRegistration: reg });
+					});
+				}
+				if (window.firebase && window.firebase.messaging) {
+					try {
+						var a = window.firebase.app();
+						if (!a || !a.name) window.firebase.initializeApp(window.FIREBASE_CONFIG);
+					} catch (e) { window.firebase.initializeApp(window.FIREBASE_CONFIG); }
+					return requestTokenWithCurrentFirebase();
+				}
+				return new Promise(function(resolve, reject) {
+					var s1 = document.createElement('script');
+					s1.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+					s1.onload = function() {
+						var s2 = document.createElement('script');
+						s2.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js';
+						s2.onload = function() {
+							try { var a = window.firebase.app(); if (!a || !a.name) window.firebase.initializeApp(window.FIREBASE_CONFIG); } catch (e) { window.firebase.initializeApp(window.FIREBASE_CONFIG); }
+							requestTokenWithCurrentFirebase().then(resolve).catch(reject);
+						};
+						s2.onerror = reject;
+						document.head.appendChild(s2);
+					};
+					s1.onerror = reject;
+					document.head.appendChild(s1);
+				});
+			}
+			function subscribeWithRetry(maxAttempts) {
+				var attempt = 0;
+				function run() {
+					attempt++;
+					return loadFirebaseAndSubscribe().then(function(token) {
+						if (!token) {
+							throw new Error('empty-token');
+						}
+						return Promise.resolve(sendToken(token)).then(function() { return true; });
+					}).catch(function() {
+						if (attempt >= maxAttempts) return false;
+						return new Promise(function(resolve) {
+							setTimeout(function() { resolve(run()); }, 1400 * attempt);
+						});
+					});
+				}
+				return run();
+			}
+			if (subscribeBtn) subscribeBtn.addEventListener('click', function() {
+				setSubscribeLoading(true);
+				Notification.requestPermission().then(function(perm) {
+					if (perm === 'granted') {
+						return subscribeWithRetry(3).catch(function(){});
+					}
+					return Promise.resolve(false);
+				}).catch(function(){}).finally(function() {
+					setSubscribeLoading(false);
+					hidePrompt(true);
+				});
+			});
+		})();
+	</script>
+	<script>
+		(function() {
+			if (!window.PUSHNOTIFY_GLOBAL || !window.PUSHNOTIFY_BASE || !('Notification' in window) || Notification.permission !== 'granted') return;
+			function pushnotifySendToken(token) {
+				if (!token) return;
+				var base = window.PUSHNOTIFY_BASE;
+				var sep = base.indexOf('?') === -1 ? '?' : '&';
+				var fd = new FormData();
+				fd.append(window.PUSHNOTIFY_TOKEN_NAME, window.PUSHNOTIFY_TOKEN_VALUE);
+				fd.append('token', token);
+				fd.append('device_type', /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) ? 'android' : 'desktop');
+				fd.append('browser', navigator.userAgent.indexOf('Chrome') >= 0 ? 'chrome' : (navigator.userAgent.indexOf('Firefox') >= 0 ? 'firefox' : (navigator.userAgent.indexOf('Edg') >= 0 ? 'edge' : '')));
+				fetch(base + sep + 'task=display.subscribe&format=json', { method: 'POST', body: fd, credentials: 'same-origin' }).catch(function(){});
+			}
+			function pushnotifyRefresh() {
+				if (!window.firebase || !window.FIREBASE_CONFIG) {
+					var load = function(cb) {
+						if (window.firebase && window.firebase.messaging) return cb();
+						var s1 = document.createElement('script');
+						s1.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+						s1.onload = function() {
+							var s2 = document.createElement('script');
+							s2.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js';
+							s2.onload = function() {
+								try {
+									var a = window.firebase.app();
+									if (!a || !a.name) window.firebase.initializeApp(window.FIREBASE_CONFIG);
+								} catch (e) {
+									window.firebase.initializeApp(window.FIREBASE_CONFIG);
+								}
+								cb();
+							};
+							document.head.appendChild(s2);
+						};
+						document.head.appendChild(s1);
+					};
+					load(function() {
+						navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
+							var app;
+							try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
+							return app.messaging().getToken({
+								vapidKey: window.FIREBASE_VAPID_KEY || undefined,
+								serviceWorkerRegistration: reg
+							});
+						}).then(pushnotifySendToken).catch(function(){});
+					});
+					return;
+				}
+				navigator.serviceWorker.register(window.PUSHNOTIFY_SW_URL, { scope: '/', updateViaCache: 'none' }).then(function(reg) {
+					var app;
+					try { app = window.firebase.app(); } catch (e) { app = window.firebase.initializeApp(window.FIREBASE_CONFIG); }
+					return app.messaging().getToken({
+						vapidKey: window.FIREBASE_VAPID_KEY || undefined,
+						serviceWorkerRegistration: reg
+					});
+				}).then(pushnotifySendToken).catch(function(){});
+			}
+			document.addEventListener('visibilitychange', function() {
+				if (document.visibilityState === 'visible') pushnotifyRefresh();
+			});
+			setInterval(pushnotifyRefresh, 25 * 60 * 1000);
+			setTimeout(pushnotifyRefresh, 3000);
+		})();
+	</script>
+	<?php endif; ?>
+	<script>
+		if ('serviceWorker' in navigator) {
+			var u = '<?php echo rtrim(Uri::root(), '/') . '/firebase-messaging-sw.js?v=20260924a'; ?>';
+			var viglingAudio = null;
+			var viglingUnlockAudio = function () {
+				try {
+					var Ctx = window.AudioContext || window.webkitAudioContext;
+					if (!Ctx) return;
+					if (!viglingAudio) viglingAudio = new Ctx();
+					if (viglingAudio.state === 'suspended') viglingAudio.resume();
+				} catch (e) {}
+			};
+			window.addEventListener('pointerdown', viglingUnlockAudio, { passive: true });
+			var viglingBeep = function () {
+				viglingUnlockAudio();
+				if (!viglingAudio) return;
+				var play = function () {
+					try {
+						var osc = viglingAudio.createOscillator();
+						var gain = viglingAudio.createGain();
+						osc.type = 'sine';
+						osc.frequency.value = 880;
+						osc.connect(gain);
+						gain.connect(viglingAudio.destination);
+						var t = viglingAudio.currentTime;
+						gain.gain.setValueAtTime(0.0001, t);
+						gain.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+						gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+						osc.start(t);
+						osc.stop(t + 0.36);
+					} catch (e) {}
+				};
+				if (viglingAudio.state === 'suspended') viglingAudio.resume().then(play).catch(function () {});
+				else play();
+			};
+			var viglingBanner = function (title, body) {
+				var el = document.getElementById('vigling-push-banner');
+				if (!el) {
+					el = document.createElement('div');
+					el.id = 'vigling-push-banner';
+					el.setAttribute('role', 'status');
+					el.style.cssText = 'position:fixed;z-index:2147483000;left:12px;right:12px;top:max(12px, env(safe-area-inset-top));background:#f9ce54;color:#111;border-radius:14px;padding:12px 14px;box-shadow:0 10px 28px rgba(0,0,0,.22);font-size:14px;line-height:1.35;';
+					document.body.appendChild(el);
+				}
+				el.replaceChildren();
+				var heading = document.createElement('div');
+				heading.style.fontWeight = '700';
+				heading.textContent = title || 'Уведомление';
+				el.appendChild(heading);
+				if (body) {
+					var text = document.createElement('div');
+					text.style.whiteSpace = 'pre-line';
+					text.textContent = body;
+					el.appendChild(text);
+				}
+				el.style.display = 'block';
+				clearTimeout(el._hideTimer);
+				el._hideTimer = setTimeout(function () { el.style.display = 'none'; }, 8000);
+			};
+			var registerSw = function () {
+				navigator.serviceWorker.getRegistrations().then(function (regs) {
+					return Promise.all(regs.map(function (reg) {
+						var scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || '';
+						if (scriptUrl.indexOf('v=20260924a') === -1) return reg.unregister();
+					}));
+				}).catch(function () {}).then(function () {
+					return navigator.serviceWorker.register(u, { scope: '/', updateViaCache: 'none' });
+				}).then(function (reg) {
+					if (reg && reg.update) return reg.update();
+				}).catch(function () {});
+			};
+			registerSw();
+			window.addEventListener('load', registerSw);
+			navigator.serviceWorker.addEventListener('message', function (event) {
+				var data = event.data || {};
+				if (data.type !== 'vigling-push-sound') return;
+				viglingBanner(data.title, data.body);
+				viglingBeep();
+			});
+		}
+		(function(){
+			function formatTimeUtc(el) {
+				var iso = el && el.getAttribute('data-time-utc');
+				if (!iso) return;
+				try {
+					var d = new Date(iso);
+					if (!isNaN(d.getTime())) el.textContent = d.toLocaleString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+				} catch (e) {}
+			}
+			document.querySelectorAll('.lk-time-utc[data-time-utc]').forEach(formatTimeUtc);
+		})();
+	</script>
+	<script>
+		(function() {
+			var mobileHeader = document.getElementById('header-mobile');
+			var toggle = document.getElementById('header-mobile-toggle');
+			var panel = document.getElementById('header-mobile-panel');
+			var overlay = document.getElementById('header-mobile-overlay');
+			var closeBtn = document.getElementById('header-mobile-close');
+			if (!mobileHeader || !panel) return;
+			function openMenu() {
+				mobileHeader.classList.add('menu-open');
+				panel.setAttribute('aria-hidden', 'false');
+				if (overlay) overlay.setAttribute('aria-hidden', 'false');
+				if (toggle) toggle.setAttribute('aria-expanded', 'true');
+			}
+			function closeMenu() {
+				mobileHeader.classList.remove('menu-open');
+				panel.setAttribute('aria-hidden', 'true');
+				if (overlay) overlay.setAttribute('aria-hidden', 'true');
+				if (toggle) toggle.setAttribute('aria-expanded', 'false');
+			}
+			if (toggle) toggle.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); mobileHeader.classList.contains('menu-open') ? closeMenu() : openMenu(); });
+			if (closeBtn) closeBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); closeMenu(); });
+			if (overlay) overlay.addEventListener('click', function(e) { e.preventDefault(); closeMenu(); });
+			panel.querySelectorAll('.nav-item.parent').forEach(function(li) {
+				li.classList.add('is-open');
+			});
+			panel.querySelectorAll('.mod-menu__sub').forEach(function(submenu) {
+				submenu.setAttribute('aria-hidden', 'false');
+			});
+			panel.querySelectorAll('.mod-menu__toggle-sub').forEach(function(btn) {
+				btn.setAttribute('aria-expanded', 'true');
+			});
+			panel.querySelectorAll('.nav-item a').forEach(function(a) {
+				a.addEventListener('click', closeMenu);
+			});
+		})();
+	</script>
+		<style>
+		.pwa-install-page {
+			position: fixed;
+			inset: 0;
+			z-index: 110000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 18px;
+		}
+		.pwa-install-backdrop {
+			position: absolute;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.42);
+		}
+		.pwa-install-card {
+			position: relative;
+			background: #fff;
+			border: 1px solid #ececec;
+			border-radius: 12px;
+			padding: 22px;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+			width: min(92vw, 760px);
+			z-index: 1;
+		}
+		.pwa-install-close {
+			position: absolute;
+			top: 10px;
+			right: 14px;
+			border: 0;
+			background: transparent;
+			font-size: 40px;
+			line-height: 1;
+			color: #777;
+			cursor: pointer;
+			padding: 0;
+		}
+		.pwa-install-close:hover { color: #111; }
+		.pwa-install-card h1 {
+			margin: 0 40px 12px 0;
+			font-size: 30px;
+			line-height: 1.2;
+			font-family: "GothamPro-Bold";
+		}
+	.pwa-install-card p {
+		margin: 0 0 16px;
+		color: #444;
+		font-size: 16px;
+		line-height: 1.45;
+	}
+		.pwa-install-actions {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			flex-wrap: wrap;
+		}
+		.pwa-install-actions #pwa-install-btn {
+			margin-top: 0;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.pwa-install-status { margin-top: 12px; min-height: 22px; color: #444; }
+		@media (max-width: 768px) {
+			.pwa-install-page { padding: 12px; align-items: flex-end; }
+			.pwa-install-card { padding: 16px; border-radius: 10px; width: 100%; }
+			.pwa-install-card h1 { font-size: 22px; margin-right: 34px; }
+			.pwa-install-card p { font-size: 14px; }
+			.pwa-install-close { top: 8px; right: 12px; font-size: 34px; }
+			.pwa-install-actions {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 10px;
+			}
+			.pwa-install-actions .btn__time-zapis {
+				margin-top: 0 !important;
+				margin-left: 0 !important;
+				margin-right: 0 !important;
+			}
+			.pwa-install-actions #pwa-install-btn {
+				width: 100%;
+				justify-content: center;
+			}
+		}
+		</style>
+		<script>
+	(function() {
+		var deferredPrompt = null;
+		var installInProgress = false;
+
+		window.addEventListener('beforeinstallprompt', function(e) {
+			e.preventDefault();
+			deferredPrompt = e;
+			window.__viglingBeforeInstallPrompt = e;
+			try { window.dispatchEvent(new CustomEvent('vigling:pwa-ready')); } catch (err) {}
+		});
+
+		window.ViglingPwaInstall = {
+			isReady: function() { return !!deferredPrompt; },
+			requestInstall: function() {
+				var promptEvent = deferredPrompt;
+				if (!promptEvent || installInProgress) {
+					return Promise.resolve({ success: false, reason: 'not-ready' });
+				}
+				installInProgress = true;
+				return promptEvent.prompt()
+					.then(function() { return promptEvent.userChoice; })
+					.then(function(choice) {
+						installInProgress = false;
+						deferredPrompt = null;
+						window.__viglingBeforeInstallPrompt = null;
+						return { success: choice && choice.outcome === 'accepted', choice: choice };
+					})
+					.catch(function(error) {
+						installInProgress = false;
+						return Promise.reject(error);
+					});
+			}
+		};
+
+		window.addEventListener('appinstalled', function() {
+			deferredPrompt = null;
+			window.__viglingBeforeInstallPrompt = null;
+		});
+
+			function initInstallPage() {
+				var btn = document.getElementById('pwa-install-btn');
+				var statusEl = document.getElementById('pwa-install-status');
+				var overlay = document.getElementById('pwa-install-overlay');
+				if (!btn || !statusEl || !overlay) return;
+				var installFinished = false;
+
+				function closeOverlay() {
+					window.location.href = <?php echo json_encode(rtrim(Uri::root(), '/') . '/'); ?>;
+				}
+
+				function setStatus(text) { statusEl.textContent = text || ''; }
+				function markInstalled() {
+					if (installFinished) return;
+					installFinished = true;
+					setStatus('Приложение уже установлено.');
+				}
+				function isIos() {
+					var ua = String(navigator.userAgent || '');
+					return /iPhone|iPad|iPod/i.test(ua)
+						|| (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+				}
+				function waitForPrompt(timeoutMs) {
+					if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+						return Promise.resolve(true);
+					}
+					return new Promise(function(resolve) {
+						var done = false;
+						function finish(ok) {
+							if (done) return;
+							done = true;
+							window.removeEventListener('vigling:pwa-ready', onReady);
+							resolve(!!ok);
+						}
+						function onReady() { finish(true); }
+						window.addEventListener('vigling:pwa-ready', onReady);
+						window.setTimeout(function() {
+							finish(window.ViglingPwaInstall && window.ViglingPwaInstall.isReady());
+						}, timeoutMs);
+					});
+				}
+				function unavailableMessage() {
+					if (isIos()) {
+						return 'На iPhone/iPad: откройте сайт в Safari → Поделиться → На экран «Домой».';
+					}
+					return 'Если окно установки не появилось: меню Chrome (⋮) → «Установить приложение» или «Добавить на главный экран». Если ярлык уже есть, удалите его и установите снова. Chrome предлагает установку после нескольких секунд на сайте.';
+				}
+				function tryInstall() {
+					if (installFinished) {
+						return;
+					}
+					if (isIos()) {
+						setStatus(unavailableMessage());
+						return;
+					}
+					function runPrompt() {
+						setStatus('Ожидаем подтверждение установки...');
+						window.ViglingPwaInstall.requestInstall().then(function(res) {
+							if (res && res.success) {
+								markInstalled();
+							} else {
+								setStatus('Установка отменена.');
+							}
+						}).catch(function() {
+							setStatus('Не удалось запустить установку. Попробуйте меню браузера (⋮) → «Установить приложение».');
+						});
+					}
+					if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+						runPrompt();
+						return;
+					}
+					setStatus('Подготовка установки, подождите несколько секунд…');
+					waitForPrompt(8000).then(function(ready) {
+						if (installFinished) return;
+						if (ready && window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+							runPrompt();
+							return;
+						}
+						setStatus(unavailableMessage());
+					});
+				}
+
+				btn.addEventListener('click', function() { tryInstall(); });
+				overlay.querySelectorAll('[data-close-pwa-install="1"]').forEach(function(el) {
+					el.addEventListener('click', function() { closeOverlay(); });
+				});
+				document.addEventListener('keydown', function(e) {
+					if (e.key === 'Escape') {
+						closeOverlay();
+					}
+				});
+				window.addEventListener('appinstalled', function() {
+					markInstalled();
+				});
+				window.addEventListener('vigling:pwa-ready', function() {
+					if (installFinished) return;
+					setStatus('Установка доступна. Нажмите кнопку.');
+				});
+				if (isIos()) {
+					setStatus('На iPhone откройте этот сайт в Safari и добавьте на экран «Домой» через Поделиться.');
+				} else if (window.ViglingPwaInstall && window.ViglingPwaInstall.isReady()) {
+					setStatus('Установка доступна. Нажмите кнопку.');
+				} else {
+					setStatus('');
+					waitForPrompt(8000).then(function(ready) {
+						if (installFinished) return;
+						if (ready) {
+							setStatus('Установка доступна. Нажмите кнопку.');
+						}
+					});
+				}
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			initInstallPage();
+		});
+	})();
+	</script>
+	<style>
+	.app-install-guide {
+		padding: 8px 0 24px;
+	}
+	.contacts-settings-page {
+		padding: 8px 0 24px;
+	}
+	.contacts-settings-page h1 {
+		margin: 0 0 14px;
+		font-size: 36px;
+		line-height: 1.2;
+		font-family: "GothamPro-Bold";
+	}
+	.contacts-hover-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin: 18px 0 0;
+	}
+	.contacts-hover-tab {
+		display: block;
+		box-sizing: border-box;
+		min-width: 168px;
+		max-width: 280px;
+		padding: 0 18px;
+		border: 1px solid #f9ce54;
+		border-radius: 22px;
+		background: #fff;
+		color: #111;
+		text-align: center;
+		text-decoration: none;
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+		overflow: hidden;
+	}
+	.contacts-hover-tab:hover,
+	.contacts-hover-tab:focus {
+		background: #fff;
+		color: #111;
+		text-decoration: none;
+		outline: none;
+	}
+	.contacts-hover-tab__label {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		height: 44px;
+		font-family: "GothamPro-Bold", sans-serif;
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: 0.3px;
+		text-align: center;
+	}
+	.contacts-hover-tab__panel {
+		display: block;
+		width: 100%;
+		max-height: 0;
+		opacity: 0;
+		overflow: hidden;
+		font-size: 13px;
+		line-height: 1.4;
+		color: #444;
+		text-align: center;
+		transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+	}
+	.contacts-hover-tab:hover .contacts-hover-tab__panel,
+	.contacts-hover-tab:focus .contacts-hover-tab__panel,
+	.contacts-hover-tab:focus-within .contacts-hover-tab__panel {
+		max-height: 72px;
+		opacity: 1;
+		margin-bottom: 12px;
+	}
+	@media (max-width: 991px) {
+		.contacts-settings-page h1 {
+			font-size: 30px;
+		}
+	}
+	.app-install-guide h1 {
+		margin: 0 0 10px;
+		font-size: 36px;
+		line-height: 1.2;
+		font-family: "GothamPro-Bold";
+	}
+	.app-install-guide__lead {
+		margin: 0 0 22px;
+		font-size: 18px;
+		color: #444;
+	}
+	.app-install-guide__actions {
+		margin: 0 0 18px;
+	}
+	.app-install-guide__install-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-top: 0 !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		min-height: 52px;
+		padding: 0 24px;
+		text-decoration: none !important;
+	}
+	.app-install-guide__grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 18px;
+	}
+	.app-install-guide__card {
+		background: #fff;
+		border: 1px solid #ececec;
+		border-radius: 14px;
+		padding: 18px;
+		box-shadow: 0 8px 22px rgba(0, 0, 0, .05);
+	}
+	.app-install-guide__card h2 {
+		margin: 0 0 10px;
+		font-size: 24px;
+		line-height: 1.2;
+	}
+	.app-install-guide__card ol {
+		margin: 0 0 14px;
+		padding-left: 22px;
+	}
+	.app-install-guide__card ol li {
+		margin: 0 0 8px;
+		line-height: 1.4;
+	}
+	.app-install-guide__card img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border-radius: 10px;
+		border: 1px solid #efefef;
+		background: #fafafa;
+	}
+	.app-install-guide__image-link {
+		display: block;
+	}
+	@media (max-width: 991px) {
+		.app-install-guide h1 {
+			font-size: 30px;
+		}
+		.app-install-guide__lead {
+			font-size: 16px;
+		}
+		.app-install-guide__actions {
+			display: flex;
+			justify-content: center;
+		}
+		.app-install-guide__grid {
+			grid-template-columns: 1fr;
+		}
+	}
+	.vig-notify-root {
+		position: fixed;
+		top: 14px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 100000;
+		width: min(92vw, 560px);
+		pointer-events: none;
+	}
+	.vig-notify {
+		pointer-events: auto;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 10px;
+		padding: 12px 14px;
+		border-radius: 10px;
+		border: 1px solid;
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+		margin-bottom: 8px;
+		font-family: "GothamPro-Medium";
+		font-size: 16px;
+		line-height: 1.3;
+	}
+	.vig-notify--success { background: #eef8f0; border-color: #6fb784; color: #2f6d43; }
+	.vig-notify--error { background: #fdeaea; border-color: #d94a4a; color: #8f1e1e; }
+	.vig-notify--info { background: #eaf4fd; border-color: #4f8fcf; color: #1f4f7a; }
+	.vig-notify--warning { background: #fff4de; border-color: #dda232; color: #7b560e; }
+	.vig-notify__close {
+		flex: 0 0 auto;
+		width: 24px;
+		height: 24px;
+		border: 0;
+		background: transparent;
+		color: currentColor;
+		font-size: 20px;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0;
+	}
+	@media (max-width: 768px) {
+		.vig-notify-root {
+			top: 10px;
+			width: calc(100vw - 16px);
+		}
+		.vig-notify {
+			font-size: 14px;
+			padding: 10px 12px;
+			border-radius: 8px;
+		}
+	}
+	</style>
+	<script>
+	(function() {
+		var root = null;
+
+		function ensureRoot() {
+			if (root && root.parentNode) return root;
+			root = document.getElementById('vig-notify-root');
+			if (!root) {
+				root = document.createElement('div');
+				root.id = 'vig-notify-root';
+				root.className = 'vig-notify-root';
+				document.body.appendChild(root);
+			}
+			return root;
+		}
+
+		function show(message, type, options) {
+			options = options || {};
+			var kind = String(type || 'info').toLowerCase();
+			var timeout = typeof options.timeout === 'number' ? options.timeout : 7000;
+			var host = ensureRoot();
+			var box = document.createElement('div');
+			box.className = 'vig-notify vig-notify--' + kind;
+
+			var text = document.createElement('div');
+			text.className = 'vig-notify__text';
+			text.textContent = String(message || '');
+
+			var close = document.createElement('button');
+			close.type = 'button';
+			close.className = 'vig-notify__close';
+			close.setAttribute('aria-label', 'Закрыть');
+			close.textContent = '×';
+
+			close.addEventListener('click', function() {
+				if (box.parentNode) box.parentNode.removeChild(box);
+			});
+
+			box.appendChild(text);
+			box.appendChild(close);
+			host.appendChild(box);
+
+			if (timeout > 0) {
+				setTimeout(function() {
+					if (box.parentNode) box.parentNode.removeChild(box);
+				}, timeout);
+			}
+			return box;
+		}
+
+		window.ViglingNotify = {
+			show: show,
+			success: function(message, options) { return show(message, 'success', options); },
+			error: function(message, options) { return show(message, 'error', options); },
+			info: function(message, options) { return show(message, 'info', options); },
+			warning: function(message, options) { return show(message, 'warning', options); }
+		};
+
+		var isLkPage = <?php echo ($option === 'com_users' && $view === 'profile') ? 'true' : 'false'; ?>;
+		if (!isLkPage) return;
+
+		try {
+			var url = new URL(window.location.href);
+			if (url.searchParams.get('booking_success') === '1') {
+				window.ViglingNotify.success('Запись была успешно совершена', { timeout: 9000 });
+				url.searchParams.delete('booking_success');
+				window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+			}
+		} catch (e) {}
+	})();
+	</script>
+	<?php
+	$quickAuthGuest = $app->getIdentity()->guest;
+	if ($quickAuthGuest) :
+		$quickAuthToken = Session::getFormToken();
+		$quickAuthAjaxUrl = Route::_('index.php?option=com_ajax&plugin=Quickauth&format=json', false);
+	?>
+	<div id="quick-auth-modal" class="quick-auth-modal" role="dialog" aria-modal="true" aria-labelledby="quick-auth-title" style="display:none;">
+		<div class="quick-auth-modal__backdrop"></div>
+		<div class="quick-auth-modal__box">
+			<button type="button" class="quick-auth-modal__close" aria-label="Закрыть">&times;</button>
+			<h2 id="quick-auth-title" class="quick-auth-modal__title">Записаться к мастеру</h2>
+			<div class="quick-auth-modal__tab quick-auth-modal__tab--reg" id="quick-auth-tab-reg">
+				<p class="quick-auth-modal__hint">Быстрая регистрация</p>
+				<form id="quick-auth-form-reg" class="quick-auth-form">
+					<input type="hidden" name="<?php echo $quickAuthToken; ?>" value="1">
+					<input type="hidden" name="action" value="register">
+					<input type="hidden" name="return" id="quick-auth-return-reg" value="">
+					<div class="quick-auth-field">
+						<label for="quick-auth-name">Имя</label>
+						<input type="text" id="quick-auth-name" name="jform[name]" required>
+					</div>
+					<div class="quick-auth-field">
+						<label for="quick-auth-phone">Номер телефона</label>
+						<input type="tel" id="quick-auth-phone" class="js-phone-mask" name="jform[profile][phone]" placeholder="Телефон" autocomplete="tel">
+					</div>
+					<div class="quick-auth-field">
+						<label for="quick-auth-email">Email *</label>
+						<input type="email" id="quick-auth-email" name="jform[email1]" required>
+						<span class="quick-auth-field__hint">* для восстановления доступа к вашему профилю</span>
+					</div>
+					<div class="quick-auth-field">
+						<label for="quick-auth-pass1">Пароль</label>
+						<input type="password" id="quick-auth-pass1" name="jform[password1]" required>
+					</div>
+					<div class="quick-auth-field">
+						<label for="quick-auth-pass2">Пароль ещё раз</label>
+						<input type="password" id="quick-auth-pass2" name="jform[password2]" required>
+					</div>
+					<input type="hidden" name="jform[username]" id="quick-auth-username" value="">
+					<input type="hidden" name="jform[registration_type]" value="client">
+					<div class="quick-auth-field">
+						<label class="quick-auth-remember" for="quick-auth-remember-reg">
+							<input type="checkbox" id="quick-auth-remember-reg" name="remember" value="1">
+							Запомнить меня
+						</label>
+					</div>
+					<div class="quick-auth-field quick-auth-msg" id="quick-auth-msg-reg"></div>
+					<button type="submit" class="btn btn__time-zapis">Зарегистрироваться и записаться</button>
+				</form>
+				<p class="quick-auth-modal__switch"><a href="#" id="quick-auth-show-login">У меня уже есть аккаунт</a></p>
+			</div>
+			<div class="quick-auth-modal__tab quick-auth-modal__tab--login" id="quick-auth-tab-login" style="display:none;">
+				<p class="quick-auth-modal__hint">Вход</p>
+				<form id="quick-auth-form-login" class="quick-auth-form">
+					<input type="hidden" name="<?php echo $quickAuthToken; ?>" value="1">
+					<input type="hidden" name="action" value="login">
+					<input type="hidden" name="return" id="quick-auth-return-login" value="">
+						<div class="quick-auth-field">
+							<label for="quick-auth-login-username">Email</label>
+							<input type="text" id="quick-auth-login-username" name="username" required>
+						</div>
+					<div class="quick-auth-field">
+						<label for="quick-auth-login-password">Пароль</label>
+						<input type="password" id="quick-auth-login-password" name="password" required>
+					</div>
+					<div class="quick-auth-field">
+						<label class="quick-auth-remember" for="quick-auth-remember-login">
+							<input type="checkbox" id="quick-auth-remember-login" name="remember" value="1">
+							Запомнить меня
+						</label>
+					</div>
+					<div class="quick-auth-field quick-auth-msg" id="quick-auth-msg-login"></div>
+					<button type="submit" class="btn btn__time-zapis">Войти и перейти к записи</button>
+				</form>
+				<p class="quick-auth-modal__switch"><a href="#" id="quick-auth-show-reg">Зарегистрироваться</a></p>
+			</div>
+		</div>
+	</div>
+	<script>
+	(function() {
+		var modal = document.getElementById('quick-auth-modal');
+		var tabReg = document.getElementById('quick-auth-tab-reg');
+		var tabLogin = document.getElementById('quick-auth-tab-login');
+		var formReg = document.getElementById('quick-auth-form-reg');
+		var formLogin = document.getElementById('quick-auth-form-login');
+		var returnReg = document.getElementById('quick-auth-return-reg');
+		var returnLogin = document.getElementById('quick-auth-return-login');
+		var msgReg = document.getElementById('quick-auth-msg-reg');
+		var msgLogin = document.getElementById('quick-auth-msg-login');
+		var titleEl = document.getElementById('quick-auth-title');
+		var ajaxUrl = <?php echo json_encode($quickAuthAjaxUrl); ?>;
+		var currentCallback = null;
+		var defaultTitle = 'Записаться к мастеру';
+
+		function showModal(returnUrl, options) {
+			options = options || {};
+			returnReg.value = returnUrl || '';
+			returnLogin.value = returnUrl || '';
+			msgReg.textContent = '';
+			msgLogin.textContent = '';
+			tabReg.style.display = '';
+			tabLogin.style.display = 'none';
+			modal.style.display = '';
+			currentCallback = options.callback || null;
+			titleEl.textContent = options.title || defaultTitle;
+		}
+		function hideModal() {
+			modal.style.display = 'none';
+			currentCallback = null;
+			titleEl.textContent = defaultTitle;
+		}
+
+		window.QuickAuth = {
+			show: showModal,
+			hide: hideModal
+		};
+		document.querySelectorAll('.btn__time-zapis[data-quick-auth-return]').forEach(function(btn) {
+			btn.addEventListener('click', function(e) {
+				var url = btn.getAttribute('data-quick-auth-return');
+				if (!url) return;
+				url = url.replace(/&amp;/g, '&');
+				e.preventDefault();
+				showModal(url);
+			});
+		});
+		if (modal) {
+			modal.querySelector('.quick-auth-modal__backdrop').addEventListener('click', hideModal);
+			modal.querySelector('.quick-auth-modal__close').addEventListener('click', hideModal);
+			document.getElementById('quick-auth-show-login').addEventListener('click', function(e) {
+				e.preventDefault();
+				tabReg.style.display = 'none';
+				tabLogin.style.display = '';
+				msgLogin.textContent = '';
+			});
+			document.getElementById('quick-auth-show-reg').addEventListener('click', function(e) {
+				e.preventDefault();
+				tabLogin.style.display = 'none';
+				tabReg.style.display = '';
+				msgReg.textContent = '';
+			});
+		}
+		document.getElementById('quick-auth-email').addEventListener('input', function() {
+			document.getElementById('quick-auth-username').value = this.value.trim();
+		});
+		function submitForm(form, msgEl) {
+			msgEl.textContent = '';
+			var fd = new FormData(form);
+			fd.append('format', 'json');
+			var action = String(fd.get('action') || '');
+			var btn = form.querySelector('button[type="submit"]');
+			var origText = btn ? btn.textContent : '';
+			if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+			var withRecaptcha = Promise.resolve();
+			if (
+				action === 'register'
+				&& window.ViglingRecaptcha
+				&& typeof window.ViglingRecaptcha.getToken === 'function'
+				&& typeof window.ViglingRecaptcha.isEnabled === 'function'
+				&& window.ViglingRecaptcha.isEnabled()
+			) {
+				withRecaptcha = window.ViglingRecaptcha.getToken('quickauth_register').then(function (token) {
+					if (!token) {
+						throw new Error('empty token');
+					}
+					fd.append('recaptcha_token', token);
+					fd.append('recaptcha_action', 'quickauth_register');
+				});
+			}
+
+			function normalizeResponse(data) {
+				if (!data || typeof data !== 'object') return {};
+				if (Array.isArray(data.data)) return data.data[0] || {};
+				if (data.data && typeof data.data === 'object') return data.data;
+				return data;
+			}
+
+			withRecaptcha.then(function () {
+				return fetch(ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' });
+			})
+				.then(function(r) { return r.json(); })
+				.then(function(data) {
+					var res = normalizeResponse(data);
+					if (res && res.success) {
+						try { sessionStorage.removeItem('vigling_registration_state_v3'); } catch (e) {}
+						var cb = currentCallback;
+						hideModal();
+						if (cb && typeof cb === 'function') {
+							cb(res);
+							return;
+						}
+						if (res.redirect) {
+							window.location.href = res.redirect;
+							return;
+						}
+					}
+					if (res && res.reason_key === 'email_verification_blocked' && res.redirect) {
+						window.location.href = res.redirect;
+						return;
+					}
+					msgEl.textContent = (res && res.message) ? res.message : 'Ошибка';
+					if (btn) { btn.disabled = false; btn.textContent = origText; }
+				})
+				.catch(function(error) {
+					var raw = String((error && error.message) || '');
+					if (/recaptcha|token|robot|empty token/i.test(raw)) {
+						msgEl.textContent = 'Подтвердите, что вы не робот';
+					} else {
+						msgEl.textContent = 'Ошибка соединения';
+					}
+					if (btn) { btn.disabled = false; btn.textContent = origText; }
+				});
+		}
+		formReg.addEventListener('submit', function(e) {
+			e.preventDefault();
+			document.getElementById('quick-auth-username').value = document.getElementById('quick-auth-email').value.trim();
+			submitForm(formReg, msgReg);
+		});
+		formLogin.addEventListener('submit', function(e) {
+			e.preventDefault();
+			submitForm(formLogin, msgLogin);
+		});
+	})();
+	</script>
+	<?php endif; ?>
+	<?php if (!$app->getIdentity()->guest) : ?>
+	<script>
+	(function () {
+		try { sessionStorage.removeItem('vigling_registration_state_v3'); } catch (e) {}
+	})();
+	</script>
+	<?php endif; ?>
+	<?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
+	<script>
+	(function () {
+		document.querySelectorAll('a.btn__time-zapis, a.category_cinfo-name').forEach(function (a) {
+			var href = a.getAttribute('href') || '';
+			if (!href || href.charAt(0) === '#') return;
+			try {
+				var u = new URL(href, window.location.origin);
+				if (!u.searchParams.get('source')) {
+					u.searchParams.set('source', 'catalog');
+					a.setAttribute('href', u.pathname + u.search + u.hash);
+				}
+			} catch (e) {}
+		});
+	})();
+	</script>
+	<?php endif; ?>
+</body>
+</html>
