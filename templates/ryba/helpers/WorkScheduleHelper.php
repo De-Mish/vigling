@@ -3,9 +3,9 @@
 \defined('_JEXEC') or die;
 
 /**
- * One copy of the schedule parser lives in the user plugin.
- * This file only loads plugins/user/vigling/src/Helper/WorkScheduleHelper.php.
- * It is not the class. Do not replace templates/ryba/offline.php with the class.
+ * Older template path. The schedule class is templates/ryba/helpers/offline.php.
+ * This file loads the plugin loader, which includes that class.
+ * templates/ryba/offline.php is the site offline page.
  */
 $viglingWorkScheduleRoot = \defined('JPATH_ROOT') ? JPATH_ROOT : dirname(__DIR__, 3);
 $viglingWorkSchedulePlugin = $viglingWorkScheduleRoot . '/plugins/user/vigling/src/Helper/WorkScheduleHelper.php';
