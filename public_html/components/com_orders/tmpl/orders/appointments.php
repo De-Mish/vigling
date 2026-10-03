@@ -11,7 +11,7 @@ require_once __DIR__ . '/_appointments_lib.php';
 
 /** @var \Viglin\Component\Orders\Site\View\Orders\HtmlView $this */
 $src = (isset($appointments) && is_object($appointments)) ? $appointments : $this;
-$mode = in_array((string) ($src->appointmentsMode ?? 'day'), ['day', 'week', 'month'], true)
+$mode = in_array((string) ($src->appointmentsMode ?? 'day'), ['day', 'week', 'month', 'list'], true)
 	? (string) $src->appointmentsMode
 	: 'day';
 $items = is_array($src->items ?? null) ? $src->items : [];
@@ -29,6 +29,7 @@ $canBookTime = !empty($src->canBookTime);
 $dayUrl = (string) ($src->dayUrl ?? $src->appointmentsBaseUrl ?? '');
 $weekUrl = (string) ($src->weekUrl ?? '');
 $monthUrl = (string) ($src->monthUrl ?? '');
+$listUrl = (string) ($src->listUrl ?? '');
 $monthCurrentUrl = (string) ($src->monthCurrentUrl ?? $monthUrl);
 $tzName = viglingOrdersGetUserTimezone($db, $viewerId, (string) Factory::getApplication()->get('offset', 'UTC'));
 try {
@@ -529,6 +530,69 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		grid-template-columns: none;
 	}
 	.com_orders.orders-list--clients .orders-table .orders-row--course-details td::before { display: none; }
+	.appointments-page .appointments-daystrip {
+		display: flex;
+		gap: 8px;
+		overflow-x: auto;
+		margin: 0 0 18px;
+		padding: 2px 2px 10px;
+		scroll-snap-type: x proximity;
+	}
+	.appointments-page .appointments-daystrip__day {
+		flex: 0 0 72px;
+		width: 72px;
+		min-height: 64px;
+		scroll-snap-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		border: 1px solid #e2e2e2;
+		border-radius: 12px;
+		background: #fff;
+		color: #111;
+		text-decoration: none;
+		line-height: 1.15;
+	}
+	.appointments-page .appointments-daystrip__dow {
+		color: #8a8a8a;
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: .3px;
+		text-transform: uppercase;
+	}
+	.appointments-page .appointments-daystrip__date {
+		font-size: 14px;
+		font-weight: 600;
+	}
+	.appointments-page .appointments-daystrip__day.is-today {
+		border-color: #f9ce54;
+	}
+	.appointments-page .appointments-daystrip__day.is-active {
+		background: #f9ce54;
+		border-color: #f9ce54;
+	}
+	.appointments-page .appointments-daystrip__day.is-active .appointments-daystrip__dow {
+		color: #3b3636;
+	}
+	.appointments-page .appointments-more {
+		margin: 16px 0 0;
+		text-align: center;
+	}
+	.appointments-page .appointments-more__btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 40px;
+		padding: 8px 18px;
+		border: 1px solid #f9ce54;
+		border-radius: 999px;
+		background: #f9ce54;
+		color: #111;
+		font-weight: 600;
+		text-decoration: none;
+	}
 	@media (max-width: 768px) {
 		.appointments-page .appointments-month-wrap { width: 100%; }
 		.appointments-page .appointments-modes { width: 100%; }
@@ -539,10 +603,12 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 
 	<div class="appointments-toolbar">
 		<div>
-			<?php if ($mode === 'day') : ?>
+			<?php if ($mode === 'day' || $mode === 'list') : ?>
 			<div class="appointments-day-heading">
 				<h1 class="page-title">Записи</h1>
+				<?php if ($mode === 'day') : ?>
 				<a class="appointments-archive-btn<?php echo $entriesArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($entriesArchive ? $dayUrl : $dayArchiveUrl); ?>">Архив</a>
+				<?php endif; ?>
 			</div>
 			<?php endif; ?>
 		</div>
@@ -550,6 +616,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			<a href="<?php echo $this->escape($dayUrl); ?>" class="<?php echo ($mode === 'day' && !$entriesArchive) ? 'is-active' : ''; ?>">День</a>
 			<a href="<?php echo $this->escape($weekUrl); ?>" class="<?php echo $mode === 'week' ? 'is-active' : ''; ?>">Неделя</a>
 			<a href="<?php echo $this->escape($monthUrl); ?>" class="<?php echo $mode === 'month' ? 'is-active' : ''; ?>">Месяц</a>
+			<a href="<?php echo $this->escape($listUrl); ?>" class="<?php echo $mode === 'list' ? 'is-active' : ''; ?>">Список</a>
 		</nav>
 	</div>
 
@@ -705,36 +772,71 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 			});
 		})();
 		</script>
-	<?php else : ?>
+	<?php elseif ($mode === 'list' || $entriesArchive) : ?>
 		<?php
-		$nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-		$futureItems = [];
-		$pastItems = [];
-		foreach ($items as $item) {
-			$stamp = null;
-			if (!empty($item->time)) {
-				try {
-					$stamp = new \DateTimeImmutable((string) $item->time, new \DateTimeZone('UTC'));
-				} catch (\Throwable $e) {
-					$stamp = null;
-				}
-			}
-			if ($stamp instanceof \DateTimeImmutable && $stamp < $nowUtc) {
-				$pastItems[] = $item;
-			} else {
-				$futureItems[] = $item;
-			}
-		}
-		usort($pastItems, static function ($a, $b): int {
-			return strcmp((string) ($b->time ?? ''), (string) ($a->time ?? ''));
-		});
-		$listItems = $entriesArchive ? $pastItems : $futureItems;
-		$displayRows = viglingAppointmentsBuildDisplayRows($listItems, $viewerId);
+		$displayRows = viglingAppointmentsBuildDisplayRows($items, $viewerId);
 		$rescheduleAction = $rescheduleClientAction;
 		$emptyMessage = $entriesArchive ? 'Архив пуст' : 'У вас пока нет записей.';
+		include __DIR__ . '/_appointments_list.php';
+		if (!empty($src->appointmentsHasMore) && (string) ($src->appointmentsMoreUrl ?? '') !== '') :
+		?>
+		<p class="appointments-more">
+			<a class="appointments-more__btn" href="<?php echo $this->escape((string) $src->appointmentsMoreUrl); ?>"><?php echo $this->escape((string) ($src->appointmentsMoreLabel ?? 'Показать следующие 10')); ?></a>
+		</p>
+		<?php
+		endif;
+		$rescheduleAction = $rescheduleMasterAction;
+		include __DIR__ . '/_appointments_modal.php';
+		?>
+	<?php else : ?>
+		<?php
+		$selectedDay = !empty($src->selectedDay) && $src->selectedDay instanceof \DateTimeImmutable
+			? $src->selectedDay
+			: $todayLocal;
+		$stripStart = !empty($src->dayStripStart) && $src->dayStripStart instanceof \DateTimeImmutable
+			? $src->dayStripStart
+			: $todayLocal->modify('-14 days');
+		$stripEnd = !empty($src->dayStripEnd) && $src->dayStripEnd instanceof \DateTimeImmutable
+			? $src->dayStripEnd
+			: $todayLocal->modify('+30 days');
+		$selectedKey = $selectedDay->format('Y-m-d');
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+		}
+		?>
+		<div class="appointments-daystrip" id="appointments-daystrip">
+			<?php for ($stripDay = $stripStart; $stripDay <= $stripEnd; $stripDay = $stripDay->modify('+1 day')) :
+				$stripKey = $stripDay->format('Y-m-d');
+				$stripClass = 'appointments-daystrip__day';
+				if ($stripKey === $todayLocal->format('Y-m-d')) {
+					$stripClass .= ' is-today';
+				}
+				if ($stripKey === $selectedKey) {
+					$stripClass .= ' is-active';
+				}
+				$stripUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day', 'start' => $stripKey]);
+			?>
+			<a class="<?php echo $stripClass; ?>" href="<?php echo $this->escape($stripUrl); ?>"<?php echo $stripKey === $selectedKey ? ' aria-current="date"' : ''; ?>>
+				<span class="appointments-daystrip__dow"><?php echo $this->escape($dowShort[(int) $stripDay->format('N')] ?? ''); ?></span>
+				<span class="appointments-daystrip__date"><?php echo $this->escape($stripDay->format('d.m')); ?></span>
+			</a>
+			<?php endfor; ?>
+		</div>
+		<?php
+		$displayRows = viglingAppointmentsBuildDisplayRows($items, $viewerId);
+		$rescheduleAction = $rescheduleClientAction;
+		$emptyMessage = 'На этот день записей нет.';
 		include __DIR__ . '/_appointments_list.php';
 		$rescheduleAction = $rescheduleMasterAction;
 		include __DIR__ . '/_appointments_modal.php';
 		?>
+		<script>
+		(function () {
+			var active = document.querySelector('#appointments-daystrip .appointments-daystrip__day.is-active');
+			if (active && active.scrollIntoView) {
+				active.scrollIntoView({inline: 'center', block: 'nearest'});
+			}
+		})();
+		</script>
 	<?php endif; ?>
 </div>

@@ -57,17 +57,30 @@ class AppointmentsHelper
 		if ($mode === '' && $layout === 'journal') {
 			$mode = 'week';
 		}
-		if (!in_array($mode, ['day', 'week', 'month'], true)) {
+		if (!in_array($mode, ['day', 'week', 'month', 'list'], true)) {
 			$mode = 'day';
 		}
 		$extra = ['zapisi' => $mode];
 		$start = trim((string) $input->getString('start', ''));
 		$month = trim((string) $input->getString('month', ''));
-		if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
+		if ($mode === 'day' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
 			$extra['start'] = $start;
 		}
-		if (preg_match('/^\d{4}-\d{2}$/', $month)) {
+		if ($mode === 'month' && preg_match('/^\d{4}-\d{2}$/', $month)) {
 			$extra['month'] = $month;
+		}
+		if ($mode === 'day' && $input->getCmd('entries', '') === 'archive') {
+			$extra['entries'] = 'archive';
+			$shown = (int) $input->getInt('shown', 0);
+			if ($shown > 7) {
+				$extra['shown'] = (string) $shown;
+			}
+		}
+		if ($mode === 'list') {
+			$shownRaw = trim((string) $input->getString('shown', ''));
+			if ($shownRaw === 'all' || (int) $shownRaw > 5) {
+				$extra['shown'] = $shownRaw === 'all' ? 'all' : (string) (int) $shownRaw;
+			}
 		}
 
 		return self::profileUrl($extra);
@@ -97,7 +110,7 @@ class AppointmentsHelper
 		if ($mode === '' && $layout === 'journal') {
 			$mode = 'week';
 		}
-		if (!in_array($mode, ['day', 'week', 'month'], true)) {
+		if (!in_array($mode, ['day', 'week', 'month', 'list'], true)) {
 			$mode = 'day';
 		}
 		$target->appointmentsMode = $mode;
@@ -134,6 +147,7 @@ class AppointmentsHelper
 		$target->appointmentsBaseUrl = self::profileUrl(['zapisi' => 'day']);
 		$target->dayUrl = self::profileUrl(['zapisi' => 'day']);
 		$target->dayArchiveUrl = self::profileUrl(['zapisi' => 'day', 'entries' => 'archive']);
+		$target->listUrl = self::profileUrl(['zapisi' => 'list']);
 		$target->weekUrl = self::profileUrl(['zapisi' => 'week']);
 		$target->monthUrl = self::profileUrl(['zapisi' => 'month']);
 		$target->monthCurrentUrl = self::profileUrl(['zapisi' => 'month']);
@@ -146,6 +160,9 @@ class AppointmentsHelper
 		$dayScope = '';
 		$dayOrder = 'ASC';
 		$listLimit = 500;
+		$pageShown = 0;
+		$fetchExtra = false;
+		$selectedDay = $todayLocal;
 		if ($mode === 'week') {
 			$fromLocal = $weekStart;
 			$toLocal = $weekStart->modify('+' . $weekDayCount . ' days');
@@ -159,18 +176,42 @@ class AppointmentsHelper
 			$toLocal = $lastDay->modify('+' . (7 - $dow) . ' days')->modify('+1 day');
 			$fromUtc = $fromLocal->setTimezone($utc)->format('Y-m-d H:i:s');
 			$toUtc = $toLocal->setTimezone($utc)->format('Y-m-d H:i:s');
+		} elseif ($mode === 'list') {
+			$shownRaw = trim((string) $input->getString('shown', ''));
+			$dayScope = 'all';
+			$dayOrder = 'DESC';
+			$fromUtc = '';
+			$toUtc = '';
+			if ($shownRaw === 'all') {
+				$listLimit = 0;
+				$pageShown = 0;
+			} else {
+				$pageShown = (int) $shownRaw >= 15 ? 15 : 5;
+				$listLimit = $pageShown + 1;
+				$fetchExtra = true;
+			}
 		} else {
 			$nowUtc = new \DateTimeImmutable('now', $utc);
 			if ($input->getCmd('entries', '') === 'archive') {
-				$fromUtc = $todayLocal->modify('-90 days')->setTimezone($utc)->format('Y-m-d H:i:s');
 				$toUtc = $nowUtc->format('Y-m-d H:i:s');
+				$fromUtc = '';
 				$dayScope = 'archive';
 				$dayOrder = 'DESC';
-				$listLimit = 500;
+				$pageShown = (int) $input->getInt('shown', 7);
+				if ($pageShown < 7) {
+					$pageShown = 7;
+				}
+				if ($pageShown > 5000) {
+					$pageShown = 5000;
+				}
+				$listLimit = $pageShown + 1;
+				$fetchExtra = true;
 			} else {
-				$fromUtc = $nowUtc->format('Y-m-d H:i:s');
-				$toUtc = $todayLocal->modify('+2 years')->setTimezone($utc)->format('Y-m-d H:i:s');
-				$dayScope = 'future';
+				$parsedDay = self::parseDate($input->getString('start', ''), $tz);
+				$selectedDay = $parsedDay instanceof \DateTimeImmutable ? $parsedDay->setTime(0, 0, 0) : $todayLocal;
+				$fromUtc = $selectedDay->setTimezone($utc)->format('Y-m-d H:i:s');
+				$toUtc = $selectedDay->modify('+1 day')->setTimezone($utc)->format('Y-m-d H:i:s');
+				$dayScope = 'oneday';
 				$dayOrder = 'ASC';
 				$listLimit = 0;
 			}
@@ -193,6 +234,41 @@ class AppointmentsHelper
 			}
 		} catch (\Throwable $e) {
 			$target->items = [];
+		}
+
+		$hasMore = false;
+		if ($fetchExtra && count($target->items) > $pageShown) {
+			$hasMore = true;
+			$target->items = array_slice($target->items, 0, $pageShown);
+		}
+		$target->appointmentsHasMore = $hasMore;
+		$target->appointmentsShown = $pageShown;
+		$target->selectedDay = $selectedDay;
+		$target->dayStripStart = $todayLocal->modify('-14 days');
+		$target->dayStripEnd = $todayLocal->modify('+30 days');
+		if ($selectedDay < $target->dayStripStart) {
+			$target->dayStripStart = $selectedDay;
+		}
+		if ($selectedDay > $target->dayStripEnd) {
+			$target->dayStripEnd = $selectedDay;
+		}
+		$target->appointmentsMoreUrl = '';
+		$target->appointmentsMoreLabel = '';
+		if ($hasMore && $mode === 'list') {
+			if ($pageShown < 15) {
+				$target->appointmentsMoreUrl = self::profileUrl(['zapisi' => 'list', 'shown' => '15']);
+				$target->appointmentsMoreLabel = 'Показать следующие 10';
+			} else {
+				$target->appointmentsMoreUrl = self::profileUrl(['zapisi' => 'list', 'shown' => 'all']);
+				$target->appointmentsMoreLabel = 'Показать все';
+			}
+		} elseif ($hasMore && $dayScope === 'archive') {
+			$target->appointmentsMoreUrl = self::profileUrl([
+				'zapisi' => 'day',
+				'entries' => 'archive',
+				'shown' => (string) ($pageShown + 10),
+			]);
+			$target->appointmentsMoreLabel = 'Показать следующие 10';
 		}
 
 		return $target;
