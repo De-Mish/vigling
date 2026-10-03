@@ -370,9 +370,11 @@ class ListModel extends BaseListModel
 						$dt = new \DateTime($dateOnly);
 						$weekday = (int) $dt->format('N');
 						$timeCompare = $time . ':00';
+						$localSlot = $this->slotInSiteTimeSql($db, $dateOnly . ' ' . $timeCompare);
 						$orParts = [
 							'(' . $db->quoteName('slot.id') . ' IS NOT NULL'
-							. ' AND DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
+							. ' AND DATE(' . $localSlot . ') = ' . $db->quote($dateOnly)
+							. ' AND TIME(' . $localSlot . ') = ' . $db->quote($timeCompare) . ')',
 						];
 
 						if ($fieldWorkDay > 0) {
@@ -395,8 +397,9 @@ class ListModel extends BaseListModel
 					} catch (\Throwable $e) {
 					}
 				} elseif ($dateOnly !== '') {
+					$localSlot = $this->slotInSiteTimeSql($db, $dateOnly . ' 12:00:00');
 					$orParts = [
-						'(DATE(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $db->quote($dateOnly) . ')',
+						'(DATE(' . $localSlot . ') = ' . $db->quote($dateOnly) . ')',
 					];
 					if ($fieldWorkDay > 0) {
 						try {
@@ -418,12 +421,13 @@ class ListModel extends BaseListModel
 					$query->where('(' . implode(' OR ', $orParts) . ')');
 				} elseif ($time !== '') {
 					$timeQ = $db->quote($time . ':00');
+					$localSlot = $this->slotInSiteTimeSql($db, 'now');
 					$orParts = [
 						'(' . $db->quoteName('c.booking_mode') . ' = ' . $db->quote('fixed')
 						. ' AND ' . $db->quoteName('slot.id') . ' IS NOT NULL'
 						. ' AND ' . $db->quoteName('slot.starts_at_utc') . ' >= UTC_TIMESTAMP()'
 						. ' AND ' . $db->quoteName('slot.starts_at_utc') . ' < DATE_ADD(UTC_TIMESTAMP(), INTERVAL 45 DAY)'
-						. ' AND TIME(' . $db->quoteName('slot.starts_at_utc') . ') = ' . $timeQ . ')',
+						. ' AND TIME(' . $localSlot . ') = ' . $timeQ . ')',
 					];
 					if ($fieldWorkDay > 0) {
 						$orParts[] = '(' . '(' . $db->quoteName('c.booking_mode') . ' IS NULL OR ' . $db->quoteName('c.booking_mode') . ' <> ' . $db->quote('fixed') . ')'
@@ -485,6 +489,43 @@ class ListModel extends BaseListModel
 		}
 
 		return $conds;
+	}
+
+	/**
+	 * Slot rows are stored in UTC. The catalog shows them in the site timezone.
+	 */
+	private function slotInSiteTimeSql($db, string $localMoment): string
+	{
+		return 'CONVERT_TZ(' . $db->quoteName('slot.starts_at_utc')
+			. ', ' . $db->quote('+00:00')
+			. ', ' . $db->quote($this->siteUtcOffset($localMoment)) . ')';
+	}
+
+	private function siteUtcOffset(string $localMoment): string
+	{
+		$name = 'UTC';
+		try {
+			$configured = trim((string) Factory::getApplication()->get('offset', 'UTC'));
+			if ($configured !== '') {
+				$name = $configured;
+			}
+		} catch (\Throwable $e) {
+		}
+		try {
+			$tz = new \DateTimeZone($name);
+		} catch (\Throwable $e) {
+			$tz = new \DateTimeZone('UTC');
+		}
+		try {
+			$moment = new \DateTimeImmutable($localMoment, $tz);
+		} catch (\Throwable $e) {
+			$moment = new \DateTimeImmutable('now', $tz);
+		}
+		$seconds = $moment->getOffset();
+		$sign = $seconds < 0 ? '-' : '+';
+		$seconds = abs($seconds);
+
+		return sprintf('%s%02d:%02d', $sign, intdiv($seconds, 3600), intdiv($seconds % 3600, 60));
 	}
 
 	private function requireWorkScheduleHelper(): void
