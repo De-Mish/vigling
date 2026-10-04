@@ -74,8 +74,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 <head>
 	<meta content="width=device-width, initial-scale=1" name="viewport">
 	<meta content="IE=edge" http-equiv="X-UA-Compatible">
-	<link rel="icon" type="image/png" sizes="1852x1852" href="<?php echo rtrim(Uri::root(), '/'); ?>/images/logo.png?v=20260910h">
-	<link rel="apple-touch-icon" href="<?php echo rtrim(Uri::root(), '/'); ?>/images/logo.png?v=20260910h">
+	<link rel="icon" type="image/png" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-pwa-192.png?v=20261003o">
+	<link rel="apple-touch-icon" href="<?php echo rtrim(Uri::root(), '/'); ?>/icons/vigling-pwa-apple.png?v=20261003o">
 	<meta name="theme-color" content="#111111">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-capable" content="yes">
@@ -113,6 +113,13 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
+	<style>
+		.header-mobile__logo img {
+			border-radius: 0 !important;
+			background: transparent !important;
+			object-fit: contain;
+		}
+	</style>
 	<jdoc:include type="styles" />
 	<?php if ($isHome) :
 		require_once __DIR__ . '/helpers/schema_ld.php';
@@ -254,7 +261,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<header class="header header--mobile" id="header-mobile" aria-hidden="false">
 		<div class="header-mobile__bar">
 			<a class="header-mobile__logo" href="<?php echo Uri::root(); ?>">
-				<img src="/images/logo.jpg" width="48" height="48" alt="Лого Vigling.ru">
+				<img src="/icons/vigling-pwa-192.png?v=20261003o" width="48" height="48" alt="Лого Vigling.ru">
 				<span class="header-mobile__sitename"><?php echo $sitename; ?></span>
 			</a>
 			<button type="button" class="header-mobile__toggle" id="header-mobile-toggle" aria-label="<?php echo htmlspecialchars($app->getLanguage()->_('JTOGGLE_NAVIGATION') ?: 'Меню'); ?>" aria-expanded="false" aria-controls="header-mobile-panel">
