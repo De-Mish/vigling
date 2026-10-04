@@ -88,11 +88,13 @@ if ($isAdministrator) {
 	$isMaster = true;
 }
 
+require_once __DIR__ . '/../../repair-type-flag.php';
+
 if ($isAdministrator) {
 	$roleLabel = 'Администратор';
-} elseif ($profileMasterType === '2') {
+} elseif ($profileMasterType === '2' && ryba_repair_type_enabled()) {
 	$roleLabel = 'Мастер - Заточка/Ремонт';
-} elseif ($profileMasterType === '1' || $isMaster) {
+} elseif ($profileMasterType === '1' || $profileMasterType === '2' || $isMaster) {
 	$roleLabel = 'Мастер';
 } else {
 	$roleLabel = 'Клиент';

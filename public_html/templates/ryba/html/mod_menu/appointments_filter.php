@@ -37,6 +37,36 @@ if (!function_exists('ryba_is_orders_menu_item')) {
 	}
 }
 
+if (!function_exists('ryba_is_repair_menu_item')) {
+	function ryba_is_repair_menu_item(object $item): bool
+	{
+		require_once dirname(__DIR__) . '/repair-type-flag.php';
+		if (ryba_repair_type_enabled()) {
+			return false;
+		}
+		$needle = 'zatochka-remont';
+		$candidates = [
+			(string) ($item->alias ?? ''),
+			(string) ($item->route ?? ''),
+			(string) ($item->path ?? ''),
+			(string) ($item->link ?? ''),
+		];
+		$query = is_array($item->query ?? null) ? $item->query : [];
+		$candidates[] = (string) ($query['category_path'] ?? '');
+		try {
+			$candidates[] = (string) $item->getParams()->get('category_path', '');
+		} catch (\Throwable $e) {
+		}
+		foreach ($candidates as $value) {
+			if ($value !== '' && stripos($value, $needle) !== false) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
 if (!function_exists('ryba_rebuild_menu_tree')) {
 	function ryba_rebuild_menu_tree(array $items, int $startLevel = 1): array
 	{
@@ -84,7 +114,7 @@ if (!function_exists('ryba_filter_appointment_menu_items')) {
 			if (!is_object($item)) {
 				continue;
 			}
-			if (ryba_is_orders_menu_item($item, $menu)) {
+			if (ryba_is_orders_menu_item($item, $menu) || ryba_is_repair_menu_item($item)) {
 				$hideIds[(int) ($item->id ?? 0)] = true;
 			}
 		}
