@@ -570,19 +570,37 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 #content.view_profile .view_profile-public--embed .masters__big-info {
   padding-top: 0;
 }
+/* Own profile shows the editable fields in settings. The public summary
+   (avatar, rating, portfolio, address, speciality, work form) stays off this page. */
+#easyprofile.view_profile .jsn-p-avatar,
+#easyprofile.view_profile .masters__big-img-cont,
+#easyprofile.view_profile .masters__big-info-head-master,
+#easyprofile.view_profile .masters__big-info-attr,
+#easyprofile.view_profile .masters__gall-small,
+#easyprofile.view_profile #bookmarkme {
+  display: none !important;
+}
+#easyprofile.view_profile .view_profile-header .jsn-p-title {
+  margin-left: 0;
+}
+#easyprofile.view_profile .masters__big-info {
+  float: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+#easyprofile.view_profile .masters__big-info-head h3,
+#easyprofile.view_profile .h3biginfo {
+  float: none;
+  margin-left: 0;
+  margin-top: 0;
+}
 </style>
 <div id="easyprofile" class="view_profile">
 	<div class="jsn-p">
 		<div class="view_profile-header">
 			<div class="jsn-p-top jsn-p-top-a">
-				<div class="jsn-p-avatar">
-					<?php if ($avatarUrl) : ?>
-						<img src="<?php echo $this->escape($avatarUrl); ?>" alt="<?php echo $this->escape($displayName); ?>" class="avatar">
-					<?php else : ?>
-						<div class="avatar avatar-placeholder"><?php echo $this->escape(mb_substr($displayName, 0, 1)); ?></div>
-					<?php endif; ?>
-					<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
-				</div>
 				<div class="jsn-p-title">
 					<h3><?php echo $this->escape($displayName); ?></h3>
 					<span class="jsn-p-role"><?php echo $this->escape($roleLabel); ?></span>
