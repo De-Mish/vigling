@@ -5604,7 +5604,7 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header--desktop .header__menu a[href="/kurs"]::before,
   .header--desktop .header__menu a[href$="/kurs"]::before,
   .header--desktop .header__menu a[href="/kurs/"]::before {
-    background-image: url("/templates/ryba/images/Kursi.png");
+    background-image: url("/templates/ryba/images/Kursi.png?v=20261004a");
   }
   .header-mobile__nav a[href="/modeli"]::before,
   .header-mobile__nav a[href$="/modeli"]::before,
@@ -5612,7 +5612,7 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header--desktop .header__menu a[href="/modeli"]::before,
   .header--desktop .header__menu a[href$="/modeli"]::before,
   .header--desktop .header__menu a[href="/modeli/"]::before {
-    background-image: url("/templates/ryba/images/Model.png");
+    background-image: url("/templates/ryba/images/Model.png?v=20261004a");
   }
   .header-mobile__nav a[href="/index.php?pwa_install=1"]::before,
   .header-mobile__nav a[href*="pwa_install=1"]::before,
