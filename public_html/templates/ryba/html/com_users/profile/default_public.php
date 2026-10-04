@@ -959,6 +959,7 @@ if (empty($isLkEmbed)) {
 	})();
 	</script>
 	<?php endif; ?>
+	<?php if (empty($isLkEmbed)) : ?>
 	<div class="masters__big-img-cont col-md-6" data-vg-idx="0">
 		<div class="arrows_master-slider">
 			<button type="button" class="my-slick-prev slick-arrow" aria-label="Предыдущее фото"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
@@ -970,17 +971,21 @@ if (empty($isLkEmbed)) {
 			</div>
 		</div>
 	</div>
+	<?php endif; ?>
 	<div class="masters__big-info col-md-6">
 		<div class="masters__big-info-head">
+			<?php if (empty($isLkEmbed)) : ?>
 			<div class="masters__big-info-head-master" style="background-image: url('<?php echo $this->escape($avatarPreviewUrl); ?>'); background-size: cover;">
 				<span class="masters__big-info-head-master-online"></span>
 			</div>
+			<?php endif; ?>
 			<h3 class="h3biginfo"><?php echo $this->escape($displayName); ?></h3>
 			<?php if ((int) $currentUser->id !== $profileOwnerId) : ?>
 			<a id="bookmarkme" class="<?php echo $isFavorite ? 'active' : ''; ?>" href="#" data-id="<?php echo $profileOwnerId; ?>" title="Добавить в избранное"></a>
 			<?php endif; ?>
 			<div class="clearFloat"></div>
 		</div>
+		<?php if (empty($isLkEmbed)) : ?>
 		<div class="masters__big-info-attr">
 			<h3 class="h3biginfo1"><?php echo $this->escape($displayName); ?></h3>
 			<div class="masters__attr-left">
@@ -1006,6 +1011,8 @@ if (empty($isLkEmbed)) {
 			</div>
 			<div class="clearFloat"></div>
 		</div>
+		<?php endif; ?>
+		<?php if (empty($isLkEmbed)) : ?>
 		<div class="masters__gall-small">
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
@@ -1017,6 +1024,7 @@ if (empty($isLkEmbed)) {
 			</div>
 			<div class="clearFloat"></div>
 		</div>
+		<?php endif; ?>
 	</div>
 	<div class="clearFloat"></div>
 </div>
