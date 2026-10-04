@@ -1,0 +1,82 @@
+.telefon-group .controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.js-phone-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.js-phone-country {
+  flex: 0 0 auto;
+  min-width: 96px;
+  max-width: 118px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+  font-size: 14px;
+  line-height: 36px;
+  box-sizing: border-box;
+}
+
+.js-phone-wrap input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.telefon-group .controls .js-phone-wrap,
+.quick-auth-field .js-phone-wrap,
+.phone-prefix-wrap.js-phone-wrap {
+  flex: 1 1 auto;
+}
+
+.quick-auth-field .js-phone-wrap input[type="text"],
+.quick-auth-field .js-phone-wrap input[type="tel"] {
+  width: auto;
+}
+
+.mail-group .telefon-group .js-phone-wrap {
+  min-width: 180px;
+}
+
+#zapis .screen3 .phone-prefix-wrap.js-phone-wrap,
+#zapis .screen3 .js-phone-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#zapis .screen3 .js-phone-country {
+  flex: 0 0 104px;
+  min-width: 104px;
+  height: 48px;
+  border: 1px solid #1d1d1d;
+  border-radius: 16px;
+  padding: 0 10px;
+  font-size: 15px;
+  line-height: 46px;
+}
+
+#zapis .screen3 .js-phone-wrap input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+}
+
+@media (max-width: 620px) {
+  #zapis .screen3 .js-phone-country {
+    min-width: 92px;
+    flex-basis: 92px;
+  }
+}

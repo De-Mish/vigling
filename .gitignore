@@ -1,0 +1,55 @@
+# Пароли и конфиги
+configuration.php
+configuration.beget.php
+configuration.local.php
+.user.ini
+*.log
+debug_profile.log
+nul
+migration_scripts/
+migration_reports/
+.env
+*.sql
+*.sql.gz
+backups/
+cache/
+tmp/
+public_html/configuration/
+firebase-credentials.json
+*.key
+*.pem
+
+# Изображения
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.webp
+*.ico
+*.bmp
+*.tiff
+*.tif
+*.psd
+*.ai
+
+# Видео
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.flv
+*.wmv
+*.m4v
+*.mpg
+*.mpeg
+
+# Аудио
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.aac
+*.m4a
+*.wma

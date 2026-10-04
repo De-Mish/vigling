@@ -1,0 +1,58 @@
+{
+  "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
+  "name": "ryba",
+  "version": "1.0",
+  "assets": [
+    {
+      "name": "template.ryba.slick.css",
+      "type": "style",
+      "uri": "css/slick.css"
+    },
+    {
+      "name": "template.ryba.slick-theme",
+      "type": "style",
+      "uri": "css/slick-theme.css"
+    },
+    {
+      "name": "template.ryba.fontawesome",
+      "type": "style",
+      "uri": "css/font-awesome.min.css"
+    },
+    {
+      "name": "template.ryba.style",
+      "type": "style",
+      "uri": "css/style.css",
+      "dependencies": ["template.ryba.slick.css", "template.ryba.slick-theme", "template.ryba.fontawesome"]
+    },
+    {
+      "name": "template.ryba.style-ext",
+      "type": "style",
+      "uri": "css/style-ext.css",
+      "dependencies": ["template.ryba.style"]
+    },
+    {
+      "name": "template.ryba.jquery",
+      "type": "script",
+      "uri": "js/jquery.min.js",
+      "attributes": {"defer": true}
+    },
+    {
+      "name": "template.ryba.slick.js",
+      "type": "script",
+      "uri": "js/slick.min.js",
+      "dependencies": ["template.ryba.jquery"]
+    },
+    {
+      "name": "template.ryba.scripts",
+      "type": "script",
+      "uri": "js/scripts.js",
+      "dependencies": ["template.ryba.jquery"]
+    },
+    {
+      "name": "template.ryba.custom",
+      "type": "script",
+      "uri": "js/custom.js",
+      "dependencies": ["template.ryba.jquery"]
+    }
+  ]
+}

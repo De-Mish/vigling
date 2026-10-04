@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+	<name>PLG_SYSTEM_REGAUTOLOGIN</name>
+	<author>Viglin</author>
+	<creationDate>2026-02</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_SYSTEM_REGAUTOLOGIN_XML_DESCRIPTION</description>
+	<namespace path="src">Joomla\Plugin\System\Regautologin</namespace>
+	<files>
+		<folder>services</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="ru-RU">language/ru-RU/plg_system_regautologin.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_system_regautologin.sys.ini</language>
+	</languages>
+</extension>

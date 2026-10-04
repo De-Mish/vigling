@@ -1,0 +1,57 @@
+@font-face {
+  font-family: "GothamPro";
+  src: url(../../fonts/GothamPro.ttf);
+}
+@font-face {
+  font-family: "GothamPro-Black";
+  src: url(../../fonts/GothamPro-Black.ttf);
+}
+@font-face {
+  font-family: "GothamPro-Bold";
+  src: url(../../fonts/GothamPro-Bold.ttf);
+}
+@font-face {
+  font-family: "GothamPro-Light";
+  src: url(../../fonts/GothamPro-Light.ttf);
+}
+@font-face {
+  font-family: "GothamPro-Medium";
+  src: url(../../fonts/GothamPro-Medium.ttf);
+}
+
+:root {
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-4xl: 80px;
+  --container-width: 1170px;
+  --container-padding: 20px;
+  --color-primary: #f7cc53;
+  --color-primary-hover: #F9E09B;
+  --color-primary-dark: #d4a832;
+  --color-text: #111;
+  --color-text-muted: #666;
+  --color-border: #e0e0e0;
+  --color-shadow: rgba(0,0,0,0.06);
+  --color-shadow-hover: rgba(0,0,0,0.12);
+  --radius-md: 10px;
+  --radius-lg: 15px;
+  --radius-xl: 20px;
+  --radius-full: 50px;
+  --font-family-base: 'GothamPro', sans-serif;
+  --font-family-heading: 'GothamPro-Bold', sans-serif;
+  --font-family-medium: 'GothamPro-Medium', sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --transition-base: 0.25s ease;
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}

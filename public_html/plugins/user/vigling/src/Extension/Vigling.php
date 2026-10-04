@@ -1,0 +1,1194 @@
+<?php
+
+namespace Joomla\Plugin\User\Vigling\Extension;
+
+use Joomla\CMS\Event\Model\NormaliseRequestDataEvent;
+use Joomla\CMS\Event\Model\PrepareFormEvent;
+use Joomla\CMS\Event\User\AfterSaveEvent;
+use Joomla\CMS\Event\User\BeforeSaveEvent;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Form\Form;
+use Joomla\CMS\Form\FormHelper;
+use Joomla\CMS\Log\Log;
+use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\Database\DatabaseInterface;
+use Joomla\Event\SubscriberInterface;
+use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
+use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
+use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
+use Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper;
+use Joomla\Plugin\User\Vigling\Service\UserCoursesService;
+use Joomla\Plugin\User\Vigling\Service\UserSearchesService;
+use Joomla\Plugin\User\Vigling\Service\UserServicesService;
+
+\defined('_JEXEC') or die;
+
+final class Vigling extends CMSPlugin implements SubscriberInterface
+{
+    private const ENCODED_FIELDS = ['prices', 'stock_prices', 'work_day', 'vyberite_spetsialnos'];
+    private const VIGLING_MARKER = "--- Расшифровано плагином Vigling ---\n";
+
+    /**
+     * Custom fields the frontend profile template posts under other names
+     * (or as files). Joomla Fields would otherwise set them to false and delete
+     * stored values on every save.
+     *
+     * @var list<string>
+     */
+    private const FRONTEND_MANAGED_COM_FIELDS = [
+        'avatar',
+        'portfolio_field',
+        'area',
+        'street',
+        'house_number',
+        'sity',
+        'firstname',
+        'lastname',
+        'secondname',
+        'telefon',
+        'o_sebe',
+        'link',
+        'is_master',
+        'vyberite_spetsialnos',
+        'prices',
+        'stock_prices',
+        'doorway',
+        'floor',
+        'apartment',
+        'home',
+        'payment_method',
+        'suitable_for_children',
+    ];
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            // After plg_system_fields adds com_fields to the frontend profile form.
+            'onContentPrepareForm' => ['onContentPrepareForm', -50],
+            'onContentNormaliseRequestData' => ['onContentNormaliseRequestData', -50],
+            'onUserBeforeSave' => ['onUserBeforeSave', 50],
+            // Run after Joomla's custom-fields save path, then persist schedule from the raw profile POST.
+            'onUserAfterSave' => ['onUserAfterSave', -100],
+        ];
+    }
+
+    public function onUserBeforeSave(BeforeSaveEvent $event): void
+    {
+        try {
+            $app = Factory::getApplication();
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if (!$app->isClient('site')) {
+            return;
+        }
+
+        $user = $event->getUser();
+        $userId = (int) ($user['id'] ?? 0);
+        if ($userId > 0) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $option = $input->getCmd('option');
+        $task = $input->post->getCmd('task');
+        if ($option !== 'com_users' || !\in_array($task, ['registration.register'], true)) {
+            return;
+        }
+
+        $consent = trim((string) $input->post->get('privacy_consent', '', 'string'));
+        if ($consent === '1') {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            'Для завершения регистрации необходимо принять условия Политики конфиденциальности'
+        );
+    }
+
+    public function onUserAfterSave(AfterSaveEvent $event): void
+    {
+        if (!$event->getSavingResult()) {
+            return;
+        }
+
+        $user = $event->getUser();
+        $userId = (int) ($user['id'] ?? 0);
+        if ($userId <= 0) {
+            return;
+        }
+
+        $this->saveScheduleFieldsFromPost($userId);
+        $this->saveSocialLinkFieldsFromPost($userId);
+        $this->saveProfileCityFromPost($userId);
+        $this->saveProfileAddressFromPost($userId);
+        UserProfileExtraFieldsHelper::saveFromPost($userId);
+        if ($event->getIsNew()) {
+            UserProfileExtraFieldsHelper::setPhonePublicIfAbsent($userId);
+        }
+        $this->restoreOrphanedAvatar($userId);
+        $this->validateVkProfileWebsite($userId);
+
+        $jform = $this->getPostedJform();
+        $this->saveNotifyChoicesFromPost($userId);
+
+        $newPricesPayload = $this->getCatalogPayloadJson($jform, 'vigling_services_payload');
+        $newStockPayload = $this->getCatalogPayloadJson($jform, 'vigling_stock_services_payload');
+        $newCoursesPayload = $this->getCatalogPayloadJson($jform, 'vigling_courses_payload');
+        $newSearchesPayload = $this->getCatalogPayloadJson($jform, 'vigling_searches_payload');
+        if ($newPricesPayload === null && $newStockPayload === null && $newCoursesPayload === null && $newSearchesPayload === null) {
+            return;
+        }
+
+        $hasPrices = $newPricesPayload !== null;
+        $hasStockPrices = $newStockPayload !== null;
+        $hasCourses = $newCoursesPayload !== null;
+        $hasSearches = $newSearchesPayload !== null;
+
+        $db = null;
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->transactionStart();
+
+            if ($hasPrices) {
+                UserServicesService::syncUserServicePayloadToTable($db, $userId, (string) $newPricesPayload, 'prices', '#__vigling_user_services');
+            }
+
+            if ($hasStockPrices) {
+                UserServicesService::syncUserServicePayloadToTable($db, $userId, (string) $newStockPayload, 'stock_prices', '#__vigling_user_stock_services');
+            }
+
+            if ($hasCourses) {
+                $newCoursesPayload = $this->mergeCourseMediaUploads($userId, (string) $newCoursesPayload);
+                UserCoursesService::syncUserCoursesPayloadToTables($db, $userId, (string) $newCoursesPayload);
+            }
+
+            if ($hasSearches) {
+                $newSearchesPayload = $this->mergeSearchMediaUploads($userId, (string) $newSearchesPayload);
+                UserSearchesService::syncUserSearchesPayloadToTables($db, $userId, (string) $newSearchesPayload);
+            }
+
+            $db->transactionCommit();
+        } catch (\Throwable $e) {
+            try {
+                if ($db instanceof DatabaseInterface) {
+                    $db->transactionRollback();
+                }
+            } catch (\Throwable $ignored) {
+            }
+
+            try {
+                $message = trim((string) $e->getMessage());
+                Factory::getApplication()->enqueueMessage(
+                    $message !== '' ? $message : 'Не удалось сохранить изменения профиля',
+                    'error'
+                );
+            } catch (\Throwable $ignored) {
+            }
+
+            Log::add(
+                'Vigling user services sync failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveNotifyChoicesFromPost(int $userId): void
+    {
+        try {
+            $app = Factory::getApplication();
+        } catch (\Throwable $e) {
+            return;
+        }
+        if (!$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $task = $input->post->getCmd('task', $input->getCmd('task'));
+        if ($task !== 'profile.save') {
+            return;
+        }
+
+        $class = \Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class;
+        if (!class_exists($class, false)) {
+            $file = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        }
+        if (!class_exists($class, false)) {
+            return;
+        }
+
+        $post = $input->post;
+        $present = false;
+        foreach (array_keys($class::KINDS) as $kind) {
+            if ($post->exists('push_' . $kind . '_remind')) {
+                $present = true;
+                break;
+            }
+        }
+        if (!$present) {
+            return;
+        }
+
+        $choices = ['push' => [], 'inbox' => []];
+        foreach (array_keys($class::KINDS) as $kind) {
+            $choices['push'][$kind] = [];
+            $choices['inbox'][$kind] = [];
+            foreach (array_keys($class::EVENTS) as $eventKey) {
+                $choices['push'][$kind][$eventKey] = $post->get('push_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+                $choices['inbox'][$kind][$eventKey] = $post->get('inbox_' . $kind . '_' . $eventKey, '', 'cmd') === '1';
+            }
+            $choices['push'][$kind]['remind'] = $post->get('push_' . $kind . '_remind', '', 'cmd');
+        }
+
+        if ($class::save($userId, $choices)) {
+            return;
+        }
+
+        try {
+            $app->enqueueMessage('Не удалось сохранить настройки уведомлений.', 'error');
+        } catch (\Throwable $e) {
+        }
+    }
+
+    private function requireScheduleTimes(): void
+    {
+        if (function_exists('vigling_profile_encode_checked')) {
+            return;
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        $file = $themes . '/ryba/html/com_users/profile/schedule_times.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    private function loadWorkScheduleHelper(): bool
+    {
+        $class = WorkScheduleHelper::class;
+        if (class_exists($class, false)) {
+            return true;
+        }
+        $themes = defined('JPATH_THEMES') ? JPATH_THEMES : JPATH_ROOT . '/templates';
+        foreach ([
+            JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php',
+            $themes . '/ryba/helpers/offline.php',
+            $themes . '/ryba/helpers/WorkScheduleHelper.php',
+        ] as $file) {
+            if (!is_file($file)) {
+                continue;
+            }
+            require_once $file;
+            if (class_exists($class, false)) {
+                break;
+            }
+        }
+
+        return class_exists($class, false);
+    }
+
+    private function saveScheduleFieldsFromPost(int $userId): void
+    {
+        $rawComFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+        $rawScheduleDays = isset($_POST['jform']['vigling_schedule_days']) && \is_array($_POST['jform']['vigling_schedule_days'])
+            ? $_POST['jform']['vigling_schedule_days']
+            : (isset($_POST['jform']['work_day']) && \is_array($_POST['jform']['work_day'])
+                ? $_POST['jform']['work_day']
+                : null);
+        $rawFromByDay = isset($_POST['jform']['work_from_by_day']) && \is_array($_POST['jform']['work_from_by_day'])
+            ? $_POST['jform']['work_from_by_day']
+            : [];
+        $rawToByDay = isset($_POST['jform']['work_to_by_day']) && \is_array($_POST['jform']['work_to_by_day'])
+            ? $_POST['jform']['work_to_by_day']
+            : [];
+
+        if (empty($rawComFields) && $rawScheduleDays === null && $rawFromByDay === [] && $rawToByDay === []) {
+            return;
+        }
+
+        $toSave = [];
+
+        if ($rawFromByDay !== [] || $rawToByDay !== []) {
+            $this->requireScheduleTimes();
+            if ($this->loadWorkScheduleHelper()) {
+                $encoded = WorkScheduleHelper::encodeChecked(
+                    is_array($rawScheduleDays) ? $rawScheduleDays : [],
+                    $rawFromByDay,
+                    $rawToByDay
+                );
+            } elseif (function_exists('vigling_profile_encode_checked')) {
+                $encoded = vigling_profile_encode_checked(
+                    is_array($rawScheduleDays) ? $rawScheduleDays : [],
+                    $rawFromByDay,
+                    $rawToByDay
+                );
+            } else {
+                return;
+            }
+            $toSave['work_day'] = json_encode($encoded['days']);
+            $toSave['work_from'] = $encoded['fromJson'];
+            $toSave['work_to'] = $encoded['toJson'];
+        } elseif ($rawScheduleDays !== null) {
+            $clean = array_values(array_unique(array_filter(
+                array_map('intval', $rawScheduleDays),
+                static fn (int $d): bool => $d >= 1 && $d <= 7
+            )));
+            sort($clean);
+            $toSave['work_day'] = json_encode(array_map('strval', $clean));
+        } elseif (\array_key_exists('work_day', $rawComFields)) {
+            $val = trim((string) ($rawComFields['work_day'] ?? ''));
+            if ($val !== '') {
+                $decoded = json_decode($val, true);
+                if (\is_array($decoded)) {
+                    $clean = array_values(array_unique(array_filter(
+                        array_map('intval', $decoded),
+                        static fn (int $d): bool => $d >= 1 && $d <= 7
+                    )));
+                    sort($clean);
+                    $toSave['work_day'] = json_encode(array_map('strval', $clean));
+                }
+            } else {
+                $toSave['work_day'] = '';
+            }
+        }
+
+        if (!isset($toSave['work_from']) && !isset($toSave['work_to'])) {
+            foreach (['work_from', 'work_to'] as $fname) {
+                if (\array_key_exists($fname, $rawComFields)) {
+                    $val = trim((string) ($rawComFields[$fname] ?? ''));
+                    $this->requireScheduleTimes();
+                    $isTimesJson = $this->loadWorkScheduleHelper()
+                        ? WorkScheduleHelper::isTimesJson($val)
+                        : (function_exists('vigling_profile_is_times_json') && vigling_profile_is_times_json($val));
+                    if ($val === '' || preg_match('/^\d{2}:\d{2}$/', $val) || $isTimesJson) {
+                        $toSave[$fname] = $val;
+                    }
+                }
+            }
+        }
+
+        if (empty($toSave)) {
+            return;
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+
+            $q = $db->getQuery(true)
+                ->select([$db->quoteName('id'), $db->quoteName('name')])
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' IN (' . implode(',', array_map([$db, 'quote'], array_keys($toSave))) . ')');
+            $db->setQuery($q);
+            $fieldRows = $db->loadObjectList('name') ?: [];
+
+            foreach ($toSave as $fieldName => $fieldValue) {
+                if (!isset($fieldRows[$fieldName])) {
+                    continue;
+                }
+                $fieldId = (int) $fieldRows[$fieldName]->id;
+
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->delete($db->quoteName('#__fields_values'))
+                        ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                        ->where($db->quoteName('item_id') . ' = ' . $userId)
+                )->execute();
+
+                if ($fieldValue !== '') {
+                    $db->setQuery(
+                        $db->getQuery(true)
+                            ->insert($db->quoteName('#__fields_values'))
+                            ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                            ->values($fieldId . ', ' . $userId . ', ' . $db->quote($fieldValue))
+                    )->execute();
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                'Vigling schedule fields save failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveProfileCityFromPost(int $userId): void
+    {
+        $profile = isset($_POST['jform']['profile']) && \is_array($_POST['jform']['profile'])
+            ? $_POST['jform']['profile']
+            : [];
+        $comFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+
+        if (!\array_key_exists('city', $profile) && !\array_key_exists('sity', $comFields)) {
+            return;
+        }
+
+        $city = '';
+        if (\array_key_exists('city', $profile)) {
+            $city = trim((string) $profile['city']);
+        } elseif (\array_key_exists('sity', $comFields)) {
+            $city = trim((string) $comFields['sity']);
+        }
+        $city = preg_replace('/\s+/u', ' ', $city) ?? '';
+        $city = trim($city, ' ,');
+        if (mb_strlen($city) > 120) {
+            $city = mb_substr($city, 0, 120);
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $q = $db->getQuery(true)
+                ->select($db->quoteName('id'))
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' = ' . $db->quote('sity'));
+            $db->setQuery($q);
+            $fieldId = (int) $db->loadResult();
+            if ($fieldId <= 0) {
+                return;
+            }
+
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete($db->quoteName('#__fields_values'))
+                    ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                    ->where($db->quoteName('item_id') . ' = ' . $userId)
+            )->execute();
+
+            if ($city !== '') {
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->insert($db->quoteName('#__fields_values'))
+                        ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                        ->values($fieldId . ', ' . $userId . ', ' . $db->quote($city))
+                )->execute();
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                'Vigling profile city save failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveProfileAddressFromPost(int $userId): void
+    {
+        $profile = isset($_POST['jform']['profile']) && \is_array($_POST['jform']['profile'])
+            ? $_POST['jform']['profile']
+            : [];
+        $comFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+
+        if (!\array_key_exists('region', $profile)
+            && !\array_key_exists('address1', $profile)
+            && !\array_key_exists('address2', $profile)
+            && !\array_key_exists('area', $comFields)
+            && !\array_key_exists('street', $comFields)
+            && !\array_key_exists('house_number', $comFields)
+        ) {
+            return;
+        }
+
+        $toSave = [];
+        $map = [
+            'area' => ['profile' => 'region', 'field' => 'area'],
+            'street' => ['profile' => 'address1', 'field' => 'street'],
+            'house_number' => ['profile' => 'address2', 'field' => 'house_number'],
+        ];
+        foreach ($map as $cfName => $keys) {
+            $value = '';
+            if (\array_key_exists($keys['profile'], $profile) && \is_scalar($profile[$keys['profile']])) {
+                $value = trim((string) $profile[$keys['profile']]);
+            } elseif (\array_key_exists($keys['field'], $comFields) && \is_scalar($comFields[$keys['field']])) {
+                $value = trim((string) $comFields[$keys['field']]);
+            } else {
+                continue;
+            }
+            $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+            $value = trim($value, ' ,');
+            if (mb_strlen($value) > 120) {
+                $value = mb_substr($value, 0, 120);
+            }
+            $toSave[$cfName] = $value;
+        }
+
+        if ($toSave === []) {
+            return;
+        }
+
+        $this->writeCustomFieldValues($userId, $toSave, 'Vigling profile address save failed for user_id=');
+    }
+
+    private function restoreOrphanedAvatar(int $userId): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+        $this->ensureImageHelper();
+        if (!class_exists(ImageUploadHelper::class, false)) {
+            return;
+        }
+        $current = $this->readCustomFieldValue($userId, 'avatar');
+        if ($current !== '' && ImageUploadHelper::webUrl($current) !== '') {
+            return;
+        }
+        $found = ImageUploadHelper::latestRelative('images/profiler', 'avatar_' . $userId);
+        if ($found === '') {
+            return;
+        }
+
+        $this->writeCustomFieldValues($userId, ['avatar' => $found], 'Vigling avatar restore failed for user_id=');
+    }
+
+    private function ensureImageHelper(): void
+    {
+        if (class_exists(ImageUploadHelper::class, false)) {
+            return;
+        }
+        $file = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+
+    private function readCustomFieldValue(int $userId, string $fieldName): string
+    {
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->select($db->quoteName('fv.value'))
+                    ->from($db->quoteName('#__fields_values', 'fv'))
+                    ->innerJoin($db->quoteName('#__fields', 'f') . ' ON ' . $db->quoteName('f.id') . ' = ' . $db->quoteName('fv.field_id'))
+                    ->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+                    ->where($db->quoteName('f.name') . ' = ' . $db->quote($fieldName))
+                    ->where($db->quoteName('fv.item_id') . ' = ' . $userId)
+                    ->setLimit(1)
+            );
+            $value = $db->loadResult();
+
+            return \is_scalar($value) ? trim((string) $value) : '';
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * @param array<string,string> $toSave
+     */
+    private function writeCustomFieldValues(int $userId, array $toSave, string $logPrefix): void
+    {
+        if ($toSave === []) {
+            return;
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $q = $db->getQuery(true)
+                ->select([$db->quoteName('id'), $db->quoteName('name')])
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' IN (' . implode(',', array_map([$db, 'quote'], array_keys($toSave))) . ')');
+            $db->setQuery($q);
+            $fieldRows = $db->loadObjectList('name') ?: [];
+
+            foreach ($toSave as $fieldName => $fieldValue) {
+                if (!isset($fieldRows[$fieldName])) {
+                    continue;
+                }
+                $fieldId = (int) $fieldRows[$fieldName]->id;
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->delete($db->quoteName('#__fields_values'))
+                        ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                        ->where($db->quoteName('item_id') . ' = ' . $userId)
+                )->execute();
+
+                if ($fieldValue === '') {
+                    continue;
+                }
+
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->insert($db->quoteName('#__fields_values'))
+                        ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                        ->values($fieldId . ', ' . $userId . ', ' . $db->quote($fieldValue))
+                )->execute();
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                $logPrefix . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function saveSocialLinkFieldsFromPost(int $userId): void
+    {
+        $rawComFields = isset($_POST['jform']['com_fields']) && \is_array($_POST['jform']['com_fields'])
+            ? $_POST['jform']['com_fields']
+            : [];
+
+        $patterns = [
+            'telegram' => '#^https?://(www\.)?t\.me/.+#i',
+            'max'      => '#^https?://(www\.)?max\.ru/.+#i',
+        ];
+        $invalidLabels = [
+            'telegram' => 'Телеграм',
+            'max'      => 'Макс',
+        ];
+        $expected = [
+            'telegram' => 'https://t.me/',
+            'max'      => 'https://max.ru/',
+        ];
+        $toSave = [];
+        $errors = [];
+        foreach ($patterns as $fname => $pattern) {
+            if (!\array_key_exists($fname, $rawComFields)) {
+                continue;
+            }
+            $val = trim((string) ($rawComFields[$fname] ?? ''));
+            if ($val === '') {
+                $toSave[$fname] = '';
+                continue;
+            }
+            if (mb_strlen($val) > 500) {
+                $val = mb_substr($val, 0, 500);
+            }
+            if (!preg_match($pattern, $val)) {
+                $errors[] = $invalidLabels[$fname] . ': ссылка должна начинаться с ' . $expected[$fname];
+                continue;
+            }
+            $toSave[$fname] = $val;
+        }
+
+        if ($errors !== []) {
+            try {
+                Factory::getApplication()->enqueueMessage(implode("\n", $errors), 'warning');
+            } catch (\Throwable $ignored) {
+            }
+        }
+
+        if (empty($toSave)) {
+            return;
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+
+            $q = $db->getQuery(true)
+                ->select([$db->quoteName('id'), $db->quoteName('name')])
+                ->from($db->quoteName('#__fields'))
+                ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                ->where($db->quoteName('name') . ' IN (' . implode(',', array_map([$db, 'quote'], array_keys($toSave))) . ')');
+            $db->setQuery($q);
+            $fieldRows = $db->loadObjectList('name') ?: [];
+
+            foreach ($toSave as $fieldName => $fieldValue) {
+                if (!isset($fieldRows[$fieldName])) {
+                    continue;
+                }
+                $fieldId = (int) $fieldRows[$fieldName]->id;
+
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->delete($db->quoteName('#__fields_values'))
+                        ->where($db->quoteName('field_id') . ' = ' . $fieldId)
+                        ->where($db->quoteName('item_id') . ' = ' . $userId)
+                )->execute();
+
+                if ($fieldValue !== '') {
+                    $db->setQuery(
+                        $db->getQuery(true)
+                            ->insert($db->quoteName('#__fields_values'))
+                            ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                            ->values($fieldId . ', ' . $userId . ', ' . $db->quote($fieldValue))
+                    )->execute();
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::add(
+                'Vigling social link fields save failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    private function validateVkProfileWebsite(int $userId): void
+    {
+        $profile = isset($_POST['jform']['profile']) && \is_array($_POST['jform']['profile'])
+            ? $_POST['jform']['profile']
+            : [];
+        if (!\array_key_exists('website', $profile)) {
+            return;
+        }
+        $val = trim((string) ($profile['website'] ?? ''));
+        if ($val === '') {
+            return;
+        }
+        if (preg_match('#^https?://(www\.|m\.)?vk\.com/.+#i', $val)) {
+            return;
+        }
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete($db->quoteName('#__user_profiles'))
+                    ->where($db->quoteName('user_id') . ' = ' . $userId)
+                    ->where($db->quoteName('profile_key') . ' = ' . $db->quote('profile.website'))
+            )->execute();
+
+            Factory::getApplication()->enqueueMessage(
+                'Вконтакте: ссылка должна начинаться с https://vk.com/',
+                'warning'
+            );
+        } catch (\Throwable $e) {
+            Log::add(
+                'Vigling VK website validation failed for user_id=' . $userId . ': ' . $e->getMessage(),
+                Log::ERROR,
+                'plg_user_vigling'
+            );
+        }
+    }
+
+    /**
+     * Joomla's array input filter can drop JSON-like hidden values in some registration paths.
+     * Keep a raw POST fallback for internal payload fields generated by our own templates.
+     *
+     * @return array<string,mixed>
+     */
+    private function getPostedJform(): array
+    {
+        $jform = Factory::getApplication()->input->post->get('jform', [], 'array');
+        if (!\is_array($jform)) {
+            $jform = [];
+        }
+
+        $rawJform = $_POST['jform'] ?? [];
+        if (\is_array($rawJform)) {
+            foreach (['vigling_services_payload', 'vigling_stock_services_payload', 'vigling_courses_payload', 'vigling_searches_payload'] as $key) {
+                if ((!isset($jform[$key]) || (string) $jform[$key] === '') && isset($rawJform[$key]) && \is_scalar($rawJform[$key])) {
+                    $jform[$key] = (string) $rawJform[$key];
+                }
+            }
+        }
+
+        return $jform;
+    }
+
+    /**
+     * @param array<string,mixed> $jform
+     */
+    private function getJformString(array $jform, string $key): ?string
+    {
+        if (!isset($jform[$key]) || !\is_scalar($jform[$key])) {
+            return null;
+        }
+
+        $value = trim((string) $jform[$key]);
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Ignore blank or invalid catalog payloads so a profile save cannot wipe
+     * existing services, stocks, courses, or model searches.
+     *
+     * @param array<string,mixed> $jform
+     */
+    private function getCatalogPayloadJson(array $jform, string $key): ?string
+    {
+        $value = $this->getJformString($jform, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        $decoded = json_decode($value, true);
+        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    private function mergeCourseMediaUploads(int $userId, string $payloadJson): string
+    {
+        $payloadJson = trim($payloadJson);
+        if ($payloadJson === '') {
+            return $payloadJson;
+        }
+
+        $payload = json_decode($payloadJson, true);
+        if (!is_array($payload) || !isset($payload['items']) || !is_array($payload['items'])) {
+            return $payloadJson;
+        }
+
+        if (empty($_FILES['jform']) || !is_array($_FILES['jform'])) {
+            return $payloadJson;
+        }
+
+        $files = $_FILES['jform'];
+        $names = $this->getUploadArray($files, 'name', 'upload_course_media');
+        $tmpNames = $this->getUploadArray($files, 'tmp_name', 'upload_course_media');
+        $errors = $this->getUploadArray($files, 'error', 'upload_course_media');
+        $sizes = $this->getUploadArray($files, 'size', 'upload_course_media');
+        if ($names === [] || $tmpNames === [] || $errors === []) {
+            return $payloadJson;
+        }
+
+        foreach ($payload['items'] as $idx => &$item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $name = isset($names[$idx]) && is_scalar($names[$idx]) ? trim((string) $names[$idx]) : '';
+            $tmp = isset($tmpNames[$idx]) && is_scalar($tmpNames[$idx]) ? (string) $tmpNames[$idx] : '';
+            $err = isset($errors[$idx]) ? (int) $errors[$idx] : \UPLOAD_ERR_NO_FILE;
+            $size = isset($sizes[$idx]) ? (int) $sizes[$idx] : 0;
+
+            if ($name === '' || $err === \UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($tmp === '' || $err !== \UPLOAD_ERR_OK || $size <= 0 || !is_uploaded_file($tmp)) {
+                ImageUploadHelper::warn('Изображение курса «' . $name . '» не загружено. Проверьте формат и размер (до 20 МБ).');
+                continue;
+            }
+
+            $saved = ImageUploadHelper::saveUploaded(
+                $tmp,
+                $name,
+                $size,
+                'images/course',
+                'course_' . $userId,
+                ImageUploadHelper::PHOTO_MAX_EDGE,
+                ImageUploadHelper::PHOTO_THUMB_EDGE
+            );
+            if (!empty($saved['ok'])) {
+                $oldPath = trim((string) ($item['media_path'] ?? ''));
+                $item['media_path'] = (string) $saved['path'];
+                if ($oldPath !== '' && $oldPath !== $item['media_path']) {
+                    ImageUploadHelper::deleteStored($oldPath);
+                }
+            } else {
+                ImageUploadHelper::warn((string) ($saved['error'] ?? 'Не удалось загрузить изображение курса.'));
+            }
+        }
+        unset($item);
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: $payloadJson;
+    }
+
+    private function mergeSearchMediaUploads(int $userId, string $payloadJson): string
+    {
+        $payloadJson = trim($payloadJson);
+        if ($payloadJson === '') {
+            return $payloadJson;
+        }
+
+        $payload = json_decode($payloadJson, true);
+        if (!is_array($payload) || !isset($payload['items']) || !is_array($payload['items'])) {
+            return $payloadJson;
+        }
+
+        if (empty($_FILES['jform']) || !is_array($_FILES['jform'])) {
+            return $payloadJson;
+        }
+
+        $files = $_FILES['jform'];
+        $names = $this->getUploadArray($files, 'name', 'upload_search_media');
+        $tmpNames = $this->getUploadArray($files, 'tmp_name', 'upload_search_media');
+        $errors = $this->getUploadArray($files, 'error', 'upload_search_media');
+        $sizes = $this->getUploadArray($files, 'size', 'upload_search_media');
+        if ($names === [] || $tmpNames === [] || $errors === []) {
+            return $payloadJson;
+        }
+
+        foreach ($payload['items'] as $idx => &$item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $name = isset($names[$idx]) && is_scalar($names[$idx]) ? trim((string) $names[$idx]) : '';
+            $tmp = isset($tmpNames[$idx]) && is_scalar($tmpNames[$idx]) ? (string) $tmpNames[$idx] : '';
+            $err = isset($errors[$idx]) ? (int) $errors[$idx] : \UPLOAD_ERR_NO_FILE;
+            $size = isset($sizes[$idx]) ? (int) $sizes[$idx] : 0;
+
+            if ($name === '' || $err === \UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($tmp === '' || $err !== \UPLOAD_ERR_OK || $size <= 0 || !is_uploaded_file($tmp)) {
+                ImageUploadHelper::warn('Изображение поиска «' . $name . '» не загружено. Проверьте формат и размер (до 20 МБ).');
+                continue;
+            }
+
+            $saved = ImageUploadHelper::saveUploaded(
+                $tmp,
+                $name,
+                $size,
+                'images/search',
+                'search_' . $userId,
+                ImageUploadHelper::PHOTO_MAX_EDGE,
+                ImageUploadHelper::PHOTO_THUMB_EDGE
+            );
+            if (!empty($saved['ok'])) {
+                $oldPath = trim((string) ($item['media_path'] ?? ''));
+                $item['media_path'] = (string) $saved['path'];
+                if ($oldPath !== '' && $oldPath !== $item['media_path']) {
+                    ImageUploadHelper::deleteStored($oldPath);
+                }
+            } else {
+                ImageUploadHelper::warn((string) ($saved['error'] ?? 'Не удалось загрузить изображение поиска.'));
+            }
+        }
+        unset($item);
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: $payloadJson;
+    }
+
+    private function getUploadArray(array $files, string $bucket, string $key): array
+    {
+        if (!isset($files[$bucket]) || !is_array($files[$bucket]) || !isset($files[$bucket][$key]) || !is_array($files[$bucket][$key])) {
+            return [];
+        }
+
+        return $files[$bucket][$key];
+    }
+
+    public function onContentPrepareForm(PrepareFormEvent $event): void
+    {
+        $form = $event->getForm();
+        if (!($form instanceof Form)) {
+            return;
+        }
+
+        $formName = $form->getName();
+        if ($formName === 'com_users.profile') {
+            foreach (self::FRONTEND_MANAGED_COM_FIELDS as $name) {
+                $form->removeField($name, 'com_fields');
+            }
+
+            return;
+        }
+
+        if ($formName !== 'com_users.user') {
+            return;
+        }
+
+        $this->loadLanguage();
+        FormHelper::addFieldPrefix('Joomla\\Plugin\\User\\Vigling\\Field');
+        FormHelper::addFormPath(JPATH_PLUGINS . '/user/vigling/forms');
+        $form->loadFile('user', true);
+
+        $this->normalizeComFieldsOnForm($form);
+    }
+
+    public function onContentNormaliseRequestData(NormaliseRequestDataEvent $event): void
+    {
+        $context = $event->getContext();
+        if (!\in_array($context, ['com_users.user', 'com_users.profile'], true)) {
+            return;
+        }
+
+        $data = $event->getData();
+        if (!\is_object($data)) {
+            return;
+        }
+
+        $comFields = isset($data->com_fields) && \is_array($data->com_fields) ? $data->com_fields : [];
+        $profile = isset($data->profile) && \is_array($data->profile) ? $data->profile : [];
+
+        $fromProfile = [
+            'area' => isset($profile['region']) && \is_scalar($profile['region']) ? trim((string) $profile['region']) : '',
+            'street' => isset($profile['address1']) && \is_scalar($profile['address1']) ? trim((string) $profile['address1']) : '',
+            'house_number' => isset($profile['address2']) && \is_scalar($profile['address2']) ? trim((string) $profile['address2']) : '',
+            'sity' => isset($profile['city']) && \is_scalar($profile['city']) ? trim((string) $profile['city']) : '',
+        ];
+        foreach ($fromProfile as $cfName => $value) {
+            if ($value === '') {
+                continue;
+            }
+            if (!\array_key_exists($cfName, $comFields) || $comFields[$cfName] === false || $comFields[$cfName] === null || $comFields[$cfName] === '') {
+                $comFields[$cfName] = $value;
+            }
+        }
+
+        foreach (self::FRONTEND_MANAGED_COM_FIELDS as $name) {
+            if (\array_key_exists($name, $comFields) && $comFields[$name] === false) {
+                unset($comFields[$name]);
+            }
+        }
+
+        $data->com_fields = $comFields;
+    }
+
+    private function normalizeComFieldsOnForm(Form $form): void
+    {
+        $fieldset = $form->getFieldset('com_fields');
+        if (empty($fieldset)) {
+            return;
+        }
+
+        $formUserId = (int) $form->getValue('id');
+        if ($formUserId <= 0) {
+            $formUserId = (int) Factory::getApplication()->input->getInt('id', 0);
+        }
+
+        foreach ($fieldset as $field) {
+            $name = $field->getAttribute('name');
+            if ($name === null || $name === '') {
+                continue;
+            }
+            $shortName = $name;
+            if (preg_match('/com_fields\[([^\]]+)\]/', $name, $m)) {
+                $shortName = $m[1];
+            }
+            $value = $form->getValue($name, 'com_fields');
+            if (\is_array($value)) {
+                $normalized = implode(', ', array_map(function ($v) {
+                    return \is_scalar($v) ? (string) $v : json_encode($v);
+                }, $value));
+                $form->setValue($name, 'com_fields', $normalized);
+                continue;
+            }
+            if (\is_string($value) && \in_array($shortName, self::ENCODED_FIELDS, true)) {
+                $decoded = $this->formatJsnEncodedValue($shortName, $value, $formUserId);
+                if ($decoded !== null) {
+                    $form->setValue($name, 'com_fields', self::VIGLING_MARKER . $decoded);
+                }
+            }
+        }
+    }
+
+    private function formatJsnEncodedValue(string $fieldName, string $value, int $userId = 0): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        if ($fieldName === 'prices') {
+            if ($userId > 0) {
+                $fromNewModel = $this->formatPricesFromNewModel($userId);
+                if ($fromNewModel !== null) {
+                    return $fromNewModel;
+                }
+                return 'Нет данных в новой таблице услуг (#__vigling_user_services).';
+            }
+            return null;
+        }
+        if ($fieldName === 'stock_prices') {
+            if ($userId > 0) {
+                $fromNewModel = $this->formatPricesFromNewModel($userId, '#__vigling_user_stock_services');
+                if ($fromNewModel !== null) {
+                    return $fromNewModel;
+                }
+                return 'Нет данных в новой таблице акционных услуг (#__vigling_user_stock_services).';
+            }
+            return null;
+        }
+        if ($fieldName === 'work_day') {
+            return $this->formatWorkDayValue($value);
+        }
+        if ($fieldName === 'vyberite_spetsialnos') {
+            return $this->formatVyberiteSpetsialnosValue($value);
+        }
+        return null;
+    }
+
+    private function formatPricesFromNewModel(int $userId, string $userServicesTable = '#__vigling_user_services'): ?string
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+        $structured = $userServicesTable === '#__vigling_user_stock_services'
+            ? JsnDecodeHelper::getUserStockServicesStructured($userId)
+            : JsnDecodeHelper::getUserServicesStructured($userId);
+
+        if ($structured === []) {
+            return null;
+        }
+
+        $lines = [];
+        foreach ($structured as $category) {
+            $title = (string) ($category['title'] ?? 'Услуги');
+            $items = is_array($category['items'] ?? null) ? $category['items'] : [];
+            if ($items !== []) {
+                $lines[] = $title . ': ' . implode('; ', $items);
+            }
+        }
+
+        return $lines === [] ? null : implode("\n", $lines);
+    }
+
+    private function formatWorkDayValue(string $raw): string
+    {
+        $data = json_decode($raw, true);
+        if (!\is_array($data)) {
+            return $raw;
+        }
+        $dayNames = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        $names = [];
+        foreach ($data as $d) {
+            $idx = (int) $d;
+            if ($idx >= 1 && $idx <= 7) {
+                $names[] = $dayNames[$idx];
+            }
+        }
+        return $names === [] ? $raw : implode(', ', $names);
+    }
+
+    private function formatVyberiteSpetsialnosValue(string $raw): string
+    {
+        $data = json_decode($raw, true);
+        if (!\is_array($data)) {
+            return $raw;
+        }
+        $cats = $this->getCategoriesFromDb();
+        $parts = [];
+        foreach ($data as $catId) {
+            $ids = $this->extractCategoryIds($catId);
+            foreach ($ids as $id) {
+                $title = isset($cats[$id]['title']) ? $cats[$id]['title'] : '#' . $id;
+                $parts[] = $title;
+            }
+        }
+        return $parts === [] ? $raw : implode(', ', $parts);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractCategoryIds($value): array
+    {
+        if (\is_scalar($value) || $value === null) {
+            $id = trim((string) $value);
+            return $id === '' ? [] : [$id];
+        }
+
+        if (!\is_array($value)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($value as $nested) {
+            foreach ($this->extractCategoryIds($nested) as $id) {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+}

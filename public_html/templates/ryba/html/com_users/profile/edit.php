@@ -1,0 +1,4770 @@
+<?php
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Access\Access;
+use Joomla\CMS\Factory;
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Router\Route;
+use Joomla\Database\DatabaseInterface;
+
+$lang = $this->getLanguage();
+$lang->load('plg_user_profile', JPATH_ADMINISTRATOR);
+
+$wa = $this->getDocument()->getWebAssetManager();
+$wa->useScript('keepalive')->useScript('form.validate');
+
+$user = Factory::getApplication()->getIdentity();
+$userId = (int) ($user->id ?? 0);
+$groups = $userId > 0 ? Access::getGroupsByUser($userId, false) : [];
+$isAdministrator = in_array(8, $groups, true) || in_array(7, $groups, true) || in_array(6, $groups, true);
+$masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+if (is_file($masterHelper)) {
+	require_once $masterHelper;
+}
+$isMaster = class_exists(\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::class, false)
+	? \Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMasterGroupList($groups)
+	: (in_array(3, array_map('intval', (array) $groups), true) || in_array(8, array_map('intval', (array) $groups), true));
+$profileMasterType = '';
+
+$profileImage = '';
+$jcfields = [];
+if (!empty($this->data->jcfields) && is_array($this->data->jcfields)) {
+	foreach ($this->data->jcfields as $f) {
+		if (isset($f->name)) {
+			$jcfields[$f->name] = $f;
+		}
+	}
+}
+if (isset($jcfields['avatar']->rawvalue) && is_scalar($jcfields['avatar']->rawvalue)) {
+	$raw = trim((string) $jcfields['avatar']->rawvalue);
+	$dec = json_decode($raw, true);
+	if (is_string($dec)) {
+		$profileImage = trim($dec);
+	} elseif (is_array($dec)) {
+		foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($dec)) as $v) {
+			if (is_scalar($v) && trim((string) $v) !== '') {
+				$profileImage = trim((string) $v);
+				break;
+			}
+		}
+	} else {
+		$profileImage = $raw;
+	}
+}
+if ($profileImage === '') {
+	$fieldsFallback = \Joomla\Component\Fields\Administrator\Helper\FieldsHelper::getFields('com_users.user', $this->data, true);
+	foreach ($fieldsFallback as $f) {
+		if (!isset($f->name) || $f->name !== 'avatar') {
+			continue;
+		}
+		$v = isset($f->rawvalue) ? $f->rawvalue : (isset($f->value) ? $f->value : '');
+		if (is_scalar($v)) {
+			$raw = trim((string) $v);
+			$dec = json_decode($raw, true);
+			if (is_string($dec)) {
+				$profileImage = trim($dec);
+			} elseif (is_array($dec)) {
+				foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($dec)) as $imgVal) {
+					if (is_scalar($imgVal) && trim((string) $imgVal) !== '') {
+						$profileImage = trim((string) $imgVal);
+						break;
+					}
+				}
+			} else {
+				$profileImage = $raw;
+			}
+		}
+		break;
+	}
+}
+
+if (isset($jcfields['is_master']->rawvalue) && is_scalar($jcfields['is_master']->rawvalue)) {
+	$profileMasterType = trim((string) $jcfields['is_master']->rawvalue);
+}
+if ($profileMasterType === '1' || $profileMasterType === '2') {
+	$isMaster = true;
+}
+if ($isAdministrator) {
+	$isMaster = true;
+}
+
+if ($isAdministrator) {
+	$roleLabel = 'Администратор';
+} elseif ($profileMasterType === '2') {
+	$roleLabel = 'Мастер - Заточка/Ремонт';
+} elseif ($profileMasterType === '1' || $isMaster) {
+	$roleLabel = 'Мастер';
+} else {
+	$roleLabel = 'Клиент';
+}
+$profileReviews = [];
+try {
+	if ($userId > 0) {
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\ReviewHelper::class)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+		}
+		$reviewDb = Factory::getContainer()->get(DatabaseInterface::class);
+		$reviewDirection = $isMaster
+			? \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_CLIENT_TO_MASTER
+			: \Viglin\Component\Orders\Site\Helper\ReviewHelper::DIRECTION_MASTER_TO_CLIENT;
+		$profileReviews = \Viglin\Component\Orders\Site\Helper\ReviewHelper::loadAboutUser(
+			$reviewDb,
+			$userId,
+			$reviewDirection
+		);
+	}
+} catch (\Throwable $e) {
+	$profileReviews = [];
+}
+if ($profileImage !== '' && strpos($profileImage, 'http') !== 0) {
+	$clean = preg_replace('#^/?(images/profiler/?)?#i', '', str_replace('\\', '/', $profileImage));
+	$profileImage = rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/images/profiler/' . $clean;
+}
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$vgImageHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/ImageUploadHelper.php';
+	if (is_file($vgImageHelperFile)) {
+		require_once $vgImageHelperFile;
+	}
+}
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class, false)) {
+	$profileImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($profileImage, (int) $userId, true);
+}
+
+$defaultImg = \Joomla\CMS\Uri\Uri::root() . 'templates/ryba/images/master.png';
+if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
+	$defaultImg = \Joomla\CMS\Uri\Uri::root() . 'components/com_jsn/assets/img/default.jpg';
+}
+
+$tabs = $isMaster
+	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'notifications', 'login']
+	: ['profile', 'notifications', 'login'];
+
+$tabTitles = [
+	'profile' => 'Профиль',
+	'portfolio' => 'Портфолио',
+	'speciality' => 'Специальность',
+	'services' => 'Услуги и цены',
+	'stocks' => 'Акции',
+	'courses' => 'Курсы',
+	'searches' => 'Поиск моделей',
+	'schedule' => 'Расписание',
+	'notifications' => 'Уведомления',
+	'login' => 'Email и пароль',
+];
+
+$tabFields = [
+	'profile' => [],
+	'portfolio' => [],
+	'speciality' => [],
+	'services' => [],
+	'stocks' => [],
+	'courses' => [],
+	'searches' => [],
+	'schedule' => [],
+	'notifications' => [],
+	'login' => [],
+];
+
+$fieldTokens = static function ($field) {
+	$id = strtolower((string) ($field->id ?? ''));
+	$name = strtolower((string) ($field->fieldname ?? ''));
+	$rawName = '';
+	if (method_exists($field, 'getAttribute')) {
+		$rawName = (string) $field->getAttribute('name', '');
+	}
+
+	return trim($id . ' ' . $name . ' ' . strtolower($rawName));
+};
+
+$classifyField = static function ($field) {
+	$id = strtolower((string) ($field->id ?? ''));
+	$name = strtolower((string) ($field->fieldname ?? ''));
+	$rawName = '';
+	if (method_exists($field, 'getAttribute')) {
+		$rawName = (string) $field->getAttribute('name', '');
+	}
+	$joined = $id . ' ' . $name . ' ' . strtolower($rawName);
+
+	if (strpos($joined, 'portfolio') !== false) {
+		return 'portfolio';
+	}
+	if (strpos($joined, 'spetsial') !== false || strpos($joined, 'special') !== false || strpos($joined, 'vyberite_spetsialnos') !== false) {
+		return 'speciality';
+	}
+	if (strpos($joined, 'stock') !== false || strpos($joined, 'akci') !== false) {
+		return 'stocks';
+	}
+	if (strpos($joined, 'price') !== false || strpos($joined, 'uslug') !== false || strpos($joined, 'servis') !== false) {
+		return 'services';
+	}
+	if (strpos($joined, 'work_day') !== false || strpos($joined, 'work_from') !== false || strpos($joined, 'work_to') !== false) {
+		return 'schedule';
+	}
+	if (strpos($joined, 'notify') !== false || strpos($joined, 'push') !== false) {
+		return 'profile';
+	}
+	if (strpos($joined, 'username') !== false || strpos($joined, 'password') !== false) {
+		return 'login';
+	}
+
+	return 'profile';
+};
+
+$isEmailField = static function ($field) use ($fieldTokens) {
+	$t = $fieldTokens($field);
+	return strpos($t, 'email') !== false;
+};
+
+$isNameField = static function ($field) use ($fieldTokens) {
+	$t = $fieldTokens($field);
+	return strpos($t, 'jform_name') !== false || preg_match('/\bname\b/', $t);
+};
+
+$isUsernameField = static function ($field) use ($fieldTokens) {
+	$t = $fieldTokens($field);
+	return strpos($t, 'username') !== false;
+};
+
+$isPasswordField = static function ($field) use ($fieldTokens) {
+	$t = $fieldTokens($field);
+	return strpos($t, 'password') !== false;
+};
+
+$lockedUsername = '';
+if (method_exists($this->form, 'getValue')) {
+	$lockedUsername = trim((string) $this->form->getValue('username'));
+}
+if ($lockedUsername === '' && isset($this->data->username) && is_scalar($this->data->username)) {
+	$lockedUsername = trim((string) $this->data->username);
+}
+if ($lockedUsername === '') {
+	$lockedUsername = trim((string) ($user->username ?? ''));
+}
+
+$allRenderableFields = [];
+foreach ($this->form->getFieldsets() as $group => $fieldset) {
+	$fields = $this->form->getFieldset($group);
+	if (!count($fields)) {
+		continue;
+	}
+	foreach ($fields as $field) {
+		$type = strtolower((string) ($field->type ?? ''));
+		if ($type === 'hidden') {
+			continue;
+		}
+		$allRenderableFields[] = $field;
+		$tab = $classifyField($field);
+		$tabFields[$tab][] = $field;
+	}
+}
+
+$hasAnyFieldsInTabs = false;
+foreach ($tabFields as $set) {
+	if (!empty($set)) {
+		$hasAnyFieldsInTabs = true;
+		break;
+	}
+}
+
+$profileData = [];
+if (isset($this->data->profile) && is_array($this->data->profile)) {
+	$profileData = $this->data->profile;
+} elseif (isset($this->data->profile) && is_object($this->data->profile)) {
+	$profileData = (array) $this->data->profile;
+}
+
+$profileValue = static function (array $data, string $key, string $fallback = '') {
+	if (!array_key_exists($key, $data)) {
+		return $fallback;
+	}
+	$val = $data[$key];
+	if (is_array($val) || is_object($val)) {
+		return $fallback;
+	}
+
+	return trim((string) $val);
+};
+
+$lastnameValue = $profileValue($profileData, 'lastname', '');
+$phoneValue = $profileValue($profileData, 'phone', '');
+$cityValue = $profileValue($profileData, 'city', '');
+$regionValue = $profileValue($profileData, 'region', '');
+$address1Value = $profileValue($profileData, 'address1', '');
+$address2Value = $profileValue($profileData, 'address2', '');
+$websiteValue = $profileValue($profileData, 'website', '');
+$aboutMeValue = $profileValue($profileData, 'aboutme', '');
+if ($lastnameValue === '' && isset($jcfields['lastname']->rawvalue) && is_scalar($jcfields['lastname']->rawvalue)) {
+	$lastnameValue = trim((string) $jcfields['lastname']->rawvalue);
+}
+if ($phoneValue === '') {
+	if (isset($jcfields['telefon']->rawvalue) && is_scalar($jcfields['telefon']->rawvalue)) {
+		$phoneValue = trim((string) $jcfields['telefon']->rawvalue);
+	} elseif (isset($jcfields['phone']->rawvalue) && is_scalar($jcfields['phone']->rawvalue)) {
+		$phoneValue = trim((string) $jcfields['phone']->rawvalue);
+	}
+}
+
+if ($cityValue === '' && isset($jcfields['sity']->rawvalue) && is_scalar($jcfields['sity']->rawvalue)) {
+	$cityValue = trim((string) $jcfields['sity']->rawvalue);
+}
+if ($cityValue === '' && class_exists(\Viglin\Component\Poisk\Site\Helper\ListMapHelper::class)) {
+	$cityValue = \Viglin\Component\Poisk\Site\Helper\ListMapHelper::cityForUser($userId);
+}
+if ($regionValue === '' && isset($jcfields['area']->rawvalue) && is_scalar($jcfields['area']->rawvalue)) {
+	$regionValue = trim((string) $jcfields['area']->rawvalue);
+}
+if ($address1Value === '' && isset($jcfields['street']->rawvalue) && is_scalar($jcfields['street']->rawvalue)) {
+	$address1Value = trim((string) $jcfields['street']->rawvalue);
+}
+if ($address2Value === '' && isset($jcfields['house_number']->rawvalue) && is_scalar($jcfields['house_number']->rawvalue)) {
+	$address2Value = trim((string) $jcfields['house_number']->rawvalue);
+}
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgExtraHelperFile = JPATH_PLUGINS . '/user/vigling/src/Helper/UserProfileExtraFieldsHelper.php';
+	if (is_file($vgExtraHelperFile)) {
+		require_once $vgExtraHelperFile;
+	}
+}
+$vgDoorway = '';
+$vgFloor = '';
+$vgApartment = '';
+$vgHomeSelected = [];
+$vgPaymentSelected = [];
+$vgChildren = false;
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$vgFieldRaw = static function (array $fields, string $name): string {
+		if (!isset($fields[$name])) {
+			return '';
+		}
+		$raw = $fields[$name]->rawvalue ?? $fields[$name]->value ?? '';
+		return is_scalar($raw) ? trim((string) $raw) : '';
+	};
+	$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'doorway'));
+	$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'floor'));
+	$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgFieldRaw($jcfields, 'apartment'));
+	$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgFieldRaw($jcfields, 'home'));
+	$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgFieldRaw($jcfields, 'payment_method'));
+	$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgFieldRaw($jcfields, 'suitable_for_children'));
+	if ((int) $userId > 0) {
+		$vgStored = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues((int) $userId, [
+			'doorway', 'floor', 'apartment', 'home', 'payment_method', 'suitable_for_children', 'area', 'street', 'house_number',
+		]);
+		if ($vgDoorway === '' && isset($vgStored['doorway'])) {
+			$vgDoorway = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['doorway']);
+		}
+		if ($vgFloor === '' && isset($vgStored['floor'])) {
+			$vgFloor = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['floor']);
+		}
+		if ($vgApartment === '' && isset($vgStored['apartment'])) {
+			$vgApartment = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::decodeText($vgStored['apartment']);
+		}
+		if ($vgHomeSelected === [] && isset($vgStored['home'])) {
+			$vgHomeSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parseHomeIds($vgStored['home']);
+		}
+		if ($vgPaymentSelected === [] && isset($vgStored['payment_method'])) {
+			$vgPaymentSelected = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::parsePaymentKeys($vgStored['payment_method']);
+		}
+		if (!$vgChildren && isset($vgStored['suitable_for_children'])) {
+			$vgChildren = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::isChildrenYes($vgStored['suitable_for_children']);
+		}
+		if ($regionValue === '' && isset($vgStored['area'])) {
+			$regionValue = trim((string) $vgStored['area']);
+		}
+		if ($address1Value === '' && isset($vgStored['street'])) {
+			$address1Value = trim((string) $vgStored['street']);
+		}
+		if ($address2Value === '' && isset($vgStored['house_number'])) {
+			$address2Value = trim((string) $vgStored['house_number']);
+		}
+	}
+}
+if ($websiteValue === '' && isset($jcfields['link']->rawvalue) && is_scalar($jcfields['link']->rawvalue)) {
+	$websiteValue = trim((string) $jcfields['link']->rawvalue);
+}
+$telegramValue = '';
+if (isset($jcfields['telegram']->rawvalue) && is_scalar($jcfields['telegram']->rawvalue)) {
+	$telegramValue = trim((string) $jcfields['telegram']->rawvalue);
+}
+$maxValue = '';
+if (isset($jcfields['max']->rawvalue) && is_scalar($jcfields['max']->rawvalue)) {
+	$maxValue = trim((string) $jcfields['max']->rawvalue);
+}
+if (($telegramValue === '' || $maxValue === '' || $websiteValue === '') && (int) $userId > 0) {
+	try {
+		$db = \Joomla\CMS\Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$q = $db->getQuery(true)
+			->select([$db->quoteName('f.name'), $db->quoteName('fv.value')])
+			->from($db->quoteName('#__fields_values', 'fv'))
+			->innerJoin($db->quoteName('#__fields', 'f') . ' ON ' . $db->quoteName('f.id') . ' = ' . $db->quoteName('fv.field_id'))
+			->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+			->where($db->quoteName('f.name') . ' IN (' . $db->quote('telegram') . ', ' . $db->quote('max') . ', ' . $db->quote('link') . ')')
+			->where($db->quoteName('fv.item_id') . ' = ' . (int) $userId);
+		$db->setQuery($q);
+		foreach ($db->loadObjectList() ?: [] as $row) {
+			if ($row->name === 'telegram' && $telegramValue === '') {
+				$telegramValue = trim((string) $row->value);
+			} elseif ($row->name === 'max' && $maxValue === '') {
+				$maxValue = trim((string) $row->value);
+			} elseif ($row->name === 'link' && $websiteValue === '') {
+				$websiteValue = trim((string) $row->value);
+			}
+		}
+	} catch (\Throwable $ignored) {
+	}
+	if ($websiteValue === '') {
+		try {
+			$db = \Joomla\CMS\Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$q = $db->getQuery(true)
+				->select($db->quoteName('profile_value'))
+				->from($db->quoteName('#__user_profiles'))
+				->where($db->quoteName('user_id') . ' = ' . (int) $userId)
+				->where($db->quoteName('profile_key') . ' = ' . $db->quote('profile.website'));
+			$db->setQuery($q);
+			$raw = $db->loadResult();
+			if (is_string($raw) && $raw !== '') {
+				$decoded = json_decode($raw, true);
+				$websiteValue = trim((string) (is_string($decoded) ? $decoded : $raw));
+			}
+		} catch (\Throwable $ignored) {
+		}
+	}
+}
+if ($aboutMeValue === '' && isset($jcfields['o_sebe']->rawvalue) && is_scalar($jcfields['o_sebe']->rawvalue)) {
+	$aboutMeValue = trim((string) $jcfields['o_sebe']->rawvalue);
+}
+
+$scheduleWorkDays = [];
+$scheduleWorkFrom = '';
+$scheduleWorkTo = '';
+$scheduleFromByDay = array_fill(1, 7, '');
+$scheduleToByDay = array_fill(1, 7, '');
+$scheduleFieldRaw = [];
+if ($userId > 0) {
+	try {
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+		$query = $db->getQuery(true)
+			->select([$db->quoteName('f.name'), $db->quoteName('fv.value')])
+			->from($db->quoteName('#__fields', 'f'))
+			->join('INNER', $db->quoteName('#__fields_values', 'fv') . ' ON ' . $db->quoteName('fv.field_id') . ' = ' . $db->quoteName('f.id'))
+			->where($db->quoteName('f.context') . ' = ' . $db->quote('com_users.user'))
+			->where($db->quoteName('fv.item_id') . ' = ' . (int) $userId)
+			->where($db->quoteName('f.name') . ' IN (' . implode(',', array_map([$db, 'quote'], ['work_day', 'work_from', 'work_to'])) . ')');
+		$db->setQuery($query);
+		foreach (($db->loadObjectList() ?: []) as $row) {
+			if (isset($row->name) && is_scalar($row->value)) {
+				$scheduleFieldRaw[(string) $row->name] = (string) $row->value;
+			}
+		}
+	} catch (Throwable $e) {
+		$scheduleFieldRaw = [];
+	}
+}
+if (isset($scheduleFieldRaw['work_day']) || (isset($jcfields['work_day']->rawvalue) && is_scalar($jcfields['work_day']->rawvalue))) {
+	$wdRaw = trim((string) ($scheduleFieldRaw['work_day'] ?? $jcfields['work_day']->rawvalue));
+	if ($wdRaw !== '') {
+		$wdDecoded = json_decode($wdRaw, true);
+		if (is_array($wdDecoded) && !empty($wdDecoded)) {
+			$scheduleWorkDays = array_values(array_unique(array_map('intval', array_filter($wdDecoded, 'is_scalar'))));
+		}
+	}
+}
+$decodeTimeField = static function (string $raw): string {
+	$raw = trim($raw);
+	if ($raw === '') {
+		return '';
+	}
+	$dec = json_decode($raw, true);
+	if (is_array($dec) && !empty($dec) && is_scalar(reset($dec))) {
+		$raw = trim((string) reset($dec));
+	}
+	$raw = str_replace('.', ':', $raw);
+	if (preg_match('/^(\d{1,2}):(\d{2})$/', $raw, $m)) {
+		return sprintf('%02d', (int) $m[1]) . ':' . $m[2];
+	}
+	return '';
+};
+$workFromRawLoad = (string) ($scheduleFieldRaw['work_from'] ?? ((isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue)) ? $jcfields['work_from']->rawvalue : ''));
+$workToRawLoad = (string) ($scheduleFieldRaw['work_to'] ?? ((isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue)) ? $jcfields['work_to']->rawvalue : ''));
+$workDayRawLoad = (string) ($scheduleFieldRaw['work_day'] ?? ((isset($jcfields['work_day']->rawvalue) && is_scalar($jcfields['work_day']->rawvalue)) ? $jcfields['work_day']->rawvalue : ''));
+if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$vgWorkScheduleFile = JPATH_PLUGINS . '/user/vigling/src/Helper/WorkScheduleHelper.php';
+	if (is_file($vgWorkScheduleFile)) {
+		require_once $vgWorkScheduleFile;
+	}
+}
+if (!function_exists('vigling_profile_times_by_day')) {
+	$vgInlineSchedule = __DIR__ . '/schedule_times.php';
+	if (is_file($vgInlineSchedule)) {
+		require_once $vgInlineSchedule;
+	}
+}
+$parsedSchedule = ['days' => [], 'from' => [], 'to' => []];
+if (class_exists(\Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::class, false)) {
+	$parsedSchedule = \Joomla\Plugin\User\Vigling\Helper\WorkScheduleHelper::timesByDay($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+} elseif (function_exists('vigling_profile_times_by_day')) {
+	$parsedSchedule = vigling_profile_times_by_day($workDayRawLoad, $workFromRawLoad, $workToRawLoad);
+}
+$scheduleWorkDays = $parsedSchedule['days'] !== [] ? $parsedSchedule['days'] : $scheduleWorkDays;
+$scheduleFromByDay = $parsedSchedule['from'];
+$scheduleToByDay = $parsedSchedule['to'];
+if (isset($scheduleFieldRaw['work_from']) || (isset($jcfields['work_from']->rawvalue) && is_scalar($jcfields['work_from']->rawvalue))) {
+	$v = $decodeTimeField($workFromRawLoad);
+	if ($v !== '') {
+		$scheduleWorkFrom = $v;
+	}
+}
+if (isset($scheduleFieldRaw['work_to']) || (isset($jcfields['work_to']->rawvalue) && is_scalar($jcfields['work_to']->rawvalue))) {
+	$v = $decodeTimeField($workToRawLoad);
+	if ($v !== '') {
+		$scheduleWorkTo = $v;
+	}
+}
+$scheduleTimeOptions = [];
+for ($h = 8; $h <= 24; $h++) {
+	foreach ([0, 15, 30, 45] as $m) {
+		if ($h === 24 && $m > 0) {
+			continue;
+		}
+		$scheduleTimeOptions[] = sprintf('%02d', $h === 24 ? 0 : $h) . ':' . sprintf('%02d', $m);
+	}
+}
+$scheduleDayNames = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
+
+$portfolioRaw = '';
+if (isset($jcfields['portfolio_field']->rawvalue) && is_scalar($jcfields['portfolio_field']->rawvalue)) {
+	$portfolioRaw = trim((string) $jcfields['portfolio_field']->rawvalue);
+}
+if ($portfolioRaw === '') {
+	$fieldsFallback = \Joomla\Component\Fields\Administrator\Helper\FieldsHelper::getFields('com_users.user', $this->data, true);
+	foreach ($fieldsFallback as $f) {
+		if (!isset($f->name) || $f->name !== 'portfolio_field') {
+			continue;
+		}
+		$v = isset($f->rawvalue) ? $f->rawvalue : (isset($f->value) ? $f->value : '');
+		if (is_scalar($v)) {
+			$portfolioRaw = trim((string) $v);
+		}
+		break;
+	}
+}
+
+$portfolioFiles = [];
+if ($portfolioRaw !== '') {
+	$decoded = json_decode($portfolioRaw, true);
+	if (is_array($decoded)) {
+		$iter = new RecursiveIteratorIterator(new RecursiveArrayIterator($decoded));
+		foreach ($iter as $item) {
+			if (is_scalar($item)) {
+				$file = trim((string) $item);
+				if ($file !== '') {
+					$portfolioFiles[] = basename(str_replace('\\', '/', $file));
+				}
+			}
+		}
+	} else {
+		$file = basename(str_replace('\\', '/', $portfolioRaw));
+		if ($file !== '') {
+			$portfolioFiles[] = $file;
+		}
+	}
+}
+$portfolioFiles = array_values(array_unique($portfolioFiles));
+
+$portfolioImages = [];
+foreach ($portfolioFiles as $file) {
+	$portfolioImages[] = [
+		'file' => $file,
+		'url' => rtrim(\Joomla\CMS\Uri\Uri::root(), '/') . '/images/portfolio/' . $file,
+	];
+}
+
+$specialtyRaw = '';
+if (isset($jcfields['vyberite_spetsialnos']->rawvalue) && is_scalar($jcfields['vyberite_spetsialnos']->rawvalue)) {
+	$specialtyRaw = trim((string) $jcfields['vyberite_spetsialnos']->rawvalue);
+}
+if ($specialtyRaw === '') {
+	$fieldsFallback = \Joomla\Component\Fields\Administrator\Helper\FieldsHelper::getFields('com_users.user', $this->data, true);
+	foreach ($fieldsFallback as $f) {
+		if (!isset($f->name) || $f->name !== 'vyberite_spetsialnos') {
+			continue;
+		}
+		$v = isset($f->rawvalue) ? $f->rawvalue : (isset($f->value) ? $f->value : '');
+		if (is_scalar($v)) {
+			$specialtyRaw = trim((string) $v);
+		}
+		break;
+	}
+}
+$selectedSpecialtyIds = [];
+if ($specialtyRaw !== '') {
+	$decoded = json_decode($specialtyRaw, true);
+	if (is_array($decoded)) {
+		foreach ($decoded as $item) {
+			if (is_scalar($item)) {
+				$id = (int) $item;
+				if ($id > 0) {
+					$selectedSpecialtyIds[] = $id;
+				}
+			}
+		}
+	} elseif (strpos($specialtyRaw, ',') !== false) {
+		foreach (explode(',', $specialtyRaw) as $item) {
+			$id = (int) trim((string) $item);
+			if ($id > 0) {
+				$selectedSpecialtyIds[] = $id;
+			}
+		}
+	} else {
+		$id = (int) $specialtyRaw;
+		if ($id > 0) {
+			$selectedSpecialtyIds[] = $id;
+		}
+	}
+}
+$selectedSpecialtyIds = array_values(array_unique($selectedSpecialtyIds));
+
+$specialties = [];
+try {
+	$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+	$query = $db->getQuery(true)
+		->select($db->quoteName(['id', 'title', 'path']))
+		->from($db->quoteName('#__categories'))
+		->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+		->where($db->quoteName('published') . ' = 1')
+		->where($db->quoteName('level') . ' = 2')
+		->order($db->quoteName('lft') . ' ASC');
+	$db->setQuery($query);
+	$rows = $db->loadAssocList() ?: [];
+	foreach ($rows as $row) {
+		$id = (int) ($row['id'] ?? 0);
+		$title = trim((string) ($row['title'] ?? ''));
+		$path = (string) ($row['path'] ?? '');
+		if ($id <= 0 || $title === '') {
+			continue;
+		}
+		$isRepair = strpos($path, 'zatochka-remont/') === 0;
+		$specialties[] = [
+			'id' => $id,
+			'title' => $title,
+			'type' => $isRepair ? 'repair' : 'beauty',
+		];
+	}
+} catch (\Throwable $e) {
+	$specialties = [];
+}
+
+$servicesByCategory = [];
+$allCategoryIds = array_values(array_unique(array_map(static function (array $item): int {
+	return (int) ($item['id'] ?? 0);
+}, $specialties)));
+$allCategoryIds = array_values(array_filter($allCategoryIds, static function (int $id): bool {
+	return $id > 0;
+}));
+
+if ($allCategoryIds !== []) {
+	try {
+		$db = $db ?? Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$servicesQuery = $db->getQuery(true)
+			->select($db->quoteName(['id', 'catid', 'title']))
+			->from($db->quoteName('#__content'))
+			->where($db->quoteName('state') . ' = 1')
+			->where($db->quoteName('catid') . ' IN (' . implode(',', array_map('intval', $allCategoryIds)) . ')')
+			->order($db->quoteName('catid') . ' ASC')
+			->order($db->quoteName('title') . ' ASC');
+		$db->setQuery($servicesQuery);
+		$serviceRows = $db->loadAssocList() ?: [];
+		$serviceIds = [];
+		foreach ($serviceRows as $row) {
+			$serviceId = (int) ($row['id'] ?? 0);
+			$catId = (int) ($row['catid'] ?? 0);
+			if ($serviceId <= 0 || $catId <= 0) {
+				continue;
+			}
+			$serviceIds[] = $serviceId;
+			if (!isset($servicesByCategory[$catId])) {
+				$servicesByCategory[$catId] = [];
+			}
+			$servicesByCategory[$catId][$serviceId] = [
+				'id' => $serviceId,
+				'title' => (string) ($row['title'] ?? ''),
+				'tags' => [],
+			];
+		}
+		if ($serviceIds !== []) {
+			$tagsQuery = $db->getQuery(true)
+				->select([
+					$db->quoteName('m.content_item_id', 'content_id'),
+					$db->quoteName('t.id', 'tag_id'),
+					$db->quoteName('t.title', 'tag_title'),
+				])
+				->from($db->quoteName('#__contentitem_tag_map', 'm'))
+				->join('INNER', $db->quoteName('#__tags', 't') . ' ON ' . $db->quoteName('t.id') . ' = ' . $db->quoteName('m.tag_id'))
+				->where($db->quoteName('m.type_alias') . ' = ' . $db->quote('com_content.article'))
+				->where($db->quoteName('m.content_item_id') . ' IN (' . implode(',', array_map('intval', $serviceIds)) . ')')
+				->where($db->quoteName('t.published') . ' = 1')
+				->order($db->quoteName('t.title') . ' ASC');
+			$db->setQuery($tagsQuery);
+			$tagRows = $db->loadAssocList() ?: [];
+			$serviceCatMap = [];
+			foreach ($servicesByCategory as $catId => $items) {
+				foreach ($items as $serviceId => $item) {
+					$serviceCatMap[$serviceId] = (int) $catId;
+				}
+			}
+			foreach ($tagRows as $tagRow) {
+				$contentId = (int) ($tagRow['content_id'] ?? 0);
+				$tagId = (int) ($tagRow['tag_id'] ?? 0);
+				$tagTitle = (string) ($tagRow['tag_title'] ?? '');
+				$catId = $serviceCatMap[$contentId] ?? 0;
+				if ($contentId <= 0 || $tagId <= 0 || $catId <= 0 || $tagTitle === '') {
+					continue;
+				}
+				if (!isset($servicesByCategory[$catId][$contentId])) {
+					continue;
+				}
+				$servicesByCategory[$catId][$contentId]['tags'][] = [
+					'id' => $tagId,
+					'title' => $tagTitle,
+				];
+			}
+		}
+		foreach ($servicesByCategory as $catId => $items) {
+			$servicesByCategory[$catId] = array_values($items);
+		}
+	} catch (\Throwable $e) {
+		$servicesByCategory = [];
+	}
+}
+
+$durationOptions = [];
+for ($i = 1; $i <= 12; $i++) {
+	$durationOptions[] = $i * 15;
+}
+
+$serviceOptionIndex = [];
+foreach ($servicesByCategory as $catId => $items) {
+	$catKey = (int) $catId;
+	foreach ((array) $items as $service) {
+		$serviceId = (int) ($service['id'] ?? 0);
+		if ($serviceId <= 0) {
+			continue;
+		}
+		$serviceOptionIndex[$catKey][(string) $serviceId] = true;
+		$tags = isset($service['tags']) && is_array($service['tags']) ? $service['tags'] : [];
+		foreach ($tags as $tag) {
+			$tagId = (int) ($tag['id'] ?? 0);
+			if ($tagId <= 0) {
+				continue;
+			}
+			$serviceOptionIndex[$catKey][$serviceId . '-' . $tagId] = true;
+		}
+	}
+}
+
+$missingServiceOptionsByCategory = [];
+$rememberMissingServiceOption = static function (int $categoryId, string $serviceRaw, string $serviceLabel) use (&$missingServiceOptionsByCategory, $serviceOptionIndex): void {
+	if ($categoryId <= 0 || $serviceRaw === '') {
+		return;
+	}
+	if (!empty($serviceOptionIndex[$categoryId][$serviceRaw])) {
+		return;
+	}
+	if (!isset($missingServiceOptionsByCategory[$categoryId])) {
+		$missingServiceOptionsByCategory[$categoryId] = [];
+	}
+	if (isset($missingServiceOptionsByCategory[$categoryId][$serviceRaw])) {
+		return;
+	}
+	$missingServiceOptionsByCategory[$categoryId][$serviceRaw] = [
+		'value' => $serviceRaw,
+		'label' => $serviceLabel !== '' ? $serviceLabel : ('Услуга #' . $serviceRaw),
+	];
+};
+
+$existingServiceRows = [];
+try {
+	$existingStructured = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserServicesStructuredWithIds($userId);
+	foreach ($existingStructured as $category) {
+		$catId = (string) ($category['cat_id'] ?? '');
+		if ($catId === '') {
+			continue;
+		}
+		$items = isset($category['items']) && is_array($category['items']) ? $category['items'] : [];
+		foreach ($items as $item) {
+			$svcId = (string) ($item['svc_id'] ?? '');
+			if ($svcId === '') {
+				continue;
+			}
+			$tagId = (int) ($item['tag_id'] ?? 0);
+			$svcInt = (int) $svcId;
+			$serviceRaw = ($tagId > 0 && $tagId !== $svcInt) ? ($svcId . '-' . $tagId) : $svcId;
+			$serviceLabel = trim((string) ($item['name'] ?? ''));
+			$existingServiceRows[] = [
+				'categoryId' => (int) $catId,
+				'serviceRaw' => $serviceRaw,
+				'serviceLabel' => $serviceLabel,
+				'duration' => (int) ($item['duration'] ?? 15),
+				'pause' => (int) ($item['pause_min'] ?? 15),
+				'price' => (int) ($item['price'] ?? 0),
+				'recommendation' => (string) ($item['recommendation'] ?? ''),
+			];
+			$rememberMissingServiceOption((int) $catId, $serviceRaw, $serviceLabel);
+		}
+	}
+} catch (\Throwable $e) {
+	$existingServiceRows = [];
+}
+
+$existingStockRows = [];
+try {
+	$existingStockStructured = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServicesStructuredWithIds($userId);
+	foreach ($existingStockStructured as $category) {
+		$catId = (string) ($category['cat_id'] ?? '');
+		if ($catId === '') {
+			continue;
+		}
+		$items = isset($category['items']) && is_array($category['items']) ? $category['items'] : [];
+		foreach ($items as $item) {
+			if ((int) ($item['count_stock'] ?? 0) <= 0) {
+				continue;
+			}
+			$svcId = (string) ($item['svc_id'] ?? '');
+			if ($svcId === '') {
+				continue;
+			}
+			$tagId = (int) ($item['tag_id'] ?? 0);
+			$svcInt = (int) $svcId;
+			$serviceRaw = ($tagId > 0 && $tagId !== $svcInt) ? ($svcId . '-' . $tagId) : $svcId;
+			$serviceLabel = trim((string) ($item['name'] ?? ''));
+			$existingStockRows[] = [
+				'id' => (int) ($item['stock_service_id'] ?? 0),
+				'categoryId' => (int) $catId,
+				'serviceRaw' => $serviceRaw,
+				'serviceLabel' => $serviceLabel,
+				'duration' => (int) ($item['duration'] ?? 15),
+				'pause' => (int) ($item['pause_min'] ?? 15),
+				'price' => (int) ($item['price'] ?? 0),
+				'oldPrice' => (int) ($item['old_price'] ?? 0),
+				'aboutStock' => (string) ($item['about_stock'] ?? ''),
+				'countStock' => (int) ($item['count_stock'] ?? 0),
+				'recommendation' => (string) ($item['recommendation'] ?? ''),
+			];
+			$rememberMissingServiceOption((int) $catId, $serviceRaw, $serviceLabel);
+		}
+	}
+} catch (\Throwable $e) {
+	$existingStockRows = [];
+}
+
+$repeatStockId = (int) Factory::getApplication()->getInput()->getInt('repeat_stock', 0);
+$openStocksTab = false;
+$stocksTabIndex = array_search('stocks', $tabs, true);
+if ($repeatStockId > 0 && $isMaster) {
+	$repeatRow = \Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper::getUserStockServiceForRepeat((int) $userId, $repeatStockId);
+	if (is_array($repeatRow) && (int) ($repeatRow['categoryId'] ?? 0) > 0) {
+		$repeatRow['id'] = 0;
+		$existingStockRows[] = $repeatRow;
+		$rememberMissingServiceOption(
+			(int) $repeatRow['categoryId'],
+			(string) ($repeatRow['serviceRaw'] ?? ''),
+			(string) ($repeatRow['serviceLabel'] ?? '')
+		);
+		$openStocksTab = true;
+	}
+}
+
+$existingCourseRows = [];
+try {
+		$existingCourseStructured = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCoursesStructured($userId);
+		foreach ($existingCourseStructured as $course) {
+			$existingCourseRows[] = [
+				'id' => (int) ($course['id'] ?? 0),
+				'categoryId' => (int) ($course['category_id'] ?? 0),
+				'title' => (string) ($course['title'] ?? $course['description'] ?? ''),
+				'description' => (string) ($course['description'] ?? ''),
+				'mediaPath' => (string) ($course['media_path'] ?? ''),
+				'price' => (int) ($course['price'] ?? 0),
+				'duration' => (int) ($course['duration_min'] ?? 60),
+				'capacity' => (int) ($course['capacity'] ?? 1),
+				'concurrentParticipants' => (int) ($course['concurrent_participants'] ?? 1),
+				'bookingMode' => (string) ($course['booking_mode'] ?? 'free'),
+				'bookingCount' => (int) ($course['booking_count'] ?? 0),
+				'slotStartUtc' => (string) ($course['slot_start_utc'] ?? ''),
+			];
+		}
+} catch (\Throwable $e) {
+	$existingCourseRows = [];
+}
+
+$repeatCourseId = (int) Factory::getApplication()->getInput()->getInt('repeat_course', 0);
+$openCoursesTab = false;
+$coursesTabIndex = array_search('courses', $tabs, true);
+if ($repeatCourseId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling\Service\UserCoursesService::class)) {
+	$repeatCourse = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCourseForRepeat((int) $userId, $repeatCourseId);
+	if (is_array($repeatCourse) && (int) ($repeatCourse['category_id'] ?? 0) > 0) {
+		$existingCourseRows[] = [
+			'id' => 0,
+			'categoryId' => (int) ($repeatCourse['category_id'] ?? 0),
+			'title' => (string) ($repeatCourse['title'] ?? $repeatCourse['description'] ?? ''),
+			'description' => (string) ($repeatCourse['description'] ?? ''),
+			'mediaPath' => (string) ($repeatCourse['media_path'] ?? ''),
+			'price' => (int) ($repeatCourse['price'] ?? 0),
+			'duration' => (int) ($repeatCourse['duration_min'] ?? 60),
+			'capacity' => (int) ($repeatCourse['capacity'] ?? 1),
+			'concurrentParticipants' => (int) ($repeatCourse['concurrent_participants'] ?? 1),
+			'bookingMode' => (string) ($repeatCourse['booking_mode'] ?? 'free'),
+			'bookingCount' => 0,
+			'slotStartUtc' => (string) ($repeatCourse['slot_start_utc'] ?? ''),
+		];
+		$openCoursesTab = true;
+	}
+}
+
+$existingSearchRows = [];
+try {
+	if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserSearchesService')) {
+		$existingSearchStructured = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::getUserSearchesStructured($userId);
+		foreach ($existingSearchStructured as $search) {
+			$existingSearchRows[] = [
+				'id' => (int) ($search['id'] ?? 0),
+				'categoryId' => (int) ($search['category_id'] ?? 0),
+				'title' => (string) ($search['title'] ?? $search['description'] ?? ''),
+				'description' => (string) ($search['description'] ?? ''),
+				'mediaPath' => (string) ($search['media_path'] ?? ''),
+				'price' => (int) ($search['price'] ?? 0),
+				'duration' => (int) ($search['duration_min'] ?? 60),
+				'capacity' => (int) ($search['capacity'] ?? 1),
+				'bookingMode' => (string) ($search['booking_mode'] ?? 'free'),
+				'bookingCount' => (int) ($search['booking_count'] ?? 0),
+				'slotStartUtc' => (string) ($search['slot_start_utc'] ?? ''),
+			];
+		}
+	}
+} catch (\Throwable $e) {
+	$existingSearchRows = [];
+}
+
+$repeatSearchId = (int) Factory::getApplication()->getInput()->getInt('repeat_search', 0);
+$openSearchesTab = false;
+$searchesTabIndex = array_search('searches', $tabs, true);
+if ($repeatSearchId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling\Service\UserSearchesService::class)) {
+	$repeatSearch = \Joomla\Plugin\User\Vigling\Service\UserSearchesService::getUserSearchForRepeat((int) $userId, $repeatSearchId);
+	if (is_array($repeatSearch) && (int) ($repeatSearch['category_id'] ?? 0) > 0) {
+		$existingSearchRows[] = [
+			'id' => 0,
+			'categoryId' => (int) ($repeatSearch['category_id'] ?? 0),
+			'title' => (string) ($repeatSearch['title'] ?? $repeatSearch['description'] ?? ''),
+			'description' => (string) ($repeatSearch['description'] ?? ''),
+			'mediaPath' => (string) ($repeatSearch['media_path'] ?? ''),
+			'price' => (int) ($repeatSearch['price'] ?? 0),
+			'duration' => (int) ($repeatSearch['duration_min'] ?? 60),
+			'capacity' => (int) ($repeatSearch['capacity'] ?? 1),
+			'bookingMode' => (string) ($repeatSearch['booking_mode'] ?? 'free'),
+			'bookingCount' => 0,
+			'slotStartUtc' => (string) ($repeatSearch['slot_start_utc'] ?? ''),
+		];
+		$openSearchesTab = true;
+	}
+}
+
+$phonePublicChecked = true;
+$phonePublicRaw = '';
+if (isset($jcfields['phone_public']->rawvalue) && is_scalar($jcfields['phone_public']->rawvalue)) {
+	$phonePublicRaw = trim((string) $jcfields['phone_public']->rawvalue);
+}
+if ($phonePublicRaw === '' && (int) $userId > 0 && class_exists(\Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::class, false)) {
+	$storedPhonePublic = \Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper::loadFieldValues((int) $userId, ['phone_public']);
+	$phonePublicRaw = trim((string) ($storedPhonePublic['phone_public'] ?? ''));
+}
+if ($phonePublicRaw === '0') {
+	$phonePublicChecked = false;
+}
+$phonePublicToggle = '<label class="phone-public-toggle">'
+	. '<input type="hidden" name="jform[com_fields][phone_public]" value="0">'
+	. '<input type="checkbox" id="jform_phone_public" name="jform[com_fields][phone_public]" value="1"' . ($phonePublicChecked ? ' checked' : '') . '>'
+	. '<span class="phone-public-toggle__wide">Сделать номер телефона публичным</span>'
+	. '<span class="phone-public-toggle__narrow">Сделать номер публичным</span>'
+	. '</label>';
+if ($phonePublicRaw === '') {
+	$phonePublicToggle .= '<p class="phone-public-legacy-note">Номер публичный, пока вы не снимете отметку и не сохраните.</p>';
+}
+
+$jsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
+$missingServiceOptionsJson = json_encode(array_map('array_values', $missingServiceOptionsByCategory), $jsJsonFlags) ?: '{}';
+$servicesJson = json_encode($servicesByCategory, $jsJsonFlags) ?: '{}';
+$durationJson = json_encode($durationOptions, $jsJsonFlags) ?: '[]';
+$existingServiceRowsJson = json_encode($existingServiceRows, $jsJsonFlags) ?: '[]';
+$existingStockRowsJson = json_encode($existingStockRows, $jsJsonFlags) ?: '[]';
+$existingCourseRowsJson = json_encode($existingCourseRows, $jsJsonFlags) ?: '[]';
+$existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]';
+?>
+<div id="easyprofile" class="view_profile profile-edit legacy-registration">
+	<div class="jsn-p">
+		<div class="view_profile-header">
+			<div class="jsn-p-top jsn-p-top-a">
+				<div class="jsn-p-avatar">
+					<?php if ($profileImage !== '') : ?>
+					<img src="<?php echo $this->escape($profileImage); ?>" alt="<?php echo $this->escape($user->name ?: $user->username); ?>" class="avatar">
+					<?php else : ?>
+					<img src="<?php echo $this->escape($defaultImg); ?>" alt="<?php echo $this->escape($user->name ?: $user->username); ?>" class="avatar">
+					<?php endif; ?>
+					<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
+				</div>
+				<div class="jsn-p-title">
+					<h3><?php echo $this->escape($user->name ?: $user->username); ?></h3>
+					<span class="jsn-p-role"><?php echo $this->escape($roleLabel); ?></span>
+				</div>
+				<div class="jsn-p-before-fields"></div>
+			</div>
+		</div>
+
+		<form id="member-profile" action="<?php echo Route::_('index.php'); ?>" method="post" class="jsn-p-fields form-validate form-horizontal well" enctype="multipart/form-data">
+			<div id="jsn-form" class="hover clean mini flat z-icons-light z-shadows z-spaced z-tabs horizontal top-compact top view_profile-tabs">
+				<ul class="z-tabs-nav z-tabs-mobile" style="display:none;">
+					<li><a class="z-link" style="text-align:left;"><span class="z-title">Профиль</span><span class="z-arrow"></span></a></li>
+				</ul>
+				<i class="z-dropdown-arrow"></i>
+				<ul id="jsn-profile-tabs" class="z-tabs-nav z-tabs-desktop">
+					<?php foreach ($tabs as $index => $tabKey) : ?>
+					<li data-index="<?php echo (int) $index; ?>" data-link="profile-tab<?php echo (int) $index; ?>" class="z-tab<?php echo $index === 0 ? ' z-first z-active' : ''; ?><?php echo $index === (count($tabs) - 1) ? ' z-last' : ''; ?>" style="width: <?php echo (100 / max(1, count($tabs))); ?>%;">
+						<a class="z-link" href="#profile-tab<?php echo (int) $index; ?>" style="min-height: 18px;"><?php echo $this->escape($tabTitles[$tabKey]); ?><span></span></a>
+					</li>
+					<?php endforeach; ?>
+				</ul>
+
+				<div class="z-container lk-edit-tab-panels">
+					<?php foreach ($tabs as $index => $tabKey) : ?>
+					<div id="profile-tab<?php echo (int) $index; ?>" class="lk-edit-tab-panel z-content<?php echo $index === 0 ? ' z-active' : ''; ?>" data-index="<?php echo (int) $index; ?>" data-name="profile-tab<?php echo (int) $index; ?>" style="<?php echo $index === 0 ? 'display:block;' : 'display:none;'; ?>">
+						<div class="z-content-inner">
+							<fieldset class="jsn-form-fieldset" data-index="<?php echo (int) $index; ?>" data-name="profile-tab<?php echo (int) $index; ?>">
+								<legend style="display:none;"><?php echo $this->escape($tabTitles[$tabKey]); ?></legend>
+								<?php if (!$isMaster && $tabKey === 'profile') : ?>
+									<div class="control-group avatar-group lk-avatar-edit-group">
+										<div class="control-label"><label for="jform_upload_avatar">Фото профиля</label></div>
+										<div class="controls lk-avatar-edit-controls">
+											<button type="button" class="lk-avatar-trigger" id="lk-avatar-trigger" title="Сменить фото">
+												<div class="jsn-p-avatar">
+													<img src="<?php echo $this->escape($profileImage !== '' ? $profileImage : $defaultImg); ?>" alt="<?php echo $this->escape($user->name ?: $user->username); ?>" class="avatar lk-avatar-preview" id="lk-avatar-preview">
+													<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
+												</div>
+											</button>
+											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="lk-avatar-file-input" data-vigling-manual="1">
+											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить. JPEG, PNG или WebP, сжимается автоматически.</span>
+										</div>
+									</div>
+									<?php
+									$nameField = null;
+									$emailField = null;
+									foreach ($tabFields['profile'] as $f) {
+										if ($nameField === null && $isNameField($f)) {
+											$nameField = $f;
+										}
+										if ($emailField === null && $isEmailField($f)) {
+											$emailField = $f;
+										}
+									}
+									?>
+									<?php if ($nameField) : ?>
+										<?php echo $nameField->renderField(); ?>
+									<?php endif; ?>
+									<div class="control-group lastname-group">
+										<div class="control-label">
+											<label for="jform_lastname">Фамилия</label>
+										</div>
+										<div class="controls">
+											<input type="text" name="jform[profile][lastname]" id="jform_lastname" value="<?php echo $this->escape($lastnameValue); ?>" placeholder="Фамилия">
+										</div>
+									</div>
+									<div class="control-group sity-group">
+										<div class="control-label">
+											<label for="jform_sity">Город</label>
+										</div>
+										<div class="controls">
+											<input type="text" name="jform[profile][city]" id="jform_sity" value="<?php echo $this->escape($cityValue); ?>" placeholder="Город">
+										</div>
+									</div>
+									<div class="control-group telefon-group">
+										<div class="control-label">
+											<label for="jform_telefon">Телефон</label>
+										</div>
+										<div class="controls">
+											<input type="text" name="jform[profile][phone]" id="jform_telefon" value="<?php echo $this->escape($phoneValue); ?>" class="js-phone-mask" placeholder="Телефон">
+											<?php echo $phonePublicToggle; ?>
+										</div>
+									</div>
+									<?php
+									$emailValue = '';
+									if ($emailField && method_exists($emailField, 'getValue')) {
+										$emailValue = (string) $emailField->getValue();
+									}
+									if ($emailValue === '') {
+										$emailValue = (string) ($user->email ?? '');
+									}
+									?>
+									<div class="control-group email1-group email-readonly-group">
+										<div class="control-label">
+											<label for="jform_email1_readonly">E-mail</label>
+										</div>
+										<div class="controls">
+											<input type="email" id="jform_email1_readonly" value="<?php echo $this->escape($emailValue); ?>" readonly aria-readonly="true">
+											<input type="hidden" name="jform[email1]" value="<?php echo $this->escape($emailValue); ?>">
+										</div>
+									</div>
+									<?php include __DIR__ . '/default_reviews.php'; ?>
+								<?php elseif ($isMaster && $tabKey === 'profile') : ?>
+									<div class="control-group avatar-group lk-avatar-edit-group">
+										<div class="control-label"><label for="jform_upload_avatar">Фото профиля</label></div>
+										<div class="controls lk-avatar-edit-controls">
+											<button type="button" class="lk-avatar-trigger" id="lk-avatar-trigger" title="Сменить фото">
+												<div class="jsn-p-avatar">
+													<img src="<?php echo $this->escape($profileImage !== '' ? $profileImage : $defaultImg); ?>" alt="<?php echo $this->escape($user->name ?: $user->username); ?>" class="avatar lk-avatar-preview" id="lk-avatar-preview">
+													<span class="avatar-online" title="OnLine" aria-hidden="true"></span>
+												</div>
+											</button>
+											<input type="file" name="jform[upload_avatar]" id="jform_upload_avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="lk-avatar-file-input" data-vigling-manual="1">
+											<span class="lk-avatar-help">Нажмите на фото, чтобы заменить. JPEG, PNG или WebP, сжимается автоматически.</span>
+										</div>
+									</div>
+									<?php
+									$nameField = null;
+									$emailField = null;
+									foreach ($tabFields['profile'] as $f) {
+										if ($nameField === null && $isNameField($f)) {
+											$nameField = $f;
+										}
+										if ($emailField === null && $isEmailField($f)) {
+											$emailField = $f;
+										}
+									}
+									$emailValue = '';
+									if ($emailField && method_exists($emailField, 'getValue')) {
+										$emailValue = (string) $emailField->getValue();
+									}
+									if ($emailValue === '') {
+										$emailValue = (string) ($user->email ?? '');
+									}
+									?>
+									<div class="control-group name-group">
+										<?php if ($nameField) : ?>
+											<?php echo $nameField->renderField(); ?>
+										<?php else : ?>
+										<div class="control-group firstname-group">
+											<div class="control-label"><label for="jform_name">Имя <span class="star" aria-hidden="true">*</span></label></div>
+											<div class="controls"><input type="text" name="jform[name]" id="jform_name" value="<?php echo $this->escape((string) ($user->name ?? '')); ?>" required></div>
+										</div>
+										<?php endif; ?>
+										<div class="control-group lastname-group">
+											<div class="control-label"><label for="jform_lastname">Фамилия</label></div>
+											<div class="controls"><input type="text" name="jform[profile][lastname]" id="jform_lastname" value="<?php echo $this->escape($lastnameValue); ?>" placeholder="Фамилия"></div>
+										</div>
+									</div>
+
+									<div class="control-group mail-group">
+										<div class="control-group telefon-group">
+											<div class="control-label"><label for="jform_telefon">Телефон</label></div>
+											<div class="controls"><input type="text" name="jform[profile][phone]" id="jform_telefon" value="<?php echo $this->escape($phoneValue); ?>" class="js-phone-mask" placeholder="Телефон"><?php echo $phonePublicToggle; ?></div>
+										</div>
+										<div class="control-group email1-group">
+											<div class="control-label"><label for="jform_email1">E-mail <span class="star" aria-hidden="true">*</span></label></div>
+											<div class="controls"><input type="email" name="jform[email1]" id="jform_email1" value="<?php echo $this->escape($emailValue); ?>" required autocomplete="email" placeholder="E-mail"></div>
+										</div>
+									</div>
+
+									<div class="control-group address-group form-row m-0">
+										<div class="control-group sity-group">
+											<div class="control-label"><label for="jform_sity">Город</label></div>
+											<div class="controls"><input type="text" name="jform[profile][city]" id="jform_sity" value="<?php echo $this->escape($cityValue); ?>" placeholder="Город"></div>
+										</div>
+										<div class="control-group area-group">
+											<div class="control-label"><label for="jform_area">Район</label></div>
+											<div class="controls"><input type="text" name="jform[profile][region]" id="jform_area" value="<?php echo $this->escape($regionValue); ?>" placeholder="Район"></div>
+										</div>
+										<div class="control-group street-group">
+											<div class="control-label"><label for="jform_street">Улица</label></div>
+											<div class="controls"><input type="text" name="jform[profile][address1]" id="jform_street" value="<?php echo $this->escape($address1Value); ?>" placeholder="Улица"></div>
+										</div>
+										<div class="control-group house_number-group">
+											<div class="control-label"><label for="jform_house_number">Номер дома</label></div>
+											<div class="controls"><input type="text" name="jform[profile][address2]" id="jform_house_number" value="<?php echo $this->escape($address2Value); ?>" placeholder="Дом"></div>
+										</div>
+										<?php
+										$vgShowLabels = true;
+										$vgExtraMasterOnly = false;
+										$vgExtraFieldsPart = 'address';
+										include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+										?>
+									</div>
+									<?php
+									$vgShowLabels = true;
+									$vgExtraMasterOnly = false;
+									$vgExtraFieldsPart = 'options';
+									include JPATH_ROOT . '/templates/ryba/html/com_users/profile/extra_profile_fields.php';
+									?>
+
+									<div class="control-group form-row social-links-group">
+										<div class="control-group social-link-row">
+											<img src="/templates/ryba/icons/social_icons/vk.svg" alt="Vk" class="social-link-icon">
+											<div class="controls"><input type="url" name="jform[profile][website]" id="jform_link" value="<?php echo $this->escape($websiteValue); ?>" placeholder="https://vk.com/ваш_id" pattern="^https?://(www\.|m\.)?vk\.com/.+" title="Ссылка должна начинаться с https://vk.com/"></div>
+										</div>
+										<div class="control-group social-link-row">
+											<img src="/templates/ryba/icons/social_icons/telegram.svg" alt="Telegram" class="social-link-icon">
+											<div class="controls"><input type="url" name="jform[com_fields][telegram]" id="jform_telegram" value="<?php echo $this->escape($telegramValue); ?>" placeholder="https://t.me/ваш_id" pattern="^https?://(www\.)?t\.me/.+" title="Ссылка должна начинаться с https://t.me/"></div>
+										</div>
+										<div class="control-group social-link-row">
+											<img src="/templates/ryba/icons/social_icons/max.svg" alt="Max" class="social-link-icon">
+											<div class="controls"><input type="url" name="jform[com_fields][max]" id="jform_max" value="<?php echo $this->escape($maxValue); ?>" placeholder="https://max.ru/ваш_id" pattern="^https?://(www\.)?max\.ru/.+" title="Ссылка должна начинаться с https://max.ru/"></div>
+										</div>
+									</div>
+									<div class="control-group o_sebe-group">
+										<div class="control-label"><label for="jform_o_sebe">О себе</label></div>
+										<div class="controls"><textarea name="jform[profile][aboutme]" id="jform_o_sebe" class="input_placeholder" placeholder="О себе"><?php echo $this->escape($aboutMeValue); ?></textarea></div>
+									</div>
+									<?php include __DIR__ . '/default_reviews.php'; ?>
+								<?php elseif ($isMaster && $tabKey === 'portfolio') : ?>
+									<div class="control-group portfolio_field-group">
+										<div class="control-label"><label for="jform_upload_portfolio_field">Портфолио</label></div>
+										<div class="controls lk-portfolio-edit-controls">
+											<label class="lk-portfolio-upload-btn" for="jform_upload_portfolio_field">Добавить фото</label>
+											<input type="file" name="jform[upload_portfolio_field][]" id="jform_upload_portfolio_field" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" multiple data-vigling-manual="1">
+											<p class="image-upload-hint" style="margin:8px 0 0;color:#888;font-size:12px;">JPEG, PNG или WebP, до 10 фото. Фото сжимается автоматически.</p>
+											<input type="hidden" name="jform[portfolio_deleted]" id="jform_portfolio_deleted" value="">
+											<?php if (!empty($portfolioImages)) : ?>
+											<div class="lk-portfolio-grid lk-edit-portfolio-grid">
+												<?php foreach ($portfolioImages as $img) : ?>
+												<div class="lk-portfolio-item lk-edit-portfolio-item" data-file="<?php echo $this->escape($img['file']); ?>">
+													<img src="<?php echo $this->escape($img['url']); ?>" alt="Портфолио">
+													<button type="button" class="lk-portfolio-remove" data-file="<?php echo $this->escape($img['file']); ?>" title="Удалить">×</button>
+												</div>
+												<?php endforeach; ?>
+											</div>
+											<?php else : ?>
+											<fieldset class="readonly">Портфолио пока пустое</fieldset>
+											<?php endif; ?>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'speciality') : ?>
+									<div class="control-group vyberite_spetsialnos-group">
+										<div class="control-label"><label for="jform_vyberite_spetsialnos">Специальность</label></div>
+										<div class="controls">
+											<fieldset id="jform_vyberite_spetsialnos" class="required checkboxes" aria-required="true">
+												<?php foreach ($specialties as $specialty) : ?>
+												<label for="jform_vyberite_spetsialnos<?php echo (int) $specialty['id']; ?>" class="checkbox<?php echo in_array((int) $specialty['id'], $selectedSpecialtyIds, true) ? ' active' : ''; ?>" data-type="<?php echo $specialty['type']; ?>">
+													<input type="checkbox" id="jform_vyberite_spetsialnos<?php echo (int) $specialty['id']; ?>" name="jform[vyberite_spetsialnos][]" value="<?php echo (int) $specialty['id']; ?>" <?php echo in_array((int) $specialty['id'], $selectedSpecialtyIds, true) ? 'checked' : ''; ?>>
+													<?php echo $this->escape($specialty['title']); ?>
+												</label>
+												<?php endforeach; ?>
+											</fieldset>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'services') : ?>
+									<div class="control-group prices-group">
+										<div class="control-label"><label for="jform_vyberite_usl">Услуги и цены</label></div>
+										<div class="controls">
+											<fieldset id="jform_vyberite_usl">Выберите специальность, чтобы добавить услугу</fieldset>
+											<input type="hidden" name="jform[prices]" id="jform_prices" value="" disabled>
+											<input type="hidden" name="jform[stock_prices]" id="jform_stock_prices" value="" disabled>
+											<input type="hidden" name="jform[vigling_services_payload]" id="jform_vigling_services_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_stock_services_payload]" id="jform_vigling_stock_services_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_courses_payload]" id="jform_vigling_courses_payload" value="" disabled>
+											<input type="hidden" name="jform[vigling_searches_payload]" id="jform_vigling_searches_payload" value="" disabled>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'stocks') : ?>
+									<div class="control-group stock_prices-group">
+										<div class="control-label"><label for="jform_stocks_servis">Акции</label></div>
+										<div class="controls">
+											<fieldset id="jform_stocks_servis">Выберите специальность, чтобы добавить акцию</fieldset>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'courses') : ?>
+									<div class="control-group stock_prices-group">
+										<div class="control-label"><label for="jform_courses_servis">Курсы</label></div>
+										<div class="controls">
+											<fieldset id="jform_courses_servis">Выберите специальность, чтобы добавить курс</fieldset>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'searches') : ?>
+									<div class="control-group stock_prices-group">
+										<div class="control-label"><label for="jform_searches_servis">Поиск моделей</label></div>
+										<div class="controls">
+											<fieldset id="jform_searches_servis">Выберите специальность, чтобы добавить поиск</fieldset>
+										</div>
+									</div>
+								<?php elseif ($isMaster && $tabKey === 'schedule') : ?>
+									<div class="control-group work_day-group schedule-by-day">
+										<div class="controls">
+											<input type="hidden" name="jform[com_fields][work_day]" id="jform_work_day_json" value="<?php echo htmlspecialchars(json_encode(array_values(array_map('strval', $scheduleWorkDays))), ENT_QUOTES); ?>">
+											<input type="hidden" name="jform[com_fields][work_from]" id="jform_work_from_json" value="">
+											<input type="hidden" name="jform[com_fields][work_to]" id="jform_work_to_json" value="">
+											<div class="schedule-day-list">
+												<?php foreach ($scheduleDayNames as $dayNum => $dayName) : ?>
+												<?php
+													$dayChecked = in_array($dayNum, $scheduleWorkDays, true);
+													$dayFrom = (string) ($scheduleFromByDay[$dayNum] ?? '');
+													$dayTo = (string) ($scheduleToByDay[$dayNum] ?? '');
+												?>
+												<div class="schedule-day-row<?php echo $dayChecked ? ' is-active' : ''; ?>">
+													<label class="checkbox schedule-day-label">
+														<input type="checkbox" class="schedule-day-cb" name="jform[vigling_schedule_days][]" value="<?php echo (int) $dayNum; ?>" data-day="<?php echo (int) $dayNum; ?>" <?php echo $dayChecked ? 'checked' : ''; ?> />
+														<?php echo $dayName; ?>
+													</label>
+													<div class="schedule-day-times">
+														<label class="schedule-time-label">
+															<span>Начало</span>
+															<select class="schedule-time-select schedule-from" name="jform[work_from_by_day][<?php echo (int) $dayNum; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+																<option value="">— выбрать —</option>
+																<?php foreach ($scheduleTimeOptions as $t) : ?>
+																<option value="<?php echo $t; ?>" <?php echo $t === $dayFrom ? 'selected' : ''; ?>><?php echo $t; ?></option>
+																<?php endforeach; ?>
+															</select>
+														</label>
+														<label class="schedule-time-label">
+															<span>Конец</span>
+															<select class="schedule-time-select schedule-to" name="jform[work_to_by_day][<?php echo (int) $dayNum; ?>]" <?php echo $dayChecked ? '' : 'disabled'; ?>>
+																<option value="">— выбрать —</option>
+																<?php foreach ($scheduleTimeOptions as $t) : ?>
+																<option value="<?php echo $t; ?>" <?php echo $t === $dayTo ? 'selected' : ''; ?>><?php echo $t; ?></option>
+																<?php endforeach; ?>
+															</select>
+														</label>
+													</div>
+												</div>
+												<?php endforeach; ?>
+											</div>
+										</div>
+									</div>
+									<script>
+									(function() {
+										function syncSchedulePayload() {
+											var days = [];
+											var from = [];
+											var to = [];
+											document.querySelectorAll('.schedule-day-row').forEach(function(row) {
+												var cb = row.querySelector('.schedule-day-cb');
+												var fromSel = row.querySelector('.schedule-from');
+												var toSel = row.querySelector('.schedule-to');
+												if (!cb || !fromSel || !toSel) {
+													return;
+												}
+												fromSel.disabled = !cb.checked;
+												toSel.disabled = !cb.checked;
+												row.classList.toggle('is-active', !!cb.checked);
+												if (!cb.checked) {
+													return;
+												}
+												var f = String(fromSel.value || '').trim();
+												var t = String(toSel.value || '').trim();
+												if (f && t && f < t) {
+													days.push(cb.getAttribute('data-day') || cb.value);
+													from.push(f);
+													to.push(t);
+												}
+											});
+											var dayInput = document.getElementById('jform_work_day_json');
+											var fromInput = document.getElementById('jform_work_from_json');
+											var toInput = document.getElementById('jform_work_to_json');
+											if (dayInput) {
+												dayInput.value = JSON.stringify(days);
+											}
+											if (fromInput) {
+												fromInput.value = from.length ? JSON.stringify(from) : '';
+											}
+											if (toInput) {
+												toInput.value = to.length ? JSON.stringify(to) : '';
+											}
+										}
+										document.querySelectorAll('.schedule-day-cb, .schedule-from, .schedule-to').forEach(function(el) {
+											el.addEventListener('change', syncSchedulePayload);
+										});
+										var form = document.getElementById('member-profile');
+										if (form) {
+											form.addEventListener('submit', function(e) {
+												var submitter = e.submitter;
+												if (submitter && String(submitter.value || '') === 'profile.cancel') {
+													return;
+												}
+												document.querySelectorAll('.schedule-from, .schedule-to').forEach(function(sel) {
+													sel.disabled = false;
+												});
+												var incomplete = false;
+												document.querySelectorAll('.schedule-day-row').forEach(function(row) {
+													var cb = row.querySelector('.schedule-day-cb');
+													var fromSel = row.querySelector('.schedule-from');
+													var toSel = row.querySelector('.schedule-to');
+													if (!cb || !cb.checked || !fromSel || !toSel) {
+														return;
+													}
+													var f = String(fromSel.value || '').trim();
+													var t = String(toSel.value || '').trim();
+													if (!f || !t || f >= t) {
+														incomplete = true;
+													}
+												});
+												if (incomplete) {
+													e.preventDefault();
+													alert('Для каждого выбранного рабочего дня укажите время начала и окончания, и время окончания должно быть позже начала.');
+													return;
+												}
+												syncSchedulePayload();
+											});
+										}
+										syncSchedulePayload();
+									})();
+									</script>
+									<p class="schedule-hint" style="margin-top:16px;color:#888;font-size:13px;">Расписание используется для отображения дней и времени вашей работы, оно не обязательно к заполнению, однако без него процесс записи не возможен. Услуги, акции, курсы, поиск моделей будут отображаться в профиле как список ваших услуг, но без возможности записаться.</p>
+								<?php elseif ($tabKey === 'notifications') : ?>
+									<?php echo $this->loadTemplate('notify'); ?>
+								<?php elseif ($tabKey === 'login') : ?>
+									<p class="lk-login-hint">В качестве email для входа используется почта аккаунта</p>
+									<?php
+									$hasPasswordFields = false;
+									foreach ($tabFields['login'] as $field) {
+										if ($isUsernameField($field)) {
+											continue;
+										}
+										if (!$isPasswordField($field)) {
+											continue;
+										}
+										$hasPasswordFields = true;
+										echo $field->renderField();
+									}
+									?>
+									<?php if (!$hasPasswordFields) : ?>
+										<fieldset class="readonly">Нет доступных полей</fieldset>
+									<?php endif; ?>
+								<?php elseif (!empty($tabFields[$tabKey])) : ?>
+									<?php foreach ($tabFields[$tabKey] as $field) : ?>
+										<?php echo $field->renderField(); ?>
+									<?php endforeach; ?>
+								<?php elseif ($tabKey === 'profile' && !$hasAnyFieldsInTabs && !empty($allRenderableFields)) : ?>
+									<?php foreach ($allRenderableFields as $field) : ?>
+										<?php echo $field->renderField(); ?>
+									<?php endforeach; ?>
+								<?php else : ?>
+									<fieldset class="readonly">Нет доступных полей</fieldset>
+								<?php endif; ?>
+							</fieldset>
+						</div>
+					</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+
+			<input type="hidden" name="option" value="com_users">
+			<input type="hidden" name="jform[username]" value="<?php echo $this->escape($lockedUsername); ?>">
+
+			<?php if ($this->mfaConfigurationUI) : ?>
+			<div class="com-users-profile__multifactor">
+				<h4><?php echo \Joomla\CMS\Language\Text::_('COM_USERS_PROFILE_MULTIFACTOR_AUTH'); ?></h4>
+				<?php echo $this->mfaConfigurationUI; ?>
+			</div>
+			<?php endif; ?>
+
+			<?php echo $this->form->renderControlFields(); ?>
+
+			<div class="lk-edit-form-footer jsn_profile_edit_controls">
+				<button type="submit" class="dale validate" name="task" value="profile.save">Сохранить</button>
+				<button type="submit" class="dale" name="task" value="profile.cancel" formnovalidate>Отменить</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<style>
+.profile-edit {
+	padding-bottom: 42px;
+}
+.profile-edit .schedule-day-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+	max-width: 520px;
+}
+.profile-edit .schedule-day-row {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 12px 14px;
+	border: 1px solid #e3e3e3;
+	border-radius: 8px;
+	background: #fafafa;
+}
+.profile-edit .schedule-day-row.is-active {
+	background: #fff;
+	border-color: #f7cc53;
+}
+.profile-edit .schedule-day-label {
+	display: block;
+	margin: 0 0 10px;
+	font-weight: 600;
+}
+.profile-edit .schedule-day-times {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 12px;
+	width: 100%;
+}
+.profile-edit .schedule-time-label {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 50%;
+	min-width: 0;
+	margin: 0;
+	font-size: 13px;
+	color: #555;
+}
+.profile-edit .schedule-time-label select {
+	width: 100%;
+	margin-top: 4px;
+	box-sizing: border-box;
+}
+@media only screen and (max-width: 1020px) {
+	.profile-edit .schedule-day-list {
+		max-width: 100%;
+	}
+}
+.profile-edit .z-dropdown-arrow {
+	display: none !important;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	width: 100%;
+	margin: 0 0 8px;
+	padding: 0;
+	list-style: none;
+	box-sizing: border-box;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
+	display: inline-block;
+	float: none;
+	width: auto !important;
+	margin: 0;
+	padding: 0;
+	pointer-events: auto !important;
+	cursor: pointer !important;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link {
+	display: inline-block;
+	box-sizing: border-box;
+	width: auto;
+	min-height: 30px !important;
+	height: 30px;
+	line-height: 30px !important;
+	margin: 0 15px 15px 0 !important;
+	padding: 0 16px !important;
+	border: 2px solid transparent !important;
+	border-radius: 4px !important;
+	background-color: #dfe6ed !important;
+	color: #55677d !important;
+	font-size: 12.5px !important;
+	text-align: center;
+	text-decoration: none !important;
+	box-shadow: none !important;
+	pointer-events: auto !important;
+	cursor: pointer !important;
+	position: relative;
+	z-index: 2;
+}
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link,
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:hover,
+.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link:focus {
+	background-color: #f7cc53 !important;
+	color: #343a40 !important;
+	border: 2px solid #343a40 !important;
+}
+@media only screen and (max-width: 1020px) {
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop {
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		width: 100%;
+		max-width: 100%;
+	}
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab {
+		display: block;
+		width: 100% !important;
+		max-width: 100%;
+		margin: 0 0 8px;
+		box-sizing: border-box;
+	}
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab > a.z-link,
+	.profile-edit #jsn-profile-tabs.z-tabs-desktop > li.z-tab.z-active > a.z-link {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		width: 100%;
+		max-width: 100%;
+		height: auto;
+		min-height: 44px !important;
+		line-height: 1.25 !important;
+		margin: 0 !important;
+		padding: 10px 16px !important;
+		font-size: 14px !important;
+		text-align: left;
+		white-space: normal;
+		box-sizing: border-box;
+	}
+}
+.profile-edit #member-profile {
+	display: block;
+	width: 100%;
+	margin-bottom: 0 !important;
+	overflow: visible !important;
+}
+.profile-edit .jsn-p-fields {
+	width: 100% !important;
+	max-width: none !important;
+}
+.profile-edit #jsn-form {
+	margin-bottom: 0 !important;
+	position: relative;
+	z-index: 1;
+	width: 100% !important;
+}
+.profile-edit #jsn-form .lk-edit-tab-panels {
+	display: block;
+	position: relative;
+	min-height: 0 !important;
+	height: auto !important;
+	overflow: visible !important;
+	width: 100% !important;
+}
+.profile-edit #jsn-form .lk-edit-tab-panels > .z-content,
+.profile-edit #jsn-form .lk-edit-tab-panel {
+	position: static !important;
+	left: auto !important;
+	top: auto !important;
+	right: auto !important;
+	width: 100% !important;
+	height: auto !important;
+	overflow: visible !important;
+	display: none !important;
+}
+.profile-edit #jsn-form .lk-edit-tab-panels > .z-content.z-active,
+.profile-edit #jsn-form .lk-edit-tab-panel.z-active,
+.profile-edit #jsn-form .lk-edit-tab-panels:has(> .z-content:target) > .z-content:target {
+	display: block !important;
+}
+.profile-edit #jsn-form .lk-edit-tab-panels:has(> .z-content:target) > .z-content:not(:target) {
+	display: none !important;
+}
+.profile-edit #jsn-form .z-content-inner,
+.profile-edit #jsn-form .jsn-form-fieldset {
+	height: auto !important;
+	overflow: visible !important;
+}
+.profile-edit #jsn-form .jsn-form-fieldset::after {
+	content: "";
+	display: block;
+	clear: both;
+}
+.profile-edit #jsn-form .jsn-form-fieldset .control-group {
+	display: block !important;
+	margin: 0 0 14px !important;
+	clear: both;
+}
+.profile-edit #jsn-form .jsn-form-fieldset .control-group,
+.profile-edit #jsn-form .jsn-form-fieldset .controls,
+.profile-edit #jsn-form .jsn-form-fieldset .control-label {
+	float: none !important;
+	position: static !important;
+}
+.profile-edit #jsn-form .jsn-form-fieldset .control-label {
+	display: block !important;
+	width: 100% !important;
+	max-width: none !important;
+	margin: 0 0 6px !important;
+	padding: 0 !important;
+	text-align: left !important;
+}
+.profile-edit #jsn-form .jsn-form-fieldset .controls {
+	display: block !important;
+	width: 100% !important;
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+.profile-edit #jsn-form .jsn-form-fieldset input[type="text"],
+.profile-edit #jsn-form .jsn-form-fieldset input[type="email"],
+.profile-edit #jsn-form .jsn-form-fieldset input[type="password"],
+.profile-edit #jsn-form .jsn-form-fieldset input[type="tel"],
+.profile-edit #jsn-form .jsn-form-fieldset input[type="url"],
+.profile-edit #jsn-form .jsn-form-fieldset input[type="number"],
+.profile-edit #jsn-form .jsn-form-fieldset select,
+.profile-edit #jsn-form .jsn-form-fieldset textarea {
+	display: block !important;
+	width: 100% !important;
+	max-width: 680px !important;
+	min-height: 40px;
+	padding: 8px 12px !important;
+	background: #fff !important;
+	color: #000 !important;
+	border: 1px solid #d9d9d9 !important;
+	border-radius: 8px !important;
+	box-sizing: border-box;
+}
+.profile-edit #jsn-form .jsn-form-fieldset textarea { min-height: 120px; }
+.profile-edit #jsn-form .jsn-form-fieldset label { color: #222 !important; font-size: 14px; line-height: 1.3; }
+.profile-edit #jsn-form .jsn-form-fieldset .star { color: #d71703 !important; }
+.profile-edit .control-group:has([id*="patronymic"]) { display: none !important; }
+.profile-edit #jform_vyberite_usl .service__item,
+.profile-edit #jform_stocks_servis .service__item,
+.profile-edit #jform_courses_servis .service__item,
+.profile-edit #jform_searches_servis .service__item {
+	display: block !important;
+	margin: 15px auto !important;
+	padding-bottom: 20px !important;
+	position: relative !important;
+}
+.profile-edit #jform_stocks_servis .service__item::after,
+.profile-edit #jform_courses_servis .service__item::after,
+.profile-edit #jform_searches_servis .service__item::after {
+	content: "";
+	position: absolute;
+	display: block;
+	background-color: rgba(0, 0, 0, 0.15);
+	width: 411px;
+	height: 2px;
+	bottom: -5px;
+}
+.profile-edit #jform_vyberite_usl,
+.profile-edit #jform_stocks_servis,
+.profile-edit #jform_courses_servis,
+.profile-edit #jform_searches_servis {
+	display: block !important;
+}
+.profile-edit #jform_stocks_servis > label,
+.profile-edit #jform_courses_servis > label,
+.profile-edit #jform_searches_servis > label {
+	display: block !important;
+	position: relative !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 0 34px !important;
+	padding: 0 !important;
+	font-size: 16px !important;
+	line-height: 1.35 !important;
+	font-family: "GothamPro-Medium", sans-serif !important;
+	font-weight: 500 !important;
+	color: #222 !important;
+	cursor: default !important;
+}
+.profile-edit #jform_stocks_servis > label:last-child,
+.profile-edit #jform_courses_servis > label:last-child,
+.profile-edit #jform_searches_servis > label:last-child {
+	margin-bottom: 0 !important;
+}
+.profile-edit #jform_stocks_servis > label > b,
+.profile-edit #jform_courses_servis > label > b,
+.profile-edit #jform_searches_servis > label > b {
+	display: inline-block !important;
+	width: 32px !important;
+	height: 32px !important;
+	margin-left: 22px !important;
+	vertical-align: middle !important;
+	background-repeat: no-repeat !important;
+	background-position: center !important;
+	background-size: 16px 10px !important;
+	border-radius: 50% !important;
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+	background-color: #fff !important;
+}
+.profile-edit #jform_stocks_servis > label .flex_wrap,
+.profile-edit #jform_courses_servis > label .flex_wrap,
+.profile-edit #jform_searches_servis > label .flex_wrap {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: flex-start !important;
+	gap: 0 !important;
+	margin-top: 0 !important;
+	min-height: 0 !important;
+}
+.profile-edit #jform_stocks_servis > label .service_list,
+.profile-edit #jform_courses_servis > label .service_list,
+.profile-edit #jform_searches_servis > label .service_list {
+	display: block !important;
+	width: 100% !important;
+}
+.profile-edit #jform_stocks_servis > label .service_list:empty,
+.profile-edit #jform_courses_servis > label .service_list:empty,
+.profile-edit #jform_searches_servis > label .service_list:empty {
+	display: none !important;
+}
+.profile-edit #jform_stocks_servis .service__item .time,
+.profile-edit #jform_stocks_servis .service__item .time2,
+.profile-edit #jform_stocks_servis .service__item .stock_price,
+.profile-edit #jform_stocks_servis .service__item .old_price,
+.profile-edit #jform_stocks_servis .service__item .about_stock,
+.profile-edit #jform_stocks_servis .service__item .count_stock {
+	display: flex !important;
+	align-items: center !important;
+	padding: 4px 0 !important;
+}
+.profile-edit #jform_stocks_servis .service__item .time label,
+.profile-edit #jform_stocks_servis .service__item .time2 label,
+.profile-edit #jform_stocks_servis .service__item .stock_price label,
+.profile-edit #jform_stocks_servis .service__item .old_price label,
+.profile-edit #jform_stocks_servis .service__item .about_stock label,
+.profile-edit #jform_stocks_servis .service__item .count_stock label {
+	min-width: 165px;
+	padding-right: 8px !important;
+}
+.profile-edit #jform_stocks_servis .service__item .stock-service-select {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+.profile-edit #jform_stocks_servis .service__item .stock_price input,
+.profile-edit #jform_stocks_servis .service__item .old_price input {
+	max-width: 90px !important;
+	width: 90px !important;
+	text-align: center;
+}
+.profile-edit #jform_stocks_servis .service__item .about_stock input {
+	max-width: 255px !important;
+	width: 255px !important;
+}
+.profile-edit #jform_stocks_servis .service__item .about_stock {
+	display: block !important;
+	width: 100% !important;
+}
+.profile-edit #jform_stocks_servis .service__item .about_stock label {
+	display: block !important;
+	margin-bottom: 4px !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation,
+.profile-edit #jform_stocks_servis .service__item .recommendation {
+	display: block !important;
+	width: 100% !important;
+	padding: 4px 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation label,
+.profile-edit #jform_stocks_servis .service__item .recommendation label {
+	display: block !important;
+	margin-bottom: 4px !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jform_vyberite_usl .service__item .recommendation textarea,
+.profile-edit #jform_stocks_servis .service__item .recommendation textarea {
+	width: 100% !important;
+	max-width: 255px !important;
+	min-height: 64px !important;
+}
+.profile-edit #jform_stocks_servis .service__item .count_stock input {
+	max-width: 90px !important;
+	width: 90px !important;
+	text-align: center;
+}
+.profile-edit #jform_stocks_servis .service__item .time select,
+.profile-edit #jform_stocks_servis .service__item .time2 select {
+	max-width: 65px !important;
+	width: 65px !important;
+}
+.profile-edit #jform_stocks_servis .btn-remove-service {
+	display: inline-block;
+	padding: 4px 16px;
+	margin: 8px 0 0;
+	border: 1px solid #d9d9d9;
+	border-radius: 6px;
+	background: #f5f5f5;
+	color: #333;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+.profile-edit #jform_stocks_servis .btn-remove-service:hover {
+	background: #e8e8e8;
+	border-color: #bbb;
+}
+.profile-edit #jform_stocks_servis .stock_key {
+	margin: 12px;
+	width: 37px;
+	height: 37px;
+	border: 1px solid #000;
+	border-radius: 50%;
+	cursor: pointer;
+	position: relative;
+}
+.profile-edit #jform_stocks_servis .stock_key::before,
+.profile-edit #jform_stocks_servis .stock_key::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background: #000;
+	transform: translate(-50%, -50%);
+}
+.profile-edit #jform_stocks_servis .stock_key::before {
+	width: 14px;
+	height: 2px;
+}
+.profile-edit #jform_stocks_servis .stock_key::after {
+	width: 2px;
+	height: 14px;
+}
+.profile-edit #jform_courses_servis .stock_key {
+	margin: 12px;
+	width: 37px;
+	height: 37px;
+	border: 1px solid #000;
+	border-radius: 50%;
+	cursor: pointer;
+	position: relative;
+}
+.profile-edit #jform_courses_servis .stock_key::before,
+.profile-edit #jform_courses_servis .stock_key::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background: #000;
+	transform: translate(-50%, -50%);
+}
+.profile-edit #jform_courses_servis .stock_key::before {
+	width: 14px;
+	height: 2px;
+}
+.profile-edit #jform_courses_servis .stock_key::after {
+	width: 2px;
+	height: 14px;
+}
+.profile-edit #jform_courses_servis .service__item .course_desc,
+.profile-edit #jform_courses_servis .service__item .course_title,
+.profile-edit #jform_courses_servis .service__item .course_media,
+.profile-edit #jform_courses_servis .service__item .course_price,
+.profile-edit #jform_courses_servis .service__item .course_duration,
+.profile-edit #jform_courses_servis .service__item .course_capacity,
+.profile-edit #jform_courses_servis .service__item .course_concurrent,
+.profile-edit #jform_courses_servis .service__item .course_mode,
+.profile-edit #jform_courses_servis .service__item .course_slot {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 4px 0 !important;
+    gap: 4px;
+    width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_duration {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 4px 0 !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_duration label {
+    min-width: 0 !important;
+    width: auto !important;
+    display: inline !important;
+    padding-right: 4px !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_duration select {
+    max-width: 80px !important;
+    width: auto !important;
+    display: inline-block !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_desc label,
+.profile-edit #jform_courses_servis .service__item .course_title label,
+.profile-edit #jform_courses_servis .service__item .course_media label,
+.profile-edit #jform_courses_servis .service__item .course_price label,
+.profile-edit #jform_courses_servis .service__item .course_capacity label,
+.profile-edit #jform_courses_servis .service__item .course_concurrent label,
+.profile-edit #jform_courses_servis .service__item .course_mode label,
+.profile-edit #jform_courses_servis .service__item .course_slot label {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    padding-right: 0 !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_title input,
+.profile-edit #jform_courses_servis .service__item .course_price input,
+.profile-edit #jform_courses_servis .service__item .course_capacity input,
+.profile-edit #jform_courses_servis .service__item .course_concurrent input,
+.profile-edit #jform_courses_servis .service__item .course_mode select {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_mode,
+.profile-edit #jform_courses_servis .service__item .course_slot,
+.profile-edit #jform_searches_servis .service__item .search_mode,
+.profile-edit #jform_searches_servis .service__item .search_slot,
+.profile-edit #jform_courses_servis .service__item,
+.profile-edit #jform_searches_servis .service__item {
+	overflow: visible !important;
+}
+.profile-edit .fixed-slot-fields {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    position: relative;
+}
+.profile-edit .fixed-slot-fields.is-time-open {
+    z-index: 4000;
+}
+.profile-edit .fixed-slot-fields input[type="hidden"] {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    flex: 0 0 0 !important;
+}
+.profile-edit .fixed-slot-fields input[type="date"] {
+    flex: 1 1 150px;
+    min-width: 140px;
+    max-width: 180px !important;
+    width: auto !important;
+    display: inline-block !important;
+    height: 34px;
+}
+.profile-edit .fixed-slot-fields select {
+    flex: 0 0 96px;
+    width: 96px !important;
+    max-width: 96px !important;
+    display: inline-block !important;
+}
+.profile-edit .fixed-slot-time-wrap {
+    position: relative;
+    flex: 0 0 96px;
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    display: inline-block !important;
+}
+.profile-edit .fixed-slot-time-wrap select {
+    width: 96px !important;
+    max-width: 96px !important;
+    height: 34px;
+    pointer-events: none;
+}
+.profile-edit .fixed-slot-time-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+.profile-edit .fixed-slot-time-grid {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: auto;
+    z-index: 4001;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 255px;
+    max-width: 100%;
+    max-height: 248px;
+    overflow-y: auto;
+    padding: 8px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.profile-edit .fixed-slot-time-grid.is-open {
+    display: grid !important;
+}
+.profile-edit .fixed-slot-time-btn {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    margin: 0;
+    padding: 0 2px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    color: #000;
+    font-family: "GothamPro-Medium", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+}
+.profile-edit .fixed-slot-time-btn.is-selected {
+    background: #f3d378;
+    border-color: #f7cc53;
+    box-shadow: 0 0 0 2px rgba(247, 204, 83, 0.3);
+}
+.profile-edit #jform_courses_servis .service__item .course_desc textarea {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 96px !important;
+    resize: vertical;
+}
+.profile-edit #jform_courses_servis .service__item .course_media .course-media-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_media .course-media-file-input {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_media .course-media-current {
+    font-size: 13px;
+    line-height: 1.35;
+    color: #666;
+    word-break: break-word;
+    max-width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_desc textarea {
+	display: block !important;
+	width: 255px !important;
+	max-width: 255px !important;
+	min-height: 96px !important;
+	resize: vertical;
+}
+.profile-edit #jform_courses_servis .service__item .course_media .course-media-file-input {
+	max-width: 255px !important;
+	width: 255px !important;
+	min-height: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_media .course-media-current {
+	font-size: 13px;
+	line-height: 1.35;
+	color: #666;
+	word-break: break-word;
+}
+.profile-edit #jform_courses_servis .btn-remove-service {
+	display: inline-block;
+	padding: 4px 16px;
+	margin: 8px 0 0;
+	border: 1px solid #d9d9d9;
+	border-radius: 6px;
+	background: #f5f5f5;
+	color: #333;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+.profile-edit #jform_courses_servis .btn-remove-service:hover {
+	background: #e8e8e8;
+	border-color: #bbb;
+}
+.profile-edit #jform_courses_servis .service__item .course_mode.is-free .course_slot {
+	display: none !important;
+}
+.profile-edit #jform_courses_servis .service__item:not(.is-free-mode) .course_concurrent,
+.profile-edit #jform_courses_servis .service__item:not(.has-capacity) .course_concurrent {
+	display: none !important;
+}
+.profile-edit #jform_searches_servis .stock_key {
+	margin: 12px;
+	width: 37px;
+	height: 37px;
+	border: 1px solid #000;
+	border-radius: 50%;
+	cursor: pointer;
+	position: relative;
+}
+.profile-edit #jform_searches_servis .stock_key::before,
+.profile-edit #jform_searches_servis .stock_key::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background: #000;
+	transform: translate(-50%, -50%);
+}
+.profile-edit #jform_searches_servis .service__item .search_desc,
+.profile-edit #jform_searches_servis .service__item .search_title,
+.profile-edit #jform_searches_servis .service__item .search_media,
+.profile-edit #jform_searches_servis .service__item .search_price,
+.profile-edit #jform_searches_servis .service__item .search_duration,
+.profile-edit #jform_searches_servis .service__item .search_capacity,
+.profile-edit #jform_searches_servis .service__item .search_mode,
+.profile-edit #jform_searches_servis .service__item .search_slot {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 4px 0 !important;
+    gap: 4px;
+    width: 100% !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_desc label,
+.profile-edit #jform_searches_servis .service__item .search_title label,
+.profile-edit #jform_searches_servis .service__item .search_media label,
+.profile-edit #jform_searches_servis .service__item .search_price label,
+.profile-edit #jform_searches_servis .service__item .search_capacity label,
+.profile-edit #jform_searches_servis .service__item .search_mode label,
+.profile-edit #jform_searches_servis .service__item .search_slot label {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    padding-right: 0 !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_duration {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 4px 0 !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_duration label {
+    min-width: 0 !important;
+    width: auto !important;
+    display: inline !important;
+    padding-right: 4px !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_duration select {
+    max-width: 80px !important;
+    width: auto !important;
+    display: inline-block !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_price input,
+.profile-edit #jform_searches_servis .service__item .search_capacity input {
+    max-width: 90px !important;
+    width: 90px !important;
+    text-align: center;
+}
+.profile-edit #jform_searches_servis .service__item .search_mode select {
+	max-width: 180px !important;
+	width: 180px !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_media {
+	align-items: flex-start !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_media .search-media-field {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 255px;
+}
+.profile-edit #jform_searches_servis .service__item .search_desc input,
+.profile-edit #jform_searches_servis .service__item .search_title input,
+.profile-edit #jform_searches_servis .service__item .search_media input {
+	max-width: 255px !important;
+	width: 255px !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_slot .fixed-slot-fields,
+.profile-edit #jform_courses_servis .service__item .course_slot .fixed-slot-fields {
+	max-width: 255px !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_desc textarea {
+	display: block !important;
+	width: 255px !important;
+	max-width: 255px !important;
+	min-height: 96px !important;
+	resize: vertical;
+}
+.profile-edit #jform_searches_servis .service__item .search_media .search-media-file-input {
+	max-width: 255px !important;
+	width: 255px !important;
+	min-height: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+}
+.profile-edit #jform_searches_servis .service__item .search_media .search-media-current {
+	font-size: 13px;
+	line-height: 1.35;
+	color: #666;
+	word-break: break-word;
+}
+.profile-edit #jform_searches_servis .btn-remove-service {
+	display: inline-block;
+	padding: 4px 16px;
+	margin: 8px 0 0;
+	border: 1px solid #d9d9d9;
+	border-radius: 6px;
+	background: #f5f5f5;
+	color: #333;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+.profile-edit #jform_searches_servis .btn-remove-service:hover {
+	background: #e8e8e8;
+	border-color: #bbb;
+}
+.profile-edit #jform_searches_servis .service__item .search_mode.is-free .search_slot {
+	display: none !important;
+}
+
+.profile-edit #jsn-form .lk-login-hint { margin: 0 0 14px !important; text-align: left; color: #222; }
+.profile-edit #jsn-form .email-readonly-group .star { display: none !important; }
+.profile-edit #jsn-form .email-readonly-group input[readonly] {
+	background: #efefef !important;
+	color: #777 !important;
+	border-color: #d0d0d0 !important;
+	cursor: not-allowed !important;
+}
+.profile-edit #jsn-form .telefon-group .controls,
+.profile-edit #jsn-form .email1-group .controls,
+.profile-edit #jsn-form .email-readonly-group .controls {
+	display: flex !important;
+	align-items: center !important;
+	gap: 10px !important;
+	max-width: 680px !important;
+}
+.profile-edit #jsn-form .telefon-group .controls::before,
+.profile-edit #jsn-form .email1-group .controls::before,
+.profile-edit #jsn-form .email-readonly-group .controls::before {
+	display: inline-block !important;
+	margin: 0 !important;
+	flex: 0 0 24px !important;
+	width: 24px !important;
+	height: 17px !important;
+	background-size: contain !important;
+	background-position: center center !important;
+}
+.profile-edit #jsn-form .telefon-group .controls input,
+.profile-edit #jsn-form .email1-group .controls input,
+.profile-edit #jsn-form .email-readonly-group .controls input {
+	flex: 1 1 auto !important;
+	max-width: none !important;
+	width: auto !important;
+}
+.profile-edit #jsn-form .phone-public-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 16px;
+	flex: 0 0 auto;
+	margin: 0;
+	font-weight: 500;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.profile-edit #jsn-form .phone-public-toggle input[type="checkbox"] {
+	flex: 0 0 16px !important;
+	width: 16px !important;
+	height: 16px !important;
+	margin: 0 !important;
+}
+.profile-edit #jsn-form .phone-public-toggle__narrow { display: none; }
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+	.profile-edit #jsn-form .telefon-group .controls {
+		flex-wrap: wrap !important;
+	}
+	.profile-edit #jsn-form .phone-public-toggle {
+		flex: 1 0 100%;
+		align-self: flex-start;
+		width: max-content;
+		max-width: 100%;
+		margin-top: 0;
+		margin-left: 0;
+		white-space: nowrap;
+	}
+	.profile-edit #jsn-form .phone-public-toggle__wide { display: none; }
+	.profile-edit #jsn-form .phone-public-toggle__narrow { display: inline; }
+}
+.profile-edit #jsn-form .address-group { display: flex; flex-wrap: wrap; gap: 12px; }
+.profile-edit #jsn-form .address-group .control-group { flex: 1 1 220px; min-width: 200px; }
+.profile-edit #jsn-form .vg-profile-extra-group { width: 100%; margin: 8px 0 12px; }
+.profile-edit #jsn-form .vg-profile-checkboxes { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; }
+.profile-edit #jsn-form .vg-profile-checkboxes .checkbox { display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; font-weight: 500; }
+.profile-edit #jsn-form .vg-profile-checkboxes input { width: 16px; height: 16px; margin: 0; }
+.profile-edit #jsn-form .name-group,
+.profile-edit #jsn-form .mail-group,
+.profile-edit #jsn-form .links-group,
+.profile-edit #jsn-form .o_sebe-group { width: 100%; }
+.profile-edit #jsn-form .mail-group,
+.profile-edit #jsn-form .name-group,
+.profile-edit #jsn-form .lastname-group,
+.profile-edit #jsn-form .sity-group {
+	display: block !important;
+	margin-right: 0 !important;
+	width: 100%;
+}
+.profile-edit #jsn-form .lastname-group .controls,
+.profile-edit #jsn-form .sity-group .controls {
+	max-width: 680px !important;
+}
+
+.profile-edit .lk-avatar-edit-controls { display: flex !important; align-items: center; gap: 12px; }
+.profile-edit .lk-avatar-edit-group .controls {
+	max-width: 680px !important;
+	padding: 0 !important;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+.profile-edit .lk-avatar-trigger { padding: 0; border: 0; background: transparent; cursor: pointer; }
+.profile-edit .lk-avatar-preview {
+	width: 72px !important;
+	height: 72px !important;
+	object-fit: cover;
+	border-radius: 50% !important;
+	border: 2px solid #ececec !important;
+	display: block;
+}
+.profile-edit .lk-avatar-edit-group .jsn-p-avatar {
+	width: 72px !important;
+	height: 72px !important;
+	position: relative !important;
+}
+.profile-edit .lk-avatar-edit-group .jsn-p-avatar .avatar-online {
+	right: -1px;
+	bottom: -1px;
+}
+.profile-edit .lk-avatar-file-input { display: none !important; }
+.profile-edit .lk-avatar-help { color: #666; font-size: 13px; }
+
+.profile-edit .lk-portfolio-edit-controls { display: block !important; }
+.profile-edit .portfolio_field-group {
+	display: block !important;
+	position: static !important;
+	margin: 0 0 18px !important;
+}
+.profile-edit .portfolio_field-group .controls {
+	display: block !important;
+	width: 100% !important;
+	height: auto !important;
+	margin: 0 !important;
+	position: relative !important;
+	vertical-align: baseline !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	border: 0 !important;
+	cursor: default !important;
+}
+.profile-edit .portfolio_field-group > .control-label {
+	display: block !important;
+	margin: 0 0 8px !important;
+}
+.profile-edit .portfolio_field-group .lk-portfolio-edit-controls {
+	display: block !important;
+	width: 100% !important;
+	height: auto !important;
+	margin: 0 !important;
+	position: static !important;
+}
+.profile-edit .lk-portfolio-upload-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 36px;
+	padding: 0 16px;
+	border-radius: 18px;
+	background: #f9ce53;
+	color: #000;
+	font-family: "GothamPro-Bold", sans-serif;
+	font-size: 14px;
+	cursor: pointer;
+	margin: 0 0 10px 0;
+	white-space: nowrap;
+}
+.profile-edit #jform_upload_portfolio_field {
+	display: none !important;
+	width: auto !important;
+	max-width: none !important;
+}
+.profile-edit #jsn-form #jform_vyberite_spetsialnos {
+	display: block !important;
+	flex-wrap: nowrap !important;
+}
+.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox {
+	display: flex !important;
+	align-items: center !important;
+	gap: 10px !important;
+	flex: none !important;
+	max-width: 100% !important;
+	margin: 0 0 8px !important;
+	line-height: 1.35 !important;
+	overflow: visible !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox::before,
+.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox::after {
+	content: none !important;
+	display: none !important;
+}
+.profile-edit #jsn-form #jform_vyberite_spetsialnos .checkbox input[type="checkbox"] {
+	display: inline-block !important;
+	appearance: auto !important;
+	-webkit-appearance: checkbox !important;
+	position: static !important;
+	opacity: 1 !important;
+	width: 16px !important;
+	height: 16px !important;
+	margin: 0 !important;
+	flex: 0 0 16px !important;
+}
+.profile-edit .lk-portfolio-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 10px;
+}
+.profile-edit .lk-edit-portfolio-grid {
+	display: flex !important;
+	flex-wrap: wrap !important;
+	gap: 12px !important;
+	align-items: flex-start !important;
+	margin-top: 10px !important;
+	clear: both !important;
+	width: 100% !important;
+}
+.profile-edit .lk-edit-portfolio-item {
+	position: relative !important;
+	display: inline-block !important;
+	flex: 0 0 140px !important;
+	width: 140px !important;
+	height: 140px !important;
+	border-radius: 12px;
+	overflow: hidden !important;
+}
+.profile-edit .lk-edit-portfolio-item img,
+.profile-edit .lk-portfolio-item img {
+	display: block !important;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: none !important;
+	object-fit: cover !important;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+}
+.profile-edit .lk-portfolio-remove {
+	position: absolute;
+	right: 6px;
+	top: 6px;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(0, 0, 0, 0.65);
+	color: #fff;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 2;
+}
+.profile-edit .lk-portfolio-remove:hover { background: rgba(0, 0, 0, 0.8); }
+.profile-edit .media-preview-thumb {
+	position: relative;
+	display: inline-block;
+	width: 96px;
+	height: 96px;
+	margin-top: 4px;
+	border-radius: 10px;
+	overflow: hidden;
+}
+.profile-edit .media-preview-thumb[hidden] { display: none !important; }
+.profile-edit .media-preview-thumb img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+}
+
+.profile-edit .lk-edit-form-footer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+	align-items: center;
+	position: static !important;
+	width: 100%;
+	margin: 0 !important;
+	padding: 12px 0 0 !important;
+	border-top: 1px solid #e9e9e9;
+	clear: both;
+	margin-top: 18px !important;
+}
+.profile-edit .lk-edit-form-footer .dale {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+}
+@media (max-width: 768px) {
+	.profile-edit {
+		padding-bottom: 28px;
+	}
+	.profile-edit #member-profile {
+		width: 100%;
+	}
+	.profile-edit #jform_courses_servis > label {
+		max-width: 100% !important;
+		margin-bottom: 28px !important;
+	}
+	.profile-edit #jform_courses_servis > label > b {
+		margin-left: 12px !important;
+	}
+	.profile-edit #jform_courses_servis > label .flex_wrap,
+	.profile-edit #jform_courses_servis > label .service_list {
+		width: 100% !important;
+	}
+	.profile-edit #jform_courses_servis .service__item {
+		width: 100% !important;
+		max-width: 100% !important;
+		margin: 0 !important;
+		padding: 12px 0 22px !important;
+		box-sizing: border-box !important;
+	}
+	.profile-edit #jform_courses_servis .service__item::after {
+		left: 0 !important;
+		right: 0 !important;
+		width: 100% !important;
+	}
+	.profile-edit #jform_courses_servis .service__item .course_desc,
+	.profile-edit #jform_courses_servis .service__item .course_title,
+	.profile-edit #jform_courses_servis .service__item .course_media,
+	.profile-edit #jform_courses_servis .service__item .course_price,
+	.profile-edit #jform_courses_servis .service__item .course_duration,
+	.profile-edit #jform_courses_servis .service__item .course_capacity,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent,
+	.profile-edit #jform_courses_servis .service__item .course_mode,
+	.profile-edit #jform_courses_servis .service__item .course_slot {
+		flex-direction: column !important;
+		align-items: flex-start !important;
+		gap: 8px !important;
+		padding: 0 0 12px !important;
+		width: 100% !important;
+		box-sizing: border-box !important;
+	}
+	.profile-edit .fixed-slot-fields {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	.profile-edit #jform_courses_servis .service__item .course_desc label,
+	.profile-edit #jform_courses_servis .service__item .course_title label,
+	.profile-edit #jform_courses_servis .service__item .course_media label,
+	.profile-edit #jform_courses_servis .service__item .course_price label,
+	.profile-edit #jform_courses_servis .service__item .course_duration label,
+	.profile-edit #jform_courses_servis .service__item .course_capacity label,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent label,
+	.profile-edit #jform_courses_servis .service__item .course_mode label,
+	.profile-edit #jform_courses_servis .service__item .course_slot label {
+		min-width: 0 !important;
+		width: 100% !important;
+		padding-right: 0 !important;
+	}
+	.profile-edit #jform_courses_servis .service__item .course_media .course-media-field,
+	.profile-edit #jform_courses_servis .service__item .course_desc textarea,
+	.profile-edit #jform_courses_servis .service__item .course_title input,
+	.profile-edit #jform_courses_servis .service__item .course_media input,
+	.profile-edit #jform_courses_servis .service__item .course_media .course-media-file-input,
+	.profile-edit #jform_courses_servis .service__item .course_price input,
+	.profile-edit #jform_courses_servis .service__item .course_capacity input,
+	.profile-edit #jform_courses_servis .service__item .course_concurrent input,
+	.profile-edit #jform_courses_servis .service__item .course_duration select,
+	.profile-edit #jform_courses_servis .service__item .course_mode select {
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+	}
+	.profile-edit #jform_courses_servis .service__item .stock-remove {
+		position: relative !important;
+		right: auto !important;
+		top: auto !important;
+		margin: 4px 0 0 !important;
+	}
+	.profile-edit .lk-edit-form-footer {
+		padding-top: 10px !important;
+	}
+	.profile-edit #jform_stocks_servis select {
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+		font-size: 16px !important;
+		height: 44px !important;
+	}
+}
+.profile-edit #jform_searches_servis .service__item .search_desc textarea,
+.search-description-input {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 60px !important;
+    resize: vertical !important;
+    box-sizing: border-box !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #d9d9d9 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    transition: height 0.1s ease !important;
+}
+.profile-edit #jform_stocks_servis .service__item .stock-remove {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #000;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    background: #ffc107;
+    margin-top: 10px;
+    flex-shrink: 0;
+    z-index: 2;
+}
+.profile-edit #jform_stocks_servis .service__item .stock-remove::before,
+.profile-edit #jform_stocks_servis .service__item .stock-remove::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 2px;
+    background: #000;
+    transform-origin: center;
+}
+.profile-edit #jform_stocks_servis .service__item .stock-remove::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+.profile-edit #jform_stocks_servis .service__item .stock-remove::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+#jform_searches_servis .service__item {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 15px 0 !important;
+}
+#jform_searches_servis .service__item > span {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 4px 0 !important;
+}
+#jform_searches_servis .service__item input:not(.search-slot-date):not(.search-slot-input):not(.course-slot-date):not(.course-slot-input),
+#jform_searches_servis .service__item select:not(.search-slot-time):not(.course-slot-time),
+#jform_searches_servis .service__item textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+#jform_searches_servis .service__item .fixed-slot-time-wrap {
+    width: 96px !important;
+    max-width: 96px !important;
+}
+#jform_searches_servis .service__item .search_duration select {
+    max-width: 80px !important;
+    width: auto !important;
+    display: inline-block !important;
+}
+#jform_searches_servis .service__item .search_media .search-media-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.profile-edit #jform_searches_servis .search-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 37px;
+    height: 37px;
+    margin: 12px 0 0;
+    border: 1px solid #000;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    font-size: 24px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+}
+
+.profile-edit #jform_searches_servis .search-add-btn:hover {
+    background: #f5f5f5;
+    transform: scale(1.05);
+}
+
+.profile-edit #jform_searches_servis .search-add-btn:active {
+    transform: scale(0.95);
+}
+
+</style>
+<script src="/templates/ryba/js/vigling-image-upload.js"></script>
+<script>
+(function(){
+	function editTabs(){
+		return document.querySelectorAll('#easyprofile.profile-edit #jsn-profile-tabs > li.z-tab');
+	}
+	function editPanels(){
+		return document.querySelectorAll('#easyprofile.profile-edit #jsn-form .lk-edit-tab-panels > .z-content');
+	}
+	function activateEditTab(idx){
+		var tabs = editTabs();
+		var panels = editPanels();
+		if (!tabs.length || !panels.length) {
+			return;
+		}
+		idx = parseInt(idx, 10);
+		if (isNaN(idx) || idx < 0 || idx >= panels.length) {
+			return;
+		}
+		tabs.forEach(function(tab, i){
+			tab.classList.toggle('z-active', i === idx);
+		});
+		panels.forEach(function(panel, i){
+			var on = i === idx;
+			panel.classList.toggle('z-active', on);
+			panel.style.setProperty('display', on ? 'block' : 'none', 'important');
+		});
+	}
+	document.addEventListener('click', function(e){
+		var tab = e.target && e.target.closest ? e.target.closest('#easyprofile.profile-edit #jsn-profile-tabs > li.z-tab') : null;
+		if (!tab) {
+			return;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		var idx = parseInt(tab.getAttribute('data-index') || '-1', 10);
+		if (idx < 0) {
+			idx = Array.prototype.indexOf.call(editTabs(), tab);
+		}
+		activateEditTab(idx);
+	}, true);
+	activateEditTab(0);
+	try {
+		if (new URLSearchParams(window.location.search).get('notify_saved') === '1') {
+			editTabs().forEach(function(tab, i){
+				if ((tab.textContent || '').indexOf('Уведомления') !== -1) activateEditTab(i);
+			});
+		}
+	} catch (err) {}
+	window.viglingActivateProfileEditTab = activateEditTab;
+})();
+</script>
+<script>
+(function(){
+	var isAdmin = <?php echo $isAdministrator ? 'true' : 'false'; ?>;
+	var isMaster = <?php echo $isMaster ? 'true' : 'false'; ?>;
+	var servicesByCategory = <?php echo $servicesJson ?: '{}'; ?>;
+	var missingServiceOptionsByCategory = <?php echo $missingServiceOptionsJson ?: '{}'; ?>;
+	var durationOptions = <?php echo $durationJson ?: '[]'; ?>;
+	var initialServiceRows = <?php echo $existingServiceRowsJson ?: '[]'; ?>;
+	var initialStockRows = <?php echo $existingStockRowsJson ?: '[]'; ?>;
+	var initialCourseRows = <?php echo $existingCourseRowsJson ?: '[]'; ?>;
+	var initialSearchRows = <?php echo $existingSearchRowsJson ?: '[]'; ?>;
+	var pendingServiceRows = Array.isArray(initialServiceRows) ? initialServiceRows.slice() : [];
+	var pendingStockRows = Array.isArray(initialStockRows) ? initialStockRows.slice() : [];
+	var pendingCourseRows = Array.isArray(initialCourseRows) ? initialCourseRows.slice() : [];
+	var pendingSearchRows = Array.isArray(initialSearchRows) ? initialSearchRows.slice() : [];
+
+	// If placeholders are empty, mirror from label text for better readability.
+	document.querySelectorAll('.profile-edit #jsn-form .control-group').forEach(function(group){
+		var label = group.querySelector('.control-label label');
+		var input = group.querySelector('.controls input[type="text"], .controls input[type="email"], .controls input[type="password"], .controls input[type="tel"], .controls input[type="url"], .controls textarea');
+		if (!label || !input) return;
+		if (input.getAttribute('placeholder')) return;
+		var text = (label.textContent || '').replace(/\*/g, '').trim();
+		if (text) input.setAttribute('placeholder', text);
+	});
+
+	// Hide "Действия в компонентах" only for administrators in profile edit.
+	if (isAdmin) {
+		document.querySelectorAll('.profile-edit #jsn-form .control-group').forEach(function(group){
+			var label = group.querySelector('.control-label label');
+			var labelText = label ? (label.textContent || '').trim().toLowerCase() : '';
+			var actionInput = group.querySelector('[name*=\"[actionlogs]\"], [id*=\"actionlogs\"], [name*=\"[action_logs]\"], [id*=\"action_logs\"]');
+			if (labelText.indexOf('действия в компонентах') !== -1 || actionInput) {
+				group.style.display = 'none';
+			}
+		});
+	}
+
+	// Clients: show email as login and keep it read-only.
+	if (!isMaster) {
+		document.querySelectorAll('.profile-edit input[type="email"][name*="[email]"], .profile-edit input[type="email"][name*="[email1]"], .profile-edit #jform_email1').forEach(function(input){
+			input.readOnly = true;
+			input.setAttribute('readonly', 'readonly');
+			input.classList.add('readonly-email');
+		});
+	}
+
+	// Specialty tab (same UX as registration): sync active state + filter by master type.
+	function syncSpecialtyActiveState() {
+		document.querySelectorAll('#jform_vyberite_spetsialnos > label').forEach(function(label){
+			var checkbox = label.querySelector('input[type="checkbox"]');
+			label.classList.toggle('active', !!(checkbox && checkbox.checked));
+		});
+	}
+	function filterSpecialtiesByType() {
+		var isRepairProfile = <?php echo $profileMasterType === '2' ? 'true' : 'false'; ?>;
+		document.querySelectorAll('#jform_vyberite_spetsialnos > label').forEach(function(label){
+			var type = label.getAttribute('data-type') || '';
+			var shouldShow = isRepairProfile ? type === 'repair' : type === 'beauty';
+			label.style.display = shouldShow ? '' : 'none';
+		});
+	}
+	function selectedSpecialtyIds() {
+		var ids = [];
+		document.querySelectorAll('#jform_vyberite_spetsialnos input[type="checkbox"]:checked').forEach(function(checkbox){
+			var id = parseInt(checkbox.value || '0', 10);
+			if (id > 0) {
+				ids.push(id);
+			}
+		});
+		return ids;
+	}
+	function labelsBySpecialtyId() {
+		var labels = {};
+		document.querySelectorAll('#jform_vyberite_spetsialnos input[type="checkbox"]').forEach(function(checkbox){
+			var label = checkbox.closest('label');
+			if (!label) {
+				return;
+			}
+			labels[parseInt(checkbox.value || '0', 10)] = (label.textContent || '').trim();
+		});
+		return labels;
+	}
+	function escapeHtml(value) {
+		return String(value || '').replace(/[&<>"']/g, function(char){
+			switch (char) {
+				case '&': return '&amp;';
+				case '<': return '&lt;';
+				case '>': return '&gt;';
+				case '"': return '&quot;';
+				case "'": return '&#39;';
+				default: return char;
+			}
+		});
+	}
+	function ensureSelectValue(select, value, label) {
+		if (!select || !value) {
+			return;
+		}
+		var exists = false;
+		Array.prototype.slice.call(select.options || []).forEach(function(option){
+			if (String(option.value || '') === String(value)) {
+				exists = true;
+			}
+		});
+		if (exists) {
+			return;
+		}
+		var option = document.createElement('option');
+		option.value = String(value);
+		option.textContent = String(label || ('Услуга #' + value));
+		option.setAttribute('data-restored', '1');
+		select.appendChild(option);
+	}
+	function serviceOptionsHtml(categoryId) {
+		var items = servicesByCategory[String(categoryId)] || servicesByCategory[categoryId] || [];
+		var html = '<option value="">Выберите услугу...</option>';
+		items.forEach(function(service){
+			html += '<option value="' + escapeHtml(service.id) + '">' + escapeHtml(service.title) + '</option>';
+			if (Array.isArray(service.tags) && service.tags.length) {
+				service.tags.forEach(function(tag){
+					html += '<option value="' + escapeHtml(service.id + '-' + tag.id) + '">' + escapeHtml(service.title + ' / ' + tag.title) + '</option>';
+				});
+			}
+		});
+		var missing = missingServiceOptionsByCategory[String(categoryId)] || missingServiceOptionsByCategory[categoryId] || [];
+		missing.forEach(function(option){
+			if (!option || !option.value) {
+				return;
+			}
+			html += '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label || option.value) + '</option>';
+		});
+		return html;
+	}
+	function durationOptionsHtml() {
+		var html = '';
+		durationOptions.forEach(function(value){
+			html += '<option value="' + value + '">' + value + '</option>';
+		});
+		return html;
+	}
+	function addServiceRow(categoryLabel, rowData) {
+		var catId = parseInt(categoryLabel.getAttribute('data-id') || '0', 10);
+		if (!catId) {
+			return;
+		}
+		var serviceList = categoryLabel.querySelector('.service_list');
+		if (!serviceList) {
+			return;
+		}
+		var row = document.createElement('p');
+		row.className = 'service__item';
+		row.setAttribute('data-category-id', String(catId));
+		row.innerHTML =
+			'<select class="service-select">' + serviceOptionsHtml(catId) + '</select>' +
+			'<span class="time"><label>Время:</label><select class="time-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+			'<span class="time2"><label>Перерыв:</label><select class="pause-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+			'<span class="price"><label>Стоимость:</label><input type="number" min="0" step="1" class="price-input" value="" /></span>' +
+			'<span class="recommendation"><label>Описание услуги:</label><textarea maxlength="150" placeholder="Описание услуги" class="recommendation-input"></textarea></span>' +
+			'<button type="button" class="btn-remove-service">Удалить</button>';
+		serviceList.appendChild(row);
+		if (rowData) {
+			var serviceSelect = row.querySelector('.service-select');
+			var timeSelect = row.querySelector('.time-select');
+			var pauseSelect = row.querySelector('.pause-select');
+			var priceInput = row.querySelector('.price-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
+			if (serviceSelect) ensureSelectValue(serviceSelect, String(rowData.serviceRaw || ''), String(rowData.serviceLabel || ''));
+			if (serviceSelect) serviceSelect.value = String(rowData.serviceRaw || '');
+			if (timeSelect) timeSelect.value = String(parseInt(rowData.duration || '15', 10) || 15);
+			if (pauseSelect) pauseSelect.value = String(parseInt(rowData.pause || '15', 10) || 15);
+			if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
+			if (recommendationInput) recommendationInput.value = String(rowData.recommendation || '');
+		}
+	}
+	function collectServiceRows() {
+		var rows = [];
+		document.querySelectorAll('#jform_vyberite_usl .service__item').forEach(function(row){
+			var catId = String(row.getAttribute('data-category-id') || '');
+			var serviceSelect = row.querySelector('.service-select');
+			var timeSelect = row.querySelector('.time-select');
+			var pauseSelect = row.querySelector('.pause-select');
+			var priceInput = row.querySelector('.price-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
+			rows.push({
+				categoryId: parseInt(catId || '0', 10) || 0,
+				serviceRaw: serviceSelect ? String(serviceSelect.value || '') : '',
+				duration: parseInt(timeSelect ? String(timeSelect.value || '0') : '0', 10) || 0,
+				pause: parseInt(pauseSelect ? String(pauseSelect.value || '0') : '0', 10) || 0,
+				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
+				recommendation: recommendationInput ? String(recommendationInput.value || '') : ''
+			});
+		});
+		return rows;
+	}
+	function buildLegacyPricesFromRows(rows) {
+		var grouped = {};
+		rows.forEach(function(row){
+			var catId = String(row.categoryId || '');
+			var serviceRaw = String(row.serviceRaw || '');
+			var duration = parseInt(row.duration || 0, 10);
+			var pause = parseInt(row.pause || 0, 10);
+			var price = parseInt(row.price || 0, 10);
+			if (!catId || !serviceRaw || !duration || !price) {
+				return;
+			}
+			if (!grouped[catId]) {
+				grouped[catId] = [];
+			}
+			grouped[catId].push([price, duration + '.' + pause, serviceRaw]);
+		});
+		return grouped;
+	}
+	function buildViglingPayload(rows) {
+		var items = [];
+		rows.forEach(function(row){
+			var catId = String(row.categoryId || '');
+			var serviceRaw = String(row.serviceRaw || '');
+			var duration = parseInt(row.duration || 0, 10);
+			var pause = parseInt(row.pause || 0, 10);
+			var price = parseInt(row.price || 0, 10);
+			if (!catId || !serviceRaw || !duration || !price) {
+				return;
+			}
+			items.push({
+				cat_id: catId,
+				service_raw: serviceRaw,
+				price: price,
+				duration: String(duration + '.' + pause),
+				recommendation: String(row.recommendation || '').trim().slice(0, 150)
+			});
+		});
+		return {version: 1, items: items};
+	}
+	function buildLegacyStockPricesFromRows(rows) {
+		var grouped = {};
+		rows.forEach(function(row){
+			var catId = String(row.categoryId || '');
+			var serviceRaw = String(row.serviceRaw || '');
+			var duration = parseInt(row.duration || 0, 10);
+			var pause = parseInt(row.pause || 0, 10);
+			var price = parseInt(row.price || 0, 10);
+			var oldPrice = parseInt(row.oldPrice || 0, 10);
+			var aboutStock = String(row.aboutStock || '').trim();
+			var countStock = parseInt(row.countStock || 0, 10);
+			if (!catId || !serviceRaw || !duration || !price) {
+				return;
+			}
+			if (!grouped[catId]) {
+				grouped[catId] = [];
+			}
+			grouped[catId].push([price, duration + '.' + pause, serviceRaw, oldPrice, aboutStock, countStock]);
+		});
+		return grouped;
+	}
+	function buildViglingStockPayload(rows) {
+		var items = [];
+		rows.forEach(function(row){
+			var catId = String(row.categoryId || '');
+			var serviceRaw = String(row.serviceRaw || '');
+			var duration = parseInt(row.duration || 0, 10);
+			var pause = parseInt(row.pause || 0, 10);
+			var price = parseInt(row.price || 0, 10);
+			var oldPrice = parseInt(row.oldPrice || 0, 10);
+			var aboutStock = String(row.aboutStock || '').trim();
+			var countStock = parseInt(row.countStock || 0, 10);
+			if (!catId || !serviceRaw || !duration || !price) {
+				return;
+			}
+			items.push({
+				id: parseInt(row.id || 0, 10) || 0,
+				cat_id: catId,
+				service_raw: serviceRaw,
+				price: price,
+				duration: String(duration + '.' + pause),
+				old_price: oldPrice,
+				about_stock: aboutStock,
+				count_stock: countStock,
+				recommendation: String(row.recommendation || '').trim().slice(0, 150)
+			});
+		});
+		return {version: 1, items: items};
+	}
+	function formatDatetimeLocal(value) {
+		var raw = String(value || '').trim();
+		if (!raw) {
+			return '';
+		}
+		if (raw.indexOf('T') !== -1 && raw.indexOf(' ') === -1) {
+			return snapDatetimeLocalMinutes(raw.slice(0, 16));
+		}
+		var iso = raw.replace(' ', 'T');
+		if (iso.length === 16) {
+			iso += ':00';
+		}
+		var date = new Date(iso + 'Z');
+		if (Number.isNaN(date.getTime())) {
+			return snapDatetimeLocalMinutes(raw.replace(' ', 'T').slice(0, 16));
+		}
+		var y = date.getFullYear();
+		var m = String(date.getMonth() + 1).padStart(2, '0');
+		var d = String(date.getDate()).padStart(2, '0');
+		var h = String(date.getHours()).padStart(2, '0');
+		var i = String(date.getMinutes()).padStart(2, '0');
+		return snapDatetimeLocalMinutes(y + '-' + m + '-' + d + 'T' + h + ':' + i);
+	}
+	function snapDatetimeLocalMinutes(value) {
+		var raw = String(value || '').trim();
+		if (!raw) {
+			return '';
+		}
+		var match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+		if (!match) {
+			return raw.slice(0, 16);
+		}
+		var day = match[1];
+		var hour = parseInt(match[2], 10);
+		var minute = parseInt(match[3], 10);
+		if (isNaN(hour) || isNaN(minute)) {
+			return raw.slice(0, 16);
+		}
+		var snapped = Math.round(minute / 15) * 15;
+		if (snapped === 60) {
+			snapped = 0;
+			hour += 1;
+		}
+		if (hour >= 24) {
+			hour = 0;
+			var next = new Date(parseInt(day.slice(0, 4), 10), parseInt(day.slice(5, 7), 10) - 1, parseInt(day.slice(8, 10), 10));
+			if (!Number.isNaN(next.getTime())) {
+				next.setDate(next.getDate() + 1);
+				day = next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0') + '-' + String(next.getDate()).padStart(2, '0');
+			}
+		}
+		return day + 'T' + String(hour).padStart(2, '0') + ':' + String(snapped).padStart(2, '0');
+	}
+	function parseLocalDateTime(value) {
+		var raw = snapDatetimeLocalMinutes(value);
+		var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+		if (!match) {
+			return null;
+		}
+		var date = new Date(
+			parseInt(match[1], 10),
+			parseInt(match[2], 10) - 1,
+			parseInt(match[3], 10),
+			parseInt(match[4], 10),
+			parseInt(match[5], 10),
+			0
+		);
+		return Number.isNaN(date.getTime()) ? null : date;
+	}
+	function quarterHourTimeOptionsHtml(selected) {
+		var html = '<option value="">Время</option>';
+		var hour;
+		var minute;
+		var value;
+		for (hour = 0; hour < 24; hour += 1) {
+			for (minute = 0; minute < 60; minute += 15) {
+				value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+				html += '<option value="' + value + '"' + (selected === value ? ' selected' : '') + '>' + value + '</option>';
+			}
+		}
+		return html;
+	}
+	function quarterHourTimeGridHtml(selected) {
+		var html = '<span class="fixed-slot-time-grid" role="listbox" aria-label="Время">';
+		var hour;
+		var minute;
+		var value;
+		var on;
+		for (hour = 0; hour < 24; hour += 1) {
+			for (minute = 0; minute < 60; minute += 15) {
+				value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+				on = selected === value;
+				html += '<button type="button" class="fixed-slot-time-btn' + (on ? ' is-selected' : '') + '" data-time="' + value + '" role="option" aria-selected="' + (on ? 'true' : 'false') + '">' + value + '</button>';
+			}
+		}
+		html += '</span>';
+		return html;
+	}
+	function syncFixedSlotTimeGrid(wrap, time) {
+		if (!wrap) {
+			return;
+		}
+		var selected = String(time || '');
+		wrap.querySelectorAll('.fixed-slot-time-btn').forEach(function (btn) {
+			var on = btn.getAttribute('data-time') === selected;
+			btn.classList.toggle('is-selected', on);
+			btn.setAttribute('aria-selected', on ? 'true' : 'false');
+		});
+	}
+	function setFixedSlotTimeExpanded(fields, open) {
+		var value = open ? 'true' : 'false';
+		if (!fields) {
+			return;
+		}
+		var sel = fields.querySelector('.course-slot-time, .search-slot-time');
+		if (sel) {
+			sel.setAttribute('aria-expanded', value);
+		}
+		var toggle = fields.querySelector('.fixed-slot-time-toggle');
+		if (toggle) {
+			toggle.setAttribute('aria-expanded', value);
+		}
+	}
+	function closeFixedSlotTimeGrids(except) {
+		document.querySelectorAll('.fixed-slot-time-grid.is-open').forEach(function (grid) {
+			if (grid === except) {
+				return;
+			}
+			grid.classList.remove('is-open');
+			var fields = grid.closest('.fixed-slot-fields');
+			if (fields) {
+				fields.classList.remove('is-time-open');
+			}
+			setFixedSlotTimeExpanded(fields, false);
+		});
+	}
+	function openFixedSlotTimeGrid(wrap, timeSelect, grid) {
+		if (!grid) {
+			return;
+		}
+		closeFixedSlotTimeGrids(grid);
+		var fields = grid.closest('.fixed-slot-fields');
+		grid.classList.add('is-open');
+		if (fields) {
+			fields.classList.add('is-time-open');
+		}
+		setFixedSlotTimeExpanded(fields, true);
+		syncFixedSlotTimeGrid(wrap, timeSelect ? timeSelect.value : '');
+		var on = grid.querySelector('.fixed-slot-time-btn.is-selected');
+		if (on && on.scrollIntoView) {
+			on.scrollIntoView({ block: 'nearest' });
+		}
+	}
+	function bindFixedSlotTimeGridDocument() {
+		if (document.documentElement.getAttribute('data-fixed-slot-grid-bound') === '1') {
+			return;
+		}
+		document.documentElement.setAttribute('data-fixed-slot-grid-bound', '1');
+		document.addEventListener('mousedown', function (e) {
+			var t = e.target;
+			if (t && t.closest && (t.closest('.fixed-slot-time-grid') || t.closest('.fixed-slot-time-wrap') || t.closest('select.course-slot-time') || t.closest('select.search-slot-time'))) {
+				return;
+			}
+			closeFixedSlotTimeGrids();
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') {
+				closeFixedSlotTimeGrids();
+			}
+		});
+	}
+	function ensureFixedSlotTimeGrid(wrap, timeSelect) {
+		if (!wrap || !timeSelect) {
+			return;
+		}
+		bindFixedSlotTimeGridDocument();
+		var fields = wrap.querySelector('.fixed-slot-fields') || timeSelect.parentNode;
+		var grid = wrap.querySelector('.fixed-slot-time-grid');
+		var holder;
+		var timeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+		var toggle;
+		if (!timeWrap) {
+			timeWrap = document.createElement('span');
+			timeWrap.className = 'fixed-slot-time-wrap';
+			if (timeSelect.parentNode) {
+				timeSelect.parentNode.insertBefore(timeWrap, timeSelect);
+			}
+			timeWrap.appendChild(timeSelect);
+		}
+		toggle = timeWrap.querySelector('.fixed-slot-time-toggle');
+		if (!toggle) {
+			toggle = document.createElement('button');
+			toggle.type = 'button';
+			toggle.className = 'fixed-slot-time-toggle';
+			toggle.setAttribute('aria-haspopup', 'listbox');
+			toggle.setAttribute('aria-label', 'Время');
+			toggle.setAttribute('aria-expanded', 'false');
+			timeWrap.appendChild(toggle);
+		}
+		if (!grid) {
+			holder = document.createElement('span');
+			holder.innerHTML = quarterHourTimeGridHtml(timeSelect.value);
+			grid = holder.firstChild;
+			if (fields) {
+				fields.appendChild(grid);
+			}
+		} else if (fields && grid.parentNode !== fields) {
+			fields.appendChild(grid);
+		}
+		timeSelect.setAttribute('tabindex', '-1');
+		timeSelect.setAttribute('aria-hidden', 'true');
+		timeSelect.setAttribute('aria-haspopup', 'listbox');
+		if (timeSelect.getAttribute('aria-expanded') !== 'true') {
+			timeSelect.setAttribute('aria-expanded', 'false');
+		}
+		if (grid.getAttribute('data-grid-bound') !== '1') {
+			grid.setAttribute('data-grid-bound', '1');
+			grid.addEventListener('click', function (e) {
+				var btn = e.target && e.target.closest ? e.target.closest('.fixed-slot-time-btn') : null;
+				if (!btn || !grid.contains(btn)) {
+					return;
+				}
+				e.preventDefault();
+				timeSelect.value = btn.getAttribute('data-time') || '';
+				timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+				syncFixedSlotTimeGrid(wrap, timeSelect.value);
+				closeFixedSlotTimeGrids();
+			});
+		}
+		if (toggle.getAttribute('data-grid-toggle-bound') !== '1') {
+			toggle.setAttribute('data-grid-toggle-bound', '1');
+			toggle.addEventListener('click', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (grid.classList.contains('is-open')) {
+					closeFixedSlotTimeGrids();
+				} else {
+					openFixedSlotTimeGrid(wrap, timeSelect, grid);
+				}
+			});
+			toggle.addEventListener('keydown', function (e) {
+				if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+					e.preventDefault();
+					if (!grid.classList.contains('is-open')) {
+						openFixedSlotTimeGrid(wrap, timeSelect, grid);
+					}
+				}
+			});
+		}
+		if (timeSelect.getAttribute('data-grid-select-bound') !== '1') {
+			timeSelect.setAttribute('data-grid-select-bound', '1');
+			timeSelect.addEventListener('mousedown', function (e) {
+				e.preventDefault();
+				if (grid.classList.contains('is-open')) {
+					closeFixedSlotTimeGrids();
+				} else {
+					openFixedSlotTimeGrid(wrap, timeSelect, grid);
+				}
+			});
+			timeSelect.addEventListener('keydown', function (e) {
+				if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+					e.preventDefault();
+					if (!grid.classList.contains('is-open')) {
+						openFixedSlotTimeGrid(wrap, timeSelect, grid);
+					}
+				}
+			});
+		}
+		syncFixedSlotTimeGrid(wrap, timeSelect.value);
+	}
+	function fixedSlotFieldsHtml(kind) {
+		var isSearch = kind === 'search';
+		return '<span class="fixed-slot-fields">' +
+			'<input type="date" class="' + (isSearch ? 'search-slot-date' : 'course-slot-date') + '" />' +
+			'<span class="fixed-slot-time-wrap"><select class="' + (isSearch ? 'search-slot-time' : 'course-slot-time') + '">' + quarterHourTimeOptionsHtml() + '</select></span>' +
+			quarterHourTimeGridHtml() +
+			'<input type="hidden" class="' + (isSearch ? 'search-slot-input' : 'course-slot-input') + '" value="" />' +
+			'</span>';
+	}
+	function fillFixedSlotParts(input, datetimeLocal) {
+		if (!input) {
+			return;
+		}
+		var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+		var snapped = snapDatetimeLocalMinutes(datetimeLocal);
+		var dateInput = wrap ? wrap.querySelector('.course-slot-date, .search-slot-date') : null;
+		var timeSelect = wrap ? wrap.querySelector('.course-slot-time, .search-slot-time') : null;
+		var parts = snapped.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/);
+		if (dateInput) {
+			dateInput.value = parts ? parts[1] : '';
+		}
+		if (timeSelect) {
+			timeSelect.value = parts ? parts[2] : '';
+		}
+		syncFixedSlotTimeGrid(wrap, parts ? parts[2] : '');
+		input.value = parts ? (parts[1] + 'T' + parts[2]) : '';
+	}
+	function syncFixedSlotHidden(input) {
+		if (!input) {
+			return;
+		}
+		var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+		var dateInput = wrap ? wrap.querySelector('.course-slot-date, .search-slot-date') : null;
+		var timeSelect = wrap ? wrap.querySelector('.course-slot-time, .search-slot-time') : null;
+		var day = dateInput ? String(dateInput.value || '').trim() : '';
+		var time = timeSelect ? String(timeSelect.value || '').trim() : '';
+		input.value = (day && time) ? (day + 'T' + time) : '';
+	}
+	function bindFixedSlotInput(input) {
+		if (!input) {
+			return;
+		}
+		var wrap = input.closest('.course_slot, .search_slot') || input.parentNode;
+		if (!wrap) {
+			return;
+		}
+		var isSearch = input.classList.contains('search-slot-input');
+		var dateClass = isSearch ? 'search-slot-date' : 'course-slot-date';
+		var timeClass = isSearch ? 'search-slot-time' : 'course-slot-time';
+		var dateInput = wrap.querySelector('.' + dateClass);
+		var timeSelect = wrap.querySelector('.' + timeClass);
+		var fields = wrap.querySelector('.fixed-slot-fields');
+		if (!fields) {
+			fields = document.createElement('span');
+			fields.className = 'fixed-slot-fields';
+			input.parentNode.insertBefore(fields, input);
+		}
+		if (input.getAttribute('type') === 'datetime-local' || input.getAttribute('type') === 'text') {
+			input.type = 'hidden';
+			input.removeAttribute('step');
+		}
+		if (!dateInput) {
+			dateInput = document.createElement('input');
+			dateInput.type = 'date';
+			dateInput.className = dateClass;
+			fields.appendChild(dateInput);
+		} else if (dateInput.parentNode !== fields) {
+			fields.appendChild(dateInput);
+		}
+		if (!timeSelect) {
+			timeSelect = document.createElement('select');
+			timeSelect.className = timeClass;
+			timeSelect.innerHTML = quarterHourTimeOptionsHtml();
+			fields.appendChild(timeSelect);
+		} else {
+			var existingTimeWrap = timeSelect.closest('.fixed-slot-time-wrap');
+			if (existingTimeWrap) {
+				if (existingTimeWrap.parentNode !== fields) {
+					fields.appendChild(existingTimeWrap);
+				}
+			} else if (timeSelect.parentNode !== fields) {
+				fields.appendChild(timeSelect);
+			}
+		}
+		if (input.parentNode !== fields) {
+			fields.appendChild(input);
+		}
+		ensureFixedSlotTimeGrid(wrap, timeSelect);
+		if (input.getAttribute('data-slot-bound') !== '1') {
+			input.setAttribute('data-slot-bound', '1');
+			dateInput.addEventListener('change', function(){
+				syncFixedSlotHidden(input);
+			});
+			timeSelect.addEventListener('change', function(){
+				syncFixedSlotHidden(input);
+			});
+		}
+		if (input.value) {
+			fillFixedSlotParts(input, input.value);
+		} else {
+			syncFixedSlotHidden(input);
+		}
+	}
+	function bindAllFixedSlotInputs() {
+		document.querySelectorAll('.course-slot-input, .search-slot-input').forEach(bindFixedSlotInput);
+	}
+	function parseClockMinutes(value) {
+		var parts = String(value || '').split(':');
+		if (parts.length < 2) {
+			return null;
+		}
+		var hour = parseInt(parts[0], 10);
+		var minute = parseInt(parts[1], 10);
+		if (isNaN(hour) || isNaN(minute)) {
+			return null;
+		}
+		return hour * 60 + minute;
+	}
+	function currentScheduleByDay() {
+		var map = {};
+		document.querySelectorAll('.schedule-day-row').forEach(function(row){
+			var cb = row.querySelector('.schedule-day-cb');
+			var fromSel = row.querySelector('.schedule-from');
+			var toSel = row.querySelector('.schedule-to');
+			if (!cb || !cb.checked || !fromSel || !toSel) {
+				return;
+			}
+			var fromMin = parseClockMinutes(fromSel.value);
+			var toMin = parseClockMinutes(toSel.value);
+			var day = parseInt(cb.getAttribute('data-day') || cb.value, 10);
+			if (day >= 1 && day <= 7 && fromMin !== null && toMin !== null && toMin > fromMin) {
+				map[day] = [fromMin, toMin];
+			}
+		});
+		return map;
+	}
+	function describeFixedSlotIssue(localValue, durationMin, schedule, kindLabel) {
+		var raw = snapDatetimeLocalMinutes(localValue);
+		if (!raw) {
+			return 'Для ' + kindLabel + ' с фиксированной датой выберите дату и время.';
+		}
+		var start = parseLocalDateTime(raw);
+		if (!start) {
+			return 'Для ' + kindLabel + ' указана некорректная дата и время.';
+		}
+		if (start.getTime() <= Date.now()) {
+			return 'Нельзя сохранить ' + kindLabel + ' на прошедшее время.';
+		}
+		var days = Object.keys(schedule);
+		if (!days.length) {
+			return null;
+		}
+		var duration = Math.max(15, parseInt(durationMin, 10) || 0);
+		var end = new Date(start.getTime() + duration * 60000);
+		var jsDay = start.getDay();
+		var isoDay = jsDay === 0 ? 7 : jsDay;
+		var startMin = start.getHours() * 60 + start.getMinutes();
+		var endMin = end.getHours() * 60 + end.getMinutes();
+		var outside = start.toDateString() !== end.toDateString()
+			|| !schedule[isoDay]
+			|| startMin < schedule[isoDay][0]
+			|| endMin > schedule[isoDay][1];
+		if (!outside) {
+			return null;
+		}
+		return 'Выбранные дата и время не входят в расписание. Измените фиксированную дату и время.';
+	}
+	function findFixedSlotScheduleIssue() {
+		var schedule = currentScheduleByDay();
+		var issue = null;
+		document.querySelectorAll('#jform_courses_servis .service__item').forEach(function(row){
+			if (issue) {
+				return;
+			}
+			var mode = row.querySelector('.course-mode-select');
+			if (!mode || String(mode.value || 'free') !== 'fixed') {
+				return;
+			}
+			var slot = row.querySelector('.course-slot-input');
+			var duration = row.querySelector('.course-duration-select');
+			var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'курс');
+			if (msg) {
+				issue = { message: msg, kind: 'course' };
+			}
+		});
+		if (issue) {
+			return issue;
+		}
+		document.querySelectorAll('#jform_searches_servis .service__item').forEach(function(row){
+			if (issue) {
+				return;
+			}
+			var mode = row.querySelector('.search-mode-select');
+			if (!mode || String(mode.value || 'free') !== 'fixed') {
+				return;
+			}
+			var slot = row.querySelector('.search-slot-input');
+			var duration = row.querySelector('.search-duration-select');
+			var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'поиск моделей');
+			if (msg) {
+				issue = { message: msg, kind: 'search' };
+			}
+		});
+		return issue;
+	}
+	function showFixedSlotNotice(message, kind) {
+		document.querySelectorAll('#jsn-profile-tabs > li.z-tab').forEach(function(li){
+			var text = (li.textContent || '');
+			var match = (kind === 'search' && text.indexOf('Поиск') !== -1)
+				|| (kind === 'course' && text.indexOf('Курсы') !== -1);
+			if (!match || typeof window.viglingActivateProfileEditTab !== 'function') {
+				return;
+			}
+			window.viglingActivateProfileEditTab(parseInt(li.getAttribute('data-index'), 10));
+		});
+		if (window.ViglingNotify && typeof window.ViglingNotify.warning === 'function') {
+			window.ViglingNotify.warning(message, { timeout: 0 });
+			return;
+		}
+		window.alert(message);
+	}
+	function normalizeDatetimeFromLocal(value) {
+		var date = parseLocalDateTime(value);
+		if (!date) {
+			return '';
+		}
+		var y = date.getUTCFullYear();
+		var m = String(date.getUTCMonth() + 1).padStart(2, '0');
+		var d = String(date.getUTCDate()).padStart(2, '0');
+		var h = String(date.getUTCHours()).padStart(2, '0');
+		var i = String(date.getUTCMinutes()).padStart(2, '0');
+		var s = String(date.getUTCSeconds()).padStart(2, '0');
+		return y + '-' + m + '-' + d + ' ' + h + ':' + i + ':' + s;
+	}
+	function basenameFromPath(path) {
+		var raw = String(path || '').trim();
+		if (!raw) {
+			return '';
+		}
+		var parts = raw.split('/');
+		return parts.length ? parts[parts.length - 1] : raw;
+	}
+	function mediaUrlFromPath(path) {
+		var raw = String(path || '').trim();
+		if (!raw) {
+			return '';
+		}
+		if (/^https?:\/\//i.test(raw) || raw.charAt(0) === '/') {
+			return raw;
+		}
+		return '/' + raw.replace(/^\/+/, '');
+	}
+	function updateMediaPreview(row, file, existingPath) {
+		if (!row) {
+			return;
+		}
+		var thumb = row.querySelector('.media-preview-thumb');
+		var img = thumb ? thumb.querySelector('img') : null;
+		if (!thumb || !img) {
+			return;
+		}
+		if (thumb._objectUrl) {
+			try { URL.revokeObjectURL(thumb._objectUrl); } catch (e) {}
+			thumb._objectUrl = '';
+		}
+		if (file) {
+			var objectUrl = URL.createObjectURL(file);
+			thumb._objectUrl = objectUrl;
+			img.src = objectUrl;
+			thumb.hidden = false;
+			return;
+		}
+		if (existingPath) {
+			img.src = mediaUrlFromPath(existingPath);
+			thumb.hidden = false;
+			return;
+		}
+		img.removeAttribute('src');
+		thumb.hidden = true;
+	}
+	function clearMediaSelection(row) {
+		if (!row) {
+			return;
+		}
+		var fileInput = row.querySelector('.course-media-file-input, .search-media-file-input');
+		var hiddenInput = row.querySelector('.course-media-input, .search-media-input');
+		if (fileInput) {
+			fileInput.value = '';
+		}
+		if (hiddenInput) {
+			hiddenInput.value = '';
+		}
+		if (row.querySelector('.course-media-file-input')) {
+			syncCourseMediaState(row);
+		} else {
+			syncSearchMediaState(row);
+		}
+	}
+	function syncCourseMediaState(row) {
+		if (!row) {
+			return;
+		}
+		var fileInput = row.querySelector('.course-media-file-input');
+		var hiddenInput = row.querySelector('.course-media-input');
+		var currentNode = row.querySelector('.course-media-current');
+		if (!currentNode) {
+			return;
+		}
+		var fileName = '';
+		var file = null;
+		if (fileInput && fileInput.files && fileInput.files.length > 0) {
+			file = fileInput.files[0];
+			fileName = String(file && file.name ? file.name : '').trim();
+		}
+		if (fileName) {
+			currentNode.textContent = 'Новый файл: ' + fileName;
+			updateMediaPreview(row, file, '');
+			return;
+		}
+		var existingPath = hiddenInput ? String(hiddenInput.value || '').trim() : '';
+		currentNode.textContent = existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран';
+		updateMediaPreview(row, null, existingPath);
+	}
+	function syncCourseModeState(row) {
+		if (!row) {
+			return;
+		}
+		var modeSelect = row.querySelector('.course-mode-select');
+		var modeWrap = row.querySelector('.course_mode');
+		var slotInput = row.querySelector('.course-slot-input');
+		var capacityInput = row.querySelector('.course-capacity-input');
+		var concurrentInput = row.querySelector('.course-concurrent-input');
+		var mode = modeSelect ? String(modeSelect.value || 'free') : 'free';
+		var capacity = parseInt(capacityInput ? String(capacityInput.value || '0') : '0', 10) || 0;
+		if (modeWrap) {
+			modeWrap.classList.toggle('is-free', mode !== 'fixed');
+		}
+		row.classList.toggle('is-free-mode', mode !== 'fixed');
+		row.classList.toggle('has-capacity', capacity >= 1);
+		if (slotInput && mode !== 'fixed') {
+			fillFixedSlotParts(slotInput, '');
+		}
+		if (concurrentInput) {
+			var maxConcurrent = Math.max(1, capacity);
+			concurrentInput.max = String(maxConcurrent);
+			var concurrent = parseInt(String(concurrentInput.value || '1'), 10) || 1;
+			if (concurrent < 1) {
+				concurrent = 1;
+			}
+			if (concurrent > maxConcurrent) {
+				concurrent = maxConcurrent;
+			}
+			concurrentInput.value = String(concurrent);
+		}
+	}
+	function addCourseRow(categoryLabel, rowData) {
+	var catId = parseInt(categoryLabel.getAttribute('data-id') || '0', 10);
+	if (!catId) {
+		return;
+	}
+	var serviceList = categoryLabel.querySelector('.service_list');
+	if (!serviceList) {
+		return;
+	}
+	var row = document.createElement('p');
+	row.className = 'service__item';
+	row.setAttribute('data-category-id', String(catId));
+	row.setAttribute('data-course-id', rowData && rowData.id ? String(parseInt(rowData.id, 10) || 0) : '0');
+	row.setAttribute('data-booking-count', rowData && rowData.bookingCount ? String(parseInt(rowData.bookingCount, 10) || 0) : '0');
+	row.innerHTML =
+		'<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
+		'<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
+		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="course-media-current">Файл не выбран</span></span></span>' +
+		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
+		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span></span>' +
+		'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+		'<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
+		'<button type="button" class="btn-remove-service">Удалить</button>';
+	serviceList.appendChild(row);
+	if (rowData) {
+		var titleInput = row.querySelector('.course-title-input');
+		var descriptionInput = row.querySelector('.course-description-input');
+		var mediaInput = row.querySelector('.course-media-input');
+		var priceInput = row.querySelector('.course-price-input');
+		var durationSelect = row.querySelector('.course-duration-select');
+		var capacityInput = row.querySelector('.course-capacity-input');
+		var concurrentInput = row.querySelector('.course-concurrent-input');
+		var modeSelect = row.querySelector('.course-mode-select');
+		var slotInput = row.querySelector('.course-slot-input');
+		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
+		if (descriptionInput) descriptionInput.value = String(rowData.description || '');
+		if (mediaInput) mediaInput.value = String(rowData.mediaPath || '');
+		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
+		if (durationSelect) durationSelect.value = String(parseInt(rowData.duration || '60', 10) || 60);
+		if (capacityInput) capacityInput.value = String(parseInt(rowData.capacity || '1', 10) || 1);
+		if (concurrentInput) concurrentInput.value = String(Math.max(1, parseInt(rowData.concurrentParticipants || '1', 10) || 1));
+		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
+		if (slotInput) slotInput.value = formatDatetimeLocal(String(rowData.slotStartUtc || ''));
+	}
+	bindFixedSlotInput(row.querySelector('.course-slot-input'));
+	syncCourseModeState(row);
+	syncCourseMediaState(row);
+	syncCourseEditConstraints(row);
+	var modeSelect = row.querySelector('.course-mode-select');
+	if (modeSelect) {
+		modeSelect.addEventListener('change', function(){
+			syncCourseModeState(row);
+			syncCourseEditConstraints(row);
+		});
+	}
+	var capacityInputListen = row.querySelector('.course-capacity-input');
+	if (capacityInputListen) {
+		capacityInputListen.addEventListener('input', function(){
+			syncCourseModeState(row);
+			syncCourseEditConstraints(row);
+		});
+		capacityInputListen.addEventListener('change', function(){
+			syncCourseModeState(row);
+			syncCourseEditConstraints(row);
+		});
+	}
+	var concurrentInputListen = row.querySelector('.course-concurrent-input');
+	if (concurrentInputListen) {
+		concurrentInputListen.addEventListener('change', function(){
+			syncCourseModeState(row);
+		});
+	}
+	var mediaFileInput = row.querySelector('.course-media-file-input');
+	if (mediaFileInput) {
+		mediaFileInput.setAttribute('data-vigling-manual', '1');
+		mediaFileInput.addEventListener('change', function(){
+			var run = function () { syncCourseMediaState(row); };
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(mediaFileInput).then(run);
+				return;
+			}
+			run();
+		});
+	}
+}
+	function syncCourseEditConstraints(row) {
+		if (!row) {
+			return;
+		}
+		var bookingCount = parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0;
+		var durationSelect = row.querySelector('.course-duration-select');
+		var capacityInput = row.querySelector('.course-capacity-input');
+		var modeSelect = row.querySelector('.course-mode-select');
+		var bookingMode = modeSelect ? String(modeSelect.value || 'free') : 'free';
+		if (durationSelect) {
+			var durationLocked = bookingCount > 0 && bookingMode === 'fixed';
+			durationSelect.disabled = durationLocked;
+			durationSelect.title = durationLocked ? 'Нельзя менять длительность fixed-курса после появления участников' : '';
+		}
+		if (capacityInput) {
+			var minCapacity = bookingCount > 0 ? bookingCount : 1;
+			capacityInput.min = String(minCapacity);
+			if ((parseInt(String(capacityInput.value || '0'), 10) || 0) < minCapacity) {
+				capacityInput.value = String(minCapacity);
+			}
+		}
+		syncCourseModeState(row);
+	}
+	function collectCourseRows() {
+		var rows = [];
+		document.querySelectorAll('#jform_courses_servis .service__item').forEach(function(row){
+			var catId = String(row.getAttribute('data-category-id') || '');
+			var titleInput = row.querySelector('.course-title-input');
+			var descriptionInput = row.querySelector('.course-description-input');
+			var mediaInput = row.querySelector('.course-media-input');
+			var priceInput = row.querySelector('.course-price-input');
+			var durationSelect = row.querySelector('.course-duration-select');
+			var capacityInput = row.querySelector('.course-capacity-input');
+			var concurrentInput = row.querySelector('.course-concurrent-input');
+			var modeSelect = row.querySelector('.course-mode-select');
+			var slotInput = row.querySelector('.course-slot-input');
+			rows.push({
+				id: parseInt(String(row.getAttribute('data-course-id') || '0'), 10) || 0,
+				categoryId: parseInt(catId || '0', 10) || 0,
+				title: titleInput ? String(titleInput.value || '') : '',
+				description: descriptionInput ? String(descriptionInput.value || '') : '',
+				mediaPath: mediaInput ? String(mediaInput.value || '') : '',
+				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
+				duration: parseInt(durationSelect ? String(durationSelect.value || '0') : '0', 10) || 0,
+				capacity: parseInt(capacityInput ? String(capacityInput.value || '1') : '1', 10) || 1,
+				concurrentParticipants: parseInt(concurrentInput ? String(concurrentInput.value || '1') : '1', 10) || 1,
+				bookingMode: modeSelect ? String(modeSelect.value || 'free') : 'free',
+				slotStartLocal: slotInput ? String(slotInput.value || '') : '',
+				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : '')
+			});
+		});
+		return rows;
+	}
+	function buildViglingCoursesPayload(rows) {
+		var items = [];
+		rows.forEach(function(row){
+			var categoryId = parseInt(row.categoryId || 0, 10) || 0;
+			var title = String(row.title || '').trim();
+			var description = String(row.description || '').trim();
+			var mediaPath = String(row.mediaPath || '').trim();
+			var price = parseInt(row.price || 0, 10) || 0;
+			var duration = parseInt(row.duration || 0, 10) || 0;
+			var capacity = Math.max(1, parseInt(row.capacity || 1, 10) || 1);
+			var bookingMode = String(row.bookingMode || 'free') === 'fixed' ? 'fixed' : 'free';
+			var concurrent = Math.max(1, parseInt(row.concurrentParticipants || 1, 10) || 1);
+			if (concurrent > capacity) {
+				concurrent = capacity;
+			}
+			var slotStartUtc = String(row.slotStartUtc || '').trim();
+			if (!categoryId || !title || !price || !duration) {
+				return;
+			}
+			items.push({
+				id: parseInt(row.id || 0, 10) || 0,
+				category_id: categoryId,
+				title: title,
+				description: description,
+				media_path: mediaPath,
+				price: price,
+				duration_min: duration,
+				capacity: capacity,
+				concurrent_participants: concurrent,
+				booking_mode: bookingMode,
+				slot_start_utc: bookingMode === 'fixed' ? slotStartUtc : '',
+				slot_start_local: bookingMode === 'fixed' ? String(row.slotStartLocal || '').trim() : ''
+			});
+		});
+		return {version: 1, items: items};
+	}
+	function syncSearchMediaState(row) {
+		if (!row) {
+			return;
+		}
+		var fileInput = row.querySelector('.search-media-file-input');
+		var hiddenInput = row.querySelector('.search-media-input');
+		var currentNode = row.querySelector('.search-media-current');
+		if (!currentNode) {
+			return;
+		}
+		var fileName = '';
+		var file = null;
+		if (fileInput && fileInput.files && fileInput.files.length > 0) {
+			file = fileInput.files[0];
+			fileName = String(file && file.name ? file.name : '').trim();
+		}
+		if (fileName) {
+			currentNode.textContent = 'Новый файл: ' + fileName;
+			updateMediaPreview(row, file, '');
+			return;
+		}
+		var existingPath = hiddenInput ? String(hiddenInput.value || '').trim() : '';
+		currentNode.textContent = existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран';
+		updateMediaPreview(row, null, existingPath);
+	}
+	function syncSearchModeState(row) {
+		if (!row) {
+			return;
+		}
+		var modeSelect = row.querySelector('.search-mode-select');
+		var modeWrap = row.querySelector('.search_mode');
+		var slotInput = row.querySelector('.search-slot-input');
+		var mode = modeSelect ? String(modeSelect.value || 'free') : 'free';
+		if (modeWrap) {
+			modeWrap.classList.toggle('is-free', mode !== 'fixed');
+		}
+		if (slotInput && mode !== 'fixed') {
+			fillFixedSlotParts(slotInput, '');
+		}
+	}
+	function syncSearchEditConstraints(row) {
+		if (!row) {
+			return;
+		}
+		var bookingCount = parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0;
+		var durationSelect = row.querySelector('.search-duration-select');
+		var capacityInput = row.querySelector('.search-capacity-input');
+		var modeSelect = row.querySelector('.search-mode-select');
+		var bookingMode = modeSelect ? String(modeSelect.value || 'free') : 'free';
+		if (durationSelect) {
+			var durationLocked = bookingCount > 0 && bookingMode === 'fixed';
+			durationSelect.disabled = durationLocked;
+			durationSelect.title = durationLocked ? 'Нельзя менять длительность fixed-поиска после появления участников' : '';
+		}
+		if (capacityInput) {
+			var minCapacity = bookingCount > 0 ? bookingCount : 1;
+			capacityInput.min = String(minCapacity);
+			if ((parseInt(String(capacityInput.value || '0'), 10) || 0) < minCapacity) {
+				capacityInput.value = String(minCapacity);
+			}
+		}
+	}
+function addSearchRow(categoryLabel, rowData) {
+	var catId = parseInt(categoryLabel.getAttribute('data-id') || '0', 10);
+	if (!catId) {
+		return;
+	}
+	var serviceList = categoryLabel.querySelector('.service_list');
+	if (!serviceList) {
+		return;
+	}
+	var row = document.createElement('p');
+	row.className = 'service__item';
+	row.setAttribute('data-category-id', String(catId));
+	row.setAttribute('data-search-id', rowData && rowData.id ? String(parseInt(rowData.id, 10) || 0) : '0');
+	row.setAttribute('data-booking-count', rowData && rowData.bookingCount ? String(parseInt(rowData.bookingCount, 10) || 0) : '0');
+	row.innerHTML =
+		'<span class="search_media"><label>Изображение:</label><span class="search-media-field"><input type="hidden" class="search-media-input" value="" /><input type="file" name="jform[upload_search_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="search-media-file-input" data-vigling-manual="1" style="max-width:100%;width:100%;" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="search-media-current" style="word-break:break-all;overflow-wrap:break-word;white-space:normal;display:inline-block;max-width:100%;">Файл не выбран</span></span></span>' +
+		'<span class="search_title"><label>Название поиска:</label><input type="text" maxlength="150" class="search-title-input" value="" style="width:100%;max-width:100%;box-sizing:border-box;" /></span>' +
+		'<span class="search_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="search-description-input" style="width:100%;max-width:100%;box-sizing:border-box;resize:vertical;"></textarea></span>' +
+		'<span class="search_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="search-price-input" value="" style="width:100%;max-width:200px;" /></span>' +
+		'<span class="search_duration"><label>Длительность:</label><select class="search-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+		'<span class="search_mode"><label>Режим записи:</label><select class="search-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="search_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('search') + '</span></span>' +
+		'<span class="search_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="search-capacity-input" value="1" style="width:100%;max-width:100px;" /></span>' +
+		'<button type="button" class="btn-remove-service">Удалить</button>';
+	serviceList.appendChild(row);
+	if (rowData) {
+		var titleInput = row.querySelector('.search-title-input');
+		var descriptionInput = row.querySelector('.search-description-input');
+		var mediaInput = row.querySelector('.search-media-input');
+		var priceInput = row.querySelector('.search-price-input');
+		var durationSelect = row.querySelector('.search-duration-select');
+		var capacityInput = row.querySelector('.search-capacity-input');
+		var modeSelect = row.querySelector('.search-mode-select');
+		var slotInput = row.querySelector('.search-slot-input');
+		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
+		if (descriptionInput) descriptionInput.value = String(rowData.description || '');
+		if (mediaInput) mediaInput.value = String(rowData.mediaPath || '');
+		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
+		if (durationSelect) durationSelect.value = String(parseInt(rowData.duration || '60', 10) || 60);
+		if (capacityInput) capacityInput.value = String(parseInt(rowData.capacity || '1', 10) || 1);
+		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
+		if (slotInput) slotInput.value = formatDatetimeLocal(String(rowData.slotStartUtc || ''));
+	}
+	bindFixedSlotInput(row.querySelector('.search-slot-input'));
+	syncSearchModeState(row);
+	syncSearchMediaState(row);
+	syncSearchEditConstraints(row);
+	var modeSelect = row.querySelector('.search-mode-select');
+	if (modeSelect) {
+		modeSelect.addEventListener('change', function(){
+			syncSearchModeState(row);
+			syncSearchEditConstraints(row);
+		});
+	}
+	var mediaFileInput = row.querySelector('.search-media-file-input');
+	if (mediaFileInput) {
+		mediaFileInput.setAttribute('data-vigling-manual', '1');
+		mediaFileInput.addEventListener('change', function(){
+			var run = function () { syncSearchMediaState(row); };
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(mediaFileInput).then(run);
+				return;
+			}
+			run();
+		});
+	}
+}
+	function collectSearchRows() {
+		var rows = [];
+		document.querySelectorAll('#jform_searches_servis .service__item').forEach(function(row){
+			var catId = String(row.getAttribute('data-category-id') || '');
+			var titleInput = row.querySelector('.search-title-input');
+			var descriptionInput = row.querySelector('.search-description-input');
+			var mediaInput = row.querySelector('.search-media-input');
+			var priceInput = row.querySelector('.search-price-input');
+			var durationSelect = row.querySelector('.search-duration-select');
+			var capacityInput = row.querySelector('.search-capacity-input');
+			var modeSelect = row.querySelector('.search-mode-select');
+			var slotInput = row.querySelector('.search-slot-input');
+			rows.push({
+				id: parseInt(String(row.getAttribute('data-search-id') || '0'), 10) || 0,
+				categoryId: parseInt(catId || '0', 10) || 0,
+				title: titleInput ? String(titleInput.value || '') : '',
+				description: descriptionInput ? String(descriptionInput.value || '') : '',
+				mediaPath: mediaInput ? String(mediaInput.value || '') : '',
+				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
+				duration: parseInt(durationSelect ? String(durationSelect.value || '0') : '0', 10) || 0,
+				capacity: parseInt(capacityInput ? String(capacityInput.value || '1') : '1', 10) || 1,
+				bookingMode: modeSelect ? String(modeSelect.value || 'free') : 'free',
+				slotStartLocal: slotInput ? String(slotInput.value || '') : '',
+				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : '')
+			});
+		});
+		return rows;
+	}
+	function buildViglingSearchesPayload(rows) {
+		var items = [];
+		rows.forEach(function(row){
+			var categoryId = parseInt(row.categoryId || 0, 10) || 0;
+			var title = String(row.title || '').trim();
+			var description = String(row.description || '').trim();
+			var mediaPath = String(row.mediaPath || '').trim();
+			var price = parseInt(row.price || 0, 10) || 0;
+			var duration = parseInt(row.duration || 0, 10) || 0;
+			var capacity = Math.max(1, parseInt(row.capacity || 1, 10) || 1);
+			var bookingMode = String(row.bookingMode || 'free') === 'fixed' ? 'fixed' : 'free';
+			var slotStartUtc = String(row.slotStartUtc || '').trim();
+			if (!categoryId || !title || !price || !duration) {
+				return;
+			}
+			items.push({
+				id: parseInt(row.id || 0, 10) || 0,
+				category_id: categoryId,
+				title: title,
+				description: description,
+				media_path: mediaPath,
+				price: price,
+				duration_min: duration,
+				capacity: capacity,
+				booking_mode: bookingMode,
+				slot_start_utc: bookingMode === 'fixed' ? slotStartUtc : '',
+				slot_start_local: bookingMode === 'fixed' ? String(row.slotStartLocal || '').trim() : ''
+			});
+		});
+		return {version: 1, items: items};
+	}
+	function renderServiceBuilders() {
+		var holder = document.getElementById('jform_vyberite_usl');
+		if (!holder) {
+			return;
+		}
+		var ids = selectedSpecialtyIds();
+		var currentRows = collectServiceRows();
+		if (currentRows.length) {
+			pendingServiceRows = currentRows;
+		}
+		holder.innerHTML = '';
+		if (!ids.length) {
+			holder.textContent = 'Выберите специальность, чтобы добавить услугу';
+			return;
+		}
+		var labelsById = labelsBySpecialtyId();
+		ids.forEach(function(catId){
+			var block = document.createElement('label');
+			block.className = 'checkbox type_master_open';
+			block.setAttribute('data-id', String(catId));
+			block.innerHTML =
+				(labelsById[catId] || ('Категория #' + catId)) +
+				'<b></b>' +
+				'<div class="flex_wrap"><div class="service_list"></div><button type="button" class="btn-add-service dale">Добавить услугу</button></div>';
+			holder.appendChild(block);
+		});
+		if (Array.isArray(pendingServiceRows) && pendingServiceRows.length) {
+			pendingServiceRows.forEach(function(rowData){
+				if (!rowData || !rowData.categoryId) {
+					return;
+				}
+				var label = holder.querySelector('label[data-id="' + parseInt(rowData.categoryId, 10) + '"]');
+				if (!label) {
+					return;
+				}
+				addServiceRow(label, rowData);
+			});
+		}
+	}
+function addStockRow(categoryLabel, rowData) {
+	var catId = parseInt(categoryLabel.getAttribute('data-id') || '0', 10);
+	if (!catId) {
+		return;
+	}
+	var serviceList = categoryLabel.querySelector('.service_list');
+	if (!serviceList) {
+		return;
+	}
+	var row = document.createElement('p');
+	row.className = 'service__item';
+	row.setAttribute('data-category-id', String(catId));
+	row.setAttribute('data-stock-id', String(parseInt((rowData && (rowData.id || rowData.stockId)) || '0', 10) || 0));
+	row.innerHTML =
+	'<select class="stock-service-select">' + serviceOptionsHtml(catId) + '</select>' +
+	'<span class="time"><label>Время:</label><select class="stock-time-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+	'<span class="time2"><label>Перерыв:</label><select class="stock-pause-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+	'<span class="stock_price"><label>Акционная стоимость:</label><input type="number" min="0" step="1" class="stock-price-input" value="" /></span>' +
+	'<span class="old_price"><label>Цена без скидки:</label><input type="number" min="0" step="1" class="stock-old-price-input" value="" /></span>' +
+	'<span class="about_stock"><label>Условия акции:</label><textarea maxlength="150" placeholder="Условия акции" class="stock-about-input"></textarea></span>' +
+	'<span class="recommendation"><label>Описание услуги:</label><textarea maxlength="150" placeholder="Описание услуги" class="recommendation-input"></textarea></span>' +
+	'<span class="count_stock"><label>Всего предложений:</label><input type="number" min="0" step="1" class="stock-count-input" value="" /></span>' +
+	'<button type="button" class="btn-remove-service">Удалить</button>';
+	serviceList.appendChild(row);
+	if (rowData) {
+		var serviceSelect = row.querySelector('.stock-service-select');
+		var timeSelect = row.querySelector('.stock-time-select');
+		var pauseSelect = row.querySelector('.stock-pause-select');
+		var priceInput = row.querySelector('.stock-price-input');
+		var oldPriceInput = row.querySelector('.stock-old-price-input');
+		var countInput = row.querySelector('.stock-count-input');
+		var aboutInput = row.querySelector('.stock-about-input');
+		var recommendationInput = row.querySelector('.recommendation-input');
+		if (serviceSelect) ensureSelectValue(serviceSelect, String(rowData.serviceRaw || ''), String(rowData.serviceLabel || ''));
+		if (serviceSelect) serviceSelect.value = String(rowData.serviceRaw || '');
+		if (timeSelect) timeSelect.value = String(parseInt(rowData.duration || '15', 10) || 15);
+		if (pauseSelect) pauseSelect.value = String(parseInt(rowData.pause || '15', 10) || 15);
+		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
+		if (oldPriceInput) oldPriceInput.value = String(parseInt(rowData.oldPrice || '0', 10) || 0);
+		if (countInput) countInput.value = String(parseInt(rowData.countStock || '0', 10) || 0);
+		if (aboutInput) aboutInput.value = String(rowData.aboutStock || '');
+		if (recommendationInput) recommendationInput.value = String(rowData.recommendation || '');
+	}
+}
+	function collectStockRows() {
+		var rows = [];
+			document.querySelectorAll('#jform_stocks_servis .service__item').forEach(function(row){
+			var catId = String(row.getAttribute('data-category-id') || '');
+			var serviceSelect = row.querySelector('.stock-service-select');
+			var timeSelect = row.querySelector('.stock-time-select');
+			var pauseSelect = row.querySelector('.stock-pause-select');
+			var priceInput = row.querySelector('.stock-price-input');
+			var oldPriceInput = row.querySelector('.stock-old-price-input');
+			var countInput = row.querySelector('.stock-count-input');
+			var aboutInput = row.querySelector('.stock-about-input');
+			var recommendationInput = row.querySelector('.recommendation-input');
+			rows.push({
+				id: parseInt(row.getAttribute('data-stock-id') || '0', 10) || 0,
+				categoryId: parseInt(catId || '0', 10) || 0,
+				serviceRaw: serviceSelect ? String(serviceSelect.value || '') : '',
+				duration: parseInt(timeSelect ? String(timeSelect.value || '0') : '0', 10) || 0,
+				pause: parseInt(pauseSelect ? String(pauseSelect.value || '0') : '0', 10) || 0,
+				price: parseInt(priceInput ? String(priceInput.value || '0') : '0', 10) || 0,
+				oldPrice: parseInt(oldPriceInput ? String(oldPriceInput.value || '0') : '0', 10) || 0,
+				aboutStock: aboutInput ? String(aboutInput.value || '') : '',
+				countStock: parseInt(countInput ? String(countInput.value || '0') : '0', 10) || 0,
+				recommendation: recommendationInput ? String(recommendationInput.value || '') : ''
+			});
+		});
+		return rows;
+	}
+	function renderStockBuilders() {
+			var holder = document.getElementById('jform_stocks_servis');
+		if (!holder) {
+			return;
+		}
+		var ids = selectedSpecialtyIds();
+		var currentRows = collectStockRows();
+		if (currentRows.length) {
+			pendingStockRows = currentRows;
+		}
+		holder.innerHTML = '';
+		if (!ids.length) {
+			holder.textContent = 'Выберите специальность, чтобы добавить акцию';
+			return;
+		}
+		var labelsById = labelsBySpecialtyId();
+		ids.forEach(function(catId){
+			var block = document.createElement('label');
+				block.className = 'checkbox type_master_open type_master_closed';
+			block.setAttribute('data-id', String(catId));
+			block.innerHTML =
+				(labelsById[catId] || ('Категория #' + catId)) +
+				'<b></b>' +
+					'<div class="flex_wrap"><div class="service_list"></div><div class="stock_key" title="Добавить акцию"></div></div>';
+			holder.appendChild(block);
+		});
+		if (Array.isArray(pendingStockRows) && pendingStockRows.length) {
+			pendingStockRows.forEach(function(rowData){
+				if (!rowData || !rowData.categoryId) {
+					return;
+				}
+				var label = holder.querySelector('label[data-id="' + parseInt(rowData.categoryId, 10) + '"]');
+				if (!label) {
+					return;
+				}
+				addStockRow(label, rowData);
+			});
+		}
+	}
+	function renderCourseBuilders() {
+		var holder = document.getElementById('jform_courses_servis');
+		if (!holder) {
+			return;
+		}
+		var ids = selectedSpecialtyIds();
+		var currentRows = collectCourseRows();
+		if (currentRows.length) {
+			pendingCourseRows = currentRows;
+		}
+		holder.innerHTML = '';
+		if (!ids.length) {
+			holder.textContent = 'Выберите специальность, чтобы добавить курс';
+			return;
+		}
+		var labelsById = labelsBySpecialtyId();
+		ids.forEach(function(catId){
+			var block = document.createElement('label');
+			block.className = 'checkbox type_master_open type_master_closed';
+			block.setAttribute('data-id', String(catId));
+			block.innerHTML =
+				(labelsById[catId] || ('Категория #' + catId)) +
+				'<b></b>' +
+				'<div class="flex_wrap"><div class="service_list"></div><div class="stock_key" title="Добавить курс"></div></div>';
+			holder.appendChild(block);
+		});
+		if (Array.isArray(pendingCourseRows) && pendingCourseRows.length) {
+			pendingCourseRows.forEach(function(rowData){
+				if (!rowData || !rowData.categoryId) {
+					return;
+				}
+				var label = holder.querySelector('label[data-id="' + parseInt(rowData.categoryId, 10) + '"]');
+				if (!label) {
+					return;
+				}
+				addCourseRow(label, rowData);
+			});
+		}
+	}
+	function renderSearchBuilders() {
+		var holder = document.getElementById('jform_searches_servis');
+		if (!holder) {
+			return;
+		}
+		var ids = selectedSpecialtyIds();
+		var currentRows = collectSearchRows();
+		if (currentRows.length) {
+			pendingSearchRows = currentRows;
+		}
+		holder.innerHTML = '';
+		if (!ids.length) {
+			holder.textContent = 'Выберите специальность, чтобы добавить поиск';
+			return;
+		}
+		var labelsById = labelsBySpecialtyId();
+		ids.forEach(function(catId){
+			var block = document.createElement('label');
+			block.className = 'checkbox type_master_open type_master_closed';
+			block.setAttribute('data-id', String(catId));
+			block.innerHTML =
+				(labelsById[catId] || ('Категория #' + catId)) +
+				'<b></b>' +
+				'<div class="flex_wrap"><div class="service_list"></div><div class="search-add-btn" title="Добавить поиск">+</div></div>';
+			holder.appendChild(block);
+		});
+		if (Array.isArray(pendingSearchRows) && pendingSearchRows.length) {
+			pendingSearchRows.forEach(function(rowData){
+				if (!rowData || !rowData.categoryId) {
+					return;
+				}
+				var label = holder.querySelector('label[data-id="' + parseInt(rowData.categoryId, 10) + '"]');
+				if (!label) {
+					return;
+				}
+				addSearchRow(label, rowData);
+			});
+		}
+	}
+	filterSpecialtiesByType();
+	syncSpecialtyActiveState();
+	document.querySelectorAll('#jform_vyberite_spetsialnos input[type="checkbox"]').forEach(function(checkbox){
+		checkbox.addEventListener('change', function(){
+			syncSpecialtyActiveState();
+			renderServiceBuilders();
+			renderStockBuilders();
+			renderCourseBuilders();
+			renderSearchBuilders();
+		});
+	});
+	renderServiceBuilders();
+	renderStockBuilders();
+	renderCourseBuilders();
+	renderSearchBuilders();
+	bindAllFixedSlotInputs();
+	<?php if (!empty($openStocksTab) && $stocksTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $stocksTabIndex; ?>);
+	}
+	<?php endif; ?>
+	<?php if (!empty($openCoursesTab) && $coursesTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $coursesTabIndex; ?>);
+	}
+	<?php endif; ?>
+	<?php if (!empty($openSearchesTab) && $searchesTabIndex !== false) : ?>
+	if (typeof window.viglingActivateProfileEditTab === 'function') {
+		window.viglingActivateProfileEditTab(<?php echo (int) $searchesTabIndex; ?>);
+	}
+	<?php endif; ?>
+	document.addEventListener('change', function(e){
+		if (!e.target || !e.target.classList) {
+			return;
+		}
+		if (e.target.classList.contains('course-slot-input') || e.target.classList.contains('search-slot-input')
+			|| e.target.classList.contains('course-slot-date') || e.target.classList.contains('search-slot-date')
+			|| e.target.classList.contains('course-slot-time') || e.target.classList.contains('search-slot-time')) {
+			var wrap = e.target.closest('.course_slot, .search_slot');
+			var hidden = wrap ? wrap.querySelector('.course-slot-input, .search-slot-input') : e.target;
+			bindFixedSlotInput(hidden);
+		}
+	});
+
+	var servicesHolder = document.getElementById('jform_vyberite_usl');
+	if (servicesHolder) {
+		servicesHolder.addEventListener('click', function(e){
+			var addButton = e.target.closest('.btn-add-service');
+			if (addButton) {
+				e.preventDefault();
+				var categoryLabel = addButton.closest('label[data-id]');
+				if (categoryLabel) {
+					addServiceRow(categoryLabel);
+				}
+				return;
+			}
+			var removeButton = e.target.closest('.btn-remove-service');
+			if (removeButton) {
+				e.preventDefault();
+				var row = removeButton.closest('.service__item');
+				if (row) {
+					row.remove();
+					pendingServiceRows = collectServiceRows();
+				}
+			}
+			});
+		}
+
+	var stocksHolder = document.getElementById('jform_stocks_servis');
+if (stocksHolder) {
+	stocksHolder.addEventListener('click', function(e){
+		var addButton = e.target.closest('.stock_key');
+		if (addButton) {
+			e.preventDefault();
+			var categoryLabel = addButton.closest('label[data-id]');
+			if (categoryLabel) {
+				addStockRow(categoryLabel);
+			}
+			return;
+		}
+		var removeButton = e.target.closest('.btn-remove-service');
+		if (removeButton) {
+			e.preventDefault();
+			var row = removeButton.closest('.service__item');
+			if (row) {
+				row.remove();
+				pendingStockRows = collectStockRows();
+			}
+		}
+	});
+}
+	var coursesHolder = document.getElementById('jform_courses_servis');
+if (coursesHolder) {
+	coursesHolder.addEventListener('click', function(e){
+		var addButton = e.target.closest('.stock_key');
+		if (addButton) {
+			e.preventDefault();
+			var categoryLabel = addButton.closest('label[data-id]');
+			if (categoryLabel) {
+				addCourseRow(categoryLabel);
+			}
+			return;
+		}
+		var removeButton = e.target.closest('.btn-remove-service');
+		if (removeButton) {
+			e.preventDefault();
+			var row = removeButton.closest('.service__item');
+			if (row) {
+				row.remove();
+				pendingCourseRows = collectCourseRows();
+			}
+		}
+	});
+}
+	var searchesHolder = document.getElementById('jform_searches_servis');
+if (searchesHolder) {
+	searchesHolder.addEventListener('click', function(e){
+		var addButton = e.target.closest('.search-add-btn');
+		if (addButton) {
+			e.preventDefault();
+			var categoryLabel = addButton.closest('label[data-id]');
+			if (categoryLabel) {
+				addSearchRow(categoryLabel);
+			}
+			return;
+		}
+		var removeButton = e.target.closest('.btn-remove-service');
+		if (removeButton) {
+			e.preventDefault();
+			var row = removeButton.closest('.service__item');
+			if (row) {
+				row.remove();
+				pendingSearchRows = collectSearchRows();
+			}
+		}
+	});
+}
+	var profileForm = document.getElementById('member-profile');
+	function catalogHasBuilders(holderId) {
+		var holder = document.getElementById(holderId);
+		return !!(holder && holder.querySelector('.btn-add-service, .stock_key, .search-add-btn'));
+	}
+	function resolveCatalogRows(collected, pending) {
+		if (collected.length) {
+			return collected;
+		}
+		if (pending && pending.length) {
+			return pending.slice();
+		}
+		return [];
+	}
+	function writeCatalogPayload(input, payload) {
+		if (!input) {
+			return;
+		}
+		if (payload === null) {
+			input.disabled = true;
+			input.value = '';
+			return;
+		}
+		input.disabled = false;
+		input.value = JSON.stringify(payload);
+	}
+	function rebuildCatalogPayloads() {
+		var serviceRows = resolveCatalogRows(collectServiceRows(), pendingServiceRows);
+		var stockRows = resolveCatalogRows(collectStockRows(), pendingStockRows);
+		var courseRows = resolveCatalogRows(collectCourseRows(), pendingCourseRows);
+		var searchRows = resolveCatalogRows(collectSearchRows(), pendingSearchRows);
+		writeCatalogPayload(
+			document.getElementById('jform_prices'),
+			catalogHasBuilders('jform_vyberite_usl') || serviceRows.length ? buildLegacyPricesFromRows(serviceRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_stock_prices'),
+			catalogHasBuilders('jform_stocks_servis') || stockRows.length ? buildLegacyStockPricesFromRows(stockRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_services_payload'),
+			catalogHasBuilders('jform_vyberite_usl') || serviceRows.length ? buildViglingPayload(serviceRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_stock_services_payload'),
+			catalogHasBuilders('jform_stocks_servis') || stockRows.length ? buildViglingStockPayload(stockRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_courses_payload'),
+			catalogHasBuilders('jform_courses_servis') || courseRows.length ? buildViglingCoursesPayload(courseRows) : null
+		);
+		writeCatalogPayload(
+			document.getElementById('jform_vigling_searches_payload'),
+			catalogHasBuilders('jform_searches_servis') || searchRows.length ? buildViglingSearchesPayload(searchRows) : null
+		);
+	}
+	window.viglingRebuildServicePayloads = rebuildCatalogPayloads;
+	if (profileForm) {
+		profileForm.addEventListener('click', function(e){
+			var btn = e.target && e.target.closest ? e.target.closest('button[type="submit"]') : null;
+			if (!btn || String(btn.value || '') === 'profile.cancel') {
+				return;
+			}
+			bindAllFixedSlotInputs();
+			rebuildCatalogPayloads();
+			var clickIssue = findFixedSlotScheduleIssue();
+			if (clickIssue) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				showFixedSlotNotice(clickIssue.message, clickIssue.kind);
+			}
+		}, true);
+		profileForm.addEventListener('submit', function(e){
+			var submitter = e.submitter;
+			if (submitter && String(submitter.value || '') === 'profile.cancel') {
+				return;
+			}
+			bindAllFixedSlotInputs();
+			rebuildCatalogPayloads();
+			var issue = findFixedSlotScheduleIssue();
+			if (issue) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				showFixedSlotNotice(issue.message, issue.kind);
+			}
+		}, true);
+	}
+
+	if (window.ViglingImageUpload) {
+		window.ViglingImageUpload.bind(document.getElementById('member-profile') || document);
+	}
+
+	var selectedPortfolioFiles = [];
+	function fileKey(file) {
+		return [file.name, file.size, file.lastModified].join('::');
+	}
+	function syncPortfolioInputWithSelectedFiles() {
+		if (!portfolioUpload || !window.DataTransfer) {
+			return;
+		}
+		var dt = new DataTransfer();
+		selectedPortfolioFiles.forEach(function (file) {
+			dt.items.add(file);
+		});
+		portfolioUpload.files = dt.files;
+	}
+	function ensurePortfolioGrid() {
+		var controls = document.querySelector('.profile-edit .lk-portfolio-edit-controls');
+		if (!controls) {
+			return null;
+		}
+		var grid = controls.querySelector('.lk-edit-portfolio-grid');
+		if (!grid) {
+			var empty = controls.querySelector('fieldset.readonly');
+			if (empty) {
+				empty.remove();
+			}
+			grid = document.createElement('div');
+			grid.className = 'lk-portfolio-grid lk-edit-portfolio-grid';
+			controls.appendChild(grid);
+		}
+		return grid;
+	}
+	function renderPendingPortfolio() {
+		var grid = ensurePortfolioGrid();
+		if (!grid) {
+			return;
+		}
+		grid.querySelectorAll('.lk-edit-portfolio-item.is-pending').forEach(function (node) {
+			node.remove();
+		});
+		selectedPortfolioFiles.forEach(function (file, index) {
+			var item = document.createElement('div');
+			item.className = 'lk-portfolio-item lk-edit-portfolio-item is-pending';
+			item.setAttribute('data-pending-index', String(index));
+			var img = document.createElement('img');
+			img.alt = 'Портфолио';
+			img.src = URL.createObjectURL(file);
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'lk-portfolio-remove';
+			btn.title = 'Удалить';
+			btn.setAttribute('data-pending-index', String(index));
+			btn.textContent = '×';
+			item.appendChild(img);
+			item.appendChild(btn);
+			grid.appendChild(item);
+		});
+	}
+	var portfolioUpload = document.getElementById('jform_upload_portfolio_field');
+	if (portfolioUpload) {
+		portfolioUpload.addEventListener('change', function () {
+			var incoming = portfolioUpload.files ? Array.prototype.slice.call(portfolioUpload.files) : [];
+			var prepare = window.ViglingImageUpload && typeof window.ViglingImageUpload.prepareFile === 'function'
+				? function (file) { return window.ViglingImageUpload.prepareFile(file); }
+				: function (file) { return Promise.resolve({ ok: true, file: file }); };
+			var existing = {};
+			selectedPortfolioFiles.forEach(function (file) {
+				existing[fileKey(file)] = true;
+			});
+			var chain = Promise.resolve();
+			incoming.forEach(function (file) {
+				chain = chain.then(function () {
+					if (selectedPortfolioFiles.length >= 10) {
+						return;
+					}
+					return prepare(file).then(function (result) {
+						if (!result || !result.ok || !result.file) {
+							if (result && result.error) {
+								alert(result.error);
+							}
+							return;
+						}
+						var key = fileKey(result.file);
+						if (existing[key]) {
+							return;
+						}
+						existing[key] = true;
+						selectedPortfolioFiles.push(result.file);
+					});
+				});
+			});
+			chain.then(function () {
+				renderPendingPortfolio();
+				syncPortfolioInputWithSelectedFiles();
+			});
+		});
+	}
+
+	// Portfolio delete UX for profile edit.
+	var deletedInput = document.getElementById('jform_portfolio_deleted');
+	var deleted = [];
+	document.addEventListener('click', function (e) {
+		var mediaRemove = e.target && e.target.closest ? e.target.closest('.media-preview-remove') : null;
+		if (mediaRemove) {
+			e.preventDefault();
+			var mediaRow = mediaRemove.closest('.service__item');
+			clearMediaSelection(mediaRow);
+			return;
+		}
+		var pendingBtn = e.target && e.target.closest ? e.target.closest('.lk-edit-portfolio-item.is-pending .lk-portfolio-remove') : null;
+		if (pendingBtn) {
+			e.preventDefault();
+			var pendingIndex = parseInt(pendingBtn.getAttribute('data-pending-index') || '-1', 10);
+			if (pendingIndex >= 0) {
+				selectedPortfolioFiles.splice(pendingIndex, 1);
+				renderPendingPortfolio();
+				syncPortfolioInputWithSelectedFiles();
+			}
+			return;
+		}
+		var btn = e.target && e.target.closest ? e.target.closest('.profile-edit .lk-portfolio-remove') : null;
+		if (!btn || !deletedInput) {
+			return;
+		}
+		var file = btn.getAttribute('data-file') || '';
+		if (!file) {
+			return;
+		}
+		if (deleted.indexOf(file) === -1) {
+			deleted.push(file);
+		}
+		deletedInput.value = deleted.join(',');
+		var item = btn.closest('.lk-edit-portfolio-item');
+		if (item) {
+			item.remove();
+		}
+	});
+
+	// Avatar change trigger + preview.
+	var avatarTrigger = document.getElementById('lk-avatar-trigger');
+	var avatarInput = document.getElementById('jform_upload_avatar');
+	var avatarPreview = document.getElementById('lk-avatar-preview');
+	if (avatarTrigger && avatarInput) {
+		avatarTrigger.addEventListener('click', function(){
+			avatarInput.click();
+		});
+		avatarInput.addEventListener('change', function(){
+			var applyPreview = function () {
+				var file = avatarInput.files && avatarInput.files[0] ? avatarInput.files[0] : null;
+				if (!file || !avatarPreview) return;
+				var objectUrl = URL.createObjectURL(file);
+				avatarPreview.src = objectUrl;
+			};
+			if (window.ViglingImageUpload) {
+				window.ViglingImageUpload.prepareInput(avatarInput).then(applyPreview);
+				return;
+			}
+			applyPreview();
+		});
+	}
+	document.addEventListener('input', function(e) {
+		if (e.target.classList.contains('stock-about-input')) {
+			e.target.style.height = 'auto';
+			e.target.style.height = e.target.scrollHeight + 'px';
+		}
+	});
+})();
+</script>
