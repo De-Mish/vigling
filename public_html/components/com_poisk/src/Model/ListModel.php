@@ -7,8 +7,10 @@ namespace Viglin\Component\Poisk\Site\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel as BaseListModel;
 use Joomla\Plugin\User\Vigling\Helper\CatalogCacheTrait;
+use Joomla\Plugin\User\Vigling\Helper\CatalogSortHelper;
 
 require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogCacheTrait.php';
+require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogSortHelper.php';
 
 class ListModel extends BaseListModel
 {
@@ -139,21 +141,44 @@ class ListModel extends BaseListModel
 			->from($tblU)
 			->where('u.block = 0');
 		$this->applyFiltersToQuery($q, $db, $prefix, $fieldIds, false);
-		$orderCol = $this->getState('list.ordering', 'id');
-		$orderDir = strtoupper((string) $this->getState('list.direction', 'ASC'));
-		if ($orderDir !== 'DESC') {
-			$orderDir = 'ASC';
-		}
-		if ($orderCol === 'id') {
-			$q->order('u.id DESC');
-		} elseif ($orderCol === 'rate') {
-			$q->order('u.id DESC');
-		} elseif ($orderCol === 'price') {
-			$q->order('u.name ' . $orderDir);
-		} else {
-			$q->order('u.name ' . $orderDir);
-		}
+		$this->applyOrdering($q, $db, $prefix);
 		return $q;
+	}
+
+	private function applyOrdering($q, $db, string $prefix): void
+	{
+		$orderCol = (string) $this->getState('list.ordering', 'id');
+
+		if ($orderCol === 'rate') {
+			$ratingSql = CatalogSortHelper::ratingExpression($db);
+			if ($ratingSql !== null) {
+				$q->select($ratingSql . ' AS ' . $db->quoteName('vg_sort_rating'));
+				$q->order($db->quoteName('vg_sort_rating') . ' DESC');
+			}
+		} elseif ($orderCol === 'price') {
+			$serviceId = (int) $this->getState('service');
+			$tagId = (int) $this->getState('tag');
+			if ($serviceId > 0) {
+				$conds = [
+					$db->quoteName('sp.user_id') . ' = ' . $db->quoteName('u.id'),
+					$db->quoteName('sp.is_active') . ' = 1',
+					$db->quoteName('sp.price') . ' > 0',
+					$db->quoteName('sp.legacy_cat_id') . ' = ' . $serviceId,
+				];
+				if ($tagId > 0) {
+					$conds[] = $db->quoteName('sp.legacy_tag_id') . ' = ' . $tagId;
+				}
+				$q->select(
+					'(SELECT MIN(' . $db->quoteName('sp.price') . ') FROM '
+					. $db->quoteName($prefix . 'vigling_user_services', 'sp')
+					. ' WHERE ' . implode(' AND ', $conds) . ') AS ' . $db->quoteName('vg_sort_price')
+				);
+				$q->order('CASE WHEN ' . $db->quoteName('vg_sort_price') . ' IS NULL THEN 1 ELSE 0 END ASC');
+				$q->order($db->quoteName('vg_sort_price') . ' ASC');
+			}
+		}
+
+		$q->order('u.id DESC');
 	}
 
 	private function applyFiltersToQuery($q, $db, $prefix, array $fieldIds, bool $forCount): void
@@ -441,13 +466,8 @@ class ListModel extends BaseListModel
 			)
 			: '';
 		$this->setState('avail_date', $availDate);
-		$order = $input->getString('filter_order', 'id');
-		if (!in_array($order, ['id', 'name', 'rate', 'price'], true)) {
-			$order = 'id';
-		}
-		$this->setState('list.ordering', $order);
-		$dir = strtoupper((string) $input->getString('filter_order_Dir', 'ASC'));
-		$this->setState('list.direction', $dir === 'DESC' ? 'DESC' : 'ASC');
+		$this->setState('list.ordering', CatalogSortHelper::resolveOrdering(CatalogSortHelper::GROUP_MASTERS, ['id', 'rate', 'price'], 'id'));
+		$this->setState('list.direction', 'DESC');
 		$limit = (int) $input->getUint('limit', 20);
 		$this->setState('list.limit', $limit > 50 ? 50 : ($limit < 1 ? 20 : $limit));
 		$this->setState('list.start', $input->getUint('limitstart', 0));

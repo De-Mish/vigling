@@ -52,7 +52,7 @@
 ## Модель (логика и память)
 
 - **State** задаётся только из input (cat_id, city, area, home, filter_order, filter_order_Dir, list.limit, list.start). `parent::populateState()` не вызывается.
-- **Запросы:** отдельно `buildCountQuery()` и `buildListQuery()`; оба используют `applyFiltersToQuery()`. Сортировка в `buildListQuery()` по `list.ordering` и `list.direction`: name (по умолчанию), rate (u.id DESC), price (u.name).
+- **Запросы:** отдельно `buildCountQuery()` и `buildListQuery()`; оба используют `applyFiltersToQuery()`. Сортировка в `buildListQuery()` по `list.ordering`: id (по умолчанию, u.id DESC), rate (средняя оценка DESC, затем u.id DESC), price (цена выбранной услуги/метода ASC, затем u.id DESC). Выбранный тип хранится в cookie `vg_sort_masters` (`CatalogSortHelper`).
 - **Критерий «мастер»:** пользователь считается мастером, если в Custom Fields есть хотя бы одно из: is_master=1, непустое vyberite_spetsialnos (и не `{}`), непустое sity, непустое telefon (EXISTS по `#__fields_values` + `#__fields`).
 - **Фильтры:** при `category_path_prefix === 'zatochka-remont'` — только пользователи, у которых в vyberite_spetsialnos есть хотя бы один ID из ветки zatochka-remont; далее cat_id (vyberite_spetsialnos), city (sity), area (area), home[] (1/2/3 — Салон, Вызов, Мастер на дому).
 - **Лимит:** 1–50 записей на страницу (по умолчанию 20).
@@ -89,7 +89,7 @@
 ## Стили и шаблон
 
 - Классы из темы ryba: `category jsn_list`, `category__head`, `category__body`, `category__masters`, `category__masters-sidebar`, `category__item`, `category__content-info`, `pagination__wrap`, `sort`, `radioBox`, `filter`, `masters-sidebar__body`, `clearable` и т.д.
-- **Сортировка:** в шапке форма с `ul.sort` и радиокнопками «Рекомендуемое», «Рейтинг», «Цена» (filter_order: name, rate, price); при смене форма отправляется с сохранением фильтров.
+- **Сортировка:** в шапке форма с `ul.sort` и радиокнопками «Рекомендуемое», «Рейтинг», «Цена» (filter_order: id, rate, price); при смене форма отправляется с сохранением фильтров.
 - **Форма фильтра:** селекты «Город», «Район», «Мастер» (категория), «Вид услуги» (мульти); подключены Chosen (CSS/JS из `templates/ryba/`), инициализация по `.category__masters-sidebar select` после DOMContentLoaded.
 - **Пагинация:** вывод через `$pagination->getPagesLinks()`. Стили ryba применяются за счёт оверрайдов в `templates/ryba/html/layouts/joomla/pagination/list.php` и `link.php` (обёртка `pagination__wrap`, иконки icon-first/previous/next/last, класс active для текущей страницы).
 - В `templates/ryba/index.php` для `option === 'com_poisk'` задаётся `$page = 'page'`.
@@ -104,7 +104,7 @@
 | city | string | Фильтр по полю «Город» (sity). |
 | area | string | Фильтр по полю «Район» (area). |
 | home[] | int[] | 1=Салон, 2=Вызов на дом, 3=Мастер на дому. |
-| filter_order | string | Сортировка: name (рекомендуемое), rate (рейтинг), price (цена). |
+| filter_order | string | Сортировка: id (рекомендуемое), rate (рейтинг), price (цена). |
 | filter_order_Dir | string | ASC или DESC. |
 | limit | int | Записей на страницу (1–50). |
 | limitstart | int | Смещение для пагинации. |
