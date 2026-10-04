@@ -388,12 +388,12 @@ $doc->addStyleDeclaration('
 							<?php endforeach; ?>
 						</select>
 					</span>
-					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
 					<?php
 					$vgAvailWrapId = 'modeli-avail-date-wrap';
 					$vgAvailHidden = !($currentCity !== '' || (int) $currentCatId > 0);
 					include JPATH_ROOT . '/templates/ryba/html/avail-when-filter.php';
 					?>
+					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
 				</div>
 				<input type="hidden" name="filter_order" value="<?php echo htmlspecialchars($listOrder, ENT_QUOTES, 'UTF-8'); ?>">
 				<input type="hidden" name="filter_order_Dir" value="<?php echo htmlspecialchars($listDirn, ENT_QUOTES, 'UTF-8'); ?>">

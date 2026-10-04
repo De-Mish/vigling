@@ -9,7 +9,6 @@ $vgAvailTime = (string) ($vgAvailTime ?? '');
 <span class="clearable<?php echo $vgAvailHidden ? ' hidden' : ''; ?>" id="<?php echo htmlspecialchars($vgAvailWrapId, ENT_QUOTES, 'UTF-8'); ?>">
 	<input type="text" name="avail_day" class="filed__master vg-avail-day" value="<?php echo htmlspecialchars($vgAvailDay, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Дата" autocomplete="off">
 	<input type="text" name="avail_time" class="filed__master vg-avail-time" value="<?php echo htmlspecialchars($vgAvailTime, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Время" autocomplete="off">
-	<p class="vg-avail-hint">Select a date, time, or both.</p>
 </span>
 <script>
 if (!window.vgAvailWhenFilterBound) {
