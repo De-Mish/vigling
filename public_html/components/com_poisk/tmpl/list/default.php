@@ -207,12 +207,12 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 							<option value="3"<?php echo in_array(3, $currentHome, true) ? ' selected' : ''; ?>>Мастер на дому</option>
 						</select>
 					</span>
-					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
 					<?php
 					$vgAvailWrapId = 'poisk-avail-date-wrap';
 					$vgAvailHidden = !($currentCity !== '' || (int) $currentCatId > 0);
 					include JPATH_ROOT . '/templates/ryba/html/avail-when-filter.php';
 					?>
+					<?php include JPATH_ROOT . '/templates/ryba/html/list-extra-filters.php'; ?>
 				</div>
 				<input type="hidden" name="filter_order" value="<?php echo htmlspecialchars($listOrder); ?>">
 				<input type="hidden" name="filter_order_Dir" value="<?php echo htmlspecialchars($listDirn); ?>">
