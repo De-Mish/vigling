@@ -7,8 +7,10 @@ namespace Viglin\Component\Kurs\Site\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel as BaseListModel;
 use Joomla\Plugin\User\Vigling\Helper\CatalogCacheTrait;
+use Joomla\Plugin\User\Vigling\Helper\CatalogSortHelper;
 
 require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogCacheTrait.php';
+require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogSortHelper.php';
 
 class ListModel extends BaseListModel
 {
@@ -178,10 +180,7 @@ class ListModel extends BaseListModel
 		$this->applyFiltersToQuery($query, $db);
 
 		$orderCol = (string) $this->getState('list.ordering', 'newest');
-		$orderDir = strtoupper((string) $this->getState('list.direction', 'DESC'));
-		if ($orderDir !== 'ASC' && $orderDir !== 'DESC') {
-			$orderDir = 'DESC';
-		}
+		$orderDir = $orderCol === 'newest' ? 'DESC' : 'ASC';
 
 		switch ($orderCol) {
 			case 'price':
@@ -196,7 +195,6 @@ class ListModel extends BaseListModel
 				break;
 
 			default:
-				$query->order($db->quoteName('c.updated_at') . ' DESC');
 				$query->order($db->quoteName('c.id') . ' DESC');
 				break;
 		}
@@ -236,10 +234,7 @@ class ListModel extends BaseListModel
 	private function applyDedupedOrdering($query, $db, string $idColumn): void
 	{
 		$orderCol = (string) $this->getState('list.ordering', 'newest');
-		$orderDir = strtoupper((string) $this->getState('list.direction', 'DESC'));
-		if ($orderDir !== 'ASC' && $orderDir !== 'DESC') {
-			$orderDir = 'DESC';
-		}
+		$orderDir = $orderCol === 'newest' ? 'DESC' : 'ASC';
 
 		switch ($orderCol) {
 			case 'price':
@@ -254,7 +249,6 @@ class ListModel extends BaseListModel
 				break;
 
 			default:
-				$query->order($db->quoteName('deduped.updated_at') . ' DESC');
 				$query->order($db->quoteName('deduped.' . $idColumn) . ' DESC');
 				break;
 		}
@@ -591,16 +585,8 @@ class ListModel extends BaseListModel
 			: '';
 		$this->setState('avail_date', $availDate);
 
-		$orderCol = trim((string) $input->getString('filter_order', 'newest'));
-		$allowedOrder = ['newest', 'price', 'date'];
-		if (!in_array($orderCol, $allowedOrder, true)) {
-			$orderCol = 'newest';
-		}
-
-		$orderDir = strtoupper(trim((string) $input->getString('filter_order_Dir', 'DESC')));
-		if ($orderDir !== 'ASC' && $orderDir !== 'DESC') {
-			$orderDir = 'DESC';
-		}
+		$orderCol = CatalogSortHelper::resolveOrdering(CatalogSortHelper::GROUP_OFFERS, ['newest', 'price', 'date'], 'newest');
+		$orderDir = $orderCol === 'newest' ? 'DESC' : 'ASC';
 
 		$limit = (int) $input->getUInt('limit', 20);
 		if ($limit < 1) {
