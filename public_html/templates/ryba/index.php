@@ -19,10 +19,13 @@ $rybaAsset = static function (string $relative) use ($tplPath): string {
 	return $tplPath . $relative . '?v=' . $v;
 };
 $vgSiteRoot = rtrim(Uri::root(), '/');
-$vgPwaIconsReady = is_file(JPATH_ROOT . '/icons/vigling-pwa-192.png');
-$vgFaviconUrl = $vgPwaIconsReady ? $vgSiteRoot . '/icons/vigling-pwa-192.png?v=20261003o' : $vgSiteRoot . '/images/logo.png?v=20260910h';
-$vgAppleIconUrl = (is_file(JPATH_ROOT . '/icons/vigling-pwa-apple.png')) ? $vgSiteRoot . '/icons/vigling-pwa-apple.png?v=20261003o' : $vgSiteRoot . '/images/logo.png?v=20260910h';
-$vgMobileLogoUrl = $vgPwaIconsReady ? '/icons/vigling-pwa-192.png?v=20261003o' : '/images/logo.jpg';
+$vgLogoFile = __DIR__ . '/images/logo.png';
+$vgLogoUrl = is_file($vgLogoFile)
+	? $tplPath . 'images/logo.png?v=' . filemtime($vgLogoFile)
+	: $vgSiteRoot . '/images/logo.png?v=20260910h';
+$vgFaviconUrl = $vgLogoUrl;
+$vgAppleIconUrl = $vgLogoUrl;
+$vgMobileLogoUrl = $vgLogoUrl;
 $manifestFile = JPATH_ROOT . '/manifest.json';
 $manifestVer = is_file($manifestFile) ? (string) filemtime($manifestFile) : '1';
 $templateParams = $app->getTemplate(true)->params;
@@ -118,7 +121,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
-	<?php if ($vgPwaIconsReady) : ?>
 	<style>
 		.header-mobile__logo img {
 			border-radius: 0 !important;
@@ -126,7 +128,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			object-fit: contain;
 		}
 	</style>
-	<?php endif; ?>
 	<jdoc:include type="styles" />
 	<?php if ($isHome) :
 		require_once __DIR__ . '/helpers/schema_ld.php';
