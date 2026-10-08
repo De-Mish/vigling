@@ -56,13 +56,13 @@
 		});
 	}
 
-	function canvasToJpeg(source, name) {
+	function canvasToJpeg(source, name, maxEdge) {
 		var width = source.width || source.videoWidth || 0;
 		var height = source.height || source.videoHeight || 0;
 		if (!width || !height) {
 			return Promise.resolve(null);
 		}
-		var scale = Math.min(1, MAX_EDGE / Math.max(width, height));
+		var scale = Math.min(1, (maxEdge > 0 ? maxEdge : MAX_EDGE) / Math.max(width, height));
 		var canvas = document.createElement('canvas');
 		canvas.width = Math.max(1, Math.round(width * scale));
 		canvas.height = Math.max(1, Math.round(height * scale));
@@ -133,7 +133,8 @@
 		}, true);
 	}
 
-	function prepareFile(file) {
+	function prepareFile(file, options) {
+		var maxEdge = options && options.maxEdge > 0 ? options.maxEdge : 0;
 		beginInflight();
 		var allowed = isAllowed(file);
 		var done = function (result) {
@@ -153,7 +154,7 @@
 			}));
 		}
 		return loadBitmap(file).then(function (bitmap) {
-			return canvasToJpeg(bitmap, file.name).then(function (prepared) {
+			return canvasToJpeg(bitmap, file.name, maxEdge).then(function (prepared) {
 				if (bitmap && typeof bitmap.close === 'function') {
 					bitmap.close();
 				}
@@ -178,7 +179,7 @@
 		});
 	}
 
-	function prepareInput(input) {
+	function prepareInput(input, options) {
 		if (!input || !input.files || !input.files.length || typeof DataTransfer === 'undefined') {
 			return Promise.resolve(true);
 		}
@@ -188,7 +189,7 @@
 		var ok = true;
 		files.forEach(function (file) {
 			chain = chain.then(function () {
-				return prepareFile(file).then(function (result) {
+				return prepareFile(file, options).then(function (result) {
 					if (!result || !result.ok) {
 						ok = false;
 						if (result && result.error) {

@@ -2399,6 +2399,21 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	}
 	.profile-edit #jsn-form .phone-public-toggle__wide { display: none; }
 	.profile-edit #jsn-form .phone-public-toggle__narrow { display: inline; }
+	.profile-edit #jsn-form .phone-public-toggle input[type="checkbox"] {
+		min-width: 16px !important;
+		max-width: 16px !important;
+	}
+	.profile-edit #jsn-form .telefon-group .controls .js-phone-wrap {
+		flex: 1 1 100%;
+		min-width: 0;
+		max-width: 100%;
+	}
+	.profile-edit #jsn-form .jsn-form-fieldset .telefon-group .js-phone-wrap select.js-phone-country {
+		flex: 0 0 auto;
+		width: auto !important;
+		min-width: 96px;
+		max-width: 118px !important;
+	}
 }
 .profile-edit #jsn-form .address-group { display: flex; flex-wrap: wrap; gap: 12px; }
 .profile-edit #jsn-form .address-group .control-group { flex: 1 1 220px; min-width: 200px; }
@@ -4665,7 +4680,7 @@ if (searchesHolder) {
 		portfolioUpload.addEventListener('change', function () {
 			var incoming = portfolioUpload.files ? Array.prototype.slice.call(portfolioUpload.files) : [];
 			var prepare = window.ViglingImageUpload && typeof window.ViglingImageUpload.prepareFile === 'function'
-				? function (file) { return window.ViglingImageUpload.prepareFile(file); }
+				? function (file) { return window.ViglingImageUpload.prepareFile(file, { maxEdge: 1600 }); }
 				: function (file) { return Promise.resolve({ ok: true, file: file }); };
 			var existing = {};
 			selectedPortfolioFiles.forEach(function (file) {
@@ -4756,7 +4771,7 @@ if (searchesHolder) {
 				avatarPreview.src = objectUrl;
 			};
 			if (window.ViglingImageUpload) {
-				window.ViglingImageUpload.prepareInput(avatarInput).then(applyPreview);
+				window.ViglingImageUpload.prepareInput(avatarInput, { maxEdge: 800 }).then(applyPreview);
 				return;
 			}
 			applyPreview();

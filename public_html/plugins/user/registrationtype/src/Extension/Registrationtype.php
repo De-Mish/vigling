@@ -22,6 +22,8 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
     private const GROUP_MASTER = 3;
     private const MAX_PORTFOLIO_FILES = 10;
 
+    private bool $profileMediaHandled = false;
+
     public static function getSubscribedEvents(): array
     {
         return [
@@ -75,6 +77,12 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
             $isRegistration = true;
         }
         if (!$isRegistration && !$isProfileSave) {
+            // Joomla rewrites the task to "save" once the controller is resolved,
+            // so the original "profile.save" is only visible in the raw POST data.
+            if ($option === 'com_users' && \in_array($input->post->getCmd('task'), ['profile.save', 'profile.apply'], true)) {
+                $this->saveProfileMedia($userId);
+            }
+
             return;
         }
 
@@ -168,6 +176,88 @@ final class Registrationtype extends CMSPlugin implements SubscriberInterface
                 ->columns([$db->quoteName('user_id'), $db->quoteName('group_id')])
                 ->values((int) $userId . ', ' . self::GROUP_MASTER)
         )->execute();
+    }
+
+    /**
+     * Stores the avatar and portfolio files posted by the frontend profile editor.
+     * Only these two custom fields are touched; everything else on profile.save
+     * stays with the existing handlers.
+     */
+    private function saveProfileMedia(int $userId): void
+    {
+        if ($this->profileMediaHandled || $userId <= 0) {
+            return;
+        }
+        $this->profileMediaHandled = true;
+
+        $jform = $this->getApplication()->getInput()->post->get('jform', [], 'array');
+        if (!\is_array($jform)) {
+            $jform = [];
+        }
+
+        $existingPortfolio = $this->getExistingPortfolioFiles($userId);
+        $deletedPortfolio = [];
+        if (isset($jform['portfolio_deleted']) && is_scalar($jform['portfolio_deleted'])) {
+            $requested = array_values(array_unique(array_filter(array_map(static function ($part) {
+                return basename(trim((string) $part));
+            }, explode(',', (string) $jform['portfolio_deleted'])))));
+            $deletedPortfolio = array_values(array_intersect($requested, $existingPortfolio));
+        }
+
+        $uploaded = $this->processRegistrationUploads($userId, $existingPortfolio, $deletedPortfolio);
+
+        if (!empty($uploaded['avatar'])) {
+            $this->storeCustomFieldValue($userId, 'avatar', (string) $uploaded['avatar']);
+        }
+
+        if (array_key_exists('portfolio_field', $uploaded)) {
+            $newList = json_decode((string) $uploaded['portfolio_field'], true);
+            $newList = \is_array($newList) ? array_values($newList) : [];
+            if ($newList !== array_values($existingPortfolio)) {
+                $this->storeCustomFieldValue($userId, 'portfolio_field', (string) $uploaded['portfolio_field']);
+            }
+        }
+    }
+
+    private function storeCustomFieldValue(int $userId, string $fieldName, string $value): void
+    {
+        try {
+            $db = $this->getDatabase();
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->select($db->quoteName('id'))
+                    ->from($db->quoteName('#__fields'))
+                    ->where($db->quoteName('context') . ' = ' . $db->quote('com_users.user'))
+                    ->where($db->quoteName('name') . ' = ' . $db->quote($fieldName))
+            );
+            $fieldId = (int) $db->loadResult();
+            if ($fieldId <= 0) {
+                return;
+            }
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete($db->quoteName('#__fields_values'))
+                    ->where($db->quoteName('field_id') . ' = :fid')
+                    ->where($db->quoteName('item_id') . ' = :iid')
+                    ->bind(':fid', $fieldId, ParameterType::INTEGER)
+                    ->bind(':iid', $userId, ParameterType::INTEGER)
+            )->execute();
+            if ($value === '') {
+                return;
+            }
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->insert($db->quoteName('#__fields_values'))
+                    ->columns([$db->quoteName('field_id'), $db->quoteName('item_id'), $db->quoteName('value')])
+                    ->values((int) $fieldId . ',' . (int) $userId . ',' . $db->quote($value))
+            )->execute();
+        } catch (\Throwable $e) {
+            Log::add(
+                'registrationtype_profile_media_failed user_id=' . $userId . ' field=' . $fieldName . ' msg=' . $e->getMessage(),
+                Log::WARNING,
+                'registrationtype'
+            );
+        }
     }
 
     private function saveRegistrationToCustomFields(int $userId, array $jform, array $profile): void
