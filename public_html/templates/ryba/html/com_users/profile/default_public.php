@@ -1031,7 +1031,6 @@ if (empty($isLkEmbed)) {
 
 <section class="master__services master__services--fullbleed">
 	<div class="container">
-		<span class="req__info">Выберите услуги, нажав на кнопку +</span>
 		<style>
 		.master__services--fullbleed {
 			max-width: none !important;

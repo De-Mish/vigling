@@ -167,7 +167,10 @@ $getValue = static function (array $source, string $key, string $fallback = ''):
 };
 
 $registrationTypeValue = $getValue($registrationData, 'registration_type', 'client');
-if (!in_array($registrationTypeValue, ['client', 'master', 'zatochka_remont'], true)) {
+require_once __DIR__ . '/../../repair-type-flag.php';
+$repairTypeEnabled = ryba_repair_type_enabled();
+$allowedRegistrationTypes = $repairTypeEnabled ? ['client', 'master', 'zatochka_remont'] : ['client', 'master'];
+if (!in_array($registrationTypeValue, $allowedRegistrationTypes, true)) {
     $registrationTypeValue = 'client';
 }
 
@@ -261,7 +264,9 @@ $durationJson = json_encode($durationOptions);
         <div class="reg-role-switch" id="registration-type-switch"<?php echo $hasSubmittedData ? ' style="display:none;"' : ''; ?>>
             <button type="button" class="dale reg-role-btn" data-type="client">Клиент</button>
             <button type="button" class="dale reg-role-btn" data-type="master">Мастер</button>
+            <?php if ($repairTypeEnabled) : ?>
             <button type="button" class="dale reg-role-btn" data-type="zatochka_remont">Заточка/Ремонт</button>
+            <?php endif; ?>
         </div>
 
         <div id="jsn-form" class="hover clean mini flat z-icons-light z-shadows z-spaced z-tabs horizontal top-compact top"<?php echo $hasSubmittedData ? '' : ' style="display:none;"'; ?>>

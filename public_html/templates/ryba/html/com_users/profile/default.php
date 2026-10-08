@@ -101,11 +101,13 @@ if (empty($this->data->jcfields) && !empty($this->data->id)) {
 	}
 }
 
+require_once __DIR__ . '/../../repair-type-flag.php';
+
 if ($profileIsAdministrator) {
 	$roleLabel = 'Администратор';
-} elseif ($profileMasterType === '2') {
+} elseif ($profileMasterType === '2' && ryba_repair_type_enabled()) {
 	$roleLabel = 'Мастер - Заточка/Ремонт';
-} elseif ($profileMasterType === '1' || $profileIsMaster) {
+} elseif ($profileMasterType === '1' || $profileMasterType === '2' || $profileIsMaster) {
 	$roleLabel = 'Мастер';
 } else {
 	$roleLabel = 'Клиент';
