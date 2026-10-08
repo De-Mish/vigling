@@ -23,7 +23,9 @@ $vgLogoFile = __DIR__ . '/images/logo.png';
 $vgLogoUrl = is_file($vgLogoFile)
 	? $tplPath . 'images/logo.png?v=' . filemtime($vgLogoFile)
 	: $vgSiteRoot . '/images/logo.png?v=20260910h';
-$vgFaviconUrl = $vgLogoUrl;
+$vgFaviconUrl = is_file(JPATH_ROOT . '/icons/vigling-pwa-192.png')
+	? $vgSiteRoot . '/icons/vigling-pwa-192.png?v=20261008a'
+	: $vgLogoUrl;
 $vgAppleIconUrl = $vgLogoUrl;
 $vgMobileLogoUrl = $vgLogoUrl;
 $manifestFile = JPATH_ROOT . '/manifest.json';
@@ -123,9 +125,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
 	<style>
 		.header-mobile__logo img {
-			border-radius: 0 !important;
+			border-radius: 10px !important;
 			background: transparent !important;
-			object-fit: contain;
+			object-fit: cover;
 		}
 	</style>
 	<jdoc:include type="styles" />
