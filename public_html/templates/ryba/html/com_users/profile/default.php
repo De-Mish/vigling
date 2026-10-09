@@ -2119,43 +2119,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 	}
 	toggle.addEventListener('click', function(e){
 		e.stopPropagation();
-		if (window.ViglingPushPrompt && typeof window.ViglingPushPrompt.show === 'function' && typeof window.ViglingPushPrompt.getPreferences === 'function') {
-			window.ViglingPushPrompt.getPreferences().then(function(prefs) {
-				if (prefs && prefs.success) {
-					var needsPrompt = Notification.permission === 'default' || prefs.subscribed !== true || prefs.notifications_enabled === false;
-					if (needsPrompt) {
-						window.ViglingPushPrompt.show({
-							reason: 'bell_click',
-							force: true,
-							remember: false
-						});
-						return;
-					}
-				}
-				var open = dropdown.style.display === 'block';
-				if (!open) {
-					dropdown.style.display = 'block';
-					toggle.setAttribute('aria-expanded', 'true');
-					loadInbox();
-				} else {
-					dropdown.style.display = 'none';
-					toggle.setAttribute('aria-expanded', 'false');
-				}
-			}).catch(function() {
-				var open = dropdown.style.display === 'block';
-				if (!open) {
-					dropdown.style.display = 'block';
-					toggle.setAttribute('aria-expanded', 'true');
-					loadInbox();
-				} else {
-					dropdown.style.display = 'none';
-					toggle.setAttribute('aria-expanded', 'false');
-				}
-			});
-			return;
-		}
-		var open = dropdown.style.display === 'block';
-		if (!open) {
+		if (dropdown.style.display !== 'block') {
 			dropdown.style.display = 'block';
 			toggle.setAttribute('aria-expanded', 'true');
 			loadInbox();

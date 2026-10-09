@@ -64,10 +64,10 @@ class AppointmentsHelper
 			$mode = 'list';
 		}
 		$extra = ['zapisi' => $mode];
-		$start = trim((string) $input->getString('start', ''));
+		$start = trim((string) $input->getString('day', ''));
 		$month = trim((string) $input->getString('month', ''));
 		if ($mode === 'day' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
-			$extra['start'] = $start;
+			$extra['day'] = $start;
 		}
 		if ($mode === 'month' && preg_match('/^\d{4}-\d{2}$/', $month)) {
 			$extra['month'] = $month;
@@ -211,7 +211,7 @@ class AppointmentsHelper
 				$fetchExtra = true;
 			}
 		} else {
-			$parsedDay = self::parseDate($input->getString('start', ''), $tz);
+			$parsedDay = self::parseDate($input->getString('day', ''), $tz);
 			$selectedDay = $parsedDay instanceof \DateTimeImmutable ? $parsedDay->setTime(0, 0, 0) : $todayLocal;
 			if ($selectedDay < $todayLocal) {
 				$selectedDay = $todayLocal;
