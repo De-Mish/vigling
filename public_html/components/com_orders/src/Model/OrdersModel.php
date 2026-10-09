@@ -109,6 +109,9 @@ class OrdersModel extends ListModel
 			if ($dayScope === 'archive' || $dayScope === 'all') {
 				$query->order('CASE WHEN ' . $db->quoteName('o.time') . ' IS NULL THEN 1 ELSE 0 END ASC');
 				$query->order($db->quoteName('o.time') . ' DESC');
+			} elseif ($dayScope === 'future') {
+				$query->order('CASE WHEN ' . $db->quoteName('o.time') . ' IS NULL THEN 1 ELSE 0 END ASC');
+				$query->order($db->quoteName('o.time') . ' ' . $orderDir);
 			} else {
 				$query->order($db->quoteName('o.time') . ' ' . $orderDir);
 			}

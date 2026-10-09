@@ -198,9 +198,9 @@ class AppointmentsHelper
 			$fetchExtra = true;
 		} elseif ($mode === 'list') {
 			$shownRaw = trim((string) $input->getString('shown', ''));
-			$dayScope = 'all';
-			$dayOrder = 'DESC';
-			$fromUtc = '';
+			$dayScope = 'future';
+			$dayOrder = 'ASC';
+			$fromUtc = (new \DateTimeImmutable('now', $utc))->format('Y-m-d H:i:s');
 			$toUtc = '';
 			if ($shownRaw === 'all') {
 				$listLimit = 0;

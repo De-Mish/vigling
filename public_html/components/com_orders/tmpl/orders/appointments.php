@@ -43,7 +43,7 @@ $dayArchiveUrl = (string) ($src->dayArchiveUrl ?? '');
 $monthNames = [1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель', 5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август', 9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь'];
 $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 => 'Сб', 7 => 'Вс'];
 ?>
-<div class="com_orders orders-list orders-list--clients appointments-page" data-mode="<?php echo $this->escape($mode); ?>" aria-label="Записи">
+<div class="com_orders orders-list orders-list--clients appointments-page" data-mode="<?php echo $this->escape($mode); ?>"<?php echo $entriesArchive ? ' data-archive="1"' : ''; ?> aria-label="Записи">
 	<style>
 	.appointments-page .appointments-toolbar {
 		display: flex;
@@ -598,6 +598,8 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		.appointments-page .appointments-modes { width: 100%; }
 		.appointments-page .appointments-modes a { flex: 1 1 0; min-width: 0; }
 		.appointments-page .appointments-cal__day { min-height: 64px; padding: 6px; }
+		.appointments-page[data-archive="1"] .appointments-card__row--feedback { grid-template-columns: minmax(0, 1fr); }
+		.appointments-page[data-archive="1"] .appointments-card__row--feedback > .appointments-card__label { display: none; }
 	}
 	</style>
 
@@ -776,7 +778,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		<?php
 		$displayRows = viglingAppointmentsBuildDisplayRows($items, $viewerId);
 		$rescheduleAction = $rescheduleClientAction;
-		$emptyMessage = $entriesArchive ? 'Архив пуст' : 'У вас пока нет записей.';
+		$emptyMessage = $entriesArchive ? 'Архив пуст' : 'Нет записей';
 		include __DIR__ . '/_appointments_list.php';
 		if (!empty($src->appointmentsHasMore) && (string) ($src->appointmentsMoreUrl ?? '') !== '') :
 		?>
