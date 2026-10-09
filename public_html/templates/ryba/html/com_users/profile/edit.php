@@ -2380,10 +2380,18 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jsn-form .phone-public-toggle input[type="checkbox"] {
 	flex: 0 0 16px !important;
 	width: 16px !important;
+	min-width: 16px !important;
+	max-width: 16px !important;
 	height: 16px !important;
 	margin: 0 !important;
 }
 .profile-edit #jsn-form .phone-public-toggle__narrow { display: none; }
+.profile-edit #jsn-form .jsn-form-fieldset .telefon-group .js-phone-wrap select.js-phone-country {
+	flex: 0 0 auto;
+	width: auto !important;
+	min-width: 96px;
+	max-width: 118px !important;
+}
 @media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
 	.profile-edit #jsn-form .telefon-group .controls {
 		flex-wrap: wrap !important;

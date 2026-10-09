@@ -5933,3 +5933,45 @@ body#home .home-search-links a.homepage-link-btn:focus {
   content: none !important;
   display: none !important;
 }
+
+/* Desktop catalog «Записаться»: one pixel wider on each side (85px -> 87px).
+   Repeated class names raise specificity above the per-catalog inline rules
+   that pin the button with margin:0 !important. */
+@media (min-width: 1021px) and (display-mode: browser) {
+  .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    width: 87px !important;
+    min-width: 87px !important;
+    max-width: 87px !important;
+  }
+  .category.jsn_list .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    margin-right: 19px !important;
+  }
+  .category.jsn_stockList .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    margin-left: -1px !important;
+    margin-right: -1px !important;
+  }
+}
+
+/* Desktop booking dialog (three days across): thin #d7dce0 line between days
+   and the day columns one pixel further apart (4px -> 4.5px padding per side). */
+@media (min-width: 821px) {
+  #zapis .screen1 .calendar__master.calendar__master.slick-initialized .slick-slide {
+    padding-left: 4.5px;
+    padding-right: 4.5px;
+  }
+  #zapis .screen1 .calendar__master.slick-initialized .slick-list {
+    background-image: linear-gradient(#d7dce0, #d7dce0), linear-gradient(#d7dce0, #d7dce0);
+    background-repeat: no-repeat;
+    background-size: 1px 100%, 1px 100%;
+    background-position: 33.3333% 0, 66.6667% 0;
+  }
+}
+
+/* Mobile and PWA reschedule dialog: stacked days get a divider and extra room. */
+@media (max-width: 768px) {
+  #zapis-reschedule #reschedule-calendar .calendar__master-item + .calendar__master-item {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #d7dce0;
+  }
+}

@@ -814,7 +814,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 				if ($stripKey === $selectedKey) {
 					$stripClass .= ' is-active';
 				}
-				$stripUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day', 'start' => $stripKey]);
+				$stripUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'day', 'day' => $stripKey]);
 			?>
 			<a class="<?php echo $stripClass; ?>" href="<?php echo $this->escape($stripUrl); ?>"<?php echo $stripKey === $selectedKey ? ' aria-current="date"' : ''; ?>>
 				<span class="appointments-daystrip__dow"><?php echo $this->escape($dowShort[(int) $stripDay->format('N')] ?? ''); ?></span>

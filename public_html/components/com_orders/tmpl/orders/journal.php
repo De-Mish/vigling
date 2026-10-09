@@ -490,6 +490,9 @@ if ($journalRangeChunk) {
 		border-radius: 12px;
 		overflow: hidden;
 	}
+	.com_orders.orders-journal .journal-vslider {
+		display: none;
+	}
 	.com_orders.orders-journal .journal-board__scroll {
 		overflow: auto;
 		max-height: calc(100vh - 210px);
@@ -782,13 +785,44 @@ if ($journalRangeChunk) {
 			--journal-col: 148px;
 		}
 		.com_orders.orders-journal .journal-board {
+			position: relative;
 			overflow: visible;
 		}
+		.com_orders.orders-journal .journal-vslider {
+			display: block;
+			position: absolute;
+			top: 8px;
+			bottom: 8px;
+			left: 0;
+			z-index: 6;
+			width: 14px;
+			touch-action: none;
+			cursor: pointer;
+		}
+		.com_orders.orders-journal .journal-vslider::before {
+			content: "";
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 6px;
+			width: 2px;
+			border-radius: 2px;
+			background: #eae9e9;
+		}
+		.com_orders.orders-journal .journal-vslider__thumb {
+			position: absolute;
+			left: 4px;
+			top: 0;
+			width: 6px;
+			height: 40px;
+			border-radius: 3px;
+			background: #f9ce54;
+		}
 		.com_orders.orders-journal .journal-board__scroll {
-			max-height: none;
-			overflow-x: auto;
-			overflow-y: visible;
-			overscroll-behavior-x: contain;
+			max-height: calc(100vh - 230px);
+			max-height: calc(100dvh - 230px);
+			overflow: auto;
+			overscroll-behavior: contain;
 		}
 		.com_orders.orders-journal .journal-detail { padding: 14px 16px 16px; }
 		.com_orders.orders-journal .journal-detail__grid { grid-template-columns: 1fr; gap: 4px; }
@@ -816,6 +850,7 @@ if ($journalRangeChunk) {
 	</div>
 
 	<div class="journal-board">
+		<div class="journal-vslider" id="journal-vslider" aria-hidden="true"><span class="journal-vslider__thumb" id="journal-vslider-thumb"></span></div>
 		<div
 			class="journal-board__scroll"
 			id="journal-board-scroll"
@@ -895,6 +930,52 @@ if ($journalRangeChunk) {
 	</div>
 </div>
 
+<script>
+(function(){
+	var scroller = document.getElementById('journal-board-scroll');
+	var slider = document.getElementById('journal-vslider');
+	var thumb = document.getElementById('journal-vslider-thumb');
+	if (!scroller || !slider || !thumb) return;
+	var dragging = false;
+	function visible() { return slider.offsetParent !== null; }
+	function maxScroll() { return Math.max(0, scroller.scrollHeight - scroller.clientHeight); }
+	function place() {
+		if (!visible()) return;
+		var track = slider.clientHeight;
+		var max = maxScroll();
+		var size = max > 0 ? Math.max(28, Math.round(track * scroller.clientHeight / scroller.scrollHeight)) : track;
+		thumb.style.height = size + 'px';
+		thumb.style.top = (max > 0 ? Math.round((track - size) * scroller.scrollTop / max) : 0) + 'px';
+	}
+	function moveTo(clientY) {
+		var rect = slider.getBoundingClientRect();
+		var size = thumb.offsetHeight;
+		var free = Math.max(1, rect.height - size);
+		var ratio = Math.min(1, Math.max(0, (clientY - rect.top - size / 2) / free));
+		scroller.scrollTop = ratio * maxScroll();
+	}
+	slider.addEventListener('pointerdown', function(e){
+		dragging = true;
+		try { slider.setPointerCapture(e.pointerId); } catch (err) {}
+		moveTo(e.clientY);
+		e.preventDefault();
+	});
+	slider.addEventListener('pointermove', function(e){
+		if (dragging) moveTo(e.clientY);
+	});
+	function stop(e) {
+		dragging = false;
+		try { slider.releasePointerCapture(e.pointerId); } catch (err) {}
+	}
+	slider.addEventListener('pointerup', stop);
+	slider.addEventListener('pointercancel', stop);
+	scroller.addEventListener('scroll', place, { passive: true });
+	window.addEventListener('resize', place);
+	window.addEventListener('load', place);
+	window.addEventListener('vigling:tab-shown', function(){ window.requestAnimationFrame(place); });
+	place();
+})();
+</script>
 <script>
 (function(){
 	var root = document.querySelector('.com_orders.orders-journal');
