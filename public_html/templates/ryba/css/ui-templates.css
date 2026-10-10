@@ -1,0 +1,151 @@
+/* Shared UI templates. Loaded after every other stylesheet.
+
+   1. «Записаться» on list cards: one design and one placement for specialists,
+      promotions, courses, model search, favourites and the home feed. The
+      promotions card (/poisk-aktsij) is the template:
+        up to 768px  - 85x30 pill, bottom-left corner, Inter, yellow gradient;
+        769px and up - 85x37 oval, bottom-right corner.
+      The class name is repeated to out-rank the per-catalog inline <style>
+      blocks and the mobile redesign rules, which pin the button with
+      !important in several different ways.
+   2. Filter fields: the text is centred vertically in every field. */
+
+@media (max-width: 768px) {
+  html body .category .category__item.category__item {
+    position: relative !important;
+    padding-bottom: 50px !important;
+    box-sizing: border-box;
+  }
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    position: absolute !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    z-index: 3;
+    display: block !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    align-self: flex-start !important;
+    width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 4px 0 !important;
+    transform: none !important;
+    font-family: "Inter", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 22px !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    color: #000 !important;
+    border-radius: 15px !important;
+    background-color: #f9ce54 !important;
+    background-image: linear-gradient(#ffdb6e, #f2b72a) !important;
+    box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.35) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  html body .category .category__item.category__item {
+    position: relative !important;
+    box-sizing: border-box;
+  }
+  html body .category:not(.jsn_list) .category__item.category__item {
+    padding-bottom: 58px !important;
+  }
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    position: absolute !important;
+    top: auto !important;
+    right: 9px !important;
+    bottom: 9px !important;
+    left: auto !important;
+    z-index: 3;
+    display: block !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    align-self: flex-start !important;
+    width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
+    height: calc((13px * 1.4 + 12px) * 1.215) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: calc((13px * 1.4 + 12px) * 1.215) !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    color: #111 !important;
+    border-radius: calc((13px * 1.4 + 12px) * 1.215 / 2) !important;
+    background-color: #f7cc53 !important;
+    background-image: none !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    right: 8px !important;
+    bottom: 8px !important;
+  }
+}
+
+@media (min-width: 1021px) and (display-mode: browser) {
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    width: 87px !important;
+    min-width: 87px !important;
+    max-width: 87px !important;
+    margin: 0 -1px !important;
+  }
+}
+
+/* Text of the first line of a promotions card (name) starts below the card edge,
+   level with the photo (the name now comes first and would otherwise touch the edge). */
+@media (max-width: 768px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-top: 12px !important;
+  }
+}
+@media (min-width: 769px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-top: 16px !important;
+  }
+}
+
+/* Filter fields (list sidebars): text centred vertically. */
+html body .category__masters-sidebar .chosen-container-single .chosen-single,
+html body .filter .chosen-container-single .chosen-single {
+  display: flex !important;
+  align-items: center;
+}
+html body .category__masters-sidebar .chosen-container-single .chosen-single > span,
+html body .filter .chosen-container-single .chosen-single > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (min-width: 769px) {
+  html body .category__masters-sidebar .chosen-container-single .chosen-single,
+  html body .filter .chosen-container-single .chosen-single {
+    min-height: 27px;
+    padding-bottom: 0 !important;
+  }
+  html body .category__masters-sidebar input.filed__master,
+  html body .filter input.filed__master {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+}
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices {
+  padding-bottom: 0;
+}
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices li.search-field input[type="text"] {
+  margin: 2px 0;
+}

@@ -5640,6 +5640,35 @@ body#home .home-search-links a.homepage-link-btn:focus {
     content: none;
     display: none;
   }
+  .header-mobile__nav .mod-menu__sub a[href*="t.me/"],
+  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"],
+  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"],
+  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"] {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::before,
+  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::before,
+  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::before,
+  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::before {
+    content: "";
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::before,
+  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::before {
+    background-image: url("/templates/ryba/images/telegram.png");
+  }
+  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::before,
+  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::before {
+    background-image: url("/templates/ryba/images/vk.jpg");
+    mix-blend-mode: multiply;
+  }
 }
 
 
