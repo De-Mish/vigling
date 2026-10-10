@@ -5514,6 +5514,7 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header-mobile__nav a[href*="pwa_install=1"],
   .header-mobile__nav a[href="/lk"],
   .header-mobile__nav a[href="/lk/"],
+  .header-mobile__nav a[href*="contacts_page=1"],
   .header--desktop .header__menu a[href="/poisk-spetsialistov"],
   .header--desktop .header__menu a[href$="/poisk-spetsialistov"],
   .header--desktop .header__menu a[href="/poisk-aktsij"],
@@ -5527,7 +5528,8 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header--desktop .header__menu a[href="/index.php?pwa_install=1"],
   .header--desktop .header__menu a[href*="pwa_install=1"],
   .header--desktop .header__menu a[href="/lk"],
-  .header--desktop .header__menu a[href="/lk/"] {
+  .header--desktop .header__menu a[href="/lk/"],
+  .header--desktop .header__menu a[href*="contacts_page=1"] {
     display: inline-flex !important;
     align-items: center;
     gap: 10px;
@@ -5545,7 +5547,8 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header-mobile__nav a[href="/index.php?pwa_install=1"],
   .header-mobile__nav a[href*="pwa_install=1"],
   .header-mobile__nav a[href="/lk"],
-  .header-mobile__nav a[href="/lk/"] {
+  .header-mobile__nav a[href="/lk/"],
+  .header-mobile__nav a[href*="contacts_page=1"] {
     display: flex !important;
     width: 100%;
     box-sizing: border-box;
@@ -5577,7 +5580,9 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header-mobile__nav a[href="/lk"]::before,
   .header-mobile__nav a[href="/lk/"]::before,
   .header--desktop .header__menu a[href="/lk"]::before,
-  .header--desktop .header__menu a[href="/lk/"]::before {
+  .header--desktop .header__menu a[href="/lk/"]::before,
+  .header-mobile__nav a[href*="contacts_page=1"]::before,
+  .header--desktop .header__menu a[href*="contacts_page=1"]::before {
     content: "";
     width: 28px;
     height: 28px;
@@ -5625,6 +5630,10 @@ body#home .home-search-links a.homepage-link-btn:focus {
   .header--desktop .header__menu a[href="/lk"]::before,
   .header--desktop .header__menu a[href="/lk/"]::before {
     background-image: url("/templates/ryba/images/profile.png");
+  }
+  .header-mobile__nav a[href*="contacts_page=1"]::before,
+  .header--desktop .header__menu a[href*="contacts_page=1"]::before {
+    background-image: url("/templates/ryba/images/cotakt.png");
   }
   .header-mobile__nav .mod-menu__sub a[href*="pwa_install=1"]::before,
   .header--desktop .header__menu .mod-menu__sub a[href*="pwa_install=1"]::before {
@@ -6023,4 +6032,17 @@ body#home .home-search-links a.homepage-link-btn:focus {
 .appointments-page .appointments-daystrip__dow,
 .appointments-page .appointments-cal__dow {
   color: #6b6b6b !important;
+}
+
+/* Telegram / Vkontakte tabs on the Contacts page: icon left of the label. */
+.contacts-hover-tab__img {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0 8px 0 0;
+  object-fit: contain;
+}
+.contacts-hover-tab__img--vk {
+  /* vk.jpg has an off-white background; multiply blends it into the white tab */
+  mix-blend-mode: multiply;
 }

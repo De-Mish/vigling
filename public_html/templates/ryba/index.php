@@ -442,11 +442,11 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 							<?php endif; ?>
 							<div class="contacts-hover-tabs">
 								<a class="contacts-hover-tab" href="https://t.me/vigling" target="_blank" rel="noopener noreferrer">
-									<span class="contacts-hover-tab__label">Telegram</span>
+									<span class="contacts-hover-tab__label"><img class="contacts-hover-tab__img" src="/templates/ryba/images/telegram.png" alt="" width="20" height="20" loading="lazy" decoding="async">Telegram</span>
 									<span class="contacts-hover-tab__panel">Написать в Telegram: @vigling</span>
 								</a>
 								<a class="contacts-hover-tab" href="https://vk.com/vigling" target="_blank" rel="noopener noreferrer">
-									<span class="contacts-hover-tab__label">Vkontakte</span>
+									<span class="contacts-hover-tab__label"><img class="contacts-hover-tab__img contacts-hover-tab__img--vk" src="/templates/ryba/images/vk.jpg" alt="" width="20" height="20" loading="lazy" decoding="async">Vkontakte</span>
 									<span class="contacts-hover-tab__panel">Открыть страницу Vkontakte</span>
 								</a>
 							</div>
