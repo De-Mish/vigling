@@ -1,0 +1,186 @@
+/* Mobile and PWA design layer (Inter, action pills, rounded-square menu buttons).
+   Loaded last; applies at 768px and below. The page background stays white. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter/Inter-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter/Inter-cyrillic.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter/Inter-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter/Inter-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@media (max-width: 768px) {
+  :root{--vm-f:'Inter',system-ui,sans-serif;--vm-bh:52px;--vm-br:999px;--vm-bw:700;--vm-bb:0 solid transparent;--vm-bg1:linear-gradient(#FFDB6E,#F2B72A);--vm-fg1:#1a1300;--vm-bs:inset 0 1px 0 rgba(255,255,255,.7),0 2px 0 #D49A10,0 15px 25px -8px rgba(0,0,0,.42);--vm-bg2:#fff;--vm-fg2:#111;--vm-bb2:1.5px solid #111;--vm-bs2:none;--vm-bpress:translateY(2px);--vm-rf:14px;--vm-rc:12px}
+
+  /* Mobile / PWA design layer. Page background stays white. */
+  html body{font-family:var(--vm-f) !important;font-size:16px;line-height:1.5;letter-spacing:0 !important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  html body *:not(i):not(.fa):not([class*="fa-"]):not(.jsn-icon):not(.glyphicon):not(.slick-arrow){font-family:var(--vm-f) !important;letter-spacing:0 !important}
+  html body h1,html body h2,html body h3,html body .page-title{font-weight:700 !important;line-height:1.2 !important;text-wrap:balance;overflow-wrap:break-word;letter-spacing:.01em !important}
+  html body p,html body li,html body .alert,html body .master__about p{text-wrap:pretty;overflow-wrap:break-word;line-height:1.5}
+  html body b,html body strong{font-weight:700}
+  html body label{font-weight:500}
+
+  /* ---------- Buttons ---------- */
+  html body .btn,html body a.btn,html body button.btn,html body .btn__time-zapis,html body a.btn__time-zapis,html body .appointments-archive-btn,html body .appointments-more__btn{
+    display:inline-flex !important;align-items:center;justify-content:center;gap:8px;
+    min-height:var(--vm-bh) !important;height:auto !important;padding:0 22px !important;
+    font-weight:var(--vm-bw) !important;font-size:15px !important;line-height:1.2 !important;text-align:center;text-wrap:balance;text-transform:none !important;
+    border-radius:var(--vm-br) !important;border:var(--vm-bb) !important;background:var(--vm-bg1) !important;color:var(--vm-fg1) !important;box-shadow:var(--vm-bs) !important;text-decoration:none !important;box-sizing:border-box;width:auto}
+  html body .btn:active,html body .btn__time-zapis:active{transform:var(--vm-bpress)}
+  html body .btn[disabled],html body .btn.disabled{opacity:.5}
+  html body .btn.btn-secondary,html body button.btn.btn-secondary,html body a.btn.btn-secondary,html body .btn.btn-link{background:var(--vm-bg2) !important;color:var(--vm-fg2) !important;border:var(--vm-bb2) !important;box-shadow:var(--vm-bs2,none) !important}
+  html body .btn.btn-xs.btn-default{background:var(--vm-bg2) !important;color:var(--vm-fg2) !important;border:var(--vm-bb2) !important;box-shadow:var(--vm-bs2,none) !important;min-height:44px !important;font-size:14px !important;padding:0 16px !important}
+  html body .lk-notify-badge{position:absolute;top:-6px;right:-4px}
+  html body .btn .fa{font-size:15px}
+
+  /* profile action buttons: tidy 2-column grid */
+  html body .jsn-p-opt{display:grid !important;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 16px !important}
+  html body .jsn-p-opt > *{margin:0 !important;width:100% !important;min-width:0}
+  html body .jsn-p-opt .lk-notify-wrap{display:block !important;position:relative}
+  html body .jsn-p-opt .lk-notify-wrap > .btn{width:100% !important}
+  html body .jsn-p-opt > a.btn:last-child{grid-column:1 / -1}
+
+  /* ---------- Fields (white, outlined) ---------- */
+  html body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=file]):not(.chosen-search-input),
+  html body select,html body textarea,html body .form-control,html body .chosen-container-single .chosen-single{
+    font-size:16px !important;min-height:48px !important;padding:0 14px !important;box-sizing:border-box;
+    color:#111 !important;background-color:#fff !important;border:1px solid #CFCFCF !important;border-radius:var(--vm-rf) !important;box-shadow:none !important;line-height:1.3}
+  html body textarea{padding:12px 14px !important;min-height:96px !important}
+  html body input:focus,html body select:focus,html body textarea:focus{border-color:#111 !important;box-shadow:0 0 0 3px rgba(245,197,66,.55) !important;outline:0 !important}
+  html body ::placeholder{color:#767676 !important;opacity:1}
+  html body .filter .form-group,html body .filter > div{margin-bottom:10px}
+  html body input[type=checkbox],html body input[type=radio]{accent-color:#111}
+
+  /* ---------- Time slot chips ---------- */
+  html body .calendar__master-item label.btn-select,html body .calendar__stock-item label.btnstk-select,html body .days__btns label{
+    min-height:44px !important;display:flex !important;align-items:center;justify-content:center;border-radius:var(--vm-rc) !important;font-weight:600 !important;font-size:14px !important;border:1px solid #D4D4D4 !important;background:#fff !important;color:#111 !important;box-shadow:none !important}
+  html body .calendar__master-item input:checked + label.btn-select,html body .days__btns input:checked + label{background:#F5C542 !important;border-color:#111 !important}
+  html body #zapis .calendar__master-item .btns-m{gap:8px}
+
+  /* ---------- Text placement ---------- */
+  html body .category.jsn_list .category__item{display:grid !important;grid-template-columns:72px minmax(0,1fr);grid-template-areas:"avatar info" "action action";column-gap:14px;row-gap:12px;align-items:start;padding:16px 0 18px !important;margin:0 !important;border:0 !important;border-bottom:1px solid #ECECEC !important;border-radius:0 !important;box-shadow:none !important;background:none !important;width:100% !important}
+  html body .category.jsn_list .category__item-img{grid-area:avatar;position:relative !important;width:72px !important;height:72px !important;min-height:0 !important;background:none !important;margin:0 !important;float:none !important}
+  html body .category.jsn_list .category__item-master{position:static !important;width:72px !important;height:72px !important;margin:0 !important;border-radius:50% !important;background-size:cover !important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+  html body .category.jsn_list .category__item-content,html body .category.jsn_list .category__item-content-left{display:contents !important}
+  html body .category.jsn_list .category__content-info{grid-area:info;display:flex !important;flex-direction:column;gap:3px;min-width:0;padding:0 !important;margin:0 !important}
+  html body .category.jsn_list.jsn_list .category__item .category__item-content-right{grid-area:action;display:block !important;position:static !important;width:100% !important;height:auto !important;min-height:0 !important;float:none !important;margin:0 !important;padding:0 !important}
+  html body .category.jsn_list.jsn_list .category__item .category__item-content-right a.btn__time-zapis.btn__time-zapis.btn__time-zapis{position:static !important;display:flex !important;width:100% !important;max-width:none !important;min-width:0 !important;height:auto !important;min-height:var(--vm-bh) !important;margin:0 !important;inset:auto !important;transform:none}
+  html body a.category_cinfo-name{font-weight:700 !important;font-size:17px !important;line-height:1.25 !important;color:#111 !important;text-wrap:balance}
+  html body .category_cinfo-address,html body .attr_left2{display:flex !important;align-items:flex-start;gap:6px;font-size:13px !important;line-height:1.4 !important;color:#6b6b6b !important;font-style:normal;text-wrap:pretty}
+  html body .category_cinfo-address i,html body .attr_left2 i{flex:none;margin-top:2px;color:#9a9a9a}
+  html body .attr_left3,html body .category__content-info .attr_left3{display:block !important;font-size:13px !important;line-height:1.4 !important;color:#444 !important;font-style:normal !important;margin:0 !important;padding:0 !important}
+  html body .attr_left3 b{font-weight:600 !important;font-style:normal !important;color:#111}
+  html body .attr_left1{display:block;font-size:13px !important;line-height:1.4 !important;color:#555 !important;text-transform:none !important;letter-spacing:0 !important;font-weight:500;margin:4px 0 2px}
+  html body .masters__attr-left{display:flex;flex-direction:column;gap:4px}
+  html body .masters__big-info h1,html body .masters__big-info h2{margin:0 0 4px !important;font-size:24px !important;text-transform:none !important}
+  html body .pathway,html body .breadcrumb{font-size:13px;line-height:1.4}
+  html body .appointments-card__label{font-weight:600 !important;color:#555 !important;font-size:14px}
+  html body .appointments-card__value{font-size:15px;line-height:1.45}
+  html body .appointments-card__row{padding:8px 0 !important}
+
+  html body.home .home-search-links a.homepage-link-btn,html body#home .home-search-links a.homepage-link-btn{display:flex !important;width:min(100%,320px) !important;margin:0 auto 10px !important;min-height:var(--vm-bh) !important;font-size:15px !important;font-weight:var(--vm-bw) !important;background:var(--vm-bg2) !important;color:var(--vm-fg2) !important;border:var(--vm-bb2) !important;border-radius:var(--vm-br) !important;box-shadow:none !important;text-transform:none !important}
+
+  html body .dale,html body button.dale,html body .btn-next,html body .btn-del,html body .btn-fin,html body #prof,html body .calc__btn .btn-next,html body .del__btn .btn-del{
+    display:inline-flex !important;align-items:center;justify-content:center;min-height:var(--vm-bh) !important;height:auto !important;padding:0 28px !important;font-weight:var(--vm-bw) !important;font-size:15px !important;border-radius:var(--vm-br) !important;border:var(--vm-bb) !important;background:var(--vm-bg1) !important;color:var(--vm-fg1) !important;box-shadow:var(--vm-bs) !important;text-transform:none !important}
+  html body #zapis .screen1 > p,html body #zapis h3,html body #zapis .modal-title,html body #zapis .title{font-weight:700 !important;font-size:18px !important;letter-spacing:0 !important;text-transform:none !important;text-wrap:balance}
+  html body #zapis .cancel,html body #zapis a.cancel,html body #zapis .btn-cancel{font-weight:600 !important;color:#111 !important;text-decoration:underline !important;text-underline-offset:4px}
+
+  html body form[action*="user.login"] button.dale,html body .quick-auth-form button[type=submit]{width:100% !important}
+  html body .input-password-toggle{min-width:0 !important;padding:0 14px !important;white-space:nowrap}
+
+  /* ===== Final v2 ===== */
+  /* rounded square = menu / secondary (shadow -1px) */
+  html body .btn.btn.btn-xs.btn-default,
+  html body .jsn-p-opt .btn.btn,
+  html body .jsn-p-opt > a.btn.btn,
+  html body .appointments-archive-btn.appointments-archive-btn,
+  html body .appointments-more__btn.appointments-more__btn,
+  html body .btn.btn.btn-secondary,
+  html body.home .home-search-links a.homepage-link-btn.homepage-link-btn,
+  html body#home .home-search-links a.homepage-link-btn.homepage-link-btn{
+    border-radius:14px !important;font-weight:500 !important;font-size:15px !important;background:#fff !important;background-image:none !important;color:#111 !important;
+    border:1.5px solid #111 !important;min-height:48px !important;
+    box-shadow:0 0 1px rgba(0,0,0,.15),0 7px 13px -4px rgba(0,0,0,.25) !important}
+
+  /* orange pills = save / record / transfer (shadow -1px) */
+  html body .order-feedback .btn.btn.btn-xs.btn-default.btn-default,
+  html body .btn.btn.btn-xs.btn-warning,
+  html body .btn.btn.btn-warning{
+    border-radius:999px !important;font-weight:700 !important;min-height:46px !important;padding:0 22px !important;
+    background:linear-gradient(#FFDB6E,#F2B72A) !important;color:#1a1300 !important;border:0 solid transparent !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 0 #D49A10,0 15px 25px -8px rgba(0,0,0,.42) !important}
+  html body a.btn__time-zapis.btn__time-zapis.btn__time-zapis,html body .btn-next.btn-next,html body button.dale.dale,html body .btn.btn.btn-success{
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 0 #D49A10,0 15px 25px -8px rgba(0,0,0,.42) !important}
+
+  /* white pills = cancel / delete: contour, NO shadow */
+  html body button.btn.btn.btn-xs.btn-default[onclick*="Удалить"],
+  html body .btn.btn.btn-xs.btn-danger,
+  html body .btn.btn.btn-danger,
+  html body .close__btn.close__btn,
+  html body #zapis .btn-fin.btn-fin,
+  html body .btn-remove-service.btn-remove-service,
+  html body button.dale.dale[value="profile.cancel"]{
+    display:inline-flex !important;align-items:center;justify-content:center;box-sizing:border-box;
+    border-radius:999px !important;font-weight:700 !important;font-size:15px !important;min-height:46px !important;padding:0 24px !important;
+    background:#fff !important;background-image:none !important;color:#111 !important;border:1.5px solid #111 !important;text-decoration:none !important;
+    box-shadow:none !important}
+
+  /* same width for action buttons in one group */
+  html body #zapis .calc__btn .btn-next,html body #zapis .calc__btn .close__btn,html body #zapis .btn-fin.btn-fin{width:100% !important;box-sizing:border-box;margin-left:0 !important;margin-right:0 !important}
+  html body #zapis .calc__btn .close__btn{margin-top:12px !important}
+  html body .appointments-card__value.orders-actions,
+  html body #easyprofile #jsn_zapisi .appointments-page .appointments-card__value.orders-actions{display:grid !important;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:stretch}
+  html body .orders-actions > form{display:block !important;margin:0 !important}
+  html body .orders-actions > .btn,html body .orders-actions > form > .btn{width:100% !important;margin:0 !important}
+  html body .lk-edit-form-footer{display:grid !important;grid-template-columns:1fr 1fr;gap:12px}
+  html body .lk-edit-form-footer > button{width:100% !important;margin:0 !important}
+
+  /* unavailable but functional: foggy */
+  html body .btn[disabled],html body button[disabled].btn,html body .btn.disabled,html body .btn[aria-disabled="true"],
+  html body button.dale[disabled],html body .btn-next.disabled,html body .btn-next[aria-disabled="true"],html body .btn-next[disabled],
+  html body .close__btn[disabled],html body .appointments-archive-btn[aria-disabled="true"],html body a.btn__time-zapis[aria-disabled="true"]{
+    opacity:.5 !important;cursor:not-allowed !important;filter:saturate(.85)}
+
+  /* spacing around feedback buttons +1px */
+  html body .order-feedback form .btn.btn.btn-xs.btn-default.btn-default{margin-top:1px !important;margin-bottom:1px !important}
+  html body .order-feedback form + form .order-feedback-label:first-of-type{margin-top:1px !important}
+
+
+  /* empty-state field (day / list): neutral grey with a gold stripe, 6px corners */
+  html body .appointments-page .alert.alert-info{
+    background:#F4F4F4 !important;color:#2b2b2b !important;border:1px solid #DADADA !important;border-left:4px solid #F5C542 !important;
+    border-radius:6px !important;padding:12px 14px !important;font-size:15px;line-height:1.45;box-shadow:none !important}
+
+  /* Password field with the "show password" button: one joined control */
+  html body .input-group:has(> .input-password-toggle){display:flex;align-items:stretch;flex-wrap:nowrap}
+  html body .input-group:has(> .input-password-toggle) > input.form-control{flex:1 1 auto;width:1% !important;min-width:0 !important;border-radius:var(--vm-rf) 0 0 var(--vm-rf) !important}
+  html body .input-group:has(> .input-password-toggle) > .btn.btn.btn-secondary.input-password-toggle{flex:0 0 auto;border-radius:0 var(--vm-rf) var(--vm-rf) 0 !important;box-shadow:none !important;margin:0 0 0 -1px !important;border:1px solid #CFCFCF !important;font-weight:500 !important;font-size:14px !important;min-height:48px !important;color:#111 !important;background:#fff !important}
+
+  /* stock/course/model lists: keep the original compact absolute-positioned button */
+  html body .category.jsn_stockList a.btn__time-zapis.btn__time-zapis.btn__time-zapis{min-height:30px !important;height:30px !important;padding:0 14px !important;font-size:13px !important;box-shadow:0 8px 14px -6px rgba(0,0,0,.35) !important}
+
+}
