@@ -124,6 +124,9 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/mobile-redesign.css'); ?>">
+<?php if ($page === 'home') : ?>
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/home-feed.css'); ?>">
+<?php endif; ?>
 	<style>
 		.header-mobile__logo img {
 			border-radius: 10px !important;
@@ -557,36 +560,10 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 				<div class="clearFloat"></div>
 			</div>
 		</section>
-		<section class="search__catalog">
-			<div class="container">
-				<h2>поиск по услугам</h2>
-				<span class="service__sub"></span>
-				<?php
-				$serviceLinks = [
-					16 => 'Волосы',
-					10 => 'Ресницы',
-					18 => 'Ногти',
-					12 => 'Косметология',
-					13 => 'Эпиляция',
-					14 => 'Визаж',
-				];
-				$serviceImages = ['service1.png', 'service2.png', 'service3.png', 'service4.png', 'service5.png', 'service6.png'];
-				$si = 0;
-				?>
-				<div>
-					<?php foreach ($serviceLinks as $catId => $label) : ?>
-					<?php $serviceUrl = Route::_('index.php?option=com_poisk&view=list&cat_id=' . (int) $catId); ?>
-					<div class="service__item">
-						<a class="service__img-link" href="<?php echo $serviceUrl; ?>">
-							<div style="background-image: url('/images/<?php echo $serviceImages[$si]; ?>')" class="service__img"><div></div></div>
-						</a>
-						<a class="service__title" href="<?php echo $serviceUrl; ?>"><?php echo htmlspecialchars($label); ?></a>
-					</div>
-					<?php $si++; endforeach; ?>
-					<div class="clearFloat"></div>
-				</div>
-			</div>
-		</section>
+		<?php
+		require_once __DIR__ . '/helpers/home_feed.php';
+		echo VglHomeFeed::render();
+		?>
 	<?php endif; ?>
 	<?php if ($this->countModules('addmaster')) : ?>
 		<section class="info__box">
