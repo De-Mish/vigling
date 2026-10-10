@@ -123,6 +123,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/phone-mask.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/a11y.css'); ?>">
 	<link rel="stylesheet" href="<?php echo $rybaAsset('css/design-tokens.css'); ?>">
+	<link rel="stylesheet" href="<?php echo $rybaAsset('css/mobile-redesign.css'); ?>">
 	<style>
 		.header-mobile__logo img {
 			border-radius: 10px !important;
