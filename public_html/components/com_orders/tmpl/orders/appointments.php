@@ -110,6 +110,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 		background: #f9ce54;
 		color: #111;
 	}
+	.appointments-page .appointments-sr-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 	.appointments-page .appointments-person { display: block; line-height: 1.35; }
 	.appointments-page .appointments-people { display: flex; flex-direction: column; gap: 2px; }
 	.appointments-page .journal-card {
@@ -612,6 +613,8 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 				<a class="appointments-archive-btn<?php echo $entriesArchive ? ' is-active' : ''; ?>" href="<?php echo $this->escape($entriesArchive ? $listUrl : $dayArchiveUrl); ?>">Архив</a>
 				<?php endif; ?>
 			</div>
+			<?php else : ?>
+			<h1 class="appointments-sr-title">Записи</h1>
 			<?php endif; ?>
 		</div>
 		<nav class="appointments-modes" aria-label="Режим записей">
@@ -661,7 +664,7 @@ $dowShort = [1 => 'Пн', 2 => 'Вт', 3 => 'Ср', 4 => 'Чт', 5 => 'Пт', 6 
 					<a href="<?php echo $this->escape((string) ($src->monthNextUrl ?? '')); ?>" aria-label="Вперёд">›</a>
 				</div>
 			</div>
-			<div class="appointments-cal" role="grid">
+			<div class="appointments-cal">
 				<?php foreach ($dowShort as $dowLabel) : ?>
 					<div class="appointments-cal__dow"><?php echo $this->escape($dowLabel); ?></div>
 				<?php endforeach; ?>
