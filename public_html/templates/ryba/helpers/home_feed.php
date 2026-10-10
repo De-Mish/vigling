@@ -1,8 +1,11 @@
 <?php
 /**
- * Home page feed: newest "Поиск моделей" and "Акции" cards (10 per page).
+ * Home page feed: one list of the newest "Поиск моделей" and "Акции" cards (10 per page).
  *
  * Cards are rendered with the same item templates as /modeli and /poisk-aktsij.
+ * Each card is preceded by a small label naming its block. The two blocks are interleaved
+ * (model search, promotion, model search, ...) because their ids come from different tables
+ * and have no shared creation time; each block keeps its own newest-first (id DESC) order.
  * Cards are narrowed to the viewer's profile city when it is set; otherwise all cities are shown.
  */
 
@@ -38,26 +41,18 @@ final class VglHomeFeed
 	public const LIMIT = 10;
 	public const FEED_MODELI = 'modeli';
 	public const FEED_AKTSII = 'aktsii';
-	public const PARAM_FEED = 'hf';
 	public const PARAM_PAGE = 'hf_page';
 	public const ANCHOR = 'home-feed';
 
 	private const FIELD_NAMES = ['sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'];
 
 	/** @return array<string, string> */
-	public static function tabs(): array
+	public static function labels(): array
 	{
 		return [
 			self::FEED_MODELI => 'Поиск моделей',
 			self::FEED_AKTSII => 'Акции',
 		];
-	}
-
-	public static function currentFeed(): string
-	{
-		$feed = Factory::getApplication()->getInput()->getCmd(self::PARAM_FEED, self::FEED_MODELI);
-
-		return isset(self::tabs()[$feed]) ? $feed : self::FEED_MODELI;
 	}
 
 	public static function currentPage(): int
@@ -81,44 +76,100 @@ final class VglHomeFeed
 		}
 	}
 
-	public static function url(string $feed, int $page = 1): string
+	public static function url(int $page = 1): string
 	{
-		$query = [self::PARAM_FEED => $feed];
-		if ($page > 1) {
-			$query[self::PARAM_PAGE] = $page;
-		}
+		$query = $page > 1 ? '?' . http_build_query([self::PARAM_PAGE => $page]) : '';
 
-		return rtrim(Uri::root(true), '/') . '/?' . http_build_query($query) . '#' . self::ANCHOR;
+		return rtrim(Uri::root(true), '/') . '/' . $query . '#' . self::ANCHOR;
 	}
 
 	/**
-	 * @return array{html: string, total: int, page: int, pages: int, city: string, error: bool}
+	 * Position $index of the interleaved list: model search and promotions alternate,
+	 * then the longer block continues on its own.
+	 *
+	 * @return array{0: string, 1: int} block key and index inside that block
+	 */
+	private static function slot(int $index, int $totalModeli, int $totalAktsii): array
+	{
+		$both = min($totalModeli, $totalAktsii);
+		if ($index < 2 * $both) {
+			return [$index % 2 === 0 ? self::FEED_MODELI : self::FEED_AKTSII, intdiv($index, 2)];
+		}
+
+		return [$totalModeli > $totalAktsii ? self::FEED_MODELI : self::FEED_AKTSII, $index - $both];
+	}
+
+	/**
+	 * @return array{0: list<array{0: string, 1: int}>, 1: array<string, array{0: int, 1: int}>}
+	 *         page slots, and per block the [offset, count] that covers them
+	 */
+	private static function windowFor(int $page, int $totalModeli, int $totalAktsii): array
+	{
+		$slots = [];
+		$ranges = [];
+		$first = ($page - 1) * self::LIMIT;
+		$last = min($first + self::LIMIT, $totalModeli + $totalAktsii);
+		for ($i = $first; $i < $last; $i++) {
+			$slot = self::slot($i, $totalModeli, $totalAktsii);
+			$slots[] = $slot;
+			if (!isset($ranges[$slot[0]])) {
+				$ranges[$slot[0]] = [$slot[1], 1];
+			} else {
+				$ranges[$slot[0]][1]++;
+			}
+		}
+
+		return [$slots, $ranges];
+	}
+
+	/**
+	 * @return array{cards: list<array{0: string, 1: string}>, total: int, page: int, pages: int, city: string, error: bool}
 	 */
 	public static function build(): array
 	{
-		$feed = self::currentFeed();
 		$page = self::currentPage();
 		$city = self::viewerCity();
-		$result = ['html' => '', 'total' => 0, 'page' => $page, 'pages' => 1, 'city' => $city, 'error' => false];
+		$result = ['cards' => [], 'total' => 0, 'page' => $page, 'pages' => 1, 'city' => $city, 'error' => false];
 
 		try {
-			$data = $feed === self::FEED_AKTSII
-				? self::loadAktsii($city, $page)
-				: self::loadModeli($city, $page);
+			$half = intdiv(self::LIMIT, 2);
+			$offset = ($page - 1) * $half;
+			$modeli = self::loadModeli($city, $offset, $half);
+			$aktsii = self::loadAktsii($city, $offset, $half);
+			$totalModeli = $modeli['total'];
+			$totalAktsii = $aktsii['total'];
+			$total = $totalModeli + $totalAktsii;
+			$pages = max(1, (int) ceil($total / self::LIMIT));
+			$loaded = [self::FEED_MODELI => [$offset, $half], self::FEED_AKTSII => [$offset, $half]];
 
-			if ($data['total'] > 0 && $data['items'] === [] && $page > 1) {
-				$page = max(1, (int) ceil($data['total'] / self::LIMIT));
-				$data = $feed === self::FEED_AKTSII
-					? self::loadAktsii($city, $page)
-					: self::loadModeli($city, $page);
+			$page = min($page, $pages);
+			[$slots, $ranges] = self::windowFor($page, $totalModeli, $totalAktsii);
+			$data = [self::FEED_MODELI => $modeli, self::FEED_AKTSII => $aktsii];
+			foreach ($ranges as $key => $range) {
+				if ($loaded[$key] !== $range) {
+					$data[$key] = $key === self::FEED_MODELI
+						? self::loadModeli($city, $range[0], $range[1])
+						: self::loadAktsii($city, $range[0], $range[1]);
+				}
 			}
 
-			$result['total'] = $data['total'];
+			$cards = [];
+			if (isset($ranges[self::FEED_MODELI])) {
+				$cards[self::FEED_MODELI] = self::renderModeli($data[self::FEED_MODELI]['items']);
+			}
+			if (isset($ranges[self::FEED_AKTSII])) {
+				$cards[self::FEED_AKTSII] = self::renderAktsii($data[self::FEED_AKTSII]['items']);
+			}
+			foreach ($slots as [$key, $index]) {
+				$html = $cards[$key][$index - $ranges[$key][0]] ?? '';
+				if ($html !== '') {
+					$result['cards'][] = [$key, $html];
+				}
+			}
+
+			$result['total'] = $total;
 			$result['page'] = $page;
-			$result['pages'] = max(1, (int) ceil($data['total'] / self::LIMIT));
-			$result['html'] = $feed === self::FEED_AKTSII
-				? self::renderAktsii($data['items'])
-				: self::renderModeli($data['items']);
+			$result['pages'] = $pages;
 		} catch (\Throwable $e) {
 			$result['error'] = true;
 		}
@@ -128,9 +179,8 @@ final class VglHomeFeed
 
 	public static function render(): string
 	{
-		$feed = self::currentFeed();
 		$feedData = self::build();
-		$tabs = self::tabs();
+		$labels = self::labels();
 		$city = $feedData['city'];
 
 		ob_start();
@@ -138,26 +188,32 @@ final class VglHomeFeed
 		<section class="search__catalog home-feed" id="<?php echo self::ANCHOR; ?>">
 			<div class="container">
 				<h2 class="home-feed__title">Новые предложения</h2>
-				<nav class="home-feed__tabs" aria-label="Раздел новых предложений">
-					<?php foreach ($tabs as $key => $label) : ?>
-						<a class="home-feed__tab<?php echo $key === $feed ? ' is-active' : ''; ?>"
-							href="<?php echo htmlspecialchars(self::url($key), ENT_QUOTES, 'UTF-8'); ?>"
-							<?php echo $key === $feed ? 'aria-current="page"' : ''; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></a>
-					<?php endforeach; ?>
-				</nav>
 				<?php if ($city !== '') : ?>
 					<p class="home-feed__city">Показаны предложения в городе: <strong><?php echo htmlspecialchars($city, ENT_QUOTES, 'UTF-8'); ?></strong></p>
 				<?php endif; ?>
 				<?php if ($feedData['error']) : ?>
 					<div class="alert alert-warning">Не удалось загрузить предложения. Попробуйте обновить страницу.</div>
-				<?php elseif ($feedData['html'] === '') : ?>
-					<div class="alert alert-warning"><?php echo $feed === self::FEED_AKTSII ? 'Акции не найдены.' : 'Поиск моделей не найден.'; ?></div>
+				<?php elseif ($feedData['cards'] === []) : ?>
+					<div class="alert alert-warning">Предложения не найдены.</div>
 				<?php else : ?>
-					<div class="category jsn_stockList<?php echo $feed === self::FEED_MODELI ? ' search-catalog' : ''; ?> home-feed__list">
-						<div class="category__body">
-							<div class="category__masters">
-								<?php echo $feedData['html']; ?>
-								<?php echo self::renderPager($feed, $feedData['page'], $feedData['pages']); ?>
+					<div class="home-feed__list">
+						<?php foreach ($feedData['cards'] as [$key, $cardHtml]) : ?>
+							<div class="home-feed__item home-feed__item--<?php echo $key; ?>">
+								<span class="home-feed__label"><?php echo htmlspecialchars($labels[$key], ENT_QUOTES, 'UTF-8'); ?></span>
+								<div class="category jsn_stockList<?php echo $key === self::FEED_MODELI ? ' search-catalog' : ''; ?>">
+									<div class="category__body">
+										<div class="category__masters">
+											<?php echo $cardHtml; ?>
+										</div>
+									</div>
+								</div>
+							</div>
+						<?php endforeach; ?>
+						<div class="category home-feed__pagination">
+							<div class="category__body">
+								<div class="category__masters">
+									<?php echo self::renderPager($feedData['page'], $feedData['pages']); ?>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -169,15 +225,15 @@ final class VglHomeFeed
 		return (string) ob_get_clean();
 	}
 
-	private static function renderPager(string $feed, int $page, int $pages): string
+	private static function renderPager(int $page, int $pages): string
 	{
 		if ($pages < 2) {
 			return '';
 		}
 
-		$link = static function (int $target, string $label, string $inner) use ($feed): string {
+		$link = static function (int $target, string $label, string $inner): string {
 			return '<li class=""><a title="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '" href="'
-				. htmlspecialchars(self::url($feed, $target), ENT_QUOTES, 'UTF-8')
+				. htmlspecialchars(self::url($target), ENT_QUOTES, 'UTF-8')
 				. '" class="pagenav" aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">' . $inner . '</a></li>';
 		};
 		$disabled = static function (string $inner): string {
@@ -199,7 +255,7 @@ final class VglHomeFeed
 				$html .= '<li class="active hidden-phone" style="color: #F9CE54; font-weight: 900"><a class="active" aria-current="true" aria-label="Страница ' . $i . '">' . $i . '</a></li>';
 			} else {
 				$html .= '<li class="hidden-phone"><a title="' . $i . '" href="'
-					. htmlspecialchars(self::url($feed, $i), ENT_QUOTES, 'UTF-8')
+					. htmlspecialchars(self::url($i), ENT_QUOTES, 'UTF-8')
 					. '" class="pagenav" aria-label="Перейти на ' . $i . '">' . $i . '</a></li>';
 			}
 		}
@@ -218,7 +274,7 @@ final class VglHomeFeed
 	 *
 	 * @return array{items: list<object>, total: int}
 	 */
-	private static function loadModeli(string $city, int $page): array
+	private static function loadModeli(string $city, int $offset, int $limit): array
 	{
 		$app = Factory::getApplication();
 		$config = ['ignore_request' => true];
@@ -237,8 +293,8 @@ final class VglHomeFeed
 		$model->setState('avail_date', '');
 		$model->setState('list.ordering', 'newest');
 		$model->setState('list.direction', 'DESC');
-		$model->setState('list.limit', self::LIMIT);
-		$model->setState('list.start', ($page - 1) * self::LIMIT);
+		$model->setState('list.limit', $limit);
+		$model->setState('list.start', $offset);
 
 		return [
 			'items' => array_values((array) $model->getItems()),
@@ -246,10 +302,11 @@ final class VglHomeFeed
 		];
 	}
 
-	private static function renderModeli(array $items): string
+	/** @return list<string> one HTML string per card */
+	private static function renderModeli(array $items): array
 	{
 		if ($items === []) {
-			return '';
+			return [];
 		}
 
 		$userIds = array_values(array_unique(array_map(static function ($item): int {
@@ -267,12 +324,7 @@ final class VglHomeFeed
 			return (string) ob_get_clean();
 		};
 
-		$html = '';
-		foreach ($items as $item) {
-			$html .= $render($item);
-		}
-
-		return $html;
+		return array_map($render, array_values($items));
 	}
 
 	/**
@@ -280,7 +332,7 @@ final class VglHomeFeed
 	 *
 	 * @return array{items: list<array<string, mixed>>, total: int}
 	 */
-	private static function loadAktsii(string $city, int $page): array
+	private static function loadAktsii(string $city, int $offset, int $limit): array
 	{
 		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$fieldIds = self::userFieldIds($db, ['vyberite_spetsialnos', 'sity']);
@@ -343,18 +395,17 @@ final class VglHomeFeed
 
 			return $cols;
 		};
-		$offset = ($page - 1) * self::LIMIT;
 
 		try {
 			$listQuery = $apply($from($db->getQuery(true)->select($select(true))))
 				->order($db->quoteName('s.id') . ' DESC')
-				->setLimit(self::LIMIT, $offset);
+				->setLimit($limit, $offset);
 			$db->setQuery($listQuery);
 			$rows = $db->loadAssocList() ?: [];
 		} catch (\Throwable $e) {
 			$listQuery = $apply($from($db->getQuery(true)->select($select(false))))
 				->order($db->quoteName('s.id') . ' DESC')
-				->setLimit(self::LIMIT, $offset);
+				->setLimit($limit, $offset);
 			$db->setQuery($listQuery);
 			$rows = $db->loadAssocList() ?: [];
 		}
@@ -362,10 +413,11 @@ final class VglHomeFeed
 		return ['items' => $rows, 'total' => $total];
 	}
 
-	private static function renderAktsii(array $rows): string
+	/** @return list<string> one HTML string per card */
+	private static function renderAktsii(array $rows): array
 	{
 		if ($rows === []) {
-			return '';
+			return [];
 		}
 
 		if (!class_exists(\Viglin\Component\Poisk\Site\Helper\PoiskHelper::class)) {
@@ -398,7 +450,7 @@ final class VglHomeFeed
 		$view->allTags = self::titlesById($db, '#__tags', $tagIds, ['published' => 1]);
 		$view->categoryByUser = $categoryByUser;
 
-		$html = '';
+		$html = [];
 		$styleSeen = false;
 		foreach ($rows as $row) {
 			$userId = (int) $row['user_id'];
@@ -421,20 +473,88 @@ final class VglHomeFeed
 			$fields = $fieldsByUser[$userId] ?? $fieldsByUser[(string) $userId] ?? [];
 
 			$card = $view->capture($file, ['item' => $item, 'fields' => $fields]);
-			// The card template carries a large shared <style> block; keep it once.
-			$card = (string) preg_replace_callback('#<style\b[^>]*>.*?</style>#s', static function (array $m) use (&$styleSeen): string {
+			// The card template carries a large shared <style> block; keep it once and limit it
+			// to promotion cards, because model-search cards share the same page and class names.
+			$card = (string) preg_replace_callback('#<style\b([^>]*)>(.*?)</style>#s', static function (array $m) use (&$styleSeen): string {
 				if (!$styleSeen) {
 					$styleSeen = true;
 
-					return $m[0];
+					return '<style' . $m[1] . '>' . self::scopeCss($m[2], ':where(.home-feed__item--' . self::FEED_AKTSII . ')') . '</style>';
 				}
 
 				return '';
 			}, $card);
-			$html .= $card;
+			$html[] = $card;
 		}
 
 		return $html;
+	}
+
+	/**
+	 * Prefixes every selector with $scope. A :where() scope adds no specificity,
+	 * so the rules keep winning and losing against other stylesheets exactly as before.
+	 */
+	private static function scopeCss(string $css, string $scope): string
+	{
+		$css = (string) preg_replace('#/\*.*?\*/#s', '', $css);
+		$out = '';
+		$length = strlen($css);
+		$pos = 0;
+
+		while ($pos < $length) {
+			$open = strpos($css, '{', $pos);
+			if ($open === false) {
+				break;
+			}
+
+			$depth = 1;
+			$close = $open + 1;
+			while ($close < $length && $depth > 0) {
+				if ($css[$close] === '{') {
+					$depth++;
+				} elseif ($css[$close] === '}') {
+					$depth--;
+				}
+				$close++;
+			}
+
+			$prelude = trim(substr($css, $pos, $open - $pos));
+			$body = substr($css, $open + 1, $close - $open - 2);
+			$pos = $close;
+
+			if ($prelude === '') {
+				continue;
+			}
+			if ($prelude[0] === '@') {
+				$nested = preg_match('/^@(media|supports)\b/i', $prelude) === 1;
+				$out .= $prelude . '{' . ($nested ? self::scopeCss($body, $scope) : $body) . '}';
+				continue;
+			}
+
+			$selectors = [];
+			$buffer = '';
+			$parens = 0;
+			foreach (str_split($prelude) as $char) {
+				if ($char === '(') {
+					$parens++;
+				} elseif ($char === ')') {
+					$parens--;
+				}
+				if ($char === ',' && $parens === 0) {
+					$selectors[] = trim($buffer);
+					$buffer = '';
+					continue;
+				}
+				$buffer .= $char;
+			}
+			$selectors[] = trim($buffer);
+
+			$out .= implode(',', array_map(static function (string $selector) use ($scope): string {
+				return $scope . ' ' . $selector;
+			}, array_filter($selectors, 'strlen'))) . '{' . $body . '}';
+		}
+
+		return $out;
 	}
 
 	/**
