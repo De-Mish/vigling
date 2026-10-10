@@ -141,6 +141,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
+				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 				<?php if ($about !== '') : ?>
 					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($about, 0, 120)) . (mb_strlen($about) > 120 ? '…' : ''); ?></span>
 				<?php endif; ?>
@@ -154,7 +155,6 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 				$listExtraFields = $fields;
 				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
 				?>
-				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 			</div>
 			
 			<?php if (!empty($stocks)) : ?>
