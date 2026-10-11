@@ -165,7 +165,7 @@ $servicePriceLabel = $servicePrice > 0 ? number_format($servicePrice, 0, '.', ' 
 				include JPATH_ROOT . '/templates/ryba/html/list-item-extra-attrs.php';
 				?>
 				<?php if ($servicePriceLabel !== '') : ?>
-					<div class="service-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></div>
+					<span class="card-price"><?php echo htmlspecialchars($servicePriceLabel, ENT_QUOTES, 'UTF-8'); ?></span>
 				<?php endif; ?>
 			</div>
 			
