@@ -1757,3 +1757,140 @@ html body #easyprofile .lk-favorites-list .lk-fav-comment-wrap {
     width: calc(100% - 175px);
   }
 }
+
+/* Master profile: courses and model search cards, same card as promotions. */
+html body .master__services .stockList__item.stockList__item.courseList__item {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 12px 0 !important;
+  padding: 16px 16px 62px !important;
+  border-radius: 16px;
+  background: #fff7da;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+html body .master__services .courseList__item > .stockList__item-coll {
+  float: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left;
+}
+html body .master__services .courseList__item .stock__badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 100%;
+  margin-bottom: 8px !important;
+}
+html body .master__services .courseList__item .course__coll0 {
+  flex: 0 0 100%;
+  width: 100% !important;
+  margin: 0 0 10px !important;
+}
+html body .master__services .courseList__item .course__coll0 img {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 180px;
+  aspect-ratio: auto;
+  object-fit: cover;
+  border-radius: 12px !important;
+}
+html body .master__services .courseList__item .stock__coll1 {
+  flex: 0 0 100%;
+  font-family: inherit;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+html body .master__services .courseList__item .stock__coll1::after {
+  display: none;
+}
+html body .master__services .courseList__item .course__coll1b {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 24px;
+  margin-top: 8px !important;
+  padding: 0 10px !important;
+  border-radius: 12px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 600;
+}
+html body .master__services .courseList__item .stock__coll2 {
+  flex: 0 0 100%;
+  margin-top: 6px !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+  overflow-wrap: anywhere;
+}
+html body .master__services .courseList__item .stock__coll4 {
+  flex: 0 0 100%;
+  margin-top: 8px !important;
+  font-family: inherit;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .master__services .courseList__item .stock__coll4 i {
+  font-style: normal;
+}
+html body .master__services .courseList__item .stock__coll5 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin: 8px 14px 0 0 !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .courseList__item .stock__coll5::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body .master__services .courseList__item .course__seats {
+  flex: 0 1 auto;
+  margin-top: 8px !important;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #c2410c;
+}
+html body .master__services .courseList__item .course__seats.is-full {
+  color: #9b1c1c;
+}
+html body .master__services .courseList__item .course__coll7 {
+  flex: 0 0 100%;
+  margin-top: 6px !important;
+  font-size: 12px;
+  line-height: 16px;
+  color: #8a8f98;
+}
+html body .master__services .courseList__item > .clearFloat,
+html body .master__services .courseList__item > br {
+  display: none !important;
+}
+@media (min-width: 769px) {
+  html body .master__services .courseList__item .course__coll0 img {
+    width: 240px !important;
+    max-width: 100% !important;
+    height: 160px;
+  }
+}
