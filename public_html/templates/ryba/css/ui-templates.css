@@ -1375,3 +1375,300 @@ html body #content #jsn_notify .push-notify-hint strong {
     margin: 0 !important;
   }
 }
+
+/* Profile editing, part 2: schedule, services, promotions, courses, model search, notifications. */
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit .schedule-day-list .schedule-day-row {
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: #f4f5f7;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-list .schedule-day-row.is-active {
+    background: #fff7da;
+    box-shadow: 0 0 0 1.5px #f7cc53 inset;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-label {
+    font-size: 16px;
+    font-weight: 800;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .schedule-time-label > span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-list select.schedule-time-select {
+    width: 100%;
+    height: 44px;
+    font-size: 15px;
+  }
+
+  html body #content #easyprofile.profile-edit .controls > fieldset[id$="_servis"],
+  html body #content #easyprofile.profile-edit .controls > fieldset#jform_vyberite_usl {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  html body #content #easyprofile.profile-edit fieldset[id$="_servis"] > label.type_master_open,
+  html body #content #easyprofile.profile-edit fieldset#jform_vyberite_usl > label.type_master_open {
+    font-size: 19px;
+    font-weight: 800;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .type_master_open .flex_wrap {
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  html body #content #easyprofile.profile-edit .service_list .service__item {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 10px;
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 14px !important;
+    padding: 14px !important;
+    border: 0 !important;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > .time,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .time2,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .stock_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .old_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_duration,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_duration {
+    grid-column: auto;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px;
+    width: auto !important;
+    font-size: 14px;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span > label {
+    display: block !important;
+    flex: 0 0 100%;
+    width: 100% !important;
+    margin: 0 !important;
+    float: none !important;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+    text-align: left !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span > span {
+    flex: 0 0 100%;
+    width: 100% !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item select,
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="number"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="text"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="date"],
+  html body #content #easyprofile.profile-edit .service_list .service__item textarea {
+    flex: 1 1 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item select,
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="number"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="text"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="date"] {
+    height: 48px !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > select.service-select,
+  html body #content #easyprofile.profile-edit .service_list .service__item > select.stock-service-select {
+    font-weight: 700;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > .price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .stock_price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_price input {
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item .btn-remove-service,
+  html body #content #easyprofile.profile-edit .service_list .service__item .stock-remove {
+    justify-self: start;
+    height: 40px;
+    padding: 0 18px !important;
+    border: 1.5px solid #e5484d !important;
+    border-radius: 20px;
+    background: #fff !important;
+    color: #e5484d !important;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  html body #content #easyprofile.profile-edit .btn-add-service.btn-add-service {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    height: 46px;
+    margin: 4px 0 18px;
+    padding: 0 20px;
+    border-radius: 23px;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-notify-subnav {
+    gap: 8px;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-subnav__btn {
+    min-height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 18px;
+    background: #eef0f3;
+    color: #5d636b;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-subnav__btn.is-active {
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-settings,
+  html body #content #easyprofile.profile-edit .lk-notify-panel,
+  html body #content #easyprofile.profile-edit .lk-notify-grid-wrap {
+    width: 100%;
+    overflow: visible;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid,
+  html body #content #easyprofile.profile-edit .lk-notify-grid tbody {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid thead {
+    display: none;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    margin: 0 0 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid th[scope="row"] {
+    display: block;
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin: 0 0 4px;
+    padding: 0;
+    border: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td {
+    display: contents;
+    border: 0;
+    text-align: left;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:not(:has(select))::before {
+    align-self: center;
+    padding: 12px 0;
+    border-top: 1px solid #eef0f3;
+    font-size: 15px;
+    font-weight: 600;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(2):not(:has(select))::before {
+    content: "Запись";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(3):not(:has(select))::before {
+    content: "Перенос";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(4):not(:has(select))::before {
+    content: "Отмена";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"] {
+    position: relative;
+    align-self: center;
+    justify-self: end;
+    width: 46px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    background: #d5d9de !important;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: background .15s;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    transition: transform .15s;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:checked {
+    background: #f7b928 !important;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:checked::after {
+    transform: translateX(18px);
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:focus-visible {
+    outline: 2px solid #111;
+    outline-offset: 2px;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:has(select) {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 12px 0 0;
+    border: 0;
+    border-top: 1px solid #eef0f3;
+    text-align: left;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:has(select)::before {
+    content: "Напоминание о начале записи";
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-remind {
+    display: block;
+    width: 100%;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-remind select {
+    height: 46px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+}
