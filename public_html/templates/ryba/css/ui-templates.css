@@ -149,3 +149,111 @@ html body .category__masters-sidebar .chosen-container-multi .chosen-choices {
 html body .category__masters-sidebar .chosen-container-multi .chosen-choices li.search-field input[type="text"] {
   margin: 2px 0;
 }
+
+/* "Перенести" buttons (client and master cabinets): base colour #e3e1db, shadow untouched. */
+html body .btn.btn.btn-xs.btn-warning.reschedule-open,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:hover,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:focus,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:active {
+  background-color: #e3e1db !important;
+  background-image: none !important;
+}
+
+/* "Отменить" buttons: base colour #ff0036, same shadow as "Перенести". */
+html body .btn.btn.btn-xs.btn-danger,
+html body .btn.btn.btn-xs.btn-danger:hover,
+html body .btn.btn.btn-xs.btn-danger:focus,
+html body .btn.btn.btn-xs.btn-danger:active {
+  background-color: #ff0036 !important;
+  background-image: none !important;
+}
+@media (max-width: 768px) {
+  html body .btn.btn.btn-xs.btn-danger {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 2px 0 #D49A10, 0 15px 25px -8px rgba(0, 0, 0, .42) !important;
+  }
+}
+
+/* Master profile: promotions / courses / model search cards.
+   Full width, "+" button in the lower right corner of the card. */
+html body .master__services .stockList {
+  margin-right: 0;
+}
+html body .master__services .stockList__item.stockList__item.courseList__item {
+  padding-bottom: 62px !important;
+}
+html body .master__services .courseList__item .btn_add-master.plus-course.plus-course {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: auto;
+  align-self: auto;
+  position: absolute;
+  top: auto;
+  left: auto;
+  right: 18px;
+  bottom: 18px;
+  margin: 0 !important;
+}
+html body .master__services .stockList__item:not(.courseList__item) {
+  padding-bottom: 52px;
+}
+html body .master__services .stockList__item:not(.courseList__item) .btn_add-master.plus-stock {
+  top: auto;
+  right: 0;
+  bottom: 8px;
+}
+@media (max-width: 768px) {
+  html body .master__services .master__offer-box {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    border-radius: 0 !important;
+  }
+  html body .master__services .courseList__item .btn_add-master.plus-course.plus-course {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+/* Master profile: working hours rows get the same pitch in every profile and viewport. */
+html body .master__about-time .category__content-info-list li span {
+  line-height: 17px;
+}
+html body .master__about-time .category__content-info-list li span:first-child {
+  width: auto;
+}
+
+/* Specialist filter column (and everything under its title) 1px higher. */
+html body .category__masters-sidebar {
+  margin-top: -1px;
+}
+@media (max-width: 1020px) {
+  html body .category__masters-sidebar {
+    margin-top: 29px;
+  }
+}
+
+/* Mobile and installed-app cards: the avatar / media image is centred on the
+   same vertical axis as the «Записаться» pill (pill: left 8px + 85px wide,
+   axis at 50.5px). The text column moves right together with the avatar. */
+@media (max-width: 768px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__item-img {
+    left: 8px !important;
+  }
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-left: 110px !important;
+  }
+  html body .category.jsn_list .category__item.category__item {
+    padding-left: 14.5px !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+  }
+  html body .category.jsn_stockList.search-catalog .category__item.category__item,
+  html body .category.jsn_stockList.course-catalog .category__item.category__item {
+    padding-left: 0.5px !important;
+  }
+}
+
+/* Specialisations list on list cards: desktop only. */
+@media (max-width: 768px) {
+  html body .category__content-info .attr_specialties {
+    display: none !important;
+  }
+}
