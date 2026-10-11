@@ -1193,3 +1193,185 @@ html body #content #jsn_notify .push-notify-hint strong {
   font-weight: 400;
   color: #6b7077;
 }
+
+/* Profile editing, part 1: fields, specialties, password, action bar (mobile and installed app). */
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label,
+  html body #content #easyprofile.profile-edit .control-group > .control-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label {
+    display: block;
+    margin: 0 0 6px;
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label .star {
+    color: #e5484d;
+  }
+  html body #content #easyprofile.profile-edit .controls input[type="text"],
+  html body #content #easyprofile.profile-edit .controls input[type="email"],
+  html body #content #easyprofile.profile-edit .controls input[type="password"],
+  html body #content #easyprofile.profile-edit .controls input[type="number"],
+  html body #content #easyprofile.profile-edit .controls input[type="tel"],
+  html body #content #easyprofile.profile-edit .controls input[type="date"],
+  html body #content #easyprofile.profile-edit .controls select {
+    box-sizing: border-box;
+    height: 48px;
+    padding: 0 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background-color: #fff;
+    color: #111;
+    font-size: 16px;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .controls textarea {
+    box-sizing: border-box;
+    min-height: 88px;
+    padding: 12px 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background-color: #fff;
+    color: #111;
+    font-size: 16px;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .controls input:focus,
+  html body #content #easyprofile.profile-edit .controls select:focus,
+  html body #content #easyprofile.profile-edit .controls textarea:focus {
+    outline: 0;
+    border-color: #f7b928;
+    box-shadow: 0 0 0 3px rgba(247, 185, 40, .25);
+  }
+  html body #content #easyprofile.profile-edit .phone-public-toggle {
+    color: #5d636b;
+    font-size: 14px;
+  }
+
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    flex: 0 0 auto !important;
+    width: auto;
+    max-width: 100% !important;
+    height: 40px;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    border-radius: 20px;
+    background: #eef0f3;
+    color: #3d434a;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1 !important;
+    cursor: pointer;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox > input[type="checkbox"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    pointer-events: none;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox:has(input:checked) {
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox:has(input:focus-visible) {
+    outline: 2px solid #111;
+    outline-offset: 2px;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-login-hint {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff7da;
+    color: #3d434a;
+    font-size: 14px;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter {
+    display: block;
+    width: 100%;
+    height: 8px;
+    margin: 8px 0 0;
+    border: 0;
+    border-radius: 4px;
+    background: #eef0f3;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-bar {
+    height: 8px;
+    border: 0;
+    border-radius: 4px;
+    background: #eef0f3;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-optimum-value {
+    border-radius: 4px;
+    background: #2fa84f;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-suboptimum-value {
+    border-radius: 4px;
+    background: #f7b928;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-even-less-good-value {
+    border-radius: 4px;
+    background: #e5484d;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-group {
+    display: flex;
+    gap: 8px;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-group > input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-password-toggle {
+    flex: 0 0 auto;
+    height: 48px;
+    padding: 0 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background: #fff;
+    color: #3d434a;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer {
+    position: fixed !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex !important;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 !important;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    border: 0;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -6px 18px -8px rgba(0, 0, 0, .25);
+  }
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer > button {
+    flex: 1 1 0;
+    height: 48px;
+    margin: 0 !important;
+  }
+}
