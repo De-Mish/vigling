@@ -1038,3 +1038,158 @@ html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appoi
   width:100% !important;
 }
 
+/* Cabinet lists (services, promotions, courses, model search): site card look. */
+html body #content .view_profile-tabs .pricesValue > label.checkbox,
+html body #content .view_profile-tabs .stock_pricesValue > label.checkbox,
+html body #content .view_profile-tabs .coursesValue > label.checkbox,
+html body #content .view_profile-tabs .searchesValue > label.checkbox {
+  display: block;
+  margin: 0 0 14px;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body #content .view_profile-tabs .service__item--readonly {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 10px 0 0 !important;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: #5d636b;
+}
+html body #content .view_profile-tabs .stock_pricesValue .service__item--readonly,
+html body #content .view_profile-tabs .coursesValue .service__item--readonly,
+html body #content .view_profile-tabs .searchesValue .service__item--readonly {
+  background: #fff7da;
+  box-shadow: none;
+}
+html body #content .view_profile-tabs .service__item--readonly > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  float: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font: inherit;
+  color: inherit;
+}
+html body #content .view_profile-tabs .service__item--readonly > span > label {
+  margin: 0 !important;
+  font-weight: 400;
+  color: #8a8f98;
+}
+html body #content .view_profile-tabs .service__item--readonly > .price {
+  order: 1;
+  flex: 0 0 100%;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #111;
+}
+html body #content .view_profile-tabs .service__item--readonly > .price > label,
+html body #content .view_profile-tabs .service__item--readonly > .course-description > label {
+  display: none;
+}
+html body #content .view_profile-tabs .service__item--readonly > .service-name {
+  order: 0;
+  flex: 0 0 100%;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #111;
+}
+html body #content .view_profile-tabs .stock_pricesValue .service__item--readonly > .service-name {
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 800;
+}
+html body #content .view_profile-tabs .coursesValue .service__item--readonly > .service-name,
+html body #content .view_profile-tabs .searchesValue .service__item--readonly > .service-name {
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 10px !important;
+  border-radius: 11px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 700;
+}
+html body #content .view_profile-tabs .service__item--readonly > .course-description {
+  order: 0;
+  flex: 0 0 100%;
+}
+html body #content .view_profile-tabs .service__item--readonly > .time,
+html body #content .view_profile-tabs .service__item--readonly > .time2,
+html body #content .view_profile-tabs .service__item--readonly > .course-mode {
+  order: 2;
+}
+html body #content .view_profile-tabs .service__item--readonly > .time::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+}
+html body #content .view_profile-tabs .stocks-subnav {
+  display: flex;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 3px;
+  border-radius: 20px;
+  background: #f1f2f4;
+}
+html body #content .view_profile-tabs .stocks-subnav__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+html body #content .view_profile-tabs .stocks-subnav__btn.is-active {
+  background: #f7cc53;
+  color: #111;
+}
+
+/* Notifications (cabinet): one card, grey hint. */
+html body #content #jsn_notify .push-notify-block {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+}
+html body #content #jsn_notify .push-notify-row-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+}
+html body #content #jsn_notify .push-notify-hint {
+  margin: 8px 0 0;
+}
+html body #content #jsn_notify .push-notify-hint strong {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  color: #6b7077;
+}

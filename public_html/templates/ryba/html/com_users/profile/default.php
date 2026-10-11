@@ -792,7 +792,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName((string) ($cat['title'] ?? ''), (string) ($item['name'] ?? ''))); ?></span>
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
-														<span class="price"><label>Стоимость:</label><?php echo (int) ($item['price'] ?? 0); ?>&nbsp;RUB</span>
+														<span class="price"><label>Стоимость:</label><?php echo number_format((int) ($item['price'] ?? 0), 0, '', ' '); ?>&nbsp;₽</span>
 														<?php
 														$serviceRecommendation = trim((string) ($item['recommendation'] ?? ''));
 														include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
@@ -830,7 +830,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName((string) ($cat['title'] ?? ''), (string) ($item['name'] ?? ''))); ?></span>
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
-														<span class="price"><label>Стоимость:</label><?php echo (int) ($item['price'] ?? 0); ?>&nbsp;RUB</span>
+														<span class="price"><label>Стоимость:</label><?php echo number_format((int) ($item['price'] ?? 0), 0, '', ' '); ?>&nbsp;₽</span>
 														<?php
 														$serviceRecommendation = trim((string) ($item['recommendation'] ?? ''));
 														include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php';
@@ -880,8 +880,8 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 													<div class="stocks-archive__name"><?php echo $this->escape($archivedName); ?></div>
 													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedItem['duration'] ?? 0); ?> мин.</div>
 													<div class="stocks-archive__row"><label>Перерыв:</label> <?php echo (int) ($archivedItem['pause_min'] ?? 0); ?> мин.</div>
-													<div class="stocks-archive__row"><label>Акционная стоимость:</label> <?php echo (int) ($archivedItem['price'] ?? 0); ?> RUB</div>
-													<div class="stocks-archive__row"><label>Цена без скидки:</label> <?php echo (int) ($archivedItem['old_price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Акционная стоимость:</label> <?php echo number_format((int) ($archivedItem['price'] ?? 0), 0, '', ' '); ?> ₽</div>
+													<div class="stocks-archive__row"><label>Цена без скидки:</label> <?php echo number_format((int) ($archivedItem['old_price'] ?? 0), 0, '', ' '); ?> ₽</div>
 													<?php if (trim((string) ($archivedItem['about_stock'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Условия акции:</label> <?php echo $this->escape(trim((string) $archivedItem['about_stock'])); ?></div>
 													<?php endif; ?>
@@ -942,7 +942,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<?php if ($courseDescription !== '') : ?>
 														<span class="course-description"><label>Описание:</label><?php echo $this->escape($courseDescription); ?></span>
 														<?php endif; ?>
-														<span class="price"><label>Стоимость:</label><?php echo $coursePrice; ?>&nbsp;RUB</span>
+														<span class="price"><label>Стоимость:</label><?php echo number_format((int) $coursePrice, 0, '', ' '); ?>&nbsp;₽</span>
 														<span class="time"><label>Время:</label><?php echo $courseDurationMin; ?>&nbsp;мин.</span>
 														<span class="time2"><label>Лимит мест:</label><?php echo max(1, $courseCapacity); ?></span>
 														<?php if ($courseBookingMode !== 'fixed') : ?>
@@ -996,7 +996,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedCourse['description'])); ?></div>
 													<?php endif; ?>
-													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo (int) ($archivedCourse['price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo number_format((int) ($archivedCourse['price'] ?? 0), 0, '', ' '); ?> ₽</div>
 													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedCourse['duration_min'] ?? 0); ?> мин.</div>
 													<div class="stocks-archive__row"><label>Лимит мест:</label> <?php echo $archivedCapacity; ?></div>
 													<div class="stocks-archive__row"><label>Записано:</label> <?php echo $archivedBooked; ?></div>
@@ -1057,7 +1057,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<?php if ($searchDescription !== '') : ?>
 														<span class="course-description"><label>Описание:</label><?php echo $this->escape($searchDescription); ?></span>
 														<?php endif; ?>
-														<span class="price"><label>Стоимость:</label><?php echo $searchPrice; ?>&nbsp;RUB</span>
+														<span class="price"><label>Стоимость:</label><?php echo number_format((int) $searchPrice, 0, '', ' '); ?>&nbsp;₽</span>
 														<span class="time"><label>Время:</label><?php echo $searchDurationMin; ?>&nbsp;мин.</span>
 														<span class="time2"><label>Лимит мест:</label><?php echo max(1, $searchCapacity); ?></span>
 														<span class="course-mode"><label>Режим:</label><?php echo $this->escape($searchBookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'); ?></span>
@@ -1108,7 +1108,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 													<?php if (trim((string) ($archivedSearch['description'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedSearch['description'])); ?></div>
 													<?php endif; ?>
-													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo (int) ($archivedSearch['price'] ?? 0); ?> RUB</div>
+													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo number_format((int) ($archivedSearch['price'] ?? 0), 0, '', ' '); ?> ₽</div>
 													<div class="stocks-archive__row"><label>Время:</label> <?php echo (int) ($archivedSearch['duration_min'] ?? 0); ?> мин.</div>
 													<div class="stocks-archive__row"><label>Лимит мест:</label> <?php echo $archivedCapacity; ?></div>
 													<div class="stocks-archive__row"><label>Записано:</label> <?php echo $archivedBooked; ?></div>
