@@ -550,7 +550,7 @@ html body .masters__big-info-attr .attr_left2 i::before {
 html body .masters__big-info-attr .attr_left1 {
   display: block;
   margin: 0 0 8px !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   line-height: 18px !important;
   font-weight: 700 !important;
   color: #111 !important;
@@ -1893,4 +1893,13 @@ html body .master__services .courseList__item > br {
     max-width: 100% !important;
     height: 160px;
   }
+}
+
+/* Profile: «Отзывы» block 2px lower, its heading and «О мастере» 2px smaller. */
+html body .review__master.review__master {
+  border-top: 2px solid transparent;
+}
+html body .review__master h2,
+html body .master__about h2 {
+  font-size: 22px;
 }
