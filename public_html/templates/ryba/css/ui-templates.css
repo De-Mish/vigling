@@ -1672,3 +1672,60 @@ html body #content #jsn_notify .push-notify-hint strong {
     font-size: 15px;
   }
 }
+
+/* Filters: the high-density chosen sprite no longer shows under the yellow cross. */
+html body .filter .chosen-container-single .chosen-single abbr.search-choice-close,
+html body .filter .chosen-container-multi .chosen-choices li.search-choice .search-choice-close,
+html body .category__masters-sidebar .chosen-container-single .chosen-single abbr.search-choice-close,
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices li.search-choice .search-choice-close {
+  background-image: none !important;
+}
+
+/* Filters: 3px between fields. */
+html body .category__masters-sidebar .masters-sidebar__body > .clearable {
+  margin-bottom: 3px;
+}
+
+/* Filters: date and time fields, 2px apart, each with a yellow clear cross. */
+html body .category__masters-sidebar .vg-avail-field {
+  position: relative;
+  display: block;
+}
+html body .category__masters-sidebar .vg-avail-field + .vg-avail-field {
+  margin-top: 2px;
+}
+html body .category__masters-sidebar .vg-avail-field > input.filed__master {
+  padding-right: 24px;
+}
+html body .category__masters-sidebar .vg-avail-clear {
+  position: absolute;
+  top: 6px;
+  right: 3px;
+  display: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+html body .category__masters-sidebar .vg-avail-field.has-value > .vg-avail-clear {
+  display: block;
+}
+html body .category__masters-sidebar .vg-avail-clear::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+html body .category__masters-sidebar .vg-avail-clear::after {
+  content: "×";
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  margin-top: -5px;
+  color: #F9CE54;
+  font-size: 15px;
+  line-height: normal;
+}

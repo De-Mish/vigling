@@ -7,8 +7,14 @@ $vgAvailDay = (string) ($vgAvailDay ?? '');
 $vgAvailTime = (string) ($vgAvailTime ?? '');
 ?>
 <span class="clearable<?php echo $vgAvailHidden ? ' hidden' : ''; ?>" id="<?php echo htmlspecialchars($vgAvailWrapId, ENT_QUOTES, 'UTF-8'); ?>">
-	<input type="text" name="avail_day" class="filed__master vg-avail-day" value="<?php echo htmlspecialchars($vgAvailDay, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Дата" autocomplete="off">
-	<input type="text" name="avail_time" class="filed__master vg-avail-time" value="<?php echo htmlspecialchars($vgAvailTime, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Время" autocomplete="off">
+	<span class="vg-avail-field">
+		<input type="text" name="avail_day" class="filed__master vg-avail-day" value="<?php echo htmlspecialchars($vgAvailDay, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Дата" autocomplete="off">
+		<button type="button" class="vg-avail-clear" aria-label="Очистить дату" tabindex="-1"></button>
+	</span>
+	<span class="vg-avail-field">
+		<input type="text" name="avail_time" class="filed__master vg-avail-time" value="<?php echo htmlspecialchars($vgAvailTime, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Время" autocomplete="off">
+		<button type="button" class="vg-avail-clear" aria-label="Очистить время" tabindex="-1"></button>
+	</span>
 </span>
 <script>
 if (!window.vgAvailWhenFilterBound) {
@@ -58,6 +64,40 @@ if (!window.vgAvailWhenFilterBound) {
 				$input.val(h + ':' + m);
 			}
 		});
+	});
+}
+</script>
+<script>
+if (!window.vgAvailClearBound) {
+	window.vgAvailClearBound = true;
+	document.addEventListener('DOMContentLoaded', function () {
+		var fields = document.querySelectorAll('.vg-avail-field');
+		function sync(field) {
+			var input = field.querySelector('input');
+			field.classList.toggle('has-value', !!(input && input.value));
+		}
+		fields.forEach(function (field) {
+			var input = field.querySelector('input');
+			var btn = field.querySelector('.vg-avail-clear');
+			if (!input || !btn) {
+				return;
+			}
+			btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+			btn.addEventListener('click', function (e) {
+				e.preventDefault();
+				input.value = '';
+				if (window.jQuery) {
+					try { window.jQuery(input).datetimepicker('hide'); } catch (err) {}
+					window.jQuery(input).trigger('change');
+				}
+				sync(field);
+			});
+			['input', 'change', 'blur'].forEach(function (ev) {
+				input.addEventListener(ev, function () { sync(field); });
+			});
+			sync(field);
+		});
+		setInterval(function () { fields.forEach(sync); }, 300);
 	});
 }
 </script>
