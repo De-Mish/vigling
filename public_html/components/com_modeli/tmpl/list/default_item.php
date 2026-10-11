@@ -163,31 +163,28 @@ if ($slotStartUtc !== '') {
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
-				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($searchTitle !== '' ? $searchTitle : 'Поиск моделей', ENT_QUOTES, 'UTF-8'); ?></a>
-				<span class="category_cinfo-spec">Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-				<?php if ($categoryTitle !== '') : ?>
-					<span class="category_cinfo-spec">Категория: <?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span>
-				<?php endif; ?>
+				<div class="card-head">
+					<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($searchTitle !== '' ? $searchTitle : 'Поиск моделей', ENT_QUOTES, 'UTF-8'); ?></a>
+					<span class="card-price"><?php echo htmlspecialchars(number_format((float) $price, 0, '.', ' '), ENT_QUOTES, 'UTF-8'); ?> ₽</span>
+					<?php if ($categoryTitle !== '') : ?>
+						<span class="category_cinfo-chip"><?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span>
+					<?php endif; ?>
+				</div>
 				<?php if ($searchDescription !== '') : ?>
 					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($searchDescription, 0, 150), ENT_QUOTES, 'UTF-8') . (mb_strlen($searchDescription) > 150 ? '…' : ''); ?></span>
 				<?php endif; ?>
+				<span class="card-facts">
+					<span class="vg-meta"><i class="vg-i vg-i--clock" aria-hidden="true"></i><span><?php echo (int) $durationMin; ?> мин</span></span>
+					<span class="vg-meta"><i class="vg-i vg-i--seat" aria-hidden="true"></i><span><?php echo $capacity > 0 ? (int) $capacity : 1; ?> мест</span></span>
+					<span class="vg-meta"><i class="vg-i vg-i--cal" aria-hidden="true"></i><span><?php if ($slotLabel !== '') : ?><span class="modeli-time-utc" data-time-utc="<?php echo htmlspecialchars($slotStartUtc, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($slotLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php else : ?><?php echo $bookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'; ?><?php endif; ?></span></span>
+				</span>
+				<span class="attr_left3 vg-meta"><i class="vg-i vg-i--user" aria-hidden="true"></i><span>Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></span>
+				<?php $listExtraFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-specialties.php'; ?>
 				<?php if ($addr !== '') : ?>
 					<span class="category_cinfo-address"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?></span>
 				<?php endif; ?>
-				<div class="category__content-info-list">
-					<strong style="color:green;">Параметры поиска</strong>
-					<ul>
-						<li><span><?php echo $price; ?> руб.</span></li>
-						<li><div>Длительность: <?php echo $durationMin; ?> мин.</div></li>
-						<li><div>Лимит мест: <?php echo $capacity > 0 ? $capacity : 1; ?></div></li>
-						<li><div>Режим: <?php echo $bookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'; ?></div></li>
-						<?php if ($slotLabel !== '') : ?>
-							<li><div>Дата и время: <span class="modeli-time-utc" data-time-utc="<?php echo htmlspecialchars($slotStartUtc, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($slotLabel, ENT_QUOTES, 'UTF-8'); ?></span></div></li>
-						<?php endif; ?>
-					</ul>
-				</div>
 				<?php if ($homeParts !== []) : ?>
-					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts), ENT_QUOTES, 'UTF-8'); ?></b></span>
+					<span class="attr_left3 vg-meta"><i class="vg-i vg-i--home" aria-hidden="true"></i><span><?php echo htmlspecialchars(implode(', ', $homeParts), ENT_QUOTES, 'UTF-8'); ?></span></span>
 				<?php endif; ?>
 				<?php
 				$listExtraFields = $masterFields;

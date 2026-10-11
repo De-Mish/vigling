@@ -142,6 +142,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 		<div class="category__item-content-left">
 			<div class="category__content-info">
 				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
+				<?php $listExtraFields = $fields; include JPATH_ROOT . '/templates/ryba/html/list-item-specialties.php'; ?>
 				<?php if ($about !== '') : ?>
 					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($about, 0, 120)) . (mb_strlen($about) > 120 ? '…' : ''); ?></span>
 				<?php endif; ?>
@@ -149,7 +150,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 					<span class="category_cinfo-address"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($addr); ?></span>
 				<?php endif; ?>
 				<?php if ($homeParts !== []) : ?>
-					<span class="attr_left3">Форма работы: <b><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></b></span>
+					<span class="attr_left3 vg-meta"><i class="vg-i vg-i--home" aria-hidden="true"></i><span><?php echo htmlspecialchars(implode(', ', $homeParts)); ?></span></span>
 				<?php endif; ?>
 				<?php
 				$listExtraFields = $fields;
@@ -164,18 +165,23 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 						$serviceName = $getFullServiceName($item->id, $stock['cat_id'], $stock['tag_id']);
 						$serviceRecommendation = trim((string) ($stock['recommendation'] ?? ''));
 					?>
-					<li style="padding-left: 0; margin-left: 0;">
-						<span><?php echo htmlspecialchars($serviceName); ?></span>
-						<span> / <?php echo number_format($stock['price'], 0, '.', ' '); ?> руб.</span>
-						<?php if ($stock['stock_count'] > 0) : ?>
-						<div style="font-size:12px; color:#666; margin-top:2px;">
-							Осталось предложений: <?php echo (int)$stock['stock_count']; ?>
-						</div>
+					<?php
+						$stockPrice = (float) ($stock['price'] ?? 0);
+						$stockOld = (float) ($stock['old_price'] ?? 0);
+						$stockDiscount = ($stockOld > $stockPrice && $stockPrice > 0) ? (int) round(($stockOld - $stockPrice) / $stockOld * 100) : 0;
+						$stockDuration = (int) ($stock['duration'] ?? 0);
+					?>
+					<li class="stock-offer" style="padding-left: 0; margin-left: 0;">
+						<span class="stock-offer__name"><?php echo htmlspecialchars($serviceName); ?></span>
+						<span class="stock-offer__price"><span class="card-price"><?php echo number_format($stockPrice, 0, '.', ' '); ?> ₽</span><?php if ($stockDiscount > 0) : ?><s class="card-price-old"><?php echo number_format($stockOld, 0, '.', ' '); ?> ₽</s><span class="card-disc">−<?php echo $stockDiscount; ?>%</span><?php endif; ?></span>
+						<?php if ($stockDuration > 0 || $stock['stock_count'] > 0) : ?>
+						<span class="card-facts">
+							<?php if ($stockDuration > 0) : ?><span class="vg-meta"><i class="vg-i vg-i--clock" aria-hidden="true"></i><span><?php echo $stockDuration; ?> мин</span></span><?php endif; ?>
+							<?php if ($stock['stock_count'] > 0) : ?><span class="vg-meta vg-meta--warn"><span>осталось предложений: <?php echo (int) $stock['stock_count']; ?></span></span><?php endif; ?>
+						</span>
 						<?php endif; ?>
 						<?php if (!empty($stock['comment'])) : ?>
-						<div style="font-size:12px; color:#888; margin-top:2px;">
-							<?php echo htmlspecialchars($stock['comment']); ?>
-						</div>
+						<div class="stock-offer__note"><?php echo htmlspecialchars($stock['comment']); ?></div>
 						<?php endif; ?>
 						<?php include JPATH_ROOT . '/templates/ryba/html/service-recommendation.php'; ?>
 					</li>
