@@ -23,7 +23,7 @@ if ($userIds !== [] && class_exists(PoiskHelper::class)) {
 	try {
 		$fieldsByUser = PoiskHelper::getFieldsForUserIds($userIds, [
 			'sity', 'area', 'street', 'house_number', 'about', 'o_sebe', 'avatar', 'portfolio_field', 'home',
-			'payment_method', 'suitable_for_children',
+			'payment_method', 'suitable_for_children', 'vyberite_spetsialnos',
 		]);
 	} catch (\Throwable $e) {
 		$fieldsByUser = [];
