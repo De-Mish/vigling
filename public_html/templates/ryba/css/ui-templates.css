@@ -251,9 +251,253 @@ html body .category__masters-sidebar {
   }
 }
 
-/* Specialisations list on list cards: desktop only. */
+
+/* ==========================================================================
+   Card hierarchy (all viewports): the name leads, the price is the leader of
+   promotion / course / model cards, details are one icon column + text.
+   ========================================================================== */
+.vg-i {
+  display: inline-block;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  background-color: currentColor;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+}
+.vg-i--home { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); }
+.vg-i--card { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='18' height='12' rx='2.5'/%3E%3Cpath d='M3 10.5h18'/%3E%3C/svg%3E"); }
+.vg-i--kid { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='7' r='3'/%3E%3Cpath d='M6 20c0-3.6 2.7-6 6-6s6 2.4 6 6'/%3E%3C/svg%3E"); }
+.vg-i--user { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.4'/%3E%3Cpath d='M5.5 20c0-3.4 2.9-5.5 6.5-5.5s6.5 2.1 6.5 5.5'/%3E%3C/svg%3E"); }
+.vg-i--clock { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E"); }
+.vg-i--seat { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M3.5 19c0-3 2.4-5 5.5-5s5.5 2 5.5 5'/%3E%3Cpath d='M16 5.5a3 3 0 0 1 0 5.6M18.5 14.4c1.6.7 2.5 2.2 2.5 4.6'/%3E%3C/svg%3E"); }
+.vg-i--cal { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5.5' width='16' height='14.5' rx='2.5'/%3E%3Cpath d='M4 10h16M8.5 3.5v4M15.5 3.5v4'/%3E%3C/svg%3E"); }
+.vg-i--phone { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 5.7 5.7L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E"); }
+.vg-i--pin { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E"); }
+
+html body .category__item .vg-meta,
+html body .category__item .category__content-info .category_cinfo-address {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  float: none !important;
+  position: static !important;
+  z-index: auto !important;
+  background: none !important;
+  width: auto;
+  margin: 0 0 5px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  color: #5d636b !important;
+}
+html body .category__item .vg-meta > span {
+  float: none !important;
+  position: static !important;
+  z-index: auto !important;
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  font: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+}
+html body .category__item .vg-meta b {
+  font-weight: 400 !important;
+  color: inherit !important;
+  font-style: normal !important;
+}
+html body .category__item .vg-meta .vg-i,
+html body .category__item .category__content-info .category_cinfo-address i {
+  margin: 2px 0 0 !important;
+  color: #9aa0a8 !important;
+}
+html body .category__item .category__content-info .category_cinfo-address i {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  font-size: 0;
+  line-height: 0;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E");
+}
+html body .category__item .category__content-info .category_cinfo-address i::before {
+  display: none !important;
+}
+html body .category__item .category__content-info .category_cinfo-specs {
+  display: block;
+  margin: 3px 0 9px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #111;
+}
+html body .category__item .category__content-info .category_cinfo-spec {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 8px !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  color: #6b7077 !important;
+}
+html body .category__item a.category_cinfo-name {
+  font-size: 19px !important;
+  line-height: 23px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.2px;
+  color: #111 !important;
+  overflow-wrap: anywhere;
+}
+
+/* price = leader */
+html body .category__item .card-price {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .category__item .card-price-old {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #9aa0a8;
+  text-decoration: line-through;
+}
+html body .category__item .card-disc {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: #111;
+  color: #f7cc53;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 800;
+}
+html body .category__item .category_cinfo-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  height: 24px;
+  margin: 8px 0 0;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: #fff3c9;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 600;
+}
+html body .category__item .card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 6px;
+}
+html body .category__item .card-facts .vg-meta {
+  margin: 0 !important;
+}
+html body .category__item .stock-offer .card-price,
+html body .category__item .stock-offer .card-price-old,
+html body .category__item .stock-offer .card-disc,
+html body .category__item .stock-offer .card-facts,
+html body .category__item .stock-offer .card-facts > span {
+  float: none !important;
+  position: static !important;
+  background-image: none;
+  z-index: auto !important;
+}
+html body .category__item .stock-offer .card-price,
+html body .category__item .stock-offer .card-price-old {
+  padding: 0 !important;
+  background: none !important;
+}
+html body .category__item .stock-offer .card-disc {
+  background: #111 !important;
+  padding: 3px 7px !important;
+}
+html body .category__item .vg-meta--warn {
+  color: #c2410c !important;
+  font-weight: 600 !important;
+}
+
+/* promotions: service block inside the card */
+html body .category__item .stock-offer {
+  display: block;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+html body .category__item .stock-offer::before {
+  display: none !important;
+}
+html body .category__item .stock-offer > span,
+html body .category__item .stock-offer > div {
+  float: none !important;
+  position: static !important;
+  background: none !important;
+  padding: 0 !important;
+  z-index: auto !important;
+}
+html body .category__item .stock-offer__name {
+  display: block;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body .category__item .stock-offer__price {
+  display: flex !important;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 6px;
+}
+html body .category__item .stock-offer__price .card-price {
+  display: inline-block;
+  margin: 0;
+  font-size: 30px;
+  line-height: 34px;
+}
+html body .category__item .stock-offer__note {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #8a8f98;
+}
+html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.category_cinfo-name {
+  font-size: 15px !important;
+  line-height: 20px !important;
+  font-weight: 700 !important;
+}
+html body .category__item .category__content-info-list--stocks {
+  margin-top: 4px !important;
+}
+html body .category__item .card-head {
+  display: block;
+}
 @media (max-width: 768px) {
-  html body .category__content-info .attr_specialties {
-    display: none !important;
+  html body .category.jsn_stockList.search-catalog .category__content-info > .card-head,
+  html body .category.jsn_stockList.course-catalog .category__content-info > .card-head {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 12px 0 0 !important;
+    min-height: 108px;
+    box-sizing: border-box !important;
+  }
+  html body .category.jsn_stockList.search-catalog .category__content-info > .card-head .category_cinfo-name,
+  html body .category.jsn_stockList.course-catalog .category__content-info > .card-head .category_cinfo-name {
+    min-height: 0;
   }
 }
