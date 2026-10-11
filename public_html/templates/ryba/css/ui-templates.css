@@ -807,3 +807,96 @@ html body .master__services .stockList__item:not(.courseList__item) .btn_add-mas
     height: 16px;
   }
 }
+
+/* ==========================================================================
+   Account (cabinet and profile editing): tab strip, header actions.
+   ========================================================================== */
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  list-style: none;
+  box-sizing: border-box;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab {
+  display: block !important;
+  flex: none;
+  float: none !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  max-width: none !important;
+  height: 34px;
+  min-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 17px !important;
+  background: #eef0f3 !important;
+  color: #5d636b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 34px !important;
+  white-space: nowrap;
+  box-shadow: none !important;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link:hover,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link:hover {
+  display: inline-flex !important;
+  border: 0 !important;
+  background: linear-gradient(180deg, #ffd96b, #f7b928) !important;
+  color: #111 !important;
+  font-weight: 800 !important;
+}
+@media (max-width: 1020px) {
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    width: calc(100% + 32px);
+    max-width: none;
+    padding: 4px 16px !important;
+  }
+  html body #content #jsn-profile-tabs.z-tabs-desktop::-webkit-scrollbar {
+    display: none;
+  }
+}
+html body #content .view_profile-header .jsn-p-title h3,
+html body #content .jsn-p-title h3 {
+  font-weight: 800;
+}
+@media (max-width: 768px) {
+  html body #content .view_profile-header .jsn-p-title h3,
+  html body #content .jsn-p-title h3 {
+    font-size: 26px;
+    line-height: 30px;
+  }
+}
+@media (max-width: 768px) {
+  html body #content .jsn-p-opt > a.btn[data-open-tab="profile-tab11"] {
+    display: none !important;
+  }
+}
+
