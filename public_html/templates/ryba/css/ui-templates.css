@@ -501,3 +501,309 @@ html body .category__item .card-head {
     min-height: 0;
   }
 }
+
+/* ==========================================================================
+   Master profile: header, service rows, promotion block, sticky action bar.
+   ========================================================================== */
+html body .masters__big-info-attr .vg-meta,
+html body .masters__big-info-attr .attr_left2 {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  float: none !important;
+  margin: 0 0 5px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+  color: #5d636b !important;
+}
+html body .masters__big-info-attr .vg-meta > span {
+  float: none !important;
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font: inherit !important;
+  color: inherit !important;
+}
+html body .masters__big-info-attr .vg-meta .vg-i,
+html body .masters__big-info-attr .attr_left2 i {
+  flex: none;
+  margin: 2px 0 0 !important;
+  color: #9aa0a8 !important;
+}
+html body .masters__big-info-attr .attr_left2 i {
+  width: 15px;
+  height: 15px;
+  font-size: 0;
+  line-height: 0;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E");
+}
+html body .masters__big-info-attr .attr_left2 i::before {
+  display: none !important;
+}
+html body .masters__big-info-attr .attr_left1 {
+  display: block;
+  margin: 0 0 8px !important;
+  font-size: 14px !important;
+  line-height: 18px !important;
+  font-weight: 700 !important;
+  color: #111 !important;
+}
+html body #content .masters__big-info-attr .attr-rating {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: #fff3c9;
+  color: #6b4d00;
+  font-size: 14px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+html body #content .masters__big-info-attr .attr-rating::before {
+  content: "\2605";
+  margin-right: 5px;
+  color: #f2a900;
+}
+html body .h3biginfo1,
+html body .masters__big-info-head h3 {
+  font-weight: 800;
+}
+@media (max-width: 768px) {
+  html body .masters__big-info-attr .h3biginfo1 {
+    float: none;
+    width: auto;
+    margin: 0 0 6px;
+    font-size: 26px;
+    line-height: 30px;
+  }
+  html body .masters__big-info-attr .masters__attr-left {
+    clear: both;
+  }
+  html body .masters__big-info-attr .masters__attr-right {
+    margin-top: 9px;
+  }
+}
+
+/* service rows */
+html body .master__services .priceList__item .price__coll2 {
+  font-weight: 800;
+  color: #111;
+}
+html body .master__services .priceList__item .price__coll3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6b7077;
+}
+html body .master__services .priceList__item .price__coll3::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* "+" is the one action colour */
+html body .btn_add-master.plus:not(.is-disabled):not(:disabled) {
+  border: 0;
+  background: linear-gradient(180deg, #ffd96b, #f7b928);
+  color: #111;
+  font-weight: 600;
+  box-shadow: 0 2px 0 #d49a10, 0 6px 12px -4px rgba(0, 0, 0, .3);
+}
+
+/* promotion block */
+html body .master__services .stockList__item:not(.courseList__item) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 12px 0;
+  padding: 16px 16px 60px;
+  border-radius: 16px;
+  border: 0;
+  background: #fff7da;
+  box-sizing: border-box;
+}
+html body .master__services .stockList__item:not(.courseList__item) > .stockList__item-coll {
+  float: none;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  text-align: left;
+}
+html body .master__services .stockList__item:not(.courseList__item) > .clearFloat {
+  display: none;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 100%;
+  margin-bottom: 8px;
+}
+html body .master__services .stock__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 700;
+}
+html body .master__services .stock__badges .card-disc {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: #111;
+  color: #f7cc53;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 800;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll1 {
+  flex: 0 0 100%;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll1::after {
+  display: none;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll2 {
+  flex: 0 0 100%;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll4 {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .master__services .stockList__item:not(.courseList__item):not(.has-old-price) .stock__coll4 {
+  flex-basis: 100%;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll4 i {
+  font-style: normal;
+}
+html body .master__services .stockList__item:not(.courseList__item)::after {
+  content: "";
+  order: 1;
+  flex: 0 0 100%;
+  height: 0;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll3 {
+  flex: 0 0 auto;
+  margin: 8px 0 0 10px !important;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #9aa0a8;
+  text-decoration: line-through;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll3 i {
+  font-style: normal;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll5 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  order: 2;
+  margin: 8px 14px 0 0 !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll5::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll6 {
+  flex: 0 1 auto;
+  order: 2;
+  margin-top: 8px !important;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #c2410c;
+}
+html body .master__services .stockList__item:not(.courseList__item) .btn_add-master.plus-stock {
+  right: 16px;
+  bottom: 14px;
+}
+
+/* sticky action bar (mobile and installed app) */
+.vg-profile-bar {
+  display: none;
+}
+@media (max-width: 768px) {
+  html body.vg-has-profile-bar {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+  html body .vg-profile-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex;
+    gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -6px 18px -8px rgba(0, 0, 0, .25);
+  }
+  html body .vg-profile-bar a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 48px;
+    border-radius: 24px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  html body .vg-profile-bar__call {
+    flex: 0 0 auto;
+    padding: 0 20px;
+    border: 1.5px solid #111;
+    background: #fff;
+    color: #111;
+  }
+  html body .vg-profile-bar__book {
+    flex: 1 1 auto;
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    box-shadow: 0 2px 0 #d49a10, 0 8px 14px -6px rgba(0, 0, 0, .35);
+  }
+  html body .vg-profile-bar .vg-i {
+    width: 16px;
+    height: 16px;
+  }
+}
