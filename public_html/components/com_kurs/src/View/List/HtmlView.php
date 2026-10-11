@@ -57,7 +57,7 @@ class HtmlView extends BaseHtmlView
 		}, $this->items)));
 		if ($userIds !== []) {
 			$this->fieldsByUser = \Viglin\Component\Kurs\Site\Helper\KursHelper::getFieldsForUserIds($userIds, [
-				'sity', 'area', 'street', 'house_number', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children',
+				'sity', 'area', 'street', 'house_number', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos',
 			]);
 		}
 

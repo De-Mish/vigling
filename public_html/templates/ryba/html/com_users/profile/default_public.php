@@ -1901,7 +1901,7 @@ if (empty($isLkEmbed)) {
 	<section class="master__services master__services--fullbleed">
 		<div class="container">
 			<div class="accordionWrapper">
-				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened">
+				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">
 					<button style="color:#475329; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Курсы:</button>
 					<div class="accordionItem opened">
 						<div class="stockList">
@@ -1997,7 +1997,7 @@ if (empty($isLkEmbed)) {
 	<section class="master__services master__services--fullbleed">
 		<div class="container">
 			<div class="accordionWrapper">
-				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened">
+				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">
 					<button style="color:#475329; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Поиск моделей:</button>
 					<div class="accordionItem opened">
 						<div class="stockList">
