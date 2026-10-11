@@ -5648,26 +5648,27 @@ body#home .home-search-links a.homepage-link-btn:focus {
     align-items: center;
     gap: 10px;
   }
-  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::before,
-  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::before,
-  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::before,
-  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::before {
+  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::after,
+  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::after,
+  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::after,
+  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::after {
     content: "";
-    width: 22px;
-    height: 22px;
-    flex: 0 0 22px;
+    width: 20.9px;
+    height: 20.9px;
+    flex: 0 0 20.9px;
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
   }
-  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::before,
-  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::before {
+  .header-mobile__nav .mod-menu__sub a[href*="t.me/"]::after,
+  .header--desktop .header__menu .mod-menu__sub a[href*="t.me/"]::after {
     background-image: url("/templates/ryba/images/telegram.png");
   }
-  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::before,
-  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::before {
+  .header-mobile__nav .mod-menu__sub a[href*="vk.com/"]::after,
+  .header--desktop .header__menu .mod-menu__sub a[href*="vk.com/"]::after {
     background-image: url("/templates/ryba/images/vk.jpg");
-    mix-blend-mode: multiply;
+    border-radius: 22%;
+    filter: invert(1);
   }
 }
 
