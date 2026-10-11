@@ -1729,3 +1729,31 @@ html body .category__masters-sidebar .vg-avail-clear::after {
   font-size: 15px;
   line-height: normal;
 }
+
+/* Favourites: saved profiles fill the content width exactly (no fixed width, no negative shifts). */
+html body #easyprofile .lk-favorites-list .category__masters {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+html body #easyprofile .lk-favorites-list .lk-fav-item .category__item {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+html body #easyprofile .lk-favorites-list .lk-fav-comment-wrap {
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
+}
+@media (min-width: 769px) {
+  html body #easyprofile .lk-favorites-list .lk-fav-item .category__item-content {
+    width: calc(100% - 231px);
+  }
+  html body #easyprofile .lk-favorites-list .lk-fav-item .category__item-content-left {
+    width: calc(100% - 175px);
+  }
+}
