@@ -900,3 +900,141 @@ html body #content .jsn-p-title h3 {
   }
 }
 
+/* Appointment cards: time leads, one detail per line, actions in one row. */
+html body .appointments-cards .appointments-card,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card {
+  display:flex !important;
+  flex-direction:column;
+  padding:14px 16px !important;
+  border:0 !important;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 2px 14px rgba(0, 0, 0, .09);
+}
+html body .appointments-cards .appointments-card__row,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row,
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people {
+  display:block !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+}
+html body .appointments-cards .appointments-card__row--when,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when { order:1 !important; }
+html body .appointments-cards .appointments-card__row--service,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service { order:2 !important; }
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people,
+html body .appointments-cards .appointments-card__row--who,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--who { order:3 !important; }
+html body .appointments-cards .appointments-card__row--contacts,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts { order:4 !important; }
+html body .appointments-cards .appointments-card__row--feedback,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--feedback { order:5 !important; }
+html body .appointments-cards .appointments-card__row--actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions { order:6 !important; }
+html body .appointments-cards .appointments-card__participants,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__participants { order:7 !important; }
+html body .appointments-cards .appointments-card__row--when .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when .appointments-card__label,
+html body .appointments-cards .appointments-card__row--service .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service .appointments-card__label,
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__label,
+html body .appointments-cards .appointments-card__row--actions .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .appointments-card__label {
+  position:absolute;
+  width:1px !important;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}
+html body .appointments-cards .appointments-card__row--when .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when .appointments-card__value {
+  font-size:22px;
+  line-height:28px;
+  font-weight:800;
+  letter-spacing:-0.3px;
+  color:#111;
+}
+html body .appointments-cards .appointments-card__row--service,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service {
+  margin:2px 0 8px !important;
+}
+html body .appointments-cards .appointments-card__row--service .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service .appointments-card__value {
+  font-size:16px;
+  line-height:21px;
+  font-weight:700;
+  color:#111;
+}
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people {
+  display:grid !important;
+  grid-template-columns:auto 1fr !important;
+  gap:2px 10px;
+  margin-bottom:6px;
+}
+html body .appointments-cards .appointments-card__people .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people .appointments-card__label {
+  font-size:12px;
+  line-height:18px;
+  font-weight:500;
+  color:#8a8f98;
+}
+html body .appointments-cards .appointments-card__people .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people .appointments-card__value {
+  font-size:13px;
+  line-height:18px;
+  color:#5d636b;
+}
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__value {
+  display:flex !important;
+  gap:8px;
+  font-size:13px;
+  line-height:18px;
+  color:#5d636b;
+  word-break:break-word;
+}
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__value::before,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__value::before {
+  content:"";
+  flex:none !important;
+  width:15px !important;
+  height:15px;
+  margin-top:2px;
+  background-color:#9aa0a8;
+  -webkit-mask:var(--vg-i) center / contain no-repeat;
+  mask:var(--vg-i) center / contain no-repeat;
+  --vg-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 5.7 5.7L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E");
+}
+html body .appointments-cards .appointments-card__row--actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions {
+  margin-top:10px;
+  padding-top:0;
+  border-top:0 !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions {
+  display:flex !important;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:0 !important;
+  padding:0 !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions > .btn,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > .btn,
+html body .appointments-cards .appointments-card__row--actions .orders-actions > form,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > form {
+  flex:1 1 120px !important;
+  margin:0 !important;
+  display:block !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions > form .btn,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > form .btn {
+  width:100% !important;
+}
+

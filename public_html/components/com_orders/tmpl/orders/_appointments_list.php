@@ -41,14 +41,14 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 					$entityCategoryTitle = trim((string) ($isSearchGroup ? ($item->search_category_title ?? '') : ($item->course_category_title ?? '')));
 				?>
 				<div class="<?php echo $rowClass; ?>" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">
-					<div class="appointments-card__row">
+					<div class="appointments-card__row appointments-card__row--who">
 						<div class="appointments-card__label">Клиент / Мастер</div>
 						<div class="appointments-card__value">
 							<strong><?php echo $this->escape($entityLabel); ?></strong>
 							<div class="course-meta"><?php echo (int) $participantCount; ?> из <?php echo $capacityTotal > 0 ? (int) $capacityTotal : '—'; ?> мест занято</div>
 						</div>
 					</div>
-					<div class="appointments-card__row">
+					<div class="appointments-card__row appointments-card__row--service">
 						<div class="appointments-card__label">Услуга</div>
 						<div class="appointments-card__value">
 							<?php echo htmlspecialchars($entityTitle !== '' ? $entityTitle : $entityLabel); ?>
@@ -57,11 +57,11 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 							<?php endif; ?>
 						</div>
 					</div>
-					<div class="appointments-card__row">
+					<div class="appointments-card__row appointments-card__row--when">
 						<div class="appointments-card__label">Дата и время</div>
 						<div class="appointments-card__value"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></div>
 					</div>
-					<div class="appointments-card__row">
+					<div class="appointments-card__row appointments-card__row--contacts">
 						<div class="appointments-card__label">Контакты</div>
 						<div class="appointments-card__value">Участники внутри слота</div>
 					</div>
@@ -137,7 +137,7 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 			?>
 			<div class="<?php echo $rowClass; ?>" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">
 				<?php if ($isBlock) : ?>
-				<div class="appointments-card__row">
+				<div class="appointments-card__row appointments-card__row--who">
 					<div class="appointments-card__label">Клиент /<br>Мастер</div>
 					<div class="appointments-card__value"><?php echo viglingAppointmentsRenderPeople($item); ?></div>
 				</div>
@@ -153,7 +153,7 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 					</div>
 				</div>
 				<?php endif; ?>
-				<div class="appointments-card__row">
+				<div class="appointments-card__row appointments-card__row--service">
 					<div class="appointments-card__label">Услуга</div>
 					<div class="appointments-card__value">
 						<?php echo htmlspecialchars($serviceLabel); ?>
@@ -180,11 +180,11 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 					</div>
 				</div>
 				<?php endif; ?>
-				<div class="appointments-card__row">
+				<div class="appointments-card__row appointments-card__row--when">
 					<div class="appointments-card__label">Дата и время</div>
 					<div class="appointments-card__value"><span class="lk-time-utc" data-time-utc="<?php echo $timeIso ? $this->escape($timeIso) : ''; ?>">—</span></div>
 				</div>
-				<div class="appointments-card__row">
+				<div class="appointments-card__row appointments-card__row--contacts">
 					<div class="appointments-card__label">Контакты</div>
 					<div class="appointments-card__value"><?php echo $contacts !== [] ? htmlspecialchars(implode(', ', $contacts)) : '—'; ?></div>
 				</div>
