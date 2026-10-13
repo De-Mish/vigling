@@ -479,91 +479,54 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			['label' => 'Поиск моделей', 'href' => $homeSearchBase . '/modeli'],
 		];
 		?>
-		<section class="search__specialists search__section">
-			<style>
-				body#home .search__specialists .search__coll-left {
-					width: 100%;
-					float: none;
-					position: relative;
-					z-index: 2;
-				}
-				body#home .home-search-links {
-					display: flex;
-					flex-direction: row;
-					flex-wrap: wrap;
-					align-items: center;
-					gap: 12px;
-					list-style: none;
-					margin: 0;
-					padding: 0;
-				}
-				body#home .home-search-links li {
-					margin: 0;
-					padding: 0;
-				}
-				body#home .home-search-links a.homepage-link-btn {
-					display: inline-flex;
-					align-items: center;
-					justify-content: center;
-					box-sizing: border-box;
-					width: auto;
-					min-width: 142px;
-					height: 42px;
-					padding: 0 24px;
-					margin: 0;
-					background: transparent;
-					border: 1px solid #f9ce54;
-					border-radius: 25px;
-					box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-					color: #000;
-					font-family: "GothamPro-Bold", sans-serif;
-					font-size: 13px;
-					font-weight: 500;
-					letter-spacing: 1.08px;
-					line-height: 1.2;
-					text-align: center;
-					text-decoration: none;
-					cursor: pointer;
-				}
-				body#home .home-search-links a.homepage-link-btn:hover,
-				body#home .home-search-links a.homepage-link-btn:focus {
-					background: transparent;
-					color: #000;
-					text-decoration: none;
-				}
-				@media (max-width: 768px) {
-					body#home .home-search-links {
-						flex-direction: column;
-						align-items: center;
-					}
-					body#home .search__specialists .search__coll-left {
-						display: flex;
-						justify-content: center;
-					}
-				}
-				@media (min-width: 769px) {
-					body#home .home-search-links,
-					body#home .home-search-links a.homepage-link-btn {
-						display: none;
-					}
-				}
-			</style>
+		<?php
+		require_once __DIR__ . '/helpers/home_feed.php';
+		$homeStats = VglHomeFeed::stats(VglHomeFeed::viewerCity());
+		$homeCount = static function (?int $n, array $forms, string $fallback): string {
+			return $n !== null && $n > 0 ? $n . ' ' . VglHomeFeed::plural($n, $forms) : $fallback;
+		};
+		$homeTiles = [
+			['label' => 'Мастера', 'href' => $homeSearchLinks[0]['href'], 'icon' => 'user', 'lead' => true,
+				'meta' => $homeCount($homeStats['masters'], ['специалист', 'специалиста', 'специалистов'], 'специалисты')],
+			['label' => 'Акции', 'href' => $homeSearchLinks[1]['href'], 'icon' => 'tag', 'lead' => false,
+				'meta' => $homeStats['maxDiscount'] !== null
+					? 'до −' . (int) $homeStats['maxDiscount'] . '%'
+					: $homeCount($homeStats['promos'], ['акция', 'акции', 'акций'], 'скидки от мастеров')],
+			['label' => 'Курсы', 'href' => $homeSearchLinks[2]['href'], 'icon' => 'cap', 'lead' => false,
+				'meta' => $homeCount($homeStats['courses'], ['курс', 'курса', 'курсов'], 'обучение')],
+			['label' => 'Модели', 'href' => $homeSearchLinks[3]['href'], 'icon' => 'cam', 'lead' => false,
+				'meta' => $homeCount($homeStats['models'], ['предложение', 'предложения', 'предложений'], 'поиск моделей')],
+		];
+		$homeIcons = [
+			'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>',
+			'tag' => '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+			'cap' => '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/>',
+			'cam' => '<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/>',
+		];
+		?>
+		<section class="search__specialists search__section home-hero">
 			<div class="container">
-				<div class="search__coll-left">
-					<ul class="home-search-links">
-						<?php foreach ($homeSearchLinks as $homeSearchLink) : ?>
-						<li>
-							<a class="homepage-link-btn" href="<?php echo htmlspecialchars($homeSearchLink['href']); ?>"><?php echo htmlspecialchars($homeSearchLink['label']); ?></a>
-						</li>
-						<?php endforeach; ?>
-					</ul>
-				</div>
-				<p class="search__text"></p>
-				<div class="clearFloat"></div>
+				<h1 class="home-hero__title">Запишитесь к мастеру за минуту</h1>
+				<p class="home-hero__lead">Маникюр, барберы, брови, массаж — рядом с вами</p>
+				<form class="home-hero__search" action="<?php echo htmlspecialchars($homeSearchLinks[0]['href']); ?>" method="get" role="search">
+					<svg class="home-hero__search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+					<input class="home-hero__input" type="text" name="master_name" placeholder="Имя мастера" aria-label="Поиск мастера по имени" autocomplete="off">
+					<button class="home-hero__go" type="submit" aria-label="Найти"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+				</form>
+				<ul class="home-tiles">
+					<?php foreach ($homeTiles as $homeTile) : ?>
+					<li>
+						<a class="home-tile<?php echo $homeTile['lead'] ? ' home-tile--lead' : ''; ?>" href="<?php echo htmlspecialchars($homeTile['href']); ?>">
+							<span class="home-tile__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><?php echo $homeIcons[$homeTile['icon']]; ?></svg></span>
+							<span class="home-tile__name"><?php echo htmlspecialchars($homeTile['label']); ?></span>
+							<span class="home-tile__meta"><?php echo htmlspecialchars($homeTile['meta']); ?></span>
+						</a>
+					</li>
+					<?php endforeach; ?>
+				</ul>
 			</div>
 		</section>
 		<?php
-		require_once __DIR__ . '/helpers/home_feed.php';
 		echo VglHomeFeed::render();
 		?>
 	<?php endif; ?>

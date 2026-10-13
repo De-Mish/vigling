@@ -136,7 +136,7 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) 
 }
 $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardImage, true);
 
-$imgStyle = 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
+$imgStyle = '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
 
 $searchTitle = trim((string) ($item->title ?? $item->description ?? ''));
 $searchDescription = trim((string) ($item->description ?? ''));
@@ -158,6 +158,7 @@ if ($slotStartUtc !== '') {
 ?>
 <div class="category__item search-catalog__item" data-address="<?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?>">
 <div class="category__item-img" style="<?php echo $imgStyle; ?>">
+	<span class="rd-badges"><span class="rd-b rd-b--ink">Поиск моделей</span><?php if ($categoryTitle !== '') : ?><span class="rd-b rd-b--glass"><?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?></span>
 	<img src="<?php echo htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($searchTitle !== '' ? $searchTitle : 'Поиск моделей', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
 </div>
 	<div class="category__item-content">

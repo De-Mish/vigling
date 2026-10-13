@@ -134,7 +134,7 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) 
 }
 $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardImage, true);
 $avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarImage, true);
-$imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
+$imgStyle = $cardImage !== '' ? '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
 ?>
 <div class="category__item" data-address="<?php echo htmlspecialchars($addr); ?>">
@@ -193,7 +193,8 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 		</div>
 		<div class="category__item-content-right"></div>
 	</div>
-	<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
+	<div class="category__item-img" style="<?php echo $imgStyle ?: "--rd-img: url('/images/service4.png'); background-image: url('/images/service4.png');"; ?>">
+		<span class="rd-badges"><span class="rd-b rd-b--ink">Акция</span></span>
 		<div class="category__item-master" style="<?php echo $masterAvatarStyle; ?>"></div>
 	</div>
 </div>

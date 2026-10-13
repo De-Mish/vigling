@@ -177,9 +177,11 @@ html body .header--desktop .header__logo-img {
 
 /* ---------- header: mobile / PWA ---------- */
 @media only screen and (max-width: 1020px) {
-  html body .header--mobile {
+  html body .header--mobile,
+  html body .header--mobile.scrolled {
     background: rgba(247, 245, 239, .96);
     box-shadow: none;
+    border: 0;
   }
 
   html body .header-mobile__bar {
@@ -291,4 +293,686 @@ html body :is(h1, h2, h3, h4, h5) {
     --vm-rf: 14px;
     --vm-rc: 20px;
   }
+}
+
+/* =====================================================================
+   Stage 2. Card family: masters, promotions, courses, model search.
+   Photo hero on top, badges on the photo, master avatar on the photo edge,
+   body padded 16, one accent button per card.
+   ===================================================================== */
+html body :is(#content, #home-feed) .category .category__item {
+  display: flex !important;
+  flex-direction: column;
+  position: relative;
+  float: none;
+  width: auto !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 0 16px !important;
+  padding: 0 !important;
+  background: var(--rd-card) !important;
+  border: 0 !important;
+  border-radius: var(--rd-r-card) !important;
+  box-shadow: var(--rd-sh) !important;
+  overflow: visible !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-img {
+  order: -1;
+  position: relative !important;
+  display: block;
+  float: none;
+  top: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 200px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rd-r-card) var(--rd-r-card) 0 0 !important;
+  background-color: var(--rd-fill) !important;
+  background-image: var(--rd-img, none) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  grid-area: auto;
+  flex: none !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-img > img {
+  display: none !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-master {
+  position: absolute !important;
+  top: auto !important;
+  bottom: -24px !important;
+  left: 16px !important;
+  right: auto !important;
+  transform: none !important;
+  width: 48px !important;
+  height: 48px !important;
+  margin: 0 !important;
+  border: 3px solid var(--rd-card) !important;
+  border-radius: 50% !important;
+  background-color: var(--rd-card);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 2px 8px rgba(23, 21, 15, .18) !important;
+  z-index: 2;
+  grid-area: auto;
+}
+
+html body :is(#content, #home-feed) .category .category__item .rd-badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 2;
+}
+
+html body .rd-b {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--rd-r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--rd-fill);
+  color: var(--rd-ink2);
+}
+
+html body .rd-b--ink { background: var(--rd-ink); color: #fff; }
+html body .rd-b--acc { background: var(--rd-accent); color: var(--rd-ink); }
+html body .rd-b--glass { background: rgba(255, 255, 255, .94); color: var(--rd-ink); }
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content {
+  order: 1;
+  float: none;
+  display: flex !important;
+  flex-direction: column;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 32px 16px 16px !important;
+  border: 0 !important;
+  box-sizing: border-box;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content-left {
+  float: none;
+  display: flex !important;
+  flex-direction: column;
+  gap: 12px;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content-right {
+  float: none;
+  display: flex !important;
+  justify-content: flex-end;
+  width: 100% !important;
+  margin: 12px 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  clear: both;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content-right:empty {
+  display: none !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .btn__time-zapis {
+  position: static !important;
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end !important;
+  width: auto !important;
+  min-width: 0;
+  height: 40px;
+  margin: 0 !important;
+  padding: 0 20px !important;
+  font-size: 14px !important;
+}
+
+/* master block */
+html body :is(#content, #home-feed) .category .category__item .category__content-info {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 6px;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-name {
+  flex: 0 0 100%;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--rd-ink);
+  text-decoration: none;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-specs,
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-spec {
+  flex: 0 0 100%;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rd-ink2);
+}
+
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-address {
+  flex: 0 0 100%;
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--rd-mute);
+}
+
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-chip {
+  display: none !important;
+}
+
+/* attribute capsules: Салон, Мастер на дому, Банковский перевод ... */
+html body :is(#content, #home-feed) .category .category__item .category__content-info .attr_left3.vg-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rd-ink2);
+  background: transparent;
+}
+
+/* promotion offers */
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list {
+  order: -1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list ul {
+  list-style: none;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .stock-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none;
+}
+
+html body :is(#content, #home-feed) .category .category__item .stock-offer + .stock-offer {
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--rd-line);
+}
+
+html body :is(#content, #home-feed) .category .category__item .stock-offer__name {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--rd-ink);
+}
+
+html body :is(#content, #home-feed) .category .category__item .stock-offer__price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-price {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--rd-ink);
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-price-old {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rd-mute);
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-disc {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px !important;
+  border-radius: var(--rd-r-pill);
+  background: var(--rd-accent) !important;
+  color: var(--rd-ink);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  align-self: center;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-facts .vg-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px !important;
+  margin: 0 !important;
+  border-radius: var(--rd-r-pill);
+  background: var(--rd-fill) !important;
+  color: var(--rd-ink2);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-facts .vg-meta--warn {
+  background: var(--rd-hot-soft) !important;
+  color: var(--rd-hot) !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .stock-offer__note {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--rd-ink2);
+}
+
+/* course and model search: title and price from .card-head */
+html body :is(#content, #home-feed) .category .category__item .card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  order: -1;
+  margin: 0;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-head .category_cinfo-name {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+html body :is(#content, #home-feed) .category .category__item .card-head .card-price {
+  order: 2;
+}
+
+/* grid on wide screens */
+@media (min-width: 769px) {
+  html body :is(#content, #home-feed) .category .category__masters {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
+  html body :is(#content, #home-feed) .category .category__masters > .category__item {
+    margin: 0 !important;
+  }
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content-right .btn__time-zapis {
+  margin-left: auto !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list,
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list ul,
+html body :is(#content, #home-feed) .category .category__item .stock-offer {
+  box-sizing: border-box;
+  width: 100% !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  text-indent: 0;
+}
+
+/* neutralise legacy offsets inside the card body */
+html body :is(#content, #home-feed) .category .category__item :is(.category__content-info, .category__item-content-left, .category__item-content) > * {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info > :not(.attr_left3) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info .attr_left3.vg-meta {
+  padding: 0 10px !important;
+  width: auto !important;
+}
+
+/* promotion card: master block under the offers, separated by a hairline */
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list + .btn__time-zapis {
+  margin-top: 4px !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info-list {
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid var(--rd-line);
+}
+
+/* =====================================================================
+   Stage 3a. Home: hero, search capsule, section tiles, feed.
+   ===================================================================== */
+html body#home .home-hero {
+  padding: 84px 0 0;
+}
+
+html body#home .home-hero .container {
+  max-width: 1184px;
+}
+
+html body#home .home-hero__title {
+  margin: 0;
+}
+
+html body#home .home-hero__lead {
+  margin: 8px 0 0;
+  max-width: 520px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--rd-ink2);
+}
+
+html body#home .home-hero__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  margin: 16px 0 0;
+  padding: 0 7px 0 18px;
+  background: var(--rd-card);
+  border-radius: var(--rd-r-pill);
+  box-shadow: var(--rd-sh);
+}
+
+html body#home .home-hero__search svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html body#home .home-hero__search-icon {
+  color: var(--rd-mute);
+}
+
+html body#home .home-hero .home-hero__search .home-hero__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--rd-ink);
+  font-size: 15px;
+  outline: 0;
+}
+
+html body#home .home-hero__input::placeholder {
+  color: var(--rd-mute);
+}
+
+html body#home .home-hero__go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--rd-accent);
+  color: var(--rd-ink);
+  cursor: pointer;
+}
+
+html body#home .home-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+html body#home .home-tiles li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html body#home .home-tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px;
+  background: var(--rd-card);
+  border-radius: var(--rd-r-card);
+  box-shadow: var(--rd-sh);
+  color: var(--rd-ink);
+  text-decoration: none;
+}
+
+html body#home .home-tile--lead {
+  background: var(--rd-ink);
+  color: #fff;
+  box-shadow: none;
+}
+
+html body#home .home-tile__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: var(--rd-accent-soft);
+}
+
+html body#home .home-tile--lead .home-tile__icon {
+  background: var(--rd-accent);
+}
+
+html body#home .home-tile__icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--rd-ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html body#home .home-tile__name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+html body#home .home-tile__meta {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rd-mute);
+}
+
+html body#home .home-tile--lead .home-tile__meta {
+  color: #BBB5A6;
+}
+
+@media (min-width: 1021px) {
+  html body#home .home-hero {
+    padding-top: 112px;
+  }
+
+  html body#home .home-hero .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "title tiles" "lead tiles" "search tiles";
+    column-gap: 48px;
+    align-content: center;
+  }
+
+  html body#home .home-hero__title {
+    grid-area: title;
+    align-self: end;
+    font-size: 52px;
+  }
+
+  html body#home .home-hero__lead {
+    grid-area: lead;
+    font-size: 18px;
+  }
+
+  html body#home .home-hero__search {
+    grid-area: search;
+    align-self: start;
+    height: 64px;
+    margin-top: 28px;
+    padding-left: 22px;
+    font-size: 16px;
+  }
+
+  html body#home .home-hero__go {
+    width: 48px;
+    height: 48px;
+  }
+
+  html body#home .home-tiles {
+    grid-area: tiles;
+    gap: 16px;
+    margin: 0;
+  }
+
+  html body#home .home-tile {
+    padding: 24px;
+  }
+
+  html body#home .home-tile__icon {
+    margin-bottom: 32px;
+  }
+
+  html body#home .home-tile__name {
+    font-size: 20px;
+    font-weight: 700;
+  }
+}
+
+/* feed */
+html body#home .home-feed {
+  padding: 8px 0 24px;
+}
+
+html body#home .home-feed .container {
+  max-width: 1184px;
+}
+
+html body#home .home-feed .home-feed__title {
+  margin: 24px 0 12px;
+}
+
+html body#home .home-feed .home-feed__label {
+  display: none;
+}
+
+html body#home .home-feed .home-feed__item {
+  margin: 0;
+}
+
+html body#home .home-feed .home-feed__item > .category {
+  margin: 0;
+}
+
+html body#home .home-feed .home-feed__list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+html body#home .home-feed .home-feed__pagination {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 769px) {
+  html body#home .home-feed .home-feed__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1021px) {
+  html body#home .home-feed .home-feed__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+html body#home .home-feed .category .category__masters {
+  display: block !important;
+  float: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+html body#home .home-feed .category .category__item {
+  margin: 0 !important;
+}
+
+html body#home > section {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
 }

@@ -153,7 +153,7 @@ $defaultImg = '/templates/ryba/images/master.png';
 								$avatarImage = ImageUploadHelper::avatarWebUrl($avatarImage, $itemId, true);
 							}
 							$cardImage = $portfolioImage !== '' ? $portfolioImage : $avatarImage;
-							$imgStyle = $cardImage !== '' ? 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
+							$imgStyle = $cardImage !== '' ? '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
 							$masterAvatarStyle = $avatarImage !== ''
 								? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;'
 								: 'background-image: url(' . htmlspecialchars($defaultImg, ENT_QUOTES, 'UTF-8') . '); background-size: cover;';
@@ -161,7 +161,7 @@ $defaultImg = '/templates/ryba/images/master.png';
 							?>
 						<div class="lk-fav-item">
 							<div class="category__item" data-address="<?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?>">
-								<div class="category__item-img" style="<?php echo $imgStyle ?: "background-image: url('/images/service4.png');"; ?>">
+								<div class="category__item-img" style="<?php echo $imgStyle ?: "--rd-img: url('/images/service4.png'); background-image: url('/images/service4.png');"; ?>">
 									<div class="category__item-master" style="<?php echo $masterAvatarStyle; ?>"></div>
 								</div>
 								<div class="category__item-content">
