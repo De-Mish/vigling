@@ -1800,3 +1800,97 @@ html body section.master__about > .container {
   padding-top: 24px;
   padding-bottom: 24px;
 }
+
+/* ==========================================================================
+   Stage 4b: booking modal
+   ========================================================================== */
+
+html body #zapis .modal-content {
+  border: 0;
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(23, 21, 15, .25);
+}
+html body #zapis .calc__body h2 {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--rd-ink);
+}
+html body #zapis .calc__body h2::after {
+  display: none !important;
+}
+html body #zapis .calendar__master-item .mas-date {
+  display: block;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--rd-ink);
+}
+html body #zapis .calendar__master-item .mas-date b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  text-transform: capitalize;
+  color: var(--rd-mute);
+}
+html body #zapis .calendar__master-item .btns-m {
+  gap: 8px;
+}
+html body #zapis .calendar__master-item label.btn-select,
+html body #zapis .screen1 .calendar__master-item .btns-m .btn-select {
+  min-height: 40px !important;
+  border: 1px solid var(--rd-line) !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: var(--rd-card) !important;
+  color: var(--rd-ink) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+html body #zapis .calendar__master-item label.btn-select:hover {
+  border-color: var(--rd-ink) !important;
+}
+html body #zapis .calendar__master-item input:checked + label.btn-select,
+html body #zapis .screen1 .calendar__master-item .btns-m input:checked + .btn-select {
+  background: var(--rd-accent) !important;
+  border-color: var(--rd-accent) !important;
+  color: var(--rd-ink) !important;
+}
+html body #zapis .calendar__master-item label.btn-select.reserved {
+  background: var(--rd-fill) !important;
+  color: var(--rd-mute) !important;
+}
+html body #zapis .calc__btn .btn-next {
+  border: 0 !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: var(--rd-accent) !important;
+  background-image: none !important;
+  color: var(--rd-ink) !important;
+  font-weight: 700 !important;
+  box-shadow: var(--rd-sh-btn) !important;
+}
+html body #zapis .calc__btn .close__btn {
+  border: 1px solid var(--rd-ink) !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: var(--rd-card) !important;
+  color: var(--rd-ink) !important;
+  font-weight: 700 !important;
+}
+html body #zapis .zapis__data-textarea {
+  border-radius: var(--rd-r-input) !important;
+}
+html body #zapis .calc__body h2 {
+  letter-spacing: -.01em !important;
+}
+html body #zapis .calc__btn .close__btn {
+  min-height: 48px;
+  padding: 0 28px !important;
+  line-height: 46px !important;
+}
+html body #zapis .calc__btn .btn-next {
+  min-height: 48px;
+}

@@ -3556,7 +3556,12 @@ if (empty($isLkEmbed)) {
 				bookingCalendarByDate[String(day.date)] = day;
 				var slots = Array.isArray(day.slots) ? day.slots : [];
 				html += '<div class="calendar__master-item">';
-				html += '<span class="mas-date">' + escapeBookingText(day.date_view) + ' <b>' + escapeBookingText(day.dow) + '</b></span>';
+				var dayView = String(day.date_view == null ? '' : day.date_view);
+				var dayParts = dayView.split('.');
+				if (dayParts.length === 3 && parseInt(dayParts[2], 10) === new Date().getFullYear()) {
+					dayView = dayParts[0] + '.' + dayParts[1];
+				}
+				html += '<span class="mas-date">' + escapeBookingText(dayView) + ' <b>' + escapeBookingText(day.dow) + '</b></span>';
 				if (!slots.length) {
 					html += '<span class="line-no"></span></div>';
 					return;
