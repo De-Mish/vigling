@@ -328,6 +328,7 @@ $doc->addStyleDeclaration('
 			<input type="hidden" name="avail_date" value="<?php echo htmlspecialchars($currentAvailDate, ENT_QUOTES, 'UTF-8'); ?>">
 		</form>
 	</div>
+	<?php include JPATH_ROOT . '/templates/ryba/html/list-category-chips.php'; ?>
 	<div class="category__body">
 		<div class="clearFloat">&nbsp;</div>
 		<div class="category__masters">
@@ -398,7 +399,7 @@ $doc->addStyleDeclaration('
 				<input type="hidden" name="filter_order" value="<?php echo htmlspecialchars($listOrder, ENT_QUOTES, 'UTF-8'); ?>">
 				<input type="hidden" name="filter_order_Dir" value="<?php echo htmlspecialchars($listDirn, ENT_QUOTES, 'UTF-8'); ?>">
 				<input type="hidden" name="limit" value="<?php echo $limit; ?>">
-				<input class="submit__search" type="submit" value="Поиск">
+				<input class="submit__search" type="submit" value="Показать">
 			</form>
 		</div>
 	</div>
