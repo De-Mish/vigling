@@ -1894,3 +1894,164 @@ html body #zapis .calc__btn .close__btn {
 html body #zapis .calc__btn .btn-next {
   min-height: 48px;
 }
+
+/* ==========================================================================
+   Stage 5a: login
+   ========================================================================== */
+
+html body.view-login #content .header-bot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+html body.view-login #content .login > form.well,
+html body.view-login #content .login-links {
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+html body.view-login #content .login > form.well {
+  margin-top: 24px;
+  margin-bottom: 0;
+  padding: 28px 24px 24px;
+  background: var(--rd-card);
+  border-radius: 24px;
+  box-shadow: var(--rd-sh);
+}
+html body.view-login #content .rd-auth__title {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--rd-ink);
+}
+html body.view-login #content .rd-auth__lead {
+  margin: 0 0 20px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--rd-ink2);
+}
+html body.view-login #content .login .control-group {
+  margin-bottom: 16px;
+}
+html body.view-login #content .login .control-label label {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rd-mute);
+}
+html body.view-login #content .login input.form-control {
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-r-input);
+  background: var(--rd-fill);
+  box-shadow: none;
+}
+html body.view-login #content .login input.form-control:focus {
+  background: var(--rd-card);
+  border-color: var(--rd-ink);
+  box-shadow: 0 0 0 3px var(--rd-accent-soft);
+}
+html body.view-login #content .login .input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+html body.view-login #content .login .input-group input.form-control {
+  flex: 1 1 auto;
+  padding-right: 120px;
+  border-radius: var(--rd-r-input) !important;
+}
+html body.view-login #content .login .input-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0 !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: var(--rd-card) !important;
+  box-shadow: none !important;
+  color: var(--rd-ink) !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+html body.view-login #content .login .input-password-toggle .icon-fw {
+  display: none;
+}
+html body.view-login #content .login .controls .dale {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+}
+html body.view-login #content .login-links {
+  margin-top: 16px;
+  gap: 8px;
+}
+html body.view-login #content .login-links > li:first-child > a {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--rd-ink2) !important;
+  text-decoration: underline;
+  font-weight: 600;
+}
+html body.view-login #content .login-links > li:last-child > a {
+  min-height: 52px;
+  padding: 14px 24px !important;
+  border: 1px solid var(--rd-ink) !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: transparent !important;
+  color: var(--rd-ink) !important;
+  font-size: 15px !important;
+  font-weight: 700;
+}
+html body.view-login #content .login-links > li:last-child > a:hover {
+  background: var(--rd-card) !important;
+}
+html body.view-login #content .login input.form-control {
+  min-height: 52px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--rd-line) !important;
+  border-radius: var(--rd-r-input) !important;
+  background-color: var(--rd-fill) !important;
+}
+html body.view-login #content .login input.form-control:focus {
+  background-color: var(--rd-card) !important;
+  border-color: var(--rd-ink) !important;
+  box-shadow: 0 0 0 3px var(--rd-accent-soft) !important;
+}
+html body.view-login #content .login .input-group input.form-control {
+  padding-right: 130px !important;
+}
+html body.view-login #content .login .input-password-toggle {
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  line-height: 36px;
+}
+html body.view-login #content .login .control-group:has(#remember) {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+html body.view-login #content .login .control-group:has(#remember) .control-label label {
+  margin: 0;
+}
+html body.view-login #content .login .control-group:has(#remember) .controls {
+  margin: 0;
+}
+html body.view-login #content .login-links > li:first-child > a {
+  text-decoration: underline !important;
+}
+html body.view-login #content .login .controls .dale {
+  border: 0 !important;
+  background: var(--rd-accent) !important;
+  box-shadow: var(--rd-sh-btn) !important;
+}
