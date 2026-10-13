@@ -2215,3 +2215,75 @@ html body #easyprofile.view_profile .rd-lk-tiles {
 html body #easyprofile.view_profile .jsn-p-role {
   background: var(--rd-accent-soft) !important;
 }
+
+/* ==========================================================================
+   Stage 6: bottom tab bar (mobile and installed app; the burger stays)
+   ========================================================================== */
+
+.rd-tabbar {
+  display: none;
+}
+@media (max-width: 1020px) {
+  html body .rd-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, .96);
+    border-top: 1px solid var(--rd-line);
+    box-shadow: 0 -8px 24px rgba(23, 21, 15, .06);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  html body .rd-tabbar .rd-tabbar__item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 2px;
+    border-radius: 14px;
+    color: var(--rd-mute) !important;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 600;
+    text-decoration: none !important;
+  }
+  html body .rd-tabbar .rd-tabbar__item svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  html body .rd-tabbar .rd-tabbar__item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  html body .rd-tabbar .rd-tabbar__item.is-active {
+    color: var(--rd-ink) !important;
+  }
+  html body .rd-tabbar .rd-tabbar__item.is-active svg {
+    stroke: var(--rd-ink);
+    fill: var(--rd-accent);
+  }
+  html body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+  html body.rd-filter-open .rd-tabbar,
+  html body.modal-open .rd-tabbar {
+    display: none;
+  }
+  html body .vg-profile-bar {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}

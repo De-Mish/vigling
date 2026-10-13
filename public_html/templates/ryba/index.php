@@ -553,6 +553,40 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			</div>
 		</section>
 	<?php endif; ?>
+	<?php
+	$rdBase = rtrim(Uri::root(true), '/');
+	$rdCabinetUrl = $rdBase . '/login';
+	$rdCabinetLabel = 'Войти';
+	$rdIdentity = $app->getIdentity();
+	if ($rdIdentity && !$rdIdentity->guest) {
+		$rdCabinetLabel = 'Кабинет';
+		try {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+			$rdCabinetUrl = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl();
+		} catch (\Throwable $e) {
+			$rdCabinetUrl = Route::_('index.php?option=com_users&view=profile');
+		}
+	}
+	$rdTabs = [
+		['label' => 'Мастера', 'href' => $rdBase . '/poisk-spetsialistov', 'icon' => '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>'],
+		['label' => 'Акции', 'href' => $rdBase . '/poisk-aktsij', 'icon' => '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>'],
+		['label' => 'Курсы', 'href' => $rdBase . '/kurs', 'icon' => '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/>'],
+		['label' => 'Модели', 'href' => $rdBase . '/modeli', 'icon' => '<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/>'],
+		['label' => $rdCabinetLabel, 'href' => $rdCabinetUrl, 'icon' => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5c1.2-2.2 3-3.2 5.5-3.2s4.3 1 5.5 3.2"/>', 'cabinet' => true],
+	];
+	$rdPath = '/' . trim((string) Uri::getInstance()->getPath(), '/');
+	?>
+	<nav class="rd-tabbar" aria-label="Основная навигация">
+		<?php foreach ($rdTabs as $rdTab) :
+			$rdTabPath = '/' . trim((string) parse_url($rdTab['href'], PHP_URL_PATH), '/');
+			$rdActive = $rdTabPath !== '/' && ($rdPath === $rdTabPath || strpos($rdPath, $rdTabPath . '/') === 0);
+			?>
+		<a class="rd-tabbar__item<?php echo $rdActive ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($rdTab['href']); ?>"<?php echo $rdActive ? ' aria-current="page"' : ''; ?>>
+			<svg viewBox="0 0 24 24" aria-hidden="true"><?php echo $rdTab['icon']; ?></svg>
+			<span><?php echo htmlspecialchars($rdTab['label']); ?></span>
+		</a>
+		<?php endforeach; ?>
+	</nav>
 	<footer class="footer">
 		<div class="container">
 			<jdoc:include type="modules" name="bottommenu" style="none" />
