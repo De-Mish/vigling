@@ -1,0 +1,294 @@
+/*
+ * Vigling redesign layer.
+ * Loaded after every other stylesheet. Tokens, base typography, header, buttons, fields.
+ * Rules: one accent (#F9CE54) for actions, Inter only, capsule = action/status, 20px cards, 14px fields.
+ */
+
+:root {
+  --rd-bg: #F7F5EF;
+  --rd-card: #FFFFFF;
+  --rd-ink: #17150F;
+  --rd-ink2: #55514A;
+  --rd-mute: #7A756A;
+  --rd-line: #ECE8DC;
+  --rd-fill: #F1EEE5;
+  --rd-accent: #F9CE54;
+  --rd-accent-d: #E9B72A;
+  --rd-accent-soft: #FFF5D1;
+  --rd-ok: #17803F;
+  --rd-ok-soft: #E4F4EA;
+  --rd-hot: #C2410C;
+  --rd-hot-soft: #FDEBDD;
+  --rd-r-card: 20px;
+  --rd-r-input: 14px;
+  --rd-r-pill: 999px;
+  --rd-sh: 0 8px 24px rgba(23, 21, 15, .07), 0 1px 2px rgba(23, 21, 15, .05);
+  --rd-sh-btn: 0 6px 14px rgba(233, 183, 42, .38);
+  --rd-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --vg-gold: #F9CE54;
+  --vg-gold-hover: #FBDB84;
+  --vg-ink: #17150F;
+  --vg-radius-card: 20px;
+  --vg-radius-control: 14px;
+  --vg-shadow: var(--rd-sh);
+}
+
+/* ---------- base ---------- */
+html body {
+  background: var(--rd-bg);
+  color: var(--rd-ink);
+  font-family: var(--rd-font);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+html body h1,
+html body .h1 {
+  font-family: var(--rd-font);
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  text-transform: none;
+  color: var(--rd-ink);
+}
+
+html body h2,
+html body .h2 {
+  font-family: var(--rd-font);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--rd-ink);
+}
+
+html body h3,
+html body .h3 {
+  font-family: var(--rd-font);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html body h2:after,
+html body .h2:after,
+html body h1:after,
+html body .category__masters-sidebar h2:after,
+html body .registration h1:after {
+  display: none !important;
+  content: none !important;
+}
+
+@media (min-width: 1021px) {
+  html body h1,
+  html body .h1 {
+    font-size: 32px;
+  }
+  html body h2,
+  html body .h2 {
+    font-size: 24px;
+  }
+}
+
+/* ---------- primary actions: capsule, one accent ---------- */
+html body .btn__time-zapis,
+html body .calc__btn .btn-next,
+html body .btn-fin,
+html body #prof,
+html body .quick-auth-form .btn__time-zapis,
+html body .pwa-install-actions .btn,
+html body .reg-type-page #member-registration .btn.validate,
+html body .reg-type-page #member-registration .com-users-registration__submit .controls .btn.validate {
+  font-family: var(--rd-font);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--rd-accent);
+  border: 0;
+  color: var(--rd-ink);
+  border-radius: var(--rd-r-pill) !important;
+  box-shadow: var(--rd-sh-btn);
+}
+
+html body .btn__time-zapis:hover,
+html body .btn__time-zapis:focus,
+html body .calc__btn .btn-next:hover,
+html body .btn-fin:hover,
+html body #prof:hover {
+  background: #FBDB84;
+  color: var(--rd-ink);
+}
+
+/* ---------- header: desktop ---------- */
+html body .header--desktop,
+html body .header--desktop.scrolled {
+  background: rgba(247, 245, 239, .92);
+  box-shadow: none;
+  border: 0;
+}
+
+html body .header--desktop .header__menu {
+  background: transparent;
+}
+
+html body .header--desktop .header__menu .mod-menu > li > a,
+html body .header--desktop .header__menu .nav > li > a {
+  font-family: var(--rd-font);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  height: 40px;
+  padding: 0 18px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--rd-ink2);
+  border-radius: var(--rd-r-pill) !important;
+}
+
+html body .header--desktop .header__menu .mod-menu > li > a:hover,
+html body .header--desktop .header__menu .nav > li > a:hover {
+  background: var(--rd-fill);
+  color: var(--rd-ink);
+}
+
+html body .header--desktop .header__menu .mod-menu > li.current > a,
+html body .header--desktop .header__menu .nav > li.current > a,
+html body .header--desktop .header__menu .mod-menu > li > a[aria-current="page"],
+html body .header--desktop .header__menu .nav > li > a[aria-current="page"] {
+  background: var(--rd-ink);
+  color: #fff;
+  box-shadow: none;
+}
+
+html body .header--desktop .header__logo a {
+  font-family: var(--rd-font);
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: var(--rd-ink);
+}
+
+html body .header--desktop .header__logo-img {
+  border-radius: 14px;
+}
+
+/* ---------- header: mobile / PWA ---------- */
+@media only screen and (max-width: 1020px) {
+  html body .header--mobile {
+    background: rgba(247, 245, 239, .96);
+    box-shadow: none;
+  }
+
+  html body .header-mobile__bar {
+    min-height: 60px;
+    padding: 10px 16px;
+  }
+
+  html body .header-mobile__logo {
+    gap: 10px;
+    font-family: var(--rd-font);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: var(--rd-ink);
+  }
+
+  html body .header-mobile__logo img {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px !important;
+  }
+
+  html body .header-mobile__toggle {
+    width: 40px;
+    height: 40px;
+    padding: 0 11px;
+    gap: 4px;
+    background: var(--rd-card);
+    border-radius: 50%;
+    box-shadow: var(--rd-sh);
+  }
+
+  html body .header-mobile__toggle-bar {
+    width: 18px;
+    height: 2px;
+    background: var(--rd-ink);
+  }
+
+  html body .header-mobile__panel {
+    background: var(--rd-bg);
+  }
+
+  html body .header-mobile__panel-head {
+    background: var(--rd-bg);
+  }
+
+  html body #header-mobile-panel .header-mobile__nav li.current > a,
+  html body #header-mobile-panel .header-mobile__nav a[aria-current="page"] {
+    background: var(--rd-accent);
+    color: var(--rd-ink);
+    border-radius: var(--rd-r-pill);
+  }
+}
+
+/* ---------- fields ---------- */
+html body .form-control,
+html body select.form-control,
+html body textarea.form-control,
+html body .reg-type-page #member-registration .form-control,
+html body .quick-auth-form input[type="text"],
+html body .quick-auth-form input[type="email"],
+html body .quick-auth-form input[type="password"],
+html body .quick-auth-form input[type="tel"] {
+  font-family: var(--rd-font);
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-r-input);
+  background: var(--rd-card);
+  color: var(--rd-ink);
+}
+
+html body .form-control:focus,
+html body .quick-auth-form input:focus {
+  border-color: var(--rd-accent-d);
+  box-shadow: 0 0 0 3px rgba(249, 206, 84, .35);
+  outline: 0;
+}
+
+/* ---------- footer ---------- */
+html body .footer {
+  background: transparent;
+  color: var(--rd-mute);
+}
+
+html body .footer a {
+  color: var(--rd-ink2);
+  font-weight: 600;
+}
+
+html body :is(h1, h2, h3, h4, h5) {
+  text-transform: none !important;
+}
+
+/* one family everywhere (mobile-redesign.css already does this up to 768px) */
+@media (min-width: 769px) {
+  html body *:not(i):not(.fa):not([class*="fa-"]):not(.jsn-icon):not(.glyphicon):not(.slick-arrow) {
+    font-family: var(--rd-font) !important;
+    letter-spacing: 0;
+  }
+}
+
+/* mobile-redesign.css action tokens: flat accent capsule with the soft shadow */
+@media (max-width: 768px) {
+  :root {
+    --vm-bh: 48px;
+    --vm-bg1: var(--rd-accent);
+    --vm-fg1: var(--rd-ink);
+    --vm-bs: var(--rd-sh-btn);
+    --vm-bpress: translateY(1px);
+    --vm-rf: 14px;
+    --vm-rc: 20px;
+  }
+}
