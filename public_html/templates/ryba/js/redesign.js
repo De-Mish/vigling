@@ -93,9 +93,28 @@
 		});
 	}
 
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initFilterSheet);
-	} else {
+	function pad(n) {
+		return n < 10 ? '0' + n : String(n);
+	}
+
+	function formatTimes() {
+		document.querySelectorAll('[data-rd-time]').forEach(function (el) {
+			var date = new Date(el.getAttribute('data-rd-time'));
+			if (isNaN(date.getTime())) {
+				return;
+			}
+			el.textContent = pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + ', ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+		});
+	}
+
+	function init() {
 		initFilterSheet();
+		formatTimes();
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
 	}
 })();

@@ -2113,3 +2113,105 @@ html body .contacts-settings-page .contacts-hover-tab__panel {
   font-size: 14px;
   color: var(--rd-mute);
 }
+
+/* ==========================================================================
+   Stage 5c: cabinet header and tiles
+   ========================================================================== */
+
+html body #easyprofile.view_profile .view_profile-header {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100%;
+  margin: 0 0 16px !important;
+  padding: 20px !important;
+  background: var(--rd-card) !important;
+  border-radius: var(--rd-r-card);
+  box-shadow: var(--rd-sh);
+}
+html body #easyprofile.view_profile .jsn-p-title h3 {
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--rd-ink);
+}
+html body #easyprofile.view_profile .jsn-p-role {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: var(--rd-r-pill);
+  background: var(--rd-accent-soft);
+  color: var(--rd-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+html body #easyprofile.view_profile .rd-lk-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+html body #easyprofile.view_profile .rd-lk-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--rd-fill);
+  color: var(--rd-ink) !important;
+  text-decoration: none !important;
+}
+html body #easyprofile.view_profile .rd-lk-tile--next {
+  grid-column: 1 / -1;
+  background: var(--rd-accent-soft);
+}
+html body #easyprofile.view_profile .rd-lk-tile__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--rd-mute);
+}
+html body #easyprofile.view_profile .rd-lk-tile__value {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 800;
+  color: var(--rd-ink);
+}
+html body #easyprofile.view_profile .rd-lk-tile__meta {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--rd-ink2);
+}
+html body #easyprofile.view_profile .rd-lk-growth {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: var(--rd-r-pill);
+  background: #E4F4EA;
+  color: var(--rd-ok);
+  font-weight: 700;
+}
+html body #easyprofile.view_profile .rd-lk-growth.is-down {
+  background: #FDEBDD;
+  color: var(--rd-hot);
+}
+@media (min-width: 769px) {
+  html body #easyprofile.view_profile .rd-lk-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  html body #easyprofile.view_profile .rd-lk-tile--next {
+    grid-column: auto;
+  }
+}
+html body #easyprofile.view_profile .view_profile-header {
+  flex-wrap: wrap;
+  align-items: center;
+}
+html body #easyprofile.view_profile .rd-lk-tiles {
+  flex: 0 0 100%;
+}
+html body #easyprofile.view_profile .jsn-p-role {
+  background: var(--rd-accent-soft) !important;
+}
