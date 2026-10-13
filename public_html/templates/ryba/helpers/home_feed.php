@@ -225,6 +225,92 @@ final class VglHomeFeed
 		return (string) ob_get_clean();
 	}
 
+	/**
+	 * Section counters for the home tiles. Every value is null when it cannot be read,
+	 * so a failure only hides that counter.
+	 *
+	 * @return array{masters: ?int, promos: ?int, maxDiscount: ?int, courses: ?int, models: ?int}
+	 */
+	public static function stats(string $city): array
+	{
+		$stats = ['masters' => null, 'promos' => null, 'maxDiscount' => null, 'courses' => null, 'models' => null];
+
+		try {
+			$stats['masters'] = self::countList('com_poisk', $city, []);
+		} catch (\Throwable $e) {
+		}
+
+		try {
+			$stats['courses'] = self::countList('com_kurs', $city, ['booking_mode' => '']);
+		} catch (\Throwable $e) {
+		}
+
+		try {
+			$stats['models'] = self::loadModeli($city, 0, 1)['total'];
+		} catch (\Throwable $e) {
+		}
+
+		try {
+			$stats['promos'] = self::loadAktsii($city, 0, 1)['total'];
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$query = $db->getQuery(true)
+				->select('MAX(ROUND((' . $db->quoteName('s.old_price') . ' - ' . $db->quoteName('s.price') . ') / ' . $db->quoteName('s.old_price') . ' * 100))')
+				->from($db->quoteName('#__vigling_user_stock_services', 's'))
+				->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('s.user_id'))
+				->where($db->quoteName('s.is_active') . ' = 1')
+				->where($db->quoteName('s.count_stock') . ' > 0')
+				->where($db->quoteName('u.block') . ' = 0')
+				->where($db->quoteName('s.price') . ' > 0')
+				->where($db->quoteName('s.old_price') . ' > ' . $db->quoteName('s.price'));
+			$db->setQuery($query);
+			$max = (int) $db->loadResult();
+			$stats['maxDiscount'] = $max > 0 && $max < 100 ? $max : null;
+		} catch (\Throwable $e) {
+		}
+
+		return $stats;
+	}
+
+	/** @param array<string, mixed> $extraState */
+	private static function countList(string $component, string $city, array $extraState): int
+	{
+		$app = Factory::getApplication();
+		$booted = $app->bootComponent($component);
+		if (!$booted instanceof \Joomla\CMS\MVC\Factory\MVCFactoryServiceInterface) {
+			throw new \RuntimeException('Component is not available');
+		}
+
+		$model = $booted->getMVCFactory()->createModel('List', 'Site', ['ignore_request' => true]);
+		$state = array_merge([
+			'cat_id' => 0, 'service' => 0, 'tag' => 0, 'city' => $city, 'area' => '', 'master_name' => '',
+			'home' => [], 'payment' => [], 'children' => 0, 'avail_date' => '',
+			'list.ordering' => 'id', 'list.direction' => 'DESC', 'list.limit' => 1, 'list.start' => 0,
+		], $extraState);
+		foreach ($state as $key => $value) {
+			$model->setState($key, $value);
+		}
+
+		return (int) $model->getTotal();
+	}
+
+	/** Russian plural form: [one, few, many]. */
+	public static function plural(int $n, array $forms): string
+	{
+		$m100 = $n % 100;
+		$m10 = $n % 10;
+		if ($m100 >= 11 && $m100 <= 14) {
+			return $forms[2];
+		}
+		if ($m10 === 1) {
+			return $forms[0];
+		}
+		if ($m10 >= 2 && $m10 <= 4) {
+			return $forms[1];
+		}
+
+		return $forms[2];
+	}
+
 	private static function renderPager(int $page, int $pages): string
 	{
 		if ($pages < 2) {

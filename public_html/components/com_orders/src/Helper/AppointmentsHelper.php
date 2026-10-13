@@ -277,6 +277,93 @@ class AppointmentsHelper
 		return $target;
 	}
 
+	/**
+	 * Numbers for the cabinet tiles: next appointment and visit counters.
+	 * Counts only real booking rows (blocks without a client are ignored). Returns null when the data cannot be read.
+	 *
+	 * @return array{next: ?array{time: string, service: string}, upcoming: int, visits: int, week: int, month: int, prevMonth: int}|null
+	 */
+	public static function summary(int $userId, bool $asMaster): ?array
+	{
+		if ($userId <= 0) {
+			return null;
+		}
+
+		try {
+			$app = Factory::getApplication();
+			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			require_once JPATH_SITE . '/components/com_orders/tmpl/orders/_reschedule_helper.php';
+			$tzName = function_exists('viglingOrdersGetUserTimezone')
+				? viglingOrdersGetUserTimezone($db, $userId, (string) $app->get('offset', 'UTC'))
+				: (string) $app->get('offset', 'UTC');
+			try {
+				$tz = new \DateTimeZone($tzName !== '' ? $tzName : 'UTC');
+			} catch (\Throwable $e) {
+				$tz = new \DateTimeZone('UTC');
+			}
+			$utc = new \DateTimeZone('UTC');
+			$fmt = 'Y-m-d H:i:s';
+			$now = new \DateTimeImmutable('now', $utc);
+			$monthStart = (new \DateTimeImmutable('now', $tz))->modify('first day of this month')->setTime(0, 0, 0);
+			$monthStartUtc = $monthStart->setTimezone($utc);
+			$prevMonthStartUtc = $monthStart->modify('-1 month')->setTimezone($utc);
+			$elapsed = $now->getTimestamp() - $monthStartUtc->getTimestamp();
+			$prevPeriodEndUtc = $prevMonthStartUtc->modify('+' . max(0, $elapsed) . ' seconds');
+			if ($prevPeriodEndUtc > $monthStartUtc) {
+				$prevPeriodEndUtc = $monthStartUtc;
+			}
+
+			$who = $asMaster
+				? $db->quoteName('master_id') . ' = ' . $userId . ' AND ' . $db->quoteName('user_id') . ' > 0'
+				: $db->quoteName('user_id') . ' = ' . $userId;
+
+			$count = static function (string $extra) use ($db, $who): int {
+				$query = $db->getQuery(true)
+					->select('COUNT(*)')
+					->from($db->quoteName('#__vigling_bookings'))
+					->where('(' . $who . ')')
+					->where($db->quoteName('time') . ' IS NOT NULL');
+				if ($extra !== '') {
+					$query->where($extra);
+				}
+				$db->setQuery($query);
+
+				return (int) $db->loadResult();
+			};
+			$timeCol = $db->quoteName('time');
+
+			$nextQuery = $db->getQuery(true)
+				->select([$db->quoteName('time'), $db->quoteName('service_name')])
+				->from($db->quoteName('#__vigling_bookings'))
+				->where('(' . $who . ')')
+				->where($timeCol . ' >= ' . $db->quote($now->format($fmt)))
+				->order($timeCol . ' ASC');
+			$db->setQuery($nextQuery, 0, 1);
+			$nextRow = $db->loadObject();
+			$next = null;
+			if ($nextRow && !empty($nextRow->time)) {
+				$next = [
+					'time' => (new \DateTimeImmutable((string) $nextRow->time, $utc))->format('c'),
+					'service' => trim((string) ($nextRow->service_name ?? '')),
+				];
+			}
+
+			return [
+				'next' => $next,
+				'upcoming' => $count($timeCol . ' >= ' . $db->quote($now->format($fmt))),
+				'visits' => $count($timeCol . ' < ' . $db->quote($now->format($fmt))),
+				'week' => $count($timeCol . ' >= ' . $db->quote($now->format($fmt))
+					. ' AND ' . $timeCol . ' < ' . $db->quote($now->modify('+7 days')->format($fmt))),
+				'month' => $count($timeCol . ' >= ' . $db->quote($monthStartUtc->format($fmt))
+					. ' AND ' . $timeCol . ' < ' . $db->quote($now->format($fmt))),
+				'prevMonth' => $count($timeCol . ' >= ' . $db->quote($prevMonthStartUtc->format($fmt))
+					. ' AND ' . $timeCol . ' < ' . $db->quote($prevPeriodEndUtc->format($fmt))),
+			];
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}
+
 	private static function parseDate(string $raw, \DateTimeZone $tz): ?\DateTimeImmutable
 	{
 		$raw = trim($raw);

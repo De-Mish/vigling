@@ -102,7 +102,7 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) 
 $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardImage, true);
 $avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarImage, true);
 
-$imgStyle = 'background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
+$imgStyle = '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
 
 $courseTitle = trim((string) ($item->title ?? $item->description ?? ''));
@@ -125,6 +125,7 @@ if ($slotStartUtc !== '') {
 ?>
 <div class="category__item course-catalog__item" data-address="<?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?>">
 <div class="category__item-img" style="<?php echo $imgStyle; ?>">
+	<span class="rd-badges"><span class="rd-b rd-b--ink">Курс</span><?php if ($categoryTitle !== '') : ?><span class="rd-b rd-b--glass"><?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?></span>
 	<img src="<?php echo htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($courseTitle !== '' ? $courseTitle : 'Курс', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
 </div>
 	<div class="category__item-content">

@@ -48,6 +48,8 @@ $hasTfa = property_exists($this, 'tfa') && !empty($this->tfa);
 			</div>
 		<?php endif; ?>
 	<form action="<?php echo Route::_('index.php?option=com_users&task=user.login'); ?>" method="post" class="form-validate form-horizontal well">
+		<h2 class="rd-auth__title">С возвращением</h2>
+		<p class="rd-auth__lead">Войдите, чтобы записываться к мастерам и управлять своими записями.</p>
 		<fieldset>
 			<?php echo $this->form->renderFieldset('credentials'); ?>
 				<?php if ($hasTfa) : ?>
@@ -127,7 +129,7 @@ $hasTfa = property_exists($this, 'tfa') && !empty($this->tfa);
 			<?php if ($usersConfig->get('allowUserRegistration')) : ?>
 				<li>
 				<a class="login-links__item" href="<?php echo Route::_('index.php?option=com_users&view=registration'); ?>">
-					<?php echo Text::_('COM_USERS_LOGIN_REGISTER'); ?>
+					Создать аккаунт
 				</a>
 			</li>
 		<?php endif; ?>

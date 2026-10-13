@@ -544,6 +544,23 @@ foreach ($workRangeByDay as $range) {
 	}
 }
 
+$profileOnline = false;
+if ($profileOwnerId > 0) {
+	try {
+		$onlineDb = Factory::getContainer()->get(DatabaseInterface::class);
+		$onlineSince = time() - 300;
+		$onlineQuery = $onlineDb->getQuery(true)
+			->select('COUNT(*)')
+			->from($onlineDb->quoteName('#__session'))
+			->where($onlineDb->quoteName('userid') . ' = ' . $profileOwnerId)
+			->where($onlineDb->quoteName('client_id') . ' = 0')
+			->where($onlineDb->quoteName('time') . ' >= ' . $onlineSince);
+		$onlineDb->setQuery($onlineQuery);
+		$profileOnline = (int) $onlineDb->loadResult() > 0;
+	} catch (\Throwable $e) {
+		$profileOnline = false;
+	}
+}
 $displayName = trim((string) ($this->data->name ?? ''));
 if ($displayName === '') {
 	$displayName = trim((string) ($this->data->username ?? 'Мастер'));
@@ -976,10 +993,13 @@ if (empty($isLkEmbed)) {
 		<div class="masters__big-info-head">
 			<?php if (empty($isLkEmbed)) : ?>
 			<div class="masters__big-info-head-master" style="background-image: url('<?php echo $this->escape($avatarPreviewUrl); ?>'); background-size: cover;">
-				<span class="masters__big-info-head-master-online"></span>
+				<span class="masters__big-info-head-master-online<?php echo $profileOnline ? '' : ' gray'; ?>"></span>
 			</div>
 			<?php endif; ?>
 			<h3 class="h3biginfo"><?php echo $this->escape($displayName); ?></h3>
+			<?php if (empty($isLkEmbed)) : ?>
+			<span class="rd-online<?php echo $profileOnline ? ' is-on' : ''; ?>"><?php echo $profileOnline ? 'Онлайн' : 'Не в сети'; ?></span>
+			<?php endif; ?>
 			<?php if ((int) $currentUser->id !== $profileOwnerId) : ?>
 			<a id="bookmarkme" class="<?php echo $isFavorite ? 'active' : ''; ?>" href="#" data-id="<?php echo $profileOwnerId; ?>" title="Добавить в избранное"></a>
 			<?php endif; ?>
@@ -3536,7 +3556,12 @@ if (empty($isLkEmbed)) {
 				bookingCalendarByDate[String(day.date)] = day;
 				var slots = Array.isArray(day.slots) ? day.slots : [];
 				html += '<div class="calendar__master-item">';
-				html += '<span class="mas-date">' + escapeBookingText(day.date_view) + ' <b>' + escapeBookingText(day.dow) + '</b></span>';
+				var dayView = String(day.date_view == null ? '' : day.date_view);
+				var dayParts = dayView.split('.');
+				if (dayParts.length === 3 && parseInt(dayParts[2], 10) === new Date().getFullYear()) {
+					dayView = dayParts[0] + '.' + dayParts[1];
+				}
+				html += '<span class="mas-date">' + escapeBookingText(dayView) + ' <b>' + escapeBookingText(day.dow) + '</b></span>';
 				if (!slots.length) {
 					html += '<span class="line-no"></span></div>';
 					return;
