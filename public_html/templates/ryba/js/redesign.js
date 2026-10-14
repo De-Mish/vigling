@@ -103,7 +103,8 @@
 			if (isNaN(date.getTime())) {
 				return;
 			}
-			el.textContent = pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + ', ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+			var days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+			el.textContent = days[date.getDay()] + ', ' + pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + ' \u00b7 ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
 		});
 	}
 

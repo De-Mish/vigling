@@ -217,6 +217,7 @@ class OrdersController extends BaseController
 
 			OrderTable::ensureBookingCommentColumns($db);
 			OrderTable::ensureSourceColumn($db);
+			OrderTable::ensureServiceFullNameColumn($db);
 			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 			$new = new OrderTable($db, $dispatcher);
 			$payload = [
@@ -233,7 +234,7 @@ class OrdersController extends BaseController
 			if (isset($columns['source'])) {
 				$payload['source'] = 'profile';
 			}
-			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone'];
+			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone', 'service_full_name'];
 			foreach ($copyIfPresent as $columnName) {
 				if (!isset($columns[$columnName]) || !isset($table->$columnName)) {
 					continue;

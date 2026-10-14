@@ -118,6 +118,25 @@ class OrderTable extends Table
 		}
 	}
 
+	public static function ensureServiceFullNameColumn(DatabaseInterface $db): bool
+	{
+		try {
+			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			if (isset($columns['service_full_name'])) {
+				return true;
+			}
+			$db->setQuery(
+				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+				. ' ADD COLUMN ' . $db->quoteName('service_full_name') . ' VARCHAR(255) NULL DEFAULT NULL'
+				. ' AFTER ' . $db->quoteName('service_name')
+			)->execute();
+
+			return true;
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	public static function ensureSourceColumn(DatabaseInterface $db): bool
 	{
 		try {

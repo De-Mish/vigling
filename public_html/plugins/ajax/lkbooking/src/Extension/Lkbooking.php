@@ -83,6 +83,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 		$durationMin = (int) $input->post->get('duration_min', 60);
 		$catalogSvcId = (int) $input->post->get('svc_id', 0);
+		$catalogFullName = '';
 		if ($catalogSvcId <= 0) {
 			$catalogSvcId = (int) $input->post->get('service_id', 0);
 		}
@@ -158,6 +159,9 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		}
 		if (class_exists(OrderTable::class) && OrderTable::ensureSourceColumn($db)) {
+			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		}
+		if (class_exists(OrderTable::class) && OrderTable::ensureServiceFullNameColumn($db)) {
 			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		}
 		$bookingSource = strtolower(trim((string) $input->post->get('source', 'profile', 'string')));
@@ -305,6 +309,9 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$catalogTagId = (int) $catalogItem['tag_id'];
 				$catalogPrice = (int) $catalogItem['price'];
 				$catalogTimeSum = (int) $catalogItem['duration'] + (int) $catalogItem['pause_min'];
+				$catalogFullName = trim((string) ($catalogItem['category'] ?? '')) !== ''
+					? trim((string) $catalogItem['category']) . ' - ' . trim((string) ($catalogItem['name'] ?? ''))
+					: '';
 				if ($bookingKind === 'stock' && (int) ($catalogItem['stock_service_id'] ?? 0) > 0) {
 					$stockServiceId = (int) $catalogItem['stock_service_id'];
 				}
@@ -359,6 +366,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$columns = ['user_id', 'master_id', 'time', 'time_to', 'service_name'];
 		$values = [(int) $user->id, $masterId, $db->quote($timeDb), $db->quote($timeToDb), $db->quote($serviceName)];
+		if (!empty($catalogFullName) && isset($tableColumns['service_full_name'])) {
+			$columns[] = 'service_full_name';
+			$values[] = $db->quote(mb_substr($catalogFullName, 0, 255));
+		}
 		$extraColumnValues = [
 			'comment' => $bookingExtras['comment'],
 			'contact_name' => $bookingExtras['contact_name'],
@@ -1243,7 +1254,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 	}
 
 	/**
-	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int}|null
+	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int,category:string}|null
 	 */
 	private static function resolveMasterCatalogItem(int $masterId, bool $isStock, int $svcId, int $tagId, int $stockServiceId = 0): ?array
 	{
@@ -1264,12 +1275,14 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				}
 				if ($isStock && $stockServiceId > 0) {
 					if ((int) ($item['stock_service_id'] ?? 0) === $stockServiceId) {
+						$item['_category'] = trim((string) ($group['title'] ?? ''));
 						return self::normalizeCatalogItem($item);
 					}
 					continue;
 				}
 				$itemSvc = trim((string) ($item['svc_id'] ?? ''));
 				if ($svcKey !== '0' && $itemSvc !== '' && $itemSvc === $svcKey) {
+					$item['_category'] = trim((string) ($group['title'] ?? ''));
 					$matches[] = $item;
 				}
 			}
@@ -1308,7 +1321,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 	/**
 	 * @param array<string,mixed> $item
-	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int}
+	 * @return array{name:string,price:int,duration:int,svc_id:int,tag_id:int,pause_min:int,stock_service_id:int,category:string}
 	 */
 	private static function normalizeCatalogItem(array $item): array
 	{
@@ -1322,6 +1335,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			'tag_id' => (int) ($item['tag_id'] ?? 0),
 			'pause_min' => max(0, (int) ($item['pause_min'] ?? 0)),
 			'stock_service_id' => (int) ($item['stock_service_id'] ?? 0),
+			'category' => trim((string) ($item['_category'] ?? '')),
 		];
 	}
 }
