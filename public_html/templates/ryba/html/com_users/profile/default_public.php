@@ -2908,9 +2908,9 @@ if (empty($isLkEmbed)) {
 			var totalEl = bookingForm.querySelector('.zapis__data-result');
 			if (wrap) {
 				if (isStockItem && oldPrice > 0) {
-					wrap.innerHTML = '<p class="zapis__data-price"><span>' + title + '</span><span style="margin-left: 5px"> - длительность: ' + srvTime.duration + ' мин. </span><b><span style="text-decoration: line-through; opacity: .65; margin-right: 8px;">' + oldPrice + '</span>~ ' + price + ' <i class="valuta_price">руб.</i></b></p>';
+					wrap.innerHTML = '<p class="zapis__data-price"><span>' + title + '</span><span class="zapis__data-dur">Длительность: ' + srvTime.duration + ' мин.</span><b><span style="text-decoration: line-through; opacity: .65; margin-right: 8px;">' + oldPrice + '</span>~ ' + price + ' <i class="valuta_price">руб.</i></b></p>';
 				} else {
-					wrap.innerHTML = '<p class="zapis__data-price"><span>' + title + '</span><span style="margin-left: 5px"> - длительность: ' + srvTime.duration + ' мин. </span><b>~ ' + price + ' <i class="valuta_price">руб.</i></b></p>';
+					wrap.innerHTML = '<p class="zapis__data-price"><span>' + title + '</span><span class="zapis__data-dur">Длительность: ' + srvTime.duration + ' мин.</span><b>~ ' + price + ' <i class="valuta_price">руб.</i></b></p>';
 				}
 			}
 			if (totalEl) {
