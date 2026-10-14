@@ -97,19 +97,58 @@
 		return n < 10 ? '0' + n : String(n);
 	}
 
+	var WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+	function dateTimeHtml(date) {
+		var label = WEEKDAYS[date.getDay()] + ', ' + pad(date.getDate()) + '.' + pad(date.getMonth() + 1);
+		if (date.getFullYear() !== new Date().getFullYear()) {
+			label += '.' + date.getFullYear();
+		}
+		return '<span class="rd-dt"><span class="rd-dt__d">' + label + '</span><span class="rd-dt__t">' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + '</span></span>';
+	}
+
+	window.rdFormatDateTime = function (isoOrDate) {
+		var date = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+		return isNaN(date.getTime()) ? '' : dateTimeHtml(date);
+	};
+
 	function formatTimes() {
-		document.querySelectorAll('[data-rd-time]').forEach(function (el) {
-			var date = new Date(el.getAttribute('data-rd-time'));
+		document.querySelectorAll('[data-rd-time], .lk-time-utc[data-time-utc]').forEach(function (el) {
+			var date = new Date(el.getAttribute('data-rd-time') || el.getAttribute('data-time-utc'));
 			if (isNaN(date.getTime())) {
 				return;
 			}
-			var days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-			el.textContent = days[date.getDay()] + ', ' + pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + ' \u00b7 ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+			el.innerHTML = dateTimeHtml(date);
 		});
+	}
+
+	function initStickyFilter() {
+		var panel = document.querySelector('.category__masters-sidebar');
+		if (!panel || !window.matchMedia) {
+			return;
+		}
+		var wide = window.matchMedia('(min-width: 1021px)');
+		function update() {
+			if (!wide.matches) {
+				panel.style.removeProperty('top');
+				return;
+			}
+			var head = 96;
+			var gap = 16;
+			var height = panel.offsetHeight;
+			var top = height + head + gap <= window.innerHeight ? head : window.innerHeight - height - gap;
+			panel.style.setProperty('top', top + 'px', 'important');
+		}
+		update();
+		window.addEventListener('resize', update);
+		if (window.ResizeObserver) {
+			new ResizeObserver(update).observe(panel);
+		}
 	}
 
 	function init() {
 		initFilterSheet();
+		initStickyFilter();
 		formatTimes();
 	}
 
