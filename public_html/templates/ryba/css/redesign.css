@@ -2849,3 +2849,95 @@ html body #zapis-reschedule .calc__btn .close__btn {
     min-width: 180px;
   }
 }
+
+/* ==========================================================================
+   Stage 8: review cards
+   ========================================================================== */
+
+html body .review__master--fullbleed .review__master-head {
+  margin: 0 0 12px;
+}
+html body .review__master--fullbleed .review__master-head > span {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--rd-mute);
+}
+html body .review__master--fullbleed .review__master-head > span:not(.easylast_noentry)::before {
+  content: "Отзывов: ";
+}
+html body .review__master--fullbleed .review__master-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (min-width: 769px) {
+  html body .review__master--fullbleed .review__master-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+html body .review__master--fullbleed .review__master-body > .clearFloat {
+  display: none;
+}
+html body .review__master-body .review__master-body-item {
+  float: none !important;
+  box-sizing: border-box;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+  border: 0;
+  border-radius: var(--rd-r-card);
+  background: var(--rd-card);
+  box-shadow: var(--rd-sh);
+}
+html body .review__master-body-item .review__item-data {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+html body .review__master-body-item .review__item-data span {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+  text-transform: none;
+  color: var(--rd-ink);
+}
+html body .review__master-body-item .review__item-data i {
+  font-size: 13px;
+  font-style: normal;
+  color: var(--rd-mute);
+}
+html body .review__master-body-item .review__item-rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 8px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--rd-ink);
+}
+html body .review__master-body-item .review__item-rate ul {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+html body .review__master-body-item .review__item-rate li {
+  margin: 0;
+  padding: 0;
+  color: #E8A600;
+  font-size: 14px;
+}
+html body .review__master-body-item .review__item-rate li i {
+  color: inherit;
+}
+html body .review__master-body-item .review__text {
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--rd-ink2);
+  overflow-wrap: anywhere;
+}
