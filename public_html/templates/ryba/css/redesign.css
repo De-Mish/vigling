@@ -2165,7 +2165,38 @@ html body #easyprofile.view_profile .rd-lk-tile {
 }
 html body #easyprofile.view_profile .rd-lk-tile--next {
   grid-column: 1 / -1;
-  background: var(--rd-accent-soft);
+  gap: 6px;
+  padding: 18px 20px;
+  background: var(--rd-accent);
+  box-shadow: var(--rd-sh);
+}
+html body #easyprofile.view_profile .rd-lk-tile--next .rd-lk-tile__label {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: var(--rd-r-pill);
+  background: rgba(255, 255, 255, .6);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--rd-ink);
+}
+html body #easyprofile.view_profile .rd-lk-tile--next .rd-lk-tile__value {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+html body #easyprofile.view_profile .rd-lk-tile--next .rd-lk-tile__meta {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--rd-ink);
+  overflow-wrap: anywhere;
+}
+html body #easyprofile.view_profile .rd-lk-tile:not(.rd-lk-tile--next) {
+  gap: 0;
+  padding: 12px 14px;
+  background: transparent;
+  border: 1px solid var(--rd-line);
 }
 html body #easyprofile.view_profile .rd-lk-tile__label {
   font-size: 12px;
@@ -2174,16 +2205,37 @@ html body #easyprofile.view_profile .rd-lk-tile__label {
   text-transform: uppercase;
   color: var(--rd-mute);
 }
+html body #easyprofile.view_profile .rd-lk-tile:not(.rd-lk-tile--next) .rd-lk-tile__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--rd-ink2);
+}
 html body #easyprofile.view_profile .rd-lk-tile__value {
   font-size: 22px;
   line-height: 28px;
   font-weight: 800;
   color: var(--rd-ink);
 }
+html body #easyprofile.view_profile .rd-lk-tile:not(.rd-lk-tile--next) .rd-lk-tile__value {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 html body #easyprofile.view_profile .rd-lk-tile__meta {
   font-size: 13px;
   line-height: 18px;
   color: var(--rd-ink2);
+}
+html body #easyprofile.view_profile .rd-lk-tile:not(.rd-lk-tile--next) .rd-lk-tile__meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rd-mute);
+}
+html body #easyprofile.view_profile .rd-lk-tile:nth-child(2):last-child {
+  grid-column: 1 / -1;
 }
 html body #easyprofile.view_profile .rd-lk-growth {
   display: inline-block;
@@ -2199,7 +2251,11 @@ html body #easyprofile.view_profile .rd-lk-growth.is-down {
 }
 @media (min-width: 769px) {
   html body #easyprofile.view_profile .rd-lk-tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  html body #easyprofile.view_profile .rd-lk-tile:nth-child(2):last-child {
+    grid-column: 2 / -1;
   }
   html body #easyprofile.view_profile .rd-lk-tile--next {
     grid-column: auto;

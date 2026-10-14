@@ -333,7 +333,7 @@ class AppointmentsHelper
 			$timeCol = $db->quoteName('time');
 
 			$nextQuery = $db->getQuery(true)
-				->select([$db->quoteName('time'), $db->quoteName('service_name')])
+				->select([$db->quoteName('time'), $db->quoteName('service_name'), $db->quoteName('master_id')])
 				->from($db->quoteName('#__vigling_bookings'))
 				->where('(' . $who . ')')
 				->where($timeCol . ' >= ' . $db->quote($now->format($fmt)))
@@ -342,9 +342,15 @@ class AppointmentsHelper
 			$nextRow = $db->loadObject();
 			$next = null;
 			if ($nextRow && !empty($nextRow->time)) {
+				$nextService = trim((string) ($nextRow->service_name ?? ''));
+				try {
+					$ordersModel = $app->bootComponent('com_orders')->getMVCFactory()->createModel('Orders', 'Site', ['ignore_request' => true]);
+					$nextService = $ordersModel->getFullServiceName((int) ($nextRow->master_id ?? 0), $nextService);
+				} catch (\Throwable $e) {
+				}
 				$next = [
 					'time' => (new \DateTimeImmutable((string) $nextRow->time, $utc))->format('c'),
-					'service' => trim((string) ($nextRow->service_name ?? '')),
+					'service' => $nextService,
 				];
 			}
 

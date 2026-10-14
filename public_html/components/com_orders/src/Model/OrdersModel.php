@@ -250,15 +250,7 @@ class OrdersModel extends ListModel
 			$masterIdsForMap = array_unique(array_map(function ($o) {
 				return (int) $o->master_id;
 			}, $items));
-			if ((string) $this->getState('layout', 'default') === 'appointments') {
-				foreach ($masterIdsForMap as $masterId) {
-					if ((int) $masterId > 0) {
-						$serviceDisplayMap[(int) $masterId] = ['exact' => [], 'suffix' => []];
-					}
-				}
-			} else {
-				$serviceDisplayMap = $this->getMasterServiceDisplayMap($masterIdsForMap);
-			}
+			$serviceDisplayMap = $this->getMasterServiceDisplayMap($masterIdsForMap);
 			$courseInfoMap = [];
 			$courseSlotInfoMap = [];
 			$searchInfoMap = [];
@@ -601,6 +593,20 @@ class OrdersModel extends ListModel
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Full "Specialty - service / method" label for a stored booking service name.
+	 */
+	public function getFullServiceName(int $masterId, string $serviceName): string
+	{
+		$serviceName = trim($serviceName);
+		if ($masterId <= 0 || $serviceName === '') {
+			return $serviceName;
+		}
+		$map = $this->getMasterServiceDisplayMap([$masterId]);
+
+		return $this->resolveOrderServiceDisplayName($serviceName, $map[$masterId] ?? ['exact' => [], 'suffix' => []]);
 	}
 
 	/**
