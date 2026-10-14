@@ -2066,7 +2066,7 @@ window.FIREBASE_CONFIG = <?php echo json_encode([
 								if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso) && iso.indexOf('Z') === -1 && iso.indexOf('+') === -1) iso += 'Z';
 								try {
 									var dateObj = new Date(iso);
-									if (!isNaN(dateObj.getTime())) meta.textContent = dateObj.toLocaleString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+									if (!isNaN(dateObj.getTime())) meta.textContent = dateObj.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 									else meta.textContent = d;
 								} catch (e) { meta.textContent = d; }
 							}
