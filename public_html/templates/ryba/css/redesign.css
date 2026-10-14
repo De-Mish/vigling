@@ -2941,3 +2941,58 @@ html body .review__master-body-item .review__text {
   color: var(--rd-ink2);
   overflow-wrap: anywhere;
 }
+
+/* ==========================================================================
+   Stage 8: notifications dropdown
+   ========================================================================== */
+
+html body #easyprofile .lk-notify-dropdown {
+  border: 0 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 40px rgba(23, 21, 15, .18) !important;
+  overflow-x: hidden;
+}
+@media (max-width: 480px) {
+  html body #easyprofile .lk-notify-dropdown {
+    left: 0 !important;
+    right: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+html body #easyprofile .lk-notify-header {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid var(--rd-line) !important;
+  font-size: 16px;
+}
+html body #easyprofile .lk-notify-item {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid var(--rd-line) !important;
+  text-align: left !important;
+  font-size: 14px;
+  line-height: 20px;
+}
+html body #easyprofile .lk-notify-item:last-child {
+  border-bottom: 0 !important;
+}
+html body #easyprofile .lk-notify-item > div:first-child {
+  font-size: 15px;
+  color: var(--rd-ink);
+}
+html body #easyprofile .lk-notify-item .btn,
+html body #easyprofile .lk-notify-header .btn {
+  min-height: 32px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--rd-line) !important;
+  border-radius: var(--rd-r-pill) !important;
+  background: var(--rd-card) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 30px !important;
+  color: var(--rd-ink) !important;
+}
+html body #easyprofile .lk-notify-header .btn {
+  background: var(--rd-accent-soft) !important;
+  border-color: transparent !important;
+}
