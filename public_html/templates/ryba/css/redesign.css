@@ -3197,3 +3197,9 @@ html body #easyprofile.view_profile .rd-lk-tile--next .rd-dt__t {
   font-size: .72em;
   padding: .1em .55em;
 }
+
+/* Cards below the fold are not rendered, so their photos are not downloaded until the card is near the screen. */
+html body :is(#content, #home-feed) .category .category__masters > .category__item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 460px;
+}
