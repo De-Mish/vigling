@@ -3049,3 +3049,98 @@ html body .contacts-settings-page .contacts-hover-tab__img {
   color: var(--rd-ink);
   mix-blend-mode: normal;
 }
+
+/* ==========================================================================
+   Stage 10: desktop master profile, sticky booking card on the right
+   ========================================================================== */
+
+.rd-pf-cta {
+  display: none;
+}
+@media (min-width: 1021px) {
+  html body #content .rd-pf-layout:has(> #easyprofile.view_profile-public) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    column-gap: 24px;
+    row-gap: 0;
+    align-items: start;
+  }
+  html body #content .rd-pf-layout > #easyprofile.view_profile-public {
+    display: contents;
+  }
+  html body #easyprofile.view_profile-public > .clearFloat {
+    display: none;
+  }
+  html body #easyprofile.view_profile-public > .vg-profile-back-wrap {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  html body #easyprofile.view_profile-public > .masters__big-img-cont {
+    grid-column: 1;
+    grid-row: 2;
+    float: none;
+    width: auto;
+    max-width: none;
+    flex: none;
+    min-width: 0;
+    padding: 0;
+  }
+  html body #easyprofile.view_profile-public > .masters__big-info {
+    grid-column: 2;
+    grid-row: 2 / span 30;
+    position: sticky;
+    top: 96px;
+    align-self: start;
+    float: none;
+    width: auto;
+    max-width: none;
+    flex: none;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  html body #content.view-profile:has(.rd-pf-layout > #easyprofile) {
+    overflow: visible;
+    overflow-x: clip;
+  }
+  html body .rd-pf-layout:has(> #easyprofile) > .master__services--fullbleed {
+    grid-column: 1;
+    width: auto;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  html body .rd-pf-layout:has(> #easyprofile) > .master__services--fullbleed > .container {
+    width: auto;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  html body #easyprofile.view_profile-public .rd-pf-cta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0 0;
+  }
+  html body #easyprofile.view_profile-public .rd-pf-cta a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 48px;
+    border-radius: var(--rd-r-pill);
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none !important;
+  }
+  html body #easyprofile.view_profile-public .rd-pf-cta__book {
+    background: var(--rd-accent);
+    color: var(--rd-ink) !important;
+    box-shadow: var(--rd-sh-btn);
+  }
+  html body #easyprofile.view_profile-public .rd-pf-cta__call {
+    border: 1px solid var(--rd-ink);
+    background: var(--rd-card);
+    color: var(--rd-ink) !important;
+  }
+}
