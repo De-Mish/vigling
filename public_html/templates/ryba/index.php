@@ -448,11 +448,11 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 							<?php endif; ?>
 							<div class="contacts-hover-tabs">
 								<a class="contacts-hover-tab" href="https://t.me/vigling" target="_blank" rel="noopener noreferrer">
-									<span class="contacts-hover-tab__label"><img class="contacts-hover-tab__img" src="/templates/ryba/images/telegram.png" alt="" width="20" height="20" loading="lazy" decoding="async">Telegram</span>
+									<span class="contacts-hover-tab__label"><svg class="contacts-hover-tab__img" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 4L2.8 11.2c-.8.3-.8 1.4 0 1.7l4.6 1.6 1.8 5.4c.2.7 1.1.9 1.6.4l2.6-2.6 4.6 3.4c.6.4 1.4.1 1.6-.6L22.9 5c.2-.8-.6-1.4-1.4-1z"/><path d="M7.4 14.5L18 7.5"/></svg>Telegram</span>
 									<span class="contacts-hover-tab__panel">Написать в Telegram: @vigling</span>
 								</a>
 								<a class="contacts-hover-tab" href="https://vk.com/vigling" target="_blank" rel="noopener noreferrer">
-									<span class="contacts-hover-tab__label"><img class="contacts-hover-tab__img contacts-hover-tab__img--vk" src="/templates/ryba/images/vk.jpg" alt="" width="20" height="20" loading="lazy" decoding="async">Vkontakte</span>
+									<span class="contacts-hover-tab__label"><svg class="contacts-hover-tab__img" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7 9.2c.2 3.6 2 5.8 5 5.8h.5v-2c1.2.1 2 1 2.7 2H17c-.7-1.4-1.5-2.2-2.5-2.7 1-.6 1.9-1.6 2.2-3.1h-1.7c-.3 1.2-1.2 2.1-2.2 2.2V9.2H11v3.6c-1-.3-1.8-1.5-1.8-3.6z"/></svg>Vkontakte</span>
 									<span class="contacts-hover-tab__panel">Открыть страницу Vkontakte</span>
 								</a>
 							</div>
