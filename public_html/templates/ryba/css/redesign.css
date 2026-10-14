@@ -3144,3 +3144,11 @@ html body .contacts-settings-page .contacts-hover-tab__img {
     color: var(--rd-ink) !important;
   }
 }
+
+/* ==========================================================================
+   Stage 11: master cabinet, public services lists are not repeated under the tabs
+   ========================================================================== */
+
+html body #easyprofile .view_profile-public--embed ~ .master__services {
+  display: none !important;
+}
