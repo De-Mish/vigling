@@ -241,6 +241,7 @@ class OrdersModel extends ListModel
 		$tableColumns = array_change_key_case($this->getDatabase()->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 		$hasCourseColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchColumns = $hasCourseColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
+		$storedFullNames = isset($tableColumns['service_full_name']) ? $this->getStoredFullNames($items) : [];
 		if ($asMaster) {
 			$clientIds = array_unique(array_map(function ($o) {
 				return (int) $o->user_id;
@@ -290,6 +291,9 @@ class OrdersModel extends ListModel
 					trim((string) ($item->service_name ?? '')),
 					$serviceDisplayMap[(int) $item->master_id] ?? ['exact' => [], 'suffix' => []]
 				);
+				if (isset($storedFullNames[(int) $item->id])) {
+					$item->service_display_name = $storedFullNames[(int) $item->id];
+				}
 				if ($item->booking_kind === 'course' && $item->course_id > 0) {
 					$courseInfo = $courseInfoMap[$item->course_id] ?? [];
 					$slotInfo = $courseSlotInfoMap[$item->course_slot_id] ?? [];
@@ -360,6 +364,9 @@ class OrdersModel extends ListModel
 					trim((string) ($item->service_name ?? '')),
 					$serviceDisplayMap[(int) $item->master_id] ?? ['exact' => [], 'suffix' => []]
 				);
+				if (isset($storedFullNames[(int) $item->id])) {
+					$item->service_display_name = $storedFullNames[(int) $item->id];
+				}
 				if ($item->booking_kind === 'course' && $item->course_id > 0) {
 					$courseInfo = $courseInfoMap[$item->course_id] ?? [];
 					$slotInfo = $courseSlotInfoMap[$item->course_slot_id] ?? [];
@@ -593,6 +600,40 @@ class OrdersModel extends ListModel
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Full service labels saved with the booking at creation time (empty for older rows).
+	 *
+	 * @param array<int, object> $items
+	 * @return array<int, string>
+	 */
+	private function getStoredFullNames(array $items): array
+	{
+		$ids = array_values(array_filter(array_map(static function ($o): int {
+			return (int) ($o->id ?? 0);
+		}, $items)));
+		if ($ids === []) {
+			return [];
+		}
+		try {
+			$db = $this->getDatabase();
+			$query = $db->getQuery(true)
+				->select($db->quoteName(['id', 'service_full_name']))
+				->from($db->quoteName('#__vigling_bookings'))
+				->whereIn($db->quoteName('id'), $ids)
+				->where($db->quoteName('service_full_name') . ' IS NOT NULL')
+				->where($db->quoteName('service_full_name') . " <> ''");
+			$db->setQuery($query);
+			$out = [];
+			foreach ((array) $db->loadObjectList() as $row) {
+				$out[(int) $row->id] = trim((string) $row->service_full_name);
+			}
+
+			return $out;
+		} catch (\Throwable $e) {
+			return [];
+		}
 	}
 
 	/**
