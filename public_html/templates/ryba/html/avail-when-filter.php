@@ -33,6 +33,19 @@ if (!window.vgAvailWhenFilterBound) {
 			dayOfWeek: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
 			dayOfWeekShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 		};
+		function vgCenterTimeList(box) {
+			var cell = box.querySelector('.xdsoft_current');
+			if (!cell) {
+				var now = new Date();
+				var rounded = Math.round((now.getHours() * 60 + now.getMinutes()) / 15) * 15;
+				cell = box.querySelector('.xdsoft_time[data-hour="' + Math.min(23, Math.floor(rounded / 60)) + '"][data-minute="' + (rounded >= 1440 ? 45 : rounded % 60) + '"]');
+			}
+			if (!cell || !cell.offsetHeight) {
+				return false;
+			}
+			box.scrollTop = Math.max(0, cell.offsetTop - (box.clientHeight - cell.offsetHeight) / 2);
+			return true;
+		}
 		function vgPrepareTimeList($popup) {
 			var box = $popup.find('.xdsoft_time_box')[0];
 			if (!box) {
@@ -43,17 +56,14 @@ if (!window.vgAvailWhenFilterBound) {
 				$(box).off('mousewheel touchstart touchmove touchend touchcancel');
 				box.addEventListener('touchstart', function (e) { e.stopPropagation(); });
 			}
-			setTimeout(function () {
-				var cell = box.querySelector('.xdsoft_current');
-				if (!cell) {
-					var now = new Date();
-					var rounded = Math.round((now.getHours() * 60 + now.getMinutes()) / 15) * 15;
-					cell = box.querySelector('.xdsoft_time[data-hour="' + Math.min(23, Math.floor(rounded / 60)) + '"][data-minute="' + (rounded >= 1440 ? 45 : rounded % 60) + '"]');
-				}
-				if (cell) {
-					box.scrollTop = Math.max(0, cell.offsetTop - (box.clientHeight - cell.offsetHeight) / 2);
-				}
-			}, 30);
+			box.vgCenterPending = true;
+			[30, 120, 300].forEach(function (delay) {
+				setTimeout(function () {
+					if (box.vgCenterPending && vgCenterTimeList(box)) {
+						box.vgCenterPending = false;
+					}
+				}, delay);
+			});
 		}
 		$('.vg-avail-day').datetimepicker($.extend({
 			format: 'Y-m-d',
