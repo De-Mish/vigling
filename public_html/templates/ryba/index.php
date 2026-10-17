@@ -92,11 +92,12 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
 	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=<?php echo htmlspecialchars($manifestVer, ENT_QUOTES, 'UTF-8'); ?>">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo htmlspecialchars($tplPath . 'fonts/inter/Inter-latin.woff2', ENT_QUOTES, 'UTF-8'); ?>" crossorigin>
 	<style>
 		#vg-splash{display:none;position:fixed;inset:0;z-index:2147483647;background:#fff;align-items:center;justify-content:center;opacity:1;transition:opacity .28s ease}
 		html.vg-splash-on #vg-splash{display:flex}
 		html.vg-splash-off #vg-splash{opacity:0;pointer-events:none}
-		#vg-splash .vg-splash__tile{display:block;width:min(66vw,300px);height:auto;aspect-ratio:1/1}
+		#vg-splash .vg-splash__tile{display:block;width:min(66vw,300px);height:auto;aspect-ratio:1/1;flex:none}
 		html body #vg-splash .vg-splash__name{position:absolute;left:0;right:0;top:calc(50% + min(33vw,150px) + 28px);margin:0;text-align:center;font:800 22px/1.2 Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:.26em!important;text-indent:.26em;color:#17150F}
 	</style>
 	<script>
@@ -106,11 +107,15 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 			if (!standalone || sessionStorage.getItem('vgSplashShown')) { return; }
 			sessionStorage.setItem('vgSplashShown', '1');
 			document.documentElement.className += ' vg-splash-on';
+			var shownAt = Date.now();
+			var hidden = false;
 			var hide = function () {
+				if (hidden) { return; }
+				hidden = true;
 				document.documentElement.className += ' vg-splash-off';
 				setTimeout(function () { var el = document.getElementById('vg-splash'); if (el && el.parentNode) { el.parentNode.removeChild(el); } }, 400);
 			};
-			window.addEventListener('load', function () { setTimeout(hide, 150); });
+			window.addEventListener('load', function () { setTimeout(hide, Math.max(150, 1600 - (Date.now() - shownAt))); });
 			setTimeout(hide, 8000);
 		} catch (e) {}
 	})();
@@ -167,7 +172,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	endif; ?>
 </head>
 <body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
-	<div id="vg-splash" aria-hidden="true"><img class="vg-splash__tile" src="<?php echo htmlspecialchars($vgSiteRoot . '/icons/vigling-pwa-splash-512.png?v=20261017a', ENT_QUOTES, 'UTF-8'); ?>" alt="" width="512" height="512"><div class="vg-splash__name">VIGLING</div></div>
+	<div id="vg-splash" aria-hidden="true"><svg class="vg-splash__tile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" aria-hidden="true"><defs><linearGradient id="vgsg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FDE547"/><stop offset="1" stop-color="#FD9704"/></linearGradient></defs><rect width="512" height="512" fill="url(#vgsg)"/><path fill="#000" fill-rule="evenodd" d="M122.2 66L109.8 73 98.8 80.8 82.2 97.2 71.2 112.5 61 133.5 57 148 55.5 158.5 54.8 170.5 55.2 184 57 194.8 61 209 67 223.5 152.2 395.2 162.2 411.2 174.2 424.8 191.5 438.2 204 445.5 218.5 451.5 232.8 455.5 253.5 457.5 270.2 456.8 290 452.5 305 446.8 323 436.5 337.2 425.5 345.8 416.2 353.8 405 448.8 215.2 454.2 197 455.8 187.2 456.5 169.5 454 147.5 450.8 135.2 446.8 125.5 440.2 113.2 432.2 101.8 423.8 92.2 411.5 81 400.2 73 387.2 66 366.2 59 353.5 57 330 56.8 313.5 59 302.5 62 286.8 69 277 75 267 82.5 256.5 92.5 242.2 79.8 228.2 70.2 213 63 197 58.2 180.2 56 156.8 56.5 142 59ZM154.8 133.2L170.5 129.8 180.5 130.5 186.8 132 193 135 202.2 142.5 212 157.5 255.5 245.8 256.5 245.2 302 153.5 308.8 143.5 316.2 136.8 323.5 132.8 333.5 130.2 340.8 129.8 353.5 132 362 136 368 140.8 374 147 378.8 155.5 381 162 381.8 172.8 380 185.2 376 195 292 362.2 284.2 372.8 274.2 380 265.5 383 256 384 240.2 382 230.8 377 221.8 368 216.8 360 130.8 185.8 129 176 129.2 167.2 130.8 159.5 134.5 151.5 140.2 144 148 137Z"/></svg><div class="vg-splash__name">VIGLING</div></div>
 	<a class="skip-to-content" href="#main">Перейти к содержимому</a>
 	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
 		<div class="container d-flex">
