@@ -43,6 +43,8 @@ final class VglHomeFeed
 	public const FEED_MODELI = 'modeli';
 	public const FEED_AKTSII = 'aktsii';
 	public const PARAM_PAGE = 'hf_page';
+	public const PARAM_CITY = 'hf_city';
+	public const CITY_ALL = 'all';
 	public const ANCHOR = 'home-feed';
 
 	private const FIELD_NAMES = ['sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'];
@@ -77,9 +79,64 @@ final class VglHomeFeed
 		}
 	}
 
+	/** @return list<string> */
+	public static function cities(): array
+	{
+		try {
+			if (!class_exists(\Viglin\Component\Poisk\Site\Helper\PoiskHelper::class)) {
+				$file = JPATH_SITE . '/components/com_poisk/src/Helper/PoiskHelper.php';
+				if (is_file($file)) {
+					require_once $file;
+				}
+			}
+
+			$cities = [];
+			foreach ((array) \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getCities() as $city) {
+				$city = trim((string) $city);
+				if ($city !== '') {
+					$cities[$city] = $city;
+				}
+			}
+
+			return array_values($cities);
+		} catch (\Throwable $e) {
+			return [];
+		}
+	}
+
+	/**
+	 * City of the feed: the viewer's profile city unless a city was picked in the feed's own selector
+	 * (the pick lives in the URL only and never touches the profile). '' means every city.
+	 */
+	public static function feedCity(): string
+	{
+		$raw = Factory::getApplication()->getInput()->get->getString(self::PARAM_CITY, "\0");
+		if ($raw === "\0") {
+			return self::viewerCity();
+		}
+
+		$raw = trim($raw);
+		if ($raw === '' || $raw === self::CITY_ALL) {
+			return '';
+		}
+
+		return in_array($raw, self::cities(), true) ? $raw : self::viewerCity();
+	}
+
+	private static function cityQuery(): array
+	{
+		$raw = Factory::getApplication()->getInput()->get->getString(self::PARAM_CITY, "\0");
+
+		return $raw === "\0" ? [] : [self::PARAM_CITY => trim($raw)];
+	}
+
 	public static function url(int $page = 1): string
 	{
-		$query = $page > 1 ? '?' . http_build_query([self::PARAM_PAGE => $page]) : '';
+		$params = self::cityQuery();
+		if ($page > 1) {
+			$params[self::PARAM_PAGE] = $page;
+		}
+		$query = $params !== [] ? '?' . http_build_query($params) : '';
 
 		return rtrim(Uri::root(true), '/') . '/' . $query . '#' . self::ANCHOR;
 	}
@@ -129,7 +186,7 @@ final class VglHomeFeed
 	public static function build(): array
 	{
 		$page = self::currentPage();
-		$city = self::viewerCity();
+		$city = self::feedCity();
 		$result = ['cards' => [], 'total' => 0, 'page' => $page, 'pages' => 1, 'city' => $city, 'error' => false];
 
 		try {
@@ -188,10 +245,23 @@ final class VglHomeFeed
 		?>
 		<section class="search__catalog home-feed" id="<?php echo self::ANCHOR; ?>">
 			<div class="container">
-				<h2 class="home-feed__title">Новые предложения</h2>
-				<?php if ($city !== '') : ?>
-					<p class="home-feed__city">Показаны предложения в городе: <strong><?php echo htmlspecialchars($city, ENT_QUOTES, 'UTF-8'); ?></strong></p>
-				<?php endif; ?>
+				<h2 class="home-feed__title">Новейшие предложения</h2>
+				<?php
+				$cityOptions = self::cities();
+				if ($city !== '' && !in_array($city, $cityOptions, true)) {
+					array_unshift($cityOptions, $city);
+				}
+				?>
+				<form class="home-feed__city" method="get" action="<?php echo htmlspecialchars(rtrim(Uri::root(true), '/') . '/#' . self::ANCHOR, ENT_QUOTES, 'UTF-8'); ?>">
+					<label class="home-feed__city-label" for="home-feed-city">Показаны предложения в городе:</label>
+					<select class="home-feed__city-select" id="home-feed-city" name="<?php echo self::PARAM_CITY; ?>" onchange="this.form.submit()">
+						<option value="<?php echo self::CITY_ALL; ?>"<?php echo $city === '' ? ' selected' : ''; ?>>Все города</option>
+						<?php foreach ($cityOptions as $cityOption) : ?>
+							<option value="<?php echo htmlspecialchars($cityOption, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $city === $cityOption ? ' selected' : ''; ?>><?php echo htmlspecialchars($cityOption, ENT_QUOTES, 'UTF-8'); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<noscript><button class="home-feed__city-go" type="submit">Показать</button></noscript>
+				</form>
 				<?php if ($feedData['error']) : ?>
 					<div class="alert alert-warning">Не удалось загрузить предложения. Попробуйте обновить страницу.</div>
 				<?php elseif ($feedData['cards'] === []) : ?>
@@ -275,6 +345,7 @@ final class VglHomeFeed
 		try {
 			$stats['promos'] = self::loadAktsii($city, 0, 1)['total'];
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$fieldCity = (int) (self::userFieldIds($db, ['sity'])['sity'] ?? 0);
 			$query = $db->getQuery(true)
 				->select('MAX(ROUND((' . $db->quoteName('s.old_price') . ' - ' . $db->quoteName('s.price') . ') / ' . $db->quoteName('s.old_price') . ' * 100))')
 				->from($db->quoteName('#__vigling_user_stock_services', 's'))
@@ -284,6 +355,17 @@ final class VglHomeFeed
 				->where($db->quoteName('u.block') . ' = 0')
 				->where($db->quoteName('s.price') . ' > 0')
 				->where($db->quoteName('s.old_price') . ' > ' . $db->quoteName('s.price'));
+			if ($city !== '' && $fieldCity > 0) {
+				$itemId = 'CAST(' . $db->quoteName('u.id') . ' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci';
+				$query->where(
+					'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'cityfv')
+					. ' WHERE ' . $db->quoteName('cityfv.item_id') . ' = ' . $itemId
+					. ' AND ' . $db->quoteName('cityfv.field_id') . ' = ' . $fieldCity
+					. ' AND (' . $db->quoteName('cityfv.value') . ' = ' . $db->quote($city)
+					. ' OR ' . $db->quoteName('cityfv.value') . ' = ' . $db->quote(' ' . $city)
+					. ' OR ' . $db->quoteName('cityfv.value') . ' = ' . $db->quote($city . ' ') . '))'
+				);
+			}
 			$db->setQuery($query);
 			$max = (int) $db->loadResult();
 			$stats['maxDiscount'] = $max > 0 && $max < 100 ? $max : null;

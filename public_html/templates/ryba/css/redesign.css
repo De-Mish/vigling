@@ -3596,3 +3596,216 @@ html body section.master__block .stock__badge {
 html body section.master__block--stock .accordionItemHeading2 {
   color: var(--blk);
 }
+
+/* ==========================================================================
+   Stage 16: profile editing - Save / Cancel bar stays above the bottom tab bar
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer {
+    bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px !important;
+  }
+}
+
+/* ==========================================================================
+   Stage 17: home page - hero without headline text, city picker of the feed
+   ========================================================================== */
+
+@media (min-width: 1021px) {
+  html body#home .home-hero .container {
+    grid-template-areas: "search tiles";
+    align-content: start;
+  }
+
+  html body#home .home-hero__search {
+    align-self: center;
+    margin-top: 0;
+  }
+}
+
+html body#home .home-feed .home-feed__city {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 16px;
+}
+
+html body#home .home-feed .home-feed__city-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rd-mute);
+}
+
+html body#home .home-feed .home-feed__city-select {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 180px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 40px 0 16px;
+  border: 1.5px solid var(--rd-line);
+  border-radius: var(--rd-r-pill);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317150F' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 14px;
+  color: var(--rd-ink);
+  font: 700 14px/1 var(--rd-font);
+  cursor: pointer;
+}
+
+html body#home .home-feed .home-feed__city-select:focus {
+  outline: 0;
+  border-color: var(--rd-accent-d);
+  box-shadow: 0 0 0 3px var(--rd-accent-soft);
+}
+
+@media (max-width: 768px) {
+  html body#home .home-feed .home-feed__city-select {
+    font-size: 16px;
+  }
+}
+
+/* ==========================================================================
+   Stage 18: list cards - avatar twice as large, name next to it, tighter details
+   (specialists, promotions, courses, model search and the home feed)
+   ========================================================================== */
+
+/* details block: smaller gaps and capsules */
+html body :is(#content, #home-feed) .category .category__item .category__content-info {
+  gap: 4px 6px;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category_cinfo-address {
+  margin: 0;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__content-info .attr_left3.vg-meta {
+  height: 24px;
+  padding: 0 9px;
+  gap: 4px;
+}
+
+html body :is(#content, #home-feed) .category .category__item .category__item-content-right {
+  margin-top: 8px !important;
+}
+
+/* cards with an avatar: 96px, name and specialty to the right of it */
+html body :is(#content, #home-feed) .category .category__item .category__item-master {
+  bottom: -48px !important;
+  width: 96px !important;
+  height: 96px !important;
+  border-width: 4px !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master) .category__item-content {
+  padding-top: 8px !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master) .category_cinfo-name,
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master) .category_cinfo-specs {
+  order: -2;
+  flex: 0 0 calc(100% - 108px);
+  min-width: 0;
+  margin-left: 108px !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master) .category_cinfo-name {
+  margin-top: 2px;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master) .category__content-info-list {
+  margin-top: 6px;
+}
+
+/* promotion cards: the master block is flattened so the name can sit beside the avatar */
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master):has(.category__content-info-list) .category__item-content-left {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master):has(.category__content-info-list) .category__content-info {
+  display: contents !important;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master):has(.category__content-info-list) .category__content-info-list {
+  order: -1;
+  flex: 0 0 100%;
+  margin-top: 8px;
+}
+
+html body :is(#content, #home-feed) .category .category__item:has(.category__item-master):has(.category__content-info-list) .btn__time-zapis {
+  order: 5;
+  margin: 6px 0 0 auto !important;
+}
+
+@media (max-width: 768px) {
+  html body .category.jsn_stockList.search-catalog .category__content-info > .card-head,
+  html body .category.jsn_stockList.course-catalog .category__content-info > .card-head {
+    min-height: 0 !important;
+  }
+}
+
+/* ==========================================================================
+   Stage 19: master profile - call link as a quiet pill; booking time slots
+   ========================================================================== */
+
+html body .master__about-call {
+  display: block;
+  overflow: visible;
+  margin: 4px 0 16px;
+}
+
+html body .master__about-call a.master__about-call-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-r-pill);
+  background: var(--rd-card);
+  color: var(--rd-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+
+html body .master__about-call a.master__about-call-link .vg-i {
+  width: 16px;
+  height: 16px;
+  color: var(--rd-accent-d);
+}
+
+html body .master__about-call a.master__about-call-link:hover,
+html body .master__about-call a.master__about-call-link:focus-visible {
+  border-color: var(--rd-ink);
+  background: var(--rd-accent-soft);
+  outline: none;
+}
+
+@media (max-width: 820px) {
+  html body #zapis .screen1 .calendar__master-item .btns-m .btn-select {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 40px !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    text-align: center !important;
+  }
+
+  html body #zapis .screen1 .calendar__master-item {
+    max-height: calc(100vh - 250px);
+    max-height: calc(100dvh - 250px);
+  }
+
+  html body #zapis .screen1 .calendar__master-item .btns-m {
+    max-height: calc(100vh - 318px);
+    max-height: calc(100dvh - 318px);
+  }
+}
