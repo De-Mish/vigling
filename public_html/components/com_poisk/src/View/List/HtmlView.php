@@ -120,14 +120,14 @@ class HtmlView extends BaseHtmlView
 			return $o->id;
 		}, $this->items);
 		if (!empty($userIds)) {
-			$this->fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIds($userIds, [
+			$this->fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIdsCached($userIds, [
 				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'
 			]);
 		}
 		$this->pricesByUser = [];
 		$this->recommendationsByUser = [];
 		if ($catId > 0 && $this->currentService > 0 && ($this->currentTag > 0 || $this->tags === []) && !empty($userIds)) {
-			$serviceDetails = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFilteredServiceDetailsForUsers(
+			$serviceDetails = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFilteredServiceDetailsForUsersCached(
 				$userIds,
 				$this->currentService,
 				$this->currentTag
