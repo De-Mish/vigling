@@ -92,6 +92,29 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<meta name="apple-mobile-web-app-title" content="VIGLING">
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
 	<link rel="manifest" href="<?php echo rtrim(Uri::root(), '/'); ?>/manifest.json?v=<?php echo htmlspecialchars($manifestVer, ENT_QUOTES, 'UTF-8'); ?>">
+	<style>
+		#vg-splash{display:none;position:fixed;inset:0;z-index:2147483647;background:#fff;align-items:center;justify-content:center;opacity:1;transition:opacity .28s ease}
+		html.vg-splash-on #vg-splash{display:flex}
+		html.vg-splash-off #vg-splash{opacity:0;pointer-events:none}
+		#vg-splash .vg-splash__tile{display:block;width:min(66vw,300px);height:auto;aspect-ratio:1/1}
+		html body #vg-splash .vg-splash__name{position:absolute;left:0;right:0;top:calc(50% + min(33vw,150px) + 28px);margin:0;text-align:center;font:800 22px/1.2 Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:.26em!important;text-indent:.26em;color:#17150F}
+	</style>
+	<script>
+	(function () {
+		try {
+			var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+			if (!standalone || sessionStorage.getItem('vgSplashShown')) { return; }
+			sessionStorage.setItem('vgSplashShown', '1');
+			document.documentElement.className += ' vg-splash-on';
+			var hide = function () {
+				document.documentElement.className += ' vg-splash-off';
+				setTimeout(function () { var el = document.getElementById('vg-splash'); if (el && el.parentNode) { el.parentNode.removeChild(el); } }, 400);
+			};
+			window.addEventListener('load', function () { setTimeout(hide, 150); });
+			setTimeout(hide, 8000);
+		} catch (e) {}
+	})();
+	</script>
 	<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
@@ -143,7 +166,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		vigling_print_website_json_ld((string) $app->get('sitename'));
 	endif; ?>
 </head>
-<body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
+<body id="<?php echo $page; ?>
+<div id="vg-splash" aria-hidden="true"><img class="vg-splash__tile" src="<?php echo htmlspecialchars($vgSiteRoot . '/icons/vigling-pwa-splash-512.png?v=20261017a', ENT_QUOTES, 'UTF-8'); ?>" alt="" width="512" height="512"><div class="vg-splash__name">VIGLING</div></div>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
 	<a class="skip-to-content" href="#main">Перейти к содержимому</a>
 	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
 		<div class="container d-flex">
