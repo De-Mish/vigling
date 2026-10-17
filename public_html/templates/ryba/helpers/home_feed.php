@@ -39,6 +39,7 @@ final class VglHomeFeedCardView
 final class VglHomeFeed
 {
 	public const LIMIT = 10;
+	private const STATS_TTL = 600;
 	public const FEED_MODELI = 'modeli';
 	public const FEED_AKTSII = 'aktsii';
 	public const PARAM_PAGE = 'hf_page';
@@ -232,6 +233,27 @@ final class VglHomeFeed
 	 * @return array{masters: ?int, promos: ?int, maxDiscount: ?int, courses: ?int, models: ?int}
 	 */
 	public static function stats(string $city): array
+	{
+		$dir = defined('JPATH_CACHE') ? JPATH_CACHE : sys_get_temp_dir();
+		$file = rtrim($dir, '/') . '/vigling_home_stats_' . md5($city) . '.json';
+		if (is_file($file) && (time() - (int) @filemtime($file)) < self::STATS_TTL) {
+			$cached = json_decode((string) @file_get_contents($file), true);
+			if (is_array($cached) && array_key_exists('masters', $cached) && array_key_exists('maxDiscount', $cached)) {
+				return $cached;
+			}
+		}
+
+		$stats = self::computeStats($city);
+		$tmp = $file . '.' . getmypid();
+		if (@file_put_contents($tmp, json_encode($stats)) !== false) {
+			@rename($tmp, $file);
+		}
+
+		return $stats;
+	}
+
+	/** @return array{masters: ?int, promos: ?int, maxDiscount: ?int, courses: ?int, models: ?int} */
+	private static function computeStats(string $city): array
 	{
 		$stats = ['masters' => null, 'promos' => null, 'maxDiscount' => null, 'courses' => null, 'models' => null];
 

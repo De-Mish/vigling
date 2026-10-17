@@ -20,6 +20,7 @@ final class ImageUploadHelper
     public const AVATAR_THUMB_EDGE = 240;
     public const PHOTO_MAX_EDGE = 1600;
     public const PHOTO_THUMB_EDGE = 640;
+    private const THUMB_MIN_BYTES = 150000;
     public const ACCEPT_ATTR = '.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif';
 
     private const ALLOWED_DIRS = [
@@ -487,6 +488,7 @@ final class ImageUploadHelper
         $root = self::root();
         $candidates = [];
         if ($preferThumb) {
+            self::ensureThumb($relative);
             $candidates[] = self::thumbRelative($relative);
         }
         $candidates[] = $relative;
@@ -508,6 +510,89 @@ final class ImageUploadHelper
         }
 
         return '';
+    }
+
+    /**
+     * Builds the missing *_t.jpg for a large legacy upload so list pages do not ship the original.
+     * Bounded per request; a failed attempt leaves a marker so it is not retried on every page view.
+     */
+    private static function ensureThumb(string $relative): void
+    {
+        static $budget = 6;
+        if ($budget <= 0 || !self::canProcess() || !self::isAllowedRelative($relative)) {
+            return;
+        }
+        if (preg_match('/_t\.(jpe?g|png|webp|gif)$/i', $relative)) {
+            return;
+        }
+        $root = self::root();
+        $srcAbs = $root . '/' . $relative;
+        $thumbRel = self::thumbRelative($relative);
+        $thumbAbs = $root . '/' . $thumbRel;
+        if ($thumbRel === $relative || is_file($thumbAbs) || is_file($thumbAbs . '.fail') || !is_file($srcAbs)) {
+            return;
+        }
+        $size = @filesize($srcAbs);
+        if ($size === false || $size < self::THUMB_MIN_BYTES) {
+            return;
+        }
+        $dims = @getimagesize($srcAbs);
+        if (!is_array($dims) || empty($dims[0]) || empty($dims[1])) {
+            return;
+        }
+        $limit = self::memoryLimitBytes();
+        if ($limit > 0 && ((int) $dims[0] * (int) $dims[1] * 5 + memory_get_usage()) > $limit * 0.8) {
+            @file_put_contents($thumbAbs . '.fail', '1');
+
+            return;
+        }
+        $budget--;
+        $edge = strpos($relative, 'images/profiler/') === 0 ? self::AVATAR_THUMB_EDGE : self::PHOTO_THUMB_EDGE;
+        $detected = self::detectType($srcAbs, $relative);
+        $ok = false;
+        $tmpAbs = $thumbAbs . '.tmp' . getmypid();
+        try {
+            $gd = self::loadGd($srcAbs, $detected);
+            if ($gd !== null) {
+                $gd = self::applyExifOrientation($gd, $srcAbs, $detected);
+                $thumb = self::resampleToEdge($gd, $edge);
+                if ($thumb !== null) {
+                    $ok = imagejpeg($thumb, $tmpAbs, self::JPEG_QUALITY);
+                    if ($thumb !== $gd) {
+                        imagedestroy($thumb);
+                    }
+                }
+                imagedestroy($gd);
+            }
+        } catch (\Throwable $e) {
+            $ok = false;
+        }
+        if ($ok && is_file($tmpAbs) && @rename($tmpAbs, $thumbAbs)) {
+            return;
+        }
+        @unlink($tmpAbs);
+        @file_put_contents($thumbAbs . '.fail', '1');
+    }
+
+    private static function memoryLimitBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw === '' || $raw === '-1') {
+            return 0;
+        }
+        $value = (int) $raw;
+        switch (strtolower(substr($raw, -1))) {
+            case 'g':
+                $value *= 1024;
+                // no break
+            case 'm':
+                $value *= 1024;
+                // no break
+            case 'k':
+                $value *= 1024;
+        }
+
+        return $value;
     }
 
     public static function thumbRelative(string $relative): string
