@@ -93,6 +93,12 @@ if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\NotificationSettingsH
 		require_once $settingsHelper;
 	}
 }
+if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class)) {
+	$choicesHelper = $base . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+	if (is_file($choicesHelper)) {
+		require_once $choicesHelper;
+	}
+}
 if (!class_exists(\Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::class)) {
 	$notifyHelper = $base . '/plugins/system/pushnotifybooking/src/Helper/BookingNotifyHelper.php';
 	if (is_file($notifyHelper)) {
@@ -127,11 +133,12 @@ try {
 
 $columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 $select = ['o.id', 'o.user_id', 'o.master_id', 'o.time', 'o.time_to', 'o.service_name'];
-foreach (['booking_kind', 'course_id', 'course_slot_id', 'search_id', 'search_slot_id'] as $col) {
+foreach (['booking_kind', 'course_id', 'course_slot_id', 'search_id', 'search_slot_id', 'remind_minutes'] as $col) {
 	if (isset($columns[$col])) {
 		$select[] = 'o.' . $col;
 	}
 }
+$hasRemindColumn = isset($columns['remind_minutes']);
 
 $offsets = \Viglin\Component\Pushnotify\Site\Helper\NotificationSettingsHelper::getReminderOffsets();
 $legacy = (string) ($_SERVER['VIGLING_REMINDER_LEGACY'] ?? '');
@@ -144,12 +151,8 @@ if ($legacy === 'in_30min') {
 	foreach ($offsets as $offset) {
 		$byMinutes[(int) ($offset['minutes'] ?? 0)] = $offset;
 	}
-	foreach ([
-		30 => 'За 30 минут',
-		60 => 'За 60 минут',
-		720 => 'За 12 часов',
-		1440 => 'За 24 часа',
-	] as $choiceMinutes => $choiceLabel) {
+	foreach (\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::REMINDERS as $choiceMinutes => $choiceName) {
+		$choiceLabel = 'За ' . $choiceName;
 		if (!isset($byMinutes[$choiceMinutes])) {
 			$byMinutes[$choiceMinutes] = [
 				'minutes' => $choiceMinutes,
@@ -181,6 +184,12 @@ foreach ($offsets as $offset) {
 		->where($db->quoteName('o.time') . ' > ' . $db->quote($targetFrom->format('Y-m-d H:i:s')))
 		->where($db->quoteName('o.time') . ' <= ' . $db->quote($targetTo->format('Y-m-d H:i:s')))
 		->where('NOT EXISTS (SELECT 1 FROM ' . $db->quoteName($remindersTable) . ' r WHERE r.user_id = o.user_id AND r.master_id = o.master_id AND r.order_time = o.time AND r.reminder_type = ' . $db->quote($reminderType) . ')');
+	if ($hasRemindColumn) {
+		// A booking with its own reminder time skips the profile rules (including "started").
+		$query->where($minutes === 0
+			? $db->quoteName('o.remind_minutes') . ' IS NULL'
+			: '(' . $db->quoteName('o.remind_minutes') . ' IS NULL OR ' . $db->quoteName('o.remind_minutes') . ' = ' . $minutes . ')');
+	}
 	if ($minutes === 0) {
 		$query->where($db->quoteName('o.time') . ' <= ' . $db->quote($now));
 	}
@@ -210,6 +219,7 @@ foreach ($offsets as $offset) {
 			'search_id' => (int) ($row['search_id'] ?? 0),
 			'search_slot_id' => (int) ($row['search_slot_id'] ?? 0),
 		];
+		$ownReminder = isset($row['remind_minutes']) && $row['remind_minutes'] !== null && (int) $row['remind_minutes'] === $minutes && $minutes > 0;
 		try {
 			$db->setQuery(
 				'INSERT IGNORE INTO ' . $db->quoteName($remindersTable)
@@ -235,7 +245,7 @@ foreach ($offsets as $offset) {
 			continue;
 		}
 		try {
-			\Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::notifyReminder($order, $minutes);
+			\Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::notifyReminder($order, $minutes, $ownReminder);
 		} catch (\Throwable $e) {
 			if ($verbose) {
 				echo "  notify failed after marker: " . $e->getMessage() . "\n";

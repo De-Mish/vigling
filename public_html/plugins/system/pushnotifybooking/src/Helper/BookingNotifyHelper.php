@@ -123,9 +123,34 @@ class BookingNotifyHelper
 		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
 	}
 
-	public static function notifyReminder(array $order, int $minutes)
+	/**
+	 * Reminder the booker picked on the booking form: one push to the booker only,
+	 * the booker's profile reminder rules are not consulted.
+	 */
+	private static function notifyBookerReminder(array $order, int $minutes): void
+	{
+		$type = $minutes === 30 ? 'booking_in_30min' : 'booking_reminder';
+		$bookingKind = self::resolveBookingKind($order);
+		$clientId = (int) ($order['user_id'] ?? 0);
+		if ($clientId <= 0 || !self::shouldSendEvent($order, $type)) {
+			return;
+		}
+		if (!NotificationSettingsHelper::isRecipientEnabled($type, 'client') || !NotificationSettingsHelper::isFcmEnabled($type, $bookingKind)) {
+			return;
+		}
+		$orderId = isset($order['id']) ? (int) $order['id'] : 0;
+		$title = self::resolveTitle($type, $minutes === 30 ? 'Через 30 минут приём' : 'Напоминание о записи');
+		$body = self::buildAppBody($order, self::resolveOfferingName($order), $type, self::getUserTimezone($clientId));
+		self::sendWithRetry($clientId, $title, $body, self::withOrderData(['url' => self::getLkUrl()], $orderId > 0 ? $orderId : null), $type, 'client');
+	}
+
+	public static function notifyReminder(array $order, int $minutes, bool $bookerChoice = false)
 	{
 		self::ensureSettingsHelperLoaded();
+		if ($bookerChoice && $minutes > 0) {
+			self::notifyBookerReminder($order, $minutes);
+			return;
+		}
 		if ($minutes === 0) {
 			self::notifyStarted($order);
 			return;
@@ -334,6 +359,9 @@ class BookingNotifyHelper
 		if ($minutes >= 1440 && $minutes % 1440 === 0) {
 			$days = (int) ($minutes / 1440);
 			return 'Через ' . $days . ' ' . ($days === 1 ? 'день' : 'дн.') . ' приём';
+		}
+		if ($minutes === 90) {
+			return 'Через 1,5 ч. приём';
 		}
 		if ($minutes >= 60 && $minutes % 60 === 0) {
 			return 'Через ' . (int) ($minutes / 60) . ' ч. приём';
