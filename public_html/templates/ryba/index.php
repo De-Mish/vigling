@@ -166,8 +166,8 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		vigling_print_website_json_ld((string) $app->get('sitename'));
 	endif; ?>
 </head>
-<body id="<?php echo $page; ?>
-<div id="vg-splash" aria-hidden="true"><img class="vg-splash__tile" src="<?php echo htmlspecialchars($vgSiteRoot . '/icons/vigling-pwa-splash-512.png?v=20261017a', ENT_QUOTES, 'UTF-8'); ?>" alt="" width="512" height="512"><div class="vg-splash__name">VIGLING</div></div>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
+<body id="<?php echo $page; ?>" class="d-flex flex-column site <?php echo $option . ' view-' . $view . ($layout ? ' layout-' . $layout : '') . ($task ? ' task-' . $task : '') . ($itemid ? ' itemid-' . $itemid : '') . ($pageclass ? ' ' . $pageclass : ''); ?>">
+	<div id="vg-splash" aria-hidden="true"><img class="vg-splash__tile" src="<?php echo htmlspecialchars($vgSiteRoot . '/icons/vigling-pwa-splash-512.png?v=20261017a', ENT_QUOTES, 'UTF-8'); ?>" alt="" width="512" height="512"><div class="vg-splash__name">VIGLING</div></div>
 	<a class="skip-to-content" href="#main">Перейти к содержимому</a>
 	<header class="header header--desktop<?php echo $page !== 'home' ? ' single-header no_shadow' : ''; ?>">
 		<div class="container d-flex">
