@@ -169,6 +169,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$bookingSource = 'profile';
 		}
 		$bookingExtras = self::bookingExtrasFromInput($input);
+		$remindMinutes = self::remindMinutesFromInput($input);
+		if ($remindMinutes !== null && class_exists(OrderTable::class) && OrderTable::ensureRemindMinutesColumn($db)) {
+			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+		}
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 
@@ -396,6 +400,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$columns[] = $columnName;
 				$values[] = (string) $columnValue;
 			}
+		}
+		if ($remindMinutes !== null && isset($tableColumns['remind_minutes'])) {
+			$columns[] = 'remind_minutes';
+			$values[] = (string) $remindMinutes;
 		}
 		if ($hasCourseBookingColumns) {
 			$columns[] = 'booking_kind';
@@ -1233,6 +1241,24 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			'contact_name' => $name,
 			'contact_phone' => $phone,
 		];
+	}
+
+	private static function remindMinutesFromInput($input): ?int
+	{
+		$raw = trim((string) $input->post->get('remind_minutes', '', 'string'));
+		if ($raw === '' || !ctype_digit($raw)) {
+			return null;
+		}
+		$helper = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class, false) && is_file($helper)) {
+			require_once $helper;
+		}
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class, false)) {
+			return null;
+		}
+		$minutes = (int) $raw;
+
+		return isset(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::REMINDERS[$minutes]) ? $minutes : null;
 	}
 
 	private static function clipUtf8(string $value, int $max): string

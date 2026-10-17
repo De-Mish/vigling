@@ -123,6 +123,29 @@ class BookingNotifyHelper
 		self::sendToClientAndMaster($order, $title, $bodyClient, $type, $data, $bodyMaster);
 	}
 
+	/**
+	 * Lead-time reminder for one side of a booking, delivered as a push under that
+	 * person's own choice (picked by the cron). Site-wide switches still apply.
+	 */
+	public static function notifyAdvanceReminder(array $order, int $minutes, string $role): void
+	{
+		self::ensureSettingsHelperLoaded();
+		$role = $role === 'master' ? 'master' : 'client';
+		$type = $minutes === 30 ? 'booking_in_30min' : 'booking_reminder';
+		$bookingKind = self::resolveBookingKind($order);
+		$userId = (int) ($order[$role === 'master' ? 'master_id' : 'user_id'] ?? 0);
+		if ($userId <= 0 || !self::shouldSendEvent($order, $type)) {
+			return;
+		}
+		if (!NotificationSettingsHelper::isRecipientEnabled($type, $role) || !NotificationSettingsHelper::isFcmEnabled($type, $bookingKind)) {
+			return;
+		}
+		$orderId = isset($order['id']) ? (int) $order['id'] : 0;
+		$title = self::resolveTitle($type, $minutes === 30 ? 'Через 30 минут приём' : 'Напоминание о записи');
+		$body = self::buildAppBody($order, self::resolveOfferingName($order), $type, self::getUserTimezone($userId));
+		self::sendWithRetry($userId, $title, $body, self::withOrderData(['url' => self::getLkUrl()], $orderId > 0 ? $orderId : null), $type, $role);
+	}
+
 	public static function notifyReminder(array $order, int $minutes)
 	{
 		self::ensureSettingsHelperLoaded();
@@ -177,13 +200,14 @@ class BookingNotifyHelper
 		) {
 			$masterPushTitle = self::getClientPersonName($clientId);
 		}
+		$skipClient = !empty($order['skip_client']);
 		$bookedProfileReminder = self::isBookedProfileReminder($notificationType, $bookingKind);
 		if ($bookedProfileReminder) {
 			$profileId = $masterId > 0 ? $masterId : $clientId;
 			if ($clientId > 0 && $profileId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client') && NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind) && self::personalChannelAllows($profileId, 'push', $notificationType, $bookingKind, $reminderMinutes)) {
 				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
 			}
-		} elseif ($clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
+		} elseif (!$skipClient && $clientId > 0 && NotificationSettingsHelper::isRecipientEnabled($notificationType, 'client')) {
 			if (NotificationSettingsHelper::isFcmEnabled($notificationType, $bookingKind) && self::personalChannelAllows($clientId, 'push', $notificationType, $bookingKind, $reminderMinutes)) {
 				self::sendWithRetry($clientId, $title, $clientPushBody, self::withOrderData($data, $orderId), $notificationType, 'client');
 			}
@@ -334,6 +358,9 @@ class BookingNotifyHelper
 		if ($minutes >= 1440 && $minutes % 1440 === 0) {
 			$days = (int) ($minutes / 1440);
 			return 'Через ' . $days . ' ' . ($days === 1 ? 'день' : 'дн.') . ' приём';
+		}
+		if ($minutes === 90) {
+			return 'Через 1,5 ч. приём';
 		}
 		if ($minutes >= 60 && $minutes % 60 === 0) {
 			return 'Через ' . (int) ($minutes / 60) . ' ч. приём';

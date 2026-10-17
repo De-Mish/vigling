@@ -8,11 +8,11 @@ $vgAvailTime = (string) ($vgAvailTime ?? '');
 ?>
 <span class="clearable<?php echo $vgAvailHidden ? ' hidden' : ''; ?>" id="<?php echo htmlspecialchars($vgAvailWrapId, ENT_QUOTES, 'UTF-8'); ?>">
 	<span class="vg-avail-field">
-		<input type="text" name="avail_day" class="filed__master vg-avail-day" value="<?php echo htmlspecialchars($vgAvailDay, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Дата" autocomplete="off">
+		<input type="text" name="avail_day" class="filed__master vg-avail-day" value="<?php echo htmlspecialchars($vgAvailDay, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Дата" autocomplete="off" readonly inputmode="none">
 		<button type="button" class="vg-avail-clear" aria-label="Очистить дату" tabindex="-1"></button>
 	</span>
 	<span class="vg-avail-field">
-		<input type="text" name="avail_time" class="filed__master vg-avail-time" value="<?php echo htmlspecialchars($vgAvailTime, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Время" autocomplete="off">
+		<input type="text" name="avail_time" class="filed__master vg-avail-time" value="<?php echo htmlspecialchars($vgAvailTime, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Время" autocomplete="off" readonly inputmode="none">
 		<button type="button" class="vg-avail-clear" aria-label="Очистить время" tabindex="-1"></button>
 	</span>
 </span>

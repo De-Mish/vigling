@@ -93,6 +93,12 @@ if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\NotificationSettingsH
 		require_once $settingsHelper;
 	}
 }
+if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class)) {
+	$choicesHelper = $base . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+	if (is_file($choicesHelper)) {
+		require_once $choicesHelper;
+	}
+}
 if (!class_exists(\Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::class)) {
 	$notifyHelper = $base . '/plugins/system/pushnotifybooking/src/Helper/BookingNotifyHelper.php';
 	if (is_file($notifyHelper)) {
@@ -127,7 +133,7 @@ try {
 
 $columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 $select = ['o.id', 'o.user_id', 'o.master_id', 'o.time', 'o.time_to', 'o.service_name'];
-foreach (['booking_kind', 'course_id', 'course_slot_id', 'search_id', 'search_slot_id'] as $col) {
+foreach (['booking_kind', 'course_id', 'course_slot_id', 'search_id', 'search_slot_id', 'remind_minutes'] as $col) {
 	if (isset($columns[$col])) {
 		$select[] = 'o.' . $col;
 	}
@@ -144,12 +150,8 @@ if ($legacy === 'in_30min') {
 	foreach ($offsets as $offset) {
 		$byMinutes[(int) ($offset['minutes'] ?? 0)] = $offset;
 	}
-	foreach ([
-		30 => 'За 30 минут',
-		60 => 'За 60 минут',
-		720 => 'За 12 часов',
-		1440 => 'За 24 часа',
-	] as $choiceMinutes => $choiceLabel) {
+	foreach (\Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::REMINDERS as $choiceMinutes => $choiceName) {
+		$choiceLabel = 'За ' . $choiceName;
 		if (!isset($byMinutes[$choiceMinutes])) {
 			$byMinutes[$choiceMinutes] = [
 				'minutes' => $choiceMinutes,
@@ -179,8 +181,7 @@ foreach ($offsets as $offset) {
 		->from($db->quoteName($ordersTable, 'o'))
 		->where($db->quoteName('o.user_id') . ' > 0')
 		->where($db->quoteName('o.time') . ' > ' . $db->quote($targetFrom->format('Y-m-d H:i:s')))
-		->where($db->quoteName('o.time') . ' <= ' . $db->quote($targetTo->format('Y-m-d H:i:s')))
-		->where('NOT EXISTS (SELECT 1 FROM ' . $db->quoteName($remindersTable) . ' r WHERE r.user_id = o.user_id AND r.master_id = o.master_id AND r.order_time = o.time AND r.reminder_type = ' . $db->quote($reminderType) . ')');
+		->where($db->quoteName('o.time') . ' <= ' . $db->quote($targetTo->format('Y-m-d H:i:s')));
 	if ($minutes === 0) {
 		$query->where($db->quoteName('o.time') . ' <= ' . $db->quote($now));
 	}
@@ -210,32 +211,72 @@ foreach ($offsets as $offset) {
 			'search_id' => (int) ($row['search_id'] ?? 0),
 			'search_slot_id' => (int) ($row['search_slot_id'] ?? 0),
 		];
-		try {
-			$db->setQuery(
-				'INSERT IGNORE INTO ' . $db->quoteName($remindersTable)
-				. ' (' . implode(', ', $db->quoteName(['user_id', 'master_id', 'order_time', 'reminder_type', 'sent_at'])) . ')'
-				. ' VALUES ('
-				. (int) $order['user_id'] . ','
-				. (int) $order['master_id'] . ','
-				. $db->quote($order['time']) . ','
-				. $db->quote($reminderType) . ','
-				. $db->quote($now)
-				. ')'
-			)->execute();
-			if ((int) $db->getAffectedRows() === 0) {
-				if ($verbose) {
-					echo "  skip duplicate marker user_id={$order['user_id']} master_id={$order['master_id']} time={$order['time']} type={$reminderType}\n";
+		$claim = function (string $type) use ($db, $remindersTable, $order, $now, $verbose): bool {
+			try {
+				$db->setQuery(
+					'INSERT IGNORE INTO ' . $db->quoteName($remindersTable)
+					. ' (' . implode(', ', $db->quoteName(['user_id', 'master_id', 'order_time', 'reminder_type', 'sent_at'])) . ')'
+					. ' VALUES ('
+					. (int) $order['user_id'] . ','
+					. (int) $order['master_id'] . ','
+					. $db->quote($order['time']) . ','
+					. $db->quote($type) . ','
+					. $db->quote($now)
+					. ')'
+				)->execute();
+				if ((int) $db->getAffectedRows() === 0) {
+					if ($verbose) {
+						echo "  skip duplicate marker user_id={$order['user_id']} master_id={$order['master_id']} time={$order['time']} type={$type}\n";
+					}
+					return false;
 				}
-				continue;
+			} catch (\Throwable $e) {
+				if ($verbose) {
+					echo "  marker insert failed: " . $e->getMessage() . "\n";
+				}
+				return false;
 			}
-		} catch (\Throwable $e) {
-			if ($verbose) {
-				echo "  marker insert failed: " . $e->getMessage() . "\n";
+
+			return true;
+		};
+		$notifyHelper = \Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::class;
+		$choices = \Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices::class;
+		$ownMinutes = isset($row['remind_minutes']) && $row['remind_minutes'] !== null ? (int) $row['remind_minutes'] : null;
+
+		if ($minutes > 0 && $choices::isGridKind((string) $order['booking_kind'])) {
+			// Lead-time reminders: each side uses its own choice. The booker's choice on the
+			// booking form wins over the booker's profile; the specialist always uses the profile.
+			$kind = (string) $order['booking_kind'];
+			$clientWants = $ownMinutes !== null
+				? $ownMinutes === $minutes
+				: ((int) ($choices::get($order['user_id'])['push'][$kind]['remind'] ?? 0)) === $minutes;
+			$masterWants = $order['master_id'] > 0 && $order['master_id'] !== $order['user_id']
+				&& ((int) ($choices::get($order['master_id'])['push'][$kind]['remind'] ?? 0)) === $minutes;
+			foreach (['client' => $clientWants, 'master' => $masterWants] as $role => $wants) {
+				if (!$wants || !$claim(($role === 'master' ? 'master_' : '') . $reminderType)) {
+					continue;
+				}
+				try {
+					$notifyHelper::notifyAdvanceReminder($order, $minutes, $role);
+				} catch (\Throwable $e) {
+					if ($verbose) {
+						echo "  notify failed after marker: " . $e->getMessage() . "\n";
+					}
+				}
+				$totalSent++;
 			}
 			continue;
 		}
+
+		if (!$claim($reminderType)) {
+			continue;
+		}
+		if ($minutes === 0 && $ownMinutes !== null) {
+			// The booker picked their own time, so no "started" push for the booker.
+			$order['skip_client'] = true;
+		}
 		try {
-			\Viglin\Plugin\System\Pushnotifybooking\Helper\BookingNotifyHelper::notifyReminder($order, $minutes);
+			$notifyHelper::notifyReminder($order, $minutes);
 		} catch (\Throwable $e) {
 			if ($verbose) {
 				echo "  notify failed after marker: " . $e->getMessage() . "\n";
