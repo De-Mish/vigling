@@ -3596,3 +3596,14 @@ html body section.master__block .stock__badge {
 html body section.master__block--stock .accordionItemHeading2 {
   color: var(--blk);
 }
+
+/* ==========================================================================
+   Stage 16: profile editing - Save / Cancel bar stays above the bottom tab bar
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer {
+    bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px !important;
+  }
+}
