@@ -1078,7 +1078,7 @@ if (empty($isLkEmbed)) {
 	<div class="clearFloat"></div>
 </div>
 
-<section class="master__services master__services--fullbleed">
+<section class="master__services master__services--fullbleed master__block master__block--services">
 	<div class="container">
 		<style>
 		.master__services--fullbleed {
@@ -1864,7 +1864,7 @@ if (empty($isLkEmbed)) {
 	</section>
 
 	<?php if (!empty($stockPricesStructuredWithIds)) : ?>
-	<section class="master__services master__services--fullbleed">
+	<section class="master__services master__services--fullbleed master__block master__block--stock">
 		<div class="container">
 			<div class="accordionWrapper">
 				<div class="accordionItem opened">
@@ -1949,7 +1949,7 @@ if (empty($isLkEmbed)) {
 	<?php endif; ?>
 
 	<?php if (!empty($coursesStructured)) : ?>
-	<section class="master__services master__services--fullbleed">
+	<section class="master__services master__services--fullbleed master__block master__block--courses">
 		<div class="container">
 			<div class="accordionWrapper">
 				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">
@@ -2046,7 +2046,7 @@ if (empty($isLkEmbed)) {
 	<?php endif; ?>
 
 	<?php if (!empty($searchesStructured)) : ?>
-	<section class="master__services master__services--fullbleed">
+	<section class="master__services master__services--fullbleed master__block master__block--search">
 		<div class="container">
 			<div class="accordionWrapper">
 				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">

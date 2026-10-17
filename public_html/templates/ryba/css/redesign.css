@@ -3516,3 +3516,83 @@ html body #zapis .screen2 .zapis__remind-select:focus {
   border-color: var(--rd-ink) !important;
   box-shadow: 0 0 0 3px var(--rd-accent-soft) !important;
 }
+
+/* ==========================================================================
+   Stage 15: colour per block on the master profile
+   (services / promotions / courses / model search)
+   ========================================================================== */
+
+html body section.master__block {
+  --blk: var(--rd-accent-d);
+  --blk-ink: var(--rd-ink);
+  --blk-soft: var(--rd-accent-soft);
+  padding: 20px 0 6px !important;
+}
+
+html body section.master__block--stock {
+  --blk: #C2410C;
+  --blk-ink: #fff;
+  --blk-soft: #FDE9DA;
+}
+
+html body section.master__block--courses {
+  --blk: #17803F;
+  --blk-ink: #fff;
+  --blk-soft: #E1F3E8;
+}
+
+html body section.master__block--search {
+  --blk: #5B45C9;
+  --blk-ink: #fff;
+  --blk-soft: #E9E6FA;
+}
+
+html body section.master__block--services > .container::before {
+  content: "Услуги";
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  margin: 0 0 12px;
+  border-radius: var(--rd-r-input);
+  background: var(--blk);
+  color: var(--blk-ink);
+  font: 800 16px/1 var(--rd-font);
+}
+
+html body section.master__block .accordionItem > button[type="button"] {
+  display: flex !important;
+  align-items: center;
+  width: 100% !important;
+  height: 44px !important;
+  padding: 0 16px !important;
+  margin: 0 0 12px !important;
+  border-radius: var(--rd-r-input) !important;
+  background: var(--blk) !important;
+  color: var(--blk-ink) !important;
+  font: 800 16px/1 var(--rd-font) !important;
+  text-align: left;
+}
+
+html body section.master__block .master__offer-box {
+  background: transparent !important;
+}
+
+html body section.master__block .stockList__item {
+  background: var(--blk-soft) !important;
+  border-left: 5px solid var(--blk) !important;
+  box-shadow: none !important;
+}
+
+html body section.master__block .priceList__item {
+  border-left: 5px solid var(--blk);
+}
+
+html body section.master__block .stock__badge {
+  background: #fff !important;
+  color: var(--blk) !important;
+}
+
+html body section.master__block--stock .accordionItemHeading2 {
+  color: var(--blk);
+}
