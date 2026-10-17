@@ -345,6 +345,7 @@ final class VglHomeFeed
 		try {
 			$stats['promos'] = self::loadAktsii($city, 0, 1)['total'];
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$fieldCity = (int) (self::userFieldIds($db, ['sity'])['sity'] ?? 0);
 			$query = $db->getQuery(true)
 				->select('MAX(ROUND((' . $db->quoteName('s.old_price') . ' - ' . $db->quoteName('s.price') . ') / ' . $db->quoteName('s.old_price') . ' * 100))')
 				->from($db->quoteName('#__vigling_user_stock_services', 's'))
@@ -354,6 +355,17 @@ final class VglHomeFeed
 				->where($db->quoteName('u.block') . ' = 0')
 				->where($db->quoteName('s.price') . ' > 0')
 				->where($db->quoteName('s.old_price') . ' > ' . $db->quoteName('s.price'));
+			if ($city !== '' && $fieldCity > 0) {
+				$itemId = 'CAST(' . $db->quoteName('u.id') . ' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci';
+				$query->where(
+					'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__fields_values', 'cityfv')
+					. ' WHERE ' . $db->quoteName('cityfv.item_id') . ' = ' . $itemId
+					. ' AND ' . $db->quoteName('cityfv.field_id') . ' = ' . $fieldCity
+					. ' AND (' . $db->quoteName('cityfv.value') . ' = ' . $db->quote($city)
+					. ' OR ' . $db->quoteName('cityfv.value') . ' = ' . $db->quote(' ' . $city)
+					. ' OR ' . $db->quoteName('cityfv.value') . ' = ' . $db->quote($city . ' ') . '))'
+				);
+			}
 			$db->setQuery($query);
 			$max = (int) $db->loadResult();
 			$stats['maxDiscount'] = $max > 0 && $max < 100 ? $max : null;

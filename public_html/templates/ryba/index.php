@@ -506,7 +506,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		?>
 		<?php
 		require_once __DIR__ . '/helpers/home_feed.php';
-		$homeStats = VglHomeFeed::stats(VglHomeFeed::viewerCity());
+		$homeStats = VglHomeFeed::stats(VglHomeFeed::feedCity());
 		$homeCount = static function (?int $n, array $forms, string $fallback): string {
 			return $n !== null && $n > 0 ? $n . ' ' . VglHomeFeed::plural($n, $forms) : $fallback;
 		};
@@ -531,7 +531,6 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		?>
 		<section class="search__specialists search__section home-hero">
 			<div class="container">
-				<h1 class="home-hero__title">Запишитесь к мастеру за минуту</h1>
 				<form class="home-hero__search" action="<?php echo htmlspecialchars($homeSearchLinks[0]['href']); ?>" method="get" role="search">
 					<svg class="home-hero__search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
 					<input class="home-hero__input" type="text" name="master_name" placeholder="Имя мастера" aria-label="Поиск мастера по имени" autocomplete="off">
