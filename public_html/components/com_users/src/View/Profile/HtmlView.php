@@ -91,6 +91,10 @@ class HtmlView extends BaseHtmlView
         $app = Factory::getApplication();
         $viewingUserId = (int) $app->getUserState('com_users.edit.profile.id');
 
+        if ($user->guest && $app->getInput()->getCmd('layout', '') === 'edit') {
+            $viewingUserId = 0;
+        }
+
         if ($user->guest && $viewingUserId == 0) {
             $app->enqueueMessage(Text::_('JGLOBAL_YOU_MUST_LOGIN_FIRST'), 'warning');
             $app->redirect(Route::_('index.php?option=com_users&view=login', false));

@@ -219,8 +219,19 @@ class ProfileModel extends FormModel
         $params = Factory::getApplication()->getParams('com_users');
 
         // Get the user id.
-        $userId = Factory::getApplication()->getUserState('com_users.edit.profile.id');
+        $app    = Factory::getApplication();
+        $input  = $app->getInput();
+        $userId = $app->getUserState('com_users.edit.profile.id');
         $userId = !empty($userId) ? $userId : (int) $this->getCurrentUser()->id;
+
+        // The session id is set by public profile pages. The edit form and every save
+        // request must only ever work with the logged-in user's own record.
+        if (
+            $input->getCmd('layout', '') === 'edit'
+            || str_starts_with((string) $input->getCmd('task', ''), 'profile.')
+        ) {
+            $userId = (int) $this->getCurrentUser()->id;
+        }
 
         // Set the user id.
         $this->setState('user.id', $userId);

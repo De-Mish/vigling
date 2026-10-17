@@ -37,6 +37,10 @@ RewriteEngine On
 	RewriteRule ^components/[^/]+/vendor/ - [F,L]
 	RewriteRule \.(md|lock|sql|bak|orig|sh)$ - [NC,F,L]
 	RewriteRule (^|/)(composer\.json|package(-lock)?\.json|phpunit\.xml(\.dist)?)$ - [NC,F,L]
+	# Old standalone scripts and CLI entry points are not web pages.
+	RewriteRule ^specialists-list\.php$ - [F,L]
+	RewriteRule ^cli/ - [F,L]
+	RewriteRule ^(htaccess\.txt|web\.config)$ - [F,L]
 	# Правило для коротких URL профилей по ID
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
