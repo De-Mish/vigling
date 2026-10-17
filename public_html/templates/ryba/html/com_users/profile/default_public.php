@@ -2358,28 +2358,6 @@ if (empty($isLkEmbed)) {
 	</div>
 </section>
 
-<?php if (empty($isLkEmbed) && (int) $currentUser->id !== $profileOwnerId && !empty($pricesStructuredWithIds)) : ?>
-<div class="vg-profile-bar" data-vg-profile-bar="1">
-	<?php if ($phonePublic && $phone !== '') : ?>
-	<a class="vg-profile-bar__call" href="tel:<?php echo $this->escape(preg_replace('/[^\d\+]/', '', $phone)); ?>"><i class="vg-i vg-i--phone" aria-hidden="true"></i>Позвонить</a>
-	<?php endif; ?>
-	<a class="vg-profile-bar__book" href="#" data-vg-profile-book="1">Записаться <span aria-hidden="true">&rarr;</span></a>
-</div>
-<script>
-(function () {
-	var bar = document.querySelector('[data-vg-profile-bar="1"]');
-	var target = document.querySelector('.master__services');
-	if (!bar) return;
-	if (!target) { bar.parentNode.removeChild(bar); return; }
-	document.body.classList.add('vg-has-profile-bar');
-	bar.querySelector('[data-vg-profile-book="1"]').addEventListener('click', function (event) {
-		event.preventDefault();
-		target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	});
-})();
-</script>
-<?php endif; ?>
-
 <section class="master__about">
 	<div class="container">
 		<div class="master__about-left">
@@ -2387,8 +2365,7 @@ if (empty($isLkEmbed)) {
 			<p><span><?php echo $this->escape('Обо мне: "' . $aboutText . '"'); ?></span></p><br>
 			<?php if ($phonePublic && $phone !== '') : ?>
 			<div class="master__about-call">
-				<img src="/templates/ryba/images/iphone1.png" alt="">
-				<a href="tel:<?php echo $this->escape(preg_replace('/[^\d\+]/', '', $phone)); ?>" target="_blank" rel="noopener noreferrer">Позвонить мастеру</a>
+				<a class="master__about-call-link" href="tel:<?php echo $this->escape(preg_replace('/[^\d\+]/', '', $phone)); ?>" target="_blank" rel="noopener noreferrer"><i class="vg-i vg-i--phone" aria-hidden="true"></i>Позвонить мастеру</a>
 			</div>
 			<?php endif; ?>
 			<?php if ($socialLinks !== []) : ?>
