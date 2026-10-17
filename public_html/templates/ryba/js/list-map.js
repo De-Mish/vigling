@@ -740,13 +740,6 @@
 		for (var i = 0; i < nodes.length; i++) {
 			initRoot(nodes[i]);
 		}
-		if (nodes.length && 'requestIdleCallback' in window) {
-			window.requestIdleCallback(function () {
-				loadYmaps();
-			}, { timeout: 2500 });
-		} else if (nodes.length) {
-			window.setTimeout(loadYmaps, 1200);
-		}
 	}
  
 	window.ViglingListMap = {
