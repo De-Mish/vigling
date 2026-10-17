@@ -3607,3 +3607,73 @@ html body section.master__block--stock .accordionItemHeading2 {
     padding-bottom: 10px !important;
   }
 }
+
+/* ==========================================================================
+   Stage 17: home page - hero without headline text, city picker of the feed
+   ========================================================================== */
+
+html body#home .home-hero .home-hero__title {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 1021px) {
+  html body#home .home-hero .container {
+    grid-template-areas: "search tiles";
+    align-content: start;
+  }
+
+  html body#home .home-hero__search {
+    align-self: center;
+    margin-top: 0;
+  }
+}
+
+html body#home .home-feed .home-feed__city {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 16px;
+}
+
+html body#home .home-feed .home-feed__city-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rd-mute);
+}
+
+html body#home .home-feed .home-feed__city-select {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 180px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 40px 0 16px;
+  border: 1.5px solid var(--rd-line);
+  border-radius: var(--rd-r-pill);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317150F' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 14px;
+  color: var(--rd-ink);
+  font: 700 14px/1 var(--rd-font);
+  cursor: pointer;
+}
+
+html body#home .home-feed .home-feed__city-select:focus {
+  outline: 0;
+  border-color: var(--rd-accent-d);
+  box-shadow: 0 0 0 3px var(--rd-accent-soft);
+}
+
+@media (max-width: 768px) {
+  html body#home .home-feed .home-feed__city-select {
+    font-size: 16px;
+  }
+}
