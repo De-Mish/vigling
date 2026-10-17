@@ -3468,6 +3468,9 @@ html body .xdsoft_datetimepicker .xdsoft_timepicker .xdsoft_time_box > div > div
   html body .xdsoft_datetimepicker {
     width: min(296px, calc(100vw - 24px));
   }
+}
+
+/* ==========================================================================
    Stage 14: reminder choice on the booking form (#zapis step 2)
    ========================================================================== */
 
