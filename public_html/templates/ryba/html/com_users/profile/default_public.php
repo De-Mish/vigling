@@ -9,6 +9,15 @@ use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
+use Viglin\Component\Pushnotify\Site\Helper\UserNotifyChoices;
+
+if (!class_exists(UserNotifyChoices::class, false)) {
+	$userNotifyChoicesFile = JPATH_SITE . '/components/com_pushnotify/src/Helper/UserNotifyChoices.php';
+	if (is_file($userNotifyChoicesFile)) {
+		require_once $userNotifyChoicesFile;
+	}
+}
+$bookingReminderChoices = class_exists(UserNotifyChoices::class, false) ? UserNotifyChoices::REMINDERS : [];
 
 $app = Factory::getApplication();
 $currentUser = $app->getIdentity();
@@ -2169,6 +2178,17 @@ if (empty($isLkEmbed)) {
 								<div class="zapis__data-price-wrap"></div>
 								<b class="zapis__data-result"></b>
 								<textarea name="note" class="zapis__data-textarea" placeholder="Комментарий (необязательно)"></textarea>
+								<?php if ($bookingReminderChoices) : ?>
+								<label class="zapis__remind" for="zapis__remind">
+									<span class="zapis__remind-label">Напомнить</span>
+									<select name="remind_minutes" id="zapis__remind" class="zapis__remind-select">
+										<option value="">По настройкам профиля</option>
+										<?php foreach ($bookingReminderChoices as $remindMinutes => $remindLabel) : ?>
+										<option value="<?php echo (int) $remindMinutes; ?>">За <?php echo $this->escape($remindLabel); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<?php endif; ?>
 								<div class="error-msg" style="display:none;"></div>
 							</div>
 							<div class="calc__btn">
@@ -2952,6 +2972,10 @@ if (empty($isLkEmbed)) {
 			bookingForm.querySelector('#zapis__data-price').value = String(price);
 			bookingForm.querySelector('#time_sum').value = String(timeSum);
 			bookingForm.querySelector('#zapis__duration-min').value = String(Math.max(15, srvTime.duration));
+			var remindSelect = bookingForm.querySelector('#zapis__remind');
+			if (remindSelect) {
+				remindSelect.value = '';
+			}
 			applyAvailableSlotsFilter();
 		}
 

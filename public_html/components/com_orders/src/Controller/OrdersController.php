@@ -234,7 +234,7 @@ class OrdersController extends BaseController
 			if (isset($columns['source'])) {
 				$payload['source'] = 'profile';
 			}
-			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone', 'service_full_name'];
+			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone', 'service_full_name', 'remind_minutes'];
 			foreach ($copyIfPresent as $columnName) {
 				if (!isset($columns[$columnName]) || !isset($table->$columnName)) {
 					continue;

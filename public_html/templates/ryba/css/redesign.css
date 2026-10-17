@@ -3468,4 +3468,48 @@ html body .xdsoft_datetimepicker .xdsoft_timepicker .xdsoft_time_box > div > div
   html body .xdsoft_datetimepicker {
     width: min(296px, calc(100vw - 24px));
   }
+   Stage 14: reminder choice on the booking form (#zapis step 2)
+   ========================================================================== */
+
+html body #zapis .screen2 .zapis__remind {
+  display: block;
+  margin: 12px 0 0;
+}
+html body #zapis .screen2 .zapis__remind-label {
+  display: block;
+  margin: 0 0 6px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--rd-mute);
+}
+html body #zapis .screen2 .zapis__remind-select {
+  display: block;
+  box-sizing: border-box;
+  width: 100% !important;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 44px 0 16px !important;
+  border: 1px solid var(--rd-line) !important;
+  border-radius: var(--rd-r-input) !important;
+  background-color: var(--rd-fill) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317150F' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px 18px !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--rd-ink);
+  text-overflow: ellipsis;
+}
+html body #zapis .screen2 .zapis__remind-select:focus {
+  outline: 0;
+  background-color: var(--rd-card) !important;
+  border-color: var(--rd-ink) !important;
+  box-shadow: 0 0 0 3px var(--rd-accent-soft) !important;
 }

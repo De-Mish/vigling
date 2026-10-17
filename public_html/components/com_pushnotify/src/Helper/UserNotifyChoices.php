@@ -32,11 +32,15 @@ class UserNotifyChoices
 		'booking_confirmed' => 'confirmed',
 	];
 
+	/** One list of lead times for the profile menu, the booking form and the reminder cron. */
 	public const REMINDERS = [
 		30 => '30 мин',
 		60 => '60 мин',
+		90 => '1,5 часа',
+		180 => '3 часа',
+		360 => '6 часов',
 		720 => '12 часов',
-		1440 => '24 часа',
+		1440 => '1 день',
 	];
 
 	/** @var array<int, array<string, mixed>> */

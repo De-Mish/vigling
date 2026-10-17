@@ -137,6 +137,26 @@ class OrderTable extends Table
 		}
 	}
 
+	public static function ensureRemindMinutesColumn(DatabaseInterface $db): bool
+	{
+		try {
+			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+			if (isset($columns['remind_minutes'])) {
+				return true;
+			}
+			$after = isset($columns['source']) ? 'source' : 'service_name';
+			$db->setQuery(
+				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
+				. ' ADD COLUMN ' . $db->quoteName('remind_minutes') . ' SMALLINT UNSIGNED NULL DEFAULT NULL'
+				. ' AFTER ' . $db->quoteName($after)
+			)->execute();
+
+			return true;
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	public static function ensureSourceColumn(DatabaseInterface $db): bool
 	{
 		try {
