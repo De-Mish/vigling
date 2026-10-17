@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2026-09-24a';
+const CACHE_VERSION = 'v2026-10-17a';
 const STATIC_CACHE = `vigling-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `vigling-runtime-${CACHE_VERSION}`;
 
@@ -53,6 +53,85 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+const PAGE_NETWORK_TIMEOUT_MS = 4000;
+const MAX_STATIC_ENTRIES = 150;
+const MAX_PAGE_ENTRIES = 30;
+
+// Only public catalogue pages are kept for offline use. Personal pages (cabinet,
+// orders, login, registration) are never stored, so they cannot be shown to the
+// next person who uses the same device.
+const OFFLINE_PAGE_PREFIXES = [
+  '/poisk-spetsialistov',
+  '/poisk-aktsij',
+  '/modeli',
+  '/kurs',
+  '/kontakty',
+  '/privacy-policy',
+];
+
+function isOfflinePage(url) {
+  if (url.searchParams.has('option') || url.searchParams.has('task') || url.searchParams.has('format')) {
+    return false;
+  }
+  if (url.pathname === '/') {
+    return true;
+  }
+  return OFFLINE_PAGE_PREFIXES.some((prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + '/'));
+}
+
+function trimCache(cacheName, maxEntries) {
+  return caches.open(cacheName).then((cache) => cache.keys().then((keys) => {
+    if (keys.length <= maxEntries) {
+      return undefined;
+    }
+    return Promise.all(keys.slice(0, keys.length - maxEntries).map((key) => cache.delete(key)));
+  })).catch(() => undefined);
+}
+
+function store(cacheName, request, response, maxEntries) {
+  if (!response || !response.ok || response.redirected || response.type !== 'basic') {
+    return Promise.resolve();
+  }
+  const copy = response.clone();
+  return caches.open(cacheName)
+    .then((cache) => cache.put(request, copy))
+    .then(() => trimCache(cacheName, maxEntries))
+    .catch(() => undefined);
+}
+
+function pageResponse(event, request) {
+  const network = fetch(request).then((response) => {
+    event.waitUntil(store(RUNTIME_CACHE, request, response, MAX_PAGE_ENTRIES));
+    return response;
+  });
+
+  return caches.match(request).then((cached) => {
+    if (!cached) {
+      return network.catch(() => caches.match('/').then((home) => home || Response.error()));
+    }
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(cached), PAGE_NETWORK_TIMEOUT_MS));
+    return Promise.race([network.catch(() => cached), timeout]);
+  });
+}
+
+function staticResponse(event, request, url) {
+  return caches.match(request).then((cached) => {
+    const versioned = url.searchParams.has('v') || /\.woff2?$/.test(url.pathname);
+    if (cached && versioned) {
+      return cached;
+    }
+    const network = fetch(request).then((response) => {
+      event.waitUntil(store(STATIC_CACHE, request, response, MAX_STATIC_ENTRIES));
+      return response;
+    });
+    if (cached) {
+      network.catch(() => undefined);
+      return cached;
+    }
+    return network;
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -61,9 +140,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   const url = new URL(request.url);
-  const isSameOrigin = url.origin === self.location.origin;
 
-  if (!isSameOrigin) {
+  if (url.origin !== self.location.origin) {
     return;
   }
 
@@ -79,35 +157,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined);
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
-    );
+    if (isOfflinePage(url)) {
+      event.respondWith(pageResponse(event, request));
+    }
     return;
   }
 
-  const isStaticAsset = ['style', 'script', 'font'].includes(request.destination);
-
-  if (!isStaticAsset) {
-    return;
+  if (['style', 'script', 'font'].includes(request.destination)) {
+    event.respondWith(staticResponse(event, request, url));
   }
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined);
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || networkFetch;
-    })
-  );
 });

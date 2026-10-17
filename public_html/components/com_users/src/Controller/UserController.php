@@ -86,9 +86,22 @@ class UserController extends BaseController
         $credentials['password']  = $data['password'];
         $credentials['secretkey'] = $data['secretkey'];
 
+        $throttleName = (string) $data['username'];
+
+        if ($throttleName !== '' && $this->loginThrottled($throttleName)) {
+            $this->app->enqueueMessage('Слишком много попыток входа. Попробуйте через 15 минут.', 'error');
+            $data['remember']  = (int) $options['remember'];
+            $data['username']  = '';
+            $data['password']  = '';
+            $data['secretkey'] = '';
+            $this->app->setUserState('users.login.form.data', $data);
+            $this->app->redirect(Route::_('index.php?option=com_users&view=login', false));
+        }
+
         // Perform the log in.
         if (true !== $this->app->login($credentials, $options)) {
             // Login failed !
+            $this->loginThrottleHit($throttleName);
             // Clear user name, password and secret key before sending the login form back to the user.
             $data['remember']  = (int) $options['remember'];
             $data['username']  = '';
@@ -99,6 +112,8 @@ class UserController extends BaseController
         }
 
         // Success
+        $this->loginThrottleClear($throttleName);
+
         if ($options['remember']) {
             $this->app->setUserState('rememberLogin', true);
         }
@@ -106,6 +121,100 @@ class UserController extends BaseController
         $this->app->setUserState('users.login.form.data', []);
 
         $this->app->redirect(Route::_($this->app->getUserState('users.login.form.return'), false));
+    }
+
+    /**
+     * Login brute-force limit. Uses the same counters (files, 15 minutes, 5 failures per
+     * account or per IP) as the quick-login plugin, so both login forms share one limit.
+     */
+    private function loginThrottled(string $username): bool
+    {
+        return \count($this->loginAttempts('user:' . strtolower($username))) >= 5
+            || \count($this->loginAttempts('ip:' . $this->loginClientIp())) >= 5;
+    }
+
+    private function loginThrottleHit(string $username): void
+    {
+        if ($username === '') {
+            return;
+        }
+
+        foreach (['user:' . strtolower($username), 'ip:' . $this->loginClientIp()] as $key) {
+            $rows   = $this->loginAttempts($key);
+            $rows[] = time();
+            @file_put_contents($this->loginAttemptFile($key), json_encode(array_values($rows)), LOCK_EX);
+        }
+    }
+
+    private function loginThrottleClear(string $username): void
+    {
+        if ($username === '') {
+            return;
+        }
+
+        $file = $this->loginAttemptFile('user:' . strtolower($username));
+
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+
+    private function loginClientIp(): string
+    {
+        $ip        = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        $forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+
+        if ($forwarded !== '') {
+            $candidate = trim(explode(',', $forwarded)[0]);
+
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                $ip = $candidate;
+            }
+        }
+
+        return $ip !== '' ? $ip : 'unknown';
+    }
+
+    private function loginAttemptFile(string $key): string
+    {
+        $dir = (\defined('JPATH_CACHE') ? JPATH_CACHE : sys_get_temp_dir()) . '/vigling-login-limit';
+
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        return $dir . '/' . hash('sha256', $key) . '.json';
+    }
+
+    /**
+     * @return  int[]  Timestamps of failures in the last 15 minutes.
+     */
+    private function loginAttempts(string $key): array
+    {
+        $file = $this->loginAttemptFile($key);
+
+        if (!is_file($file)) {
+            return [];
+        }
+
+        $decoded = json_decode((string) @file_get_contents($file), true);
+
+        if (!\is_array($decoded)) {
+            return [];
+        }
+
+        $now  = time();
+        $rows = [];
+
+        foreach ($decoded as $ts) {
+            $ts = (int) $ts;
+
+            if ($ts > 0 && ($now - $ts) < 900) {
+                $rows[] = $ts;
+            }
+        }
+
+        return $rows;
     }
 
     /**

@@ -187,6 +187,8 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 		if ($input->get('layout') === 'edit') {
+			$ownId = (int) $app->getIdentity()->id;
+			$app->setUserState('com_users.edit.profile.id', $ownId > 0 ? $ownId : null);
 			return;
 		}
 		$userId = (int) $input->get('user_id', 0);

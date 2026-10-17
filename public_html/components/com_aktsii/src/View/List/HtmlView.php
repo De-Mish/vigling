@@ -83,7 +83,7 @@ class HtmlView extends BaseHtmlView
 		}, $this->items);
 
 		if (!empty($userIds)) {
-			$this->fieldsByUser = PoiskHelper::getFieldsForUserIds($userIds, [
+			$this->fieldsByUser = PoiskHelper::getFieldsForUserIdsCached($userIds, [
 				'sity', 'area', 'street', 'house_number', 'telefon', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos'
 			]);
 			$this->stocksByUser = $this->loadStocksForUsers($userIds);

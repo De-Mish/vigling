@@ -261,6 +261,54 @@ class PoiskHelper
 		return $exact + array_diff_key($fallback, $exact);
 	}
 
+	/**
+	 * List-page variant: the same data kept for a few minutes (the item lists themselves are cached for
+	 * 3 minutes). Not for single-user lookups such as the viewer's own city, which must follow edits at once.
+	 *
+	 * @param array<int> $userIds
+	 * @return array<int|string, array<string, mixed>>
+	 */
+	public static function getFieldsForUserIdsCached(array $userIds, array $fieldNames, int $ttl = 180): array
+	{
+		$ids = array_map('intval', $userIds);
+		sort($ids);
+		$names = array_values(array_map('strval', $fieldNames));
+		sort($names);
+
+		return self::rememberCatalog('card-fields', implode(',', $ids) . '|' . implode(',', $names), $ttl, static function () use ($userIds, $fieldNames) {
+			return self::getFieldsForUserIds($userIds, $fieldNames);
+		});
+	}
+
+	/**
+	 * @param array<int> $userIds
+	 * @return array<int, array{price:int, recommendation:string}>
+	 */
+	public static function getFilteredServiceDetailsForUsersCached(array $userIds, int $serviceId, int $tagId = 0, int $ttl = 180): array
+	{
+		$ids = array_map('intval', $userIds);
+		sort($ids);
+
+		return self::rememberCatalog('card-prices', implode(',', $ids) . '|' . $serviceId . '|' . $tagId, $ttl, static function () use ($userIds, $serviceId, $tagId) {
+			return self::getFilteredServiceDetailsForUsers($userIds, $serviceId, $tagId);
+		});
+	}
+
+	private static function rememberCatalog(string $bucket, string $key, int $ttl, callable $loader)
+	{
+		if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::class, false)) {
+			$path = JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogQueryCache.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+		if (class_exists(\Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::class, false)) {
+			return \Joomla\Plugin\User\Vigling\Helper\CatalogQueryCache::remember($bucket, $key, $ttl, $loader);
+		}
+
+		return $loader();
+	}
+
 	public static function getFieldsForUserIds(array $userIds, array $fieldNames): array
 	{
 		if (empty($userIds)) {

@@ -44,6 +44,11 @@ final class UserServicesService
             return $ensured;
         }
 
+        $stamp = (\defined('JPATH_CACHE') ? JPATH_CACHE : sys_get_temp_dir()) . '/vigling-schema-recommendation.stamp';
+        if (is_file($stamp) && (time() - (int) @filemtime($stamp)) < 86400) {
+            return $ensured = true;
+        }
+
         try {
             $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
             $ok = true;
@@ -58,6 +63,7 @@ final class UserServicesService
                 )->execute();
             }
             $ensured = $ok;
+            @file_put_contents($stamp, (string) time(), LOCK_EX);
 
             return $ensured;
         } catch (\Throwable $e) {

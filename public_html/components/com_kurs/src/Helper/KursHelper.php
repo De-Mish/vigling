@@ -110,6 +110,11 @@ class KursHelper
 		return PoiskHelper::getFieldsForUserIds($userIds, $fieldNames);
 	}
 
+	public static function getFieldsForUserIdsCached(array $userIds, array $fieldNames): array
+	{
+		return PoiskHelper::getFieldsForUserIdsCached($userIds, $fieldNames);
+	}
+
 	private static function getDistinctFieldValues(string $fieldName): array
 	{
 		$masterIds = self::getCourseMasterIds();

@@ -10,6 +10,7 @@ use Joomla\CMS\User\User;
 $app   = Factory::getApplication();
 $input = $app->getInput();
 $tpl   = $this->template;
+$this->setGenerator('');
 $tplPath = rtrim(Uri::root(), '/') . '/templates/' . $tpl . '/';
 $rybaAsset = static function (string $relative) use ($tplPath): string {
 	$relative = ltrim($relative, '/');

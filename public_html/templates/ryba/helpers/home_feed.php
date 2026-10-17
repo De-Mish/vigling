@@ -503,7 +503,7 @@ final class VglHomeFeed
 			return (int) ($item->master_id ?? 0);
 		}, $items)));
 		$fieldsByUser = $userIds !== []
-			? \Viglin\Component\Modeli\Site\Helper\ModeliHelper::getFieldsForUserIds($userIds, self::FIELD_NAMES)
+			? \Viglin\Component\Modeli\Site\Helper\ModeliHelper::getFieldsForUserIdsCached($userIds, self::FIELD_NAMES)
 			: [];
 
 		$file = JPATH_SITE . '/components/com_modeli/tmpl/list/default_item.php';
@@ -621,7 +621,7 @@ final class VglHomeFeed
 		$userIds = array_values(array_unique(array_map(static function (array $row): int {
 			return (int) $row['user_id'];
 		}, $rows)));
-		$fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIds($userIds, self::FIELD_NAMES);
+		$fieldsByUser = \Viglin\Component\Poisk\Site\Helper\PoiskHelper::getFieldsForUserIdsCached($userIds, self::FIELD_NAMES);
 		$categoryByUser = self::specialistCategoryByUser($db, $userIds);
 
 		$catIds = array_values(array_unique(array_filter(array_map('intval', array_values($categoryByUser)))));
