@@ -1882,6 +1882,7 @@ if (empty($isLkEmbed)) {
 							}
 							$stockAccCounter++;
 						?>
+						<div class="stockCategory">
 						<h2 class="accordionItemHeading2"><?php echo $this->escape($stockCategoryTitle); ?></h2>
 						<div class="accordionItemContent2">
 							<div class="stockList">
@@ -1904,7 +1905,7 @@ if (empty($isLkEmbed)) {
 								?>
 								<?php $stockDiscountPct = ($stockOldPrice > $stockPrice && $stockPrice > 0) ? (int) round(($stockOldPrice - $stockPrice) / $stockOldPrice * 100) : 0; ?>
 								<div class="stockList__item<?php echo $stockIsSoldOut ? ' is-unavailable' : ''; ?><?php echo $isHighlightedStock ? ' highlighted-service' : ''; ?><?php echo $stockDiscountPct > 0 ? ' has-old-price' : ''; ?>" data-cat-id="<?php echo (int) ($stockCategory['cat_id'] ?? 0); ?>" data-svc-id="<?php echo $this->escape((string) ($stockItem['svc_id'] ?? '')); ?>" data-stock-service-id="<?php echo $stockServiceId; ?>" data-tag-id="<?php echo (int) ($stockItem['tag_id'] ?? 0); ?>" data-legacy-cat-id="<?php echo (int) ($stockItem['legacy_cat_id'] ?? 0); ?>">
-									<div class="stockList__item-coll stock__badges"><span class="stock__badge">Акция</span><?php if ($stockDiscountPct > 0) : ?><span class="card-disc">−<?php echo $stockDiscountPct; ?>%</span><?php endif; ?></div>
+									<?php if ($stockDiscountPct > 0) : ?><div class="stockList__item-coll stock__badges"><span class="card-disc">−<?php echo $stockDiscountPct; ?>%</span></div><?php endif; ?>
 									<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($stockCategoryTitle . ' - ' . (string) ($stockItem['name'] ?? '')); ?></div>
 									<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($stockDescription !== '' ? $stockDescription : 'Акционное предложение'); ?></div>
 									<div class="stockList__item-coll stock__coll4"><?php echo number_format($stockPrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
@@ -1939,6 +1940,7 @@ if (empty($isLkEmbed)) {
 								</div>
 								<?php endforeach; ?>
 							</div>
+						</div>
 						</div>
 						<?php endforeach; ?>
 					</div>
@@ -1994,7 +1996,6 @@ if (empty($isLkEmbed)) {
 								}
 							?>
 							<div class="stockList__item courseList__item<?php echo $courseButtonDisabled ? ' is-unavailable' : ''; ?>">
-								<div class="stockList__item-coll stock__badges"><span class="stock__badge">Курс</span></div>
 								<?php if ($courseMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
 									<img src="<?php echo $this->escape($vgImageUrl($courseMediaUrl, true)); ?>" alt="<?php echo $this->escape($courseTitle !== '' ? $courseTitle : 'Курс'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
@@ -2091,7 +2092,6 @@ if (empty($isLkEmbed)) {
 								}
 							?>
 							<div class="stockList__item courseList__item<?php echo $searchButtonDisabled ? ' is-unavailable' : ''; ?>">
-								<div class="stockList__item-coll stock__badges"><span class="stock__badge">Поиск моделей</span></div>
 								<?php if ($searchMediaUrl !== '') : ?>
 								<div class="stockList__item-coll course__coll0" style="margin-bottom:10px;">
 									<img src="<?php echo $this->escape($vgImageUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
@@ -2879,6 +2879,7 @@ if (empty($isLkEmbed)) {
 				var list = item.closest('.stockList');
 				var wrap = list ? list.closest('.accordionItemContent2') : null;
 				var heading = wrap ? wrap.previousElementSibling : null;
+				var category = wrap ? wrap.closest('.stockCategory') : null;
 				item.remove();
 				if (list && !list.querySelector('.stockList__item')) {
 					if (wrap) {
@@ -2886,6 +2887,9 @@ if (empty($isLkEmbed)) {
 					}
 					if (heading && heading.tagName === 'H2') {
 						heading.remove();
+					}
+					if (category) {
+						category.remove();
 					}
 				}
 				var section = button.closest('section.master__services');
