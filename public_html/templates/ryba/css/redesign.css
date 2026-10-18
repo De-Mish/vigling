@@ -3862,3 +3862,66 @@ html body section.master__block--stock .stockCategory .stockList__item:not(.high
 html body .master__services .stockList__item:not(.courseList__item) .stock__badges {
   justify-content: flex-end;
 }
+
+/* ==========================================================================
+   Stage 20: page numbers - one step larger, wider gaps, current page in a black circle
+   ========================================================================== */
+html body .pagination,
+html body .pagination li {
+  font-size: 16px;
+}
+
+html body .pagination li {
+  margin-right: calc(20px + 1ch);
+}
+
+html body .pagination li:last-child {
+  margin-right: 0;
+}
+
+html body .pagination li a {
+  color: #000;
+}
+
+html body .pagination li a.pagenav,
+html body .pagination li a.active {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  min-width: 1.2em;
+  text-align: center;
+}
+
+html body .pagination li.active,
+html body .pagination li a.active {
+  color: #F9CE54;
+  font-weight: 900;
+}
+
+html body .pagination li a.active,
+html body .pagination li a.pagenav:not(:has(span)) {
+  font-size: 16px;
+}
+
+html body .pagination li a.active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 2em;
+  height: 2em;
+  margin: -1em 0 0 -1em;
+  border-radius: 50%;
+  background: #000;
+}
+
+@media only screen and (max-width: 767px) {
+  html body .pagination__wrap .pagination {
+    gap: calc(8px + 1ch);
+  }
+
+  html body .pagination__wrap .pagination li {
+    margin-right: 0;
+  }
+}
