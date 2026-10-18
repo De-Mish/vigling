@@ -3858,3 +3858,7 @@ html body section.master__block--stock .stockCategory .stockList__item:not(.high
   background: var(--rd-card) !important;
   border-left: 0 !important;
 }
+
+html body .master__services .stockList__item:not(.courseList__item) .stock__badges {
+  justify-content: flex-end;
+}
