@@ -3809,3 +3809,52 @@ html body .master__about-call a.master__about-call-link:focus-visible {
     max-height: calc(100dvh - 318px);
   }
 }
+
+/* ==========================================================================
+   Stage 19: home feed city picker in one row; profile service groups as fields
+   (heading + cards on one background, accent line on the left)
+   ========================================================================== */
+
+html body#home .home-feed .home-feed__city {
+  flex-wrap: nowrap;
+}
+
+html body#home .home-feed .home-feed__city-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+html body section.master__block--services .accordionItem {
+  margin: 0 0 16px;
+  padding: 14px 16px 16px;
+  background: var(--rd-accent-soft);
+  border-left: 5px solid #F9CE54;
+  border-radius: var(--rd-r-card);
+}
+
+html body section.master__block--services .accordionItemHeading {
+  margin: 0 0 10px;
+  background: transparent;
+}
+
+html body section.master__block--services .priceList__item {
+  border-left: 0;
+}
+
+html body section.master__block--stock .stockCategory {
+  margin: 0 0 16px;
+  padding: 14px 16px 16px;
+  background: var(--blk-soft);
+  border-left: 5px solid var(--blk);
+  border-radius: var(--rd-r-card);
+}
+
+html body section.master__block--stock .stockCategory .accordionItemHeading2 {
+  margin: 0 0 10px;
+  background: transparent;
+}
+
+html body section.master__block--stock .stockCategory .stockList__item:not(.highlighted-service) {
+  background: var(--rd-card) !important;
+  border-left: 0 !important;
+}

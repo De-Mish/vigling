@@ -245,7 +245,7 @@ final class VglHomeFeed
 		?>
 		<section class="search__catalog home-feed" id="<?php echo self::ANCHOR; ?>">
 			<div class="container">
-				<h2 class="home-feed__title">Новейшие предложения</h2>
+				<h2 class="home-feed__title">Новые предложения</h2>
 				<?php
 				$cityOptions = self::cities();
 				if ($city !== '' && !in_array($city, $cityOptions, true)) {
@@ -253,7 +253,7 @@ final class VglHomeFeed
 				}
 				?>
 				<form class="home-feed__city" method="get" action="<?php echo htmlspecialchars(rtrim(Uri::root(true), '/') . '/#' . self::ANCHOR, ENT_QUOTES, 'UTF-8'); ?>">
-					<label class="home-feed__city-label" for="home-feed-city">Показаны предложения в городе:</label>
+					<label class="home-feed__city-label" for="home-feed-city">в городе:</label>
 					<select class="home-feed__city-select" id="home-feed-city" name="<?php echo self::PARAM_CITY; ?>" onchange="this.form.submit()">
 						<option value="<?php echo self::CITY_ALL; ?>"<?php echo $city === '' ? ' selected' : ''; ?>>Все города</option>
 						<?php foreach ($cityOptions as $cityOption) : ?>

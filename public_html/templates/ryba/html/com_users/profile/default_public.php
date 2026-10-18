@@ -1868,7 +1868,6 @@ if (empty($isLkEmbed)) {
 		<div class="container">
 			<div class="accordionWrapper">
 				<div class="accordionItem opened">
-					<button style="color:green; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Акционные услуги:</button>
 					<div class="accordionItem opened">
 						<?php
 						$stockAccCounter = 0;
@@ -1882,6 +1881,7 @@ if (empty($isLkEmbed)) {
 							}
 							$stockAccCounter++;
 						?>
+						<div class="stockCategory">
 						<h2 class="accordionItemHeading2"><?php echo $this->escape($stockCategoryTitle); ?></h2>
 						<div class="accordionItemContent2">
 							<div class="stockList">
@@ -1940,6 +1940,7 @@ if (empty($isLkEmbed)) {
 								<?php endforeach; ?>
 							</div>
 						</div>
+						</div>
 						<?php endforeach; ?>
 					</div>
 				</div>
@@ -1953,7 +1954,6 @@ if (empty($isLkEmbed)) {
 		<div class="container">
 			<div class="accordionWrapper">
 				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">
-					<button style="color:#475329; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Курсы:</button>
 					<div class="accordionItem opened">
 						<div class="stockList">
 							<?php foreach ((array) $coursesStructured as $courseItem) : ?>
@@ -2050,7 +2050,6 @@ if (empty($isLkEmbed)) {
 		<div class="container">
 			<div class="accordionWrapper">
 				<div style="background-color:#e8f0c8; border-radius:10px; padding:5px; margin-bottom:5px" class="accordionItem opened master__offer-box">
-					<button style="color:#475329; font-weight:bold; background-color:#fff; border-radius:5px" type="button">Поиск моделей:</button>
 					<div class="accordionItem opened">
 						<div class="stockList">
 							<?php foreach ((array) $searchesStructured as $searchItem) : ?>
@@ -2879,6 +2878,7 @@ if (empty($isLkEmbed)) {
 				var list = item.closest('.stockList');
 				var wrap = list ? list.closest('.accordionItemContent2') : null;
 				var heading = wrap ? wrap.previousElementSibling : null;
+				var category = wrap ? wrap.closest('.stockCategory') : null;
 				item.remove();
 				if (list && !list.querySelector('.stockList__item')) {
 					if (wrap) {
@@ -2886,6 +2886,9 @@ if (empty($isLkEmbed)) {
 					}
 					if (heading && heading.tagName === 'H2') {
 						heading.remove();
+					}
+					if (category) {
+						category.remove();
 					}
 				}
 				var section = button.closest('section.master__services');
