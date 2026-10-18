@@ -85,17 +85,6 @@ final class DailyMaintenance
 			'#__fields_values' => [
 				'idx_vigling_fields_field_item' => ['field_id', 'item_id'],
 			],
-			'#__vigling_user_services' => [
-				'idx_vigling_us_legacy_cat' => ['legacy_cat_id'],
-			],
-			'#__vigling_user_stock_services' => [
-				'idx_vigling_stock_user' => ['user_id'],
-				'idx_vigling_stock_active' => ['is_active', 'count_stock'],
-			],
-			'#__vigling_service_nodes' => [
-				'idx_vigling_node_legacy' => ['legacy_id'],
-				'idx_vigling_node_parent' => ['parent_id'],
-			],
 		];
 
 		foreach ($plans as $table => $indexes) {
