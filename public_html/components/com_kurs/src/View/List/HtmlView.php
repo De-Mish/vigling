@@ -56,7 +56,7 @@ class HtmlView extends BaseHtmlView
 			return (int) ($item->master_id ?? 0);
 		}, $this->items)));
 		if ($userIds !== []) {
-			$this->fieldsByUser = \Viglin\Component\Kurs\Site\Helper\KursHelper::getFieldsForUserIds($userIds, [
+			$this->fieldsByUser = \Viglin\Component\Kurs\Site\Helper\KursHelper::getFieldsForUserIdsCached($userIds, [
 				'sity', 'area', 'street', 'house_number', 'about', 'avatar', 'portfolio_field', 'home', 'payment_method', 'suitable_for_children', 'vyberite_spetsialnos',
 			]);
 		}
