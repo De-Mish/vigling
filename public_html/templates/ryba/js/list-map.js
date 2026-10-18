@@ -5,7 +5,8 @@
 	var API_SRC = 'https://api-maps.yandex.ru/2.1/?lang=ru-RU&apikey=' + API_KEY;
 	var CITY_ZOOM = 10;
 	var MAX_FIT_ZOOM = 11;
-	var STREET_ZOOM = 13;
+	var MAX_CLUSTER_ZOOM = 18;
+	var CLUSTER_LIST_MAX = 40;
 	var CITY_LL = {
 		'москва': [37.6173, 55.7558],
 		'санкт-петербург': [30.3159, 59.9391],
@@ -120,20 +121,6 @@
 		];
 	}
  
-	function coordsForGroup(key) {
-		var cityName = String(key.split(',')[0] || '').trim();
-		if (!cityName) {
-			return offsetAroundCity('Москва', key);
-		}
-		if (!CITY_LL[cityKey(cityName)]) {
-			return null;
-		}
-		if (key.indexOf(',') === -1) {
-			return cityLatLon(cityName);
-		}
-		return offsetAroundCity(cityName, key);
-	}
- 
 	function pinHref(pin) {
 		var href = String((pin && pin.href) || '').trim();
 		if (!href || href === '#') {
@@ -188,16 +175,27 @@
 		return target._vgPin || null;
 	}
  
+	var GOLDEN_ANGLE = 2.399963229728653;
+	var SPREAD_STEP_M = 60;
+
+	// Pins of one city/district share a single geocoded point (street and house are not published),
+	// so they are laid out on a sunflower spiral around it: every pin gets its own position
+	// and the clusterer can split them while zooming in.
 	function spreadCoords(base, index, total) {
 		if (!base || total < 2) {
 			return base ? base.slice() : base;
 		}
-		var angle = (index / total) * Math.PI * 2;
-		var dist = 0.0024 + (index % 4) * 0.0006;
-		return [
-			base[0] + Math.sin(angle) * dist,
-			base[1] + Math.cos(angle) * dist * 1.45
-		];
+		var radius = SPREAD_STEP_M * Math.sqrt(index + 0.5);
+		var angle = index * GOLDEN_ANGLE;
+		var dLat = (radius * Math.sin(angle)) / 111320;
+		var dLon = (radius * Math.cos(angle)) / (111320 * Math.max(0.2, Math.cos(base[0] * Math.PI / 180)));
+		return [base[0] + dLat, base[1] + dLon];
+	}
+
+	function distanceKm(a, b) {
+		var dLat = (a[0] - b[0]) * 111.32;
+		var dLon = (a[1] - b[1]) * 111.32 * Math.cos(((a[0] + b[0]) / 2) * Math.PI / 180);
+		return Math.hypot(dLat, dLon);
 	}
  
 	function pixelDistance(mapObj, geoA, geoB) {
@@ -289,7 +287,8 @@
 		var rect = root.getBoundingClientRect();
 		var x = page[0] - (window.scrollX || window.pageXOffset || 0) - rect.left;
 		var y = page[1] - (window.scrollY || window.pageYOffset || 0) - rect.top;
-		var placeBelow = y < 88;
+		var needed = Math.max(88, (card.offsetHeight || 0) + 24);
+		var placeBelow = y < needed && (rect.height - y) > y;
 		card.style.left = Math.round(x) + 'px';
 		card.style.top = Math.round(y) + 'px';
 		card.classList.toggle('is-below', placeBelow);
@@ -382,6 +381,25 @@
 		return ymapsLoading;
 	}
  
+	var GEO_STORE_PREFIX = 'vgGeo2:';
+
+	function readStoredGeocode(key) {
+		try {
+			var raw = window.localStorage.getItem(GEO_STORE_PREFIX + key);
+			var parsed = raw ? JSON.parse(raw) : null;
+			if (parsed && parsed.length === 2 && isFinite(parsed[0]) && isFinite(parsed[1])) {
+				return parsed;
+			}
+		} catch (e) {}
+		return null;
+	}
+
+	function writeStoredGeocode(key, coords) {
+		try {
+			window.localStorage.setItem(GEO_STORE_PREFIX + key, JSON.stringify(coords));
+		} catch (e) {}
+	}
+
 	function geocodeAddress(ymaps, address) {
 		var key = String(address || '').trim();
 		if (!key) {
@@ -390,13 +408,20 @@
 		if (geocodeCache[key]) {
 			return geocodeCache[key];
 		}
+		var stored = readStoredGeocode(key);
+		if (stored) {
+			geocodeCache[key] = Promise.resolve(stored);
+			return geocodeCache[key];
+		}
 		geocodeCache[key] = ymaps.geocode(key, { results: 1 })
 			.then(function (res) {
 				var first = res.geoObjects.get(0);
 				if (!first) {
 					return null;
 				}
-				return first.geometry.getCoordinates();
+				var coords = first.geometry.getCoordinates();
+				writeStoredGeocode(key, coords);
+				return coords;
 			})
 			.catch(function () {
 				return null;
@@ -453,17 +478,14 @@
 			},
 			clusterIconOffset: [-20, -20],
 			groupByCoordinates: false,
-			clusterDisableClickZoom: false,
+			clusterDisableClickZoom: true,
 			clusterHideIconOnBalloonOpen: false,
 			geoObjectHideIconOnBalloonOpen: false,
 			gridSize: 80,
 			minClusterSize: 2,
-			hasBalloon: true,
-			clusterOpenBalloonOnClick: true,
-			geoObjectOpenBalloonOnClick: false,
-			clusterBalloonContentLayout: 'cluster#balloonAccordion',
-			clusterBalloonItemContentLayout: 'cluster#balloonAccordionItemContent',
-			clusterBalloonPanelMaxMapArea: 0
+			hasBalloon: false,
+			clusterOpenBalloonOnClick: false,
+			geoObjectOpenBalloonOnClick: false
 		});
 	}
  
@@ -573,13 +595,111 @@
 		});
 	}
  
+	function groupCenter(ymaps, key, groupPins) {
+		var cityName = String(key.split(',')[0] || '').trim() || 'Москва';
+		var cityCenter = cityLatLon(cityName);
+		if (key.indexOf(',') === -1) {
+			return Promise.resolve(cityCenter);
+		}
+		var query = streetQuery(groupPins[0] || {}) || key;
+		return geocodeAddress(ymaps, query).then(function (coords) {
+			if (coords && distanceKm(coords, cityCenter) <= 80) {
+				return coords;
+			}
+			return offsetAroundCity(cityName, key);
+		});
+	}
+
+	function clusterAnchor(cluster) {
+		var bounds = cluster.getBounds();
+		var center = bounds
+			? [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2]
+			: cluster.geometry.getCoordinates();
+		return { geometry: { getCoordinates: function () { return center; } } };
+	}
+
+	function showClusterCard(root, mapObj, cluster) {
+		var members = cluster.getGeoObjects() || [];
+		if (!members.length) {
+			return false;
+		}
+		closePinCard(root);
+		rememberCatalogReturn();
+		var shown = members.slice(0, CLUSTER_LIST_MAX);
+		var items = shown.map(function (mark) {
+			var pin = mark._vgPin || {};
+			var href = pinHref(pin);
+			var name = String(pin.name || 'Специалист').trim() || 'Специалист';
+			var place = pinAddressLocal(pin);
+			return '<li class="vg-list-map__card-item">'
+				+ (href
+					? '<a class="vg-list-map__card-name" href="' + escapeHtml(href) + '">' + escapeHtml(name) + '</a>'
+					: '<span class="vg-list-map__card-name">' + escapeHtml(name) + '</span>')
+				+ (place && place !== 'Адрес не указан' ? '<div class="vg-list-map__card-addr">' + escapeHtml(place) + '</div>' : '')
+				+ '</li>';
+		}).join('');
+		var more = members.length > shown.length
+			? '<div class="vg-list-map__card-more">и ещё ' + (members.length - shown.length) + '</div>'
+			: '';
+		var card = document.createElement('div');
+		card.className = 'vg-list-map__card vg-list-map__card--list';
+		card.innerHTML = '<button type="button" class="vg-list-map__card-close" aria-label="Закрыть">×</button>'
+			+ '<div class="vg-list-map__card-title">Специалистов здесь: ' + members.length + '</div>'
+			+ '<ul class="vg-list-map__card-list">' + items + '</ul>' + more;
+		var closeBtn = card.querySelector('.vg-list-map__card-close');
+		if (closeBtn) {
+			closeBtn.addEventListener('click', function (event) {
+				event.preventDefault();
+				event.stopPropagation();
+				closePinCard(root);
+			});
+		}
+		card.addEventListener('click', function (event) {
+			var link = event.target && event.target.closest ? event.target.closest('a.vg-list-map__card-name') : null;
+			if (link) {
+				rememberCatalogReturn();
+			}
+		});
+		root.appendChild(card);
+		root.classList.add('has-card');
+		var anchor = clusterAnchor(cluster);
+		positionPinCard(root, mapObj, anchor, card);
+		function onBounds() {
+			if (root._vgCard && root._vgCard.el) {
+				positionPinCard(root, mapObj, anchor, root._vgCard.el);
+			}
+		}
+		mapObj.events.add('boundschange', onBounds);
+		root._vgCard = { el: card, mark: anchor, off: onBounds };
+		root._vgMap = mapObj;
+		return true;
+	}
+
+	function openCluster(root, mapObj, cluster) {
+		var bounds = cluster.getBounds();
+		var zoomBefore = mapObj.getZoom();
+		var span = bounds
+			? Math.max(Math.abs(bounds[1][0] - bounds[0][0]), Math.abs(bounds[1][1] - bounds[0][1]))
+			: 0;
+		if (bounds && span > 0.00002 && zoomBefore < MAX_CLUSTER_ZOOM) {
+			var ready = mapObj.setBounds(bounds, { checkZoomRange: true, zoomMargin: 70 }) || Promise.resolve();
+			Promise.resolve(ready).then(function () {
+				if (mapObj.getZoom() <= zoomBefore) {
+					showClusterCard(root, mapObj, cluster);
+				}
+			});
+			return;
+		}
+		showClusterCard(root, mapObj, cluster);
+	}
+
 	function placePins(ymaps, mapObj, clusterer, pins, fallbackCity, cityLocked, layouts, root) {
 		if (!pins.length) {
 			return resolveCityLatLon(ymaps, fallbackCity).then(function (center) {
 				mapObj.setCenter(center, CITY_ZOOM);
 			});
 		}
- 
+
 		var groups = {};
 		pins.forEach(function (pin) {
 			var key = groupKey(pin);
@@ -600,11 +720,34 @@
 		return runPool(unknownCities, function (cityName) {
 			return resolveCityLatLon(ymaps, cityName);
 		}, 4).then(function () {
- 
+			var keys = Object.keys(groups);
+			var centers = {};
+			return runPool(keys, function (key) {
+				return groupCenter(ymaps, key, groups[key]).then(function (coords) {
+					centers[key] = coords;
+				});
+			}, 4).then(function () {
+				return centers;
+			});
+		}).then(function (centers) {
+
 		var placemarks = [];
+		var buckets = {};
+		var bucketOrder = [];
 		Object.keys(groups).forEach(function (key) {
-			var baseCoords = coordsForGroup(key) || offsetAroundCity(String(key.split(',')[0] || '').trim() || 'Москва', key);
-			var groupPins = groups[key];
+			var baseCoords = centers[key] || offsetAroundCity(String(key.split(',')[0] || '').trim() || 'Москва', key);
+			var bucketKey = baseCoords[0].toFixed(4) + ',' + baseCoords[1].toFixed(4);
+			if (!buckets[bucketKey]) {
+				buckets[bucketKey] = { base: baseCoords, pins: [] };
+				bucketOrder.push(bucketKey);
+			}
+			groups[key].forEach(function (pin) {
+				buckets[bucketKey].pins.push(pin);
+			});
+		});
+		bucketOrder.forEach(function (bucketKey) {
+			var baseCoords = buckets[bucketKey].base;
+			var groupPins = buckets[bucketKey].pins;
 			groupPins.forEach(function (pin, index) {
 				var coords = spreadCoords(baseCoords, index, groupPins.length);
 				var mark = new ymaps.Placemark(coords, {
@@ -625,7 +768,7 @@
 					hasHint: true,
 					cursor: 'pointer'
 				});
-				mark._vgPin = pin; mark._vgStreetReady = false;
+				mark._vgPin = pin;
 				mark.events.add('click', function (event) {
 					if (showPinCard(root, mapObj, mark)) {
 						event.preventDefault();
@@ -635,23 +778,29 @@
 				placemarks.push(mark);
 			});
 		});
- 
+
 		clusterer.add(placemarks);
 		var mapRoot = root || mapObj.container.getElement().closest('.vg-list-map');
 		clusterer.events.add('click', function (event) {
-			var pin = pinFromTarget(event.get('target'));
-			if (!pin) {
+			var target = event.get('target');
+			var pin = pinFromTarget(target);
+			if (pin) {
+				var mark = null;
+				placemarks.forEach(function (item) {
+					if (item._vgPin === pin) {
+						mark = item;
+					}
+				});
+				if (mark && showPinCard(mapRoot, mapObj, mark)) {
+					event.preventDefault();
+					event.stopPropagation();
+				}
 				return;
 			}
-			var mark = null;
-			placemarks.forEach(function (item) {
-				if (item._vgPin === pin) {
-					mark = item;
-				}
-			});
-			if (mark && showPinCard(mapRoot, mapObj, mark)) {
+			if (target && typeof target.getGeoObjects === 'function') {
 				event.preventDefault();
 				event.stopPropagation();
+				openCluster(mapRoot, mapObj, target);
 			}
 		});
 		mapObj.events.add('click', function (event) {
@@ -668,57 +817,11 @@
 			}
 		});
 		bindPointerFallback(mapRoot, mapObj, placemarks);
- 
-		var refining = false;
-		function maybeRefine() {
-			if (mapObj.getZoom() < STREET_ZOOM || refining) {
-				return;
-			}
-			refining = true;
-			refineStreets(ymaps, mapObj, clusterer, placemarks).then(function () {
-				refining = false;
-			});
-		}
- 
-		mapObj.events.add('boundschange', maybeRefine);
+
 		return fitCityView(mapObj, clusterer, fallbackCity, cityLocked, ymaps);
 		});
 	}
- 
-	function refineStreets(ymaps, mapObj, clusterer, placemarks) {
-		var bounds = mapObj.getBounds();
-		var pending = placemarks.filter(function (mark) {
-			if (mark._vgStreetReady) {
-				return false;
-			}
-			var pin = mark._vgPin || {};
-			var query = streetQuery(pin);
-			if (!query) {
-				mark._vgStreetReady = true;
-				return false;
-			}
-			var pos = mark.geometry.getCoordinates();
-			return ymaps.util.bounds.containsPoint(bounds, pos);
-		});
- 
-		if (!pending.length) {
-			return Promise.resolve();
-		}
- 
-		return runPool(pending, function (mark) {
-			var query = streetQuery(mark._vgPin || {});
-			return geocodeAddress(ymaps, query).then(function (coords) {
-				mark._vgStreetReady = true;
-				if (coords) {
-					mark.geometry.setCoordinates(coords);
-				}
-			});
-		}, 4).then(function () {
-			clusterer.removeAll();
-			clusterer.add(placemarks);
-		});
-	}
- 
+
 	function onShowMapButton(event) {
 		event.preventDefault();
 		var root = event.currentTarget.closest('.vg-list-map');

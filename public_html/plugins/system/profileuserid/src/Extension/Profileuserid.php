@@ -96,19 +96,24 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 	public function parseStandalonePages(&$router, &$uri)
 	{
 		$path = strtolower(trim((string) $uri->getPath(), '/'));
-		if ($path !== 'privacy-policy') {
+		$pageVars = [
+			'privacy-policy' => 'privacy_page',
+			'polzovatelskoe-soglashenie' => 'agreement_page',
+		];
+		if (!isset($pageVars[$path])) {
 			return [];
 		}
+		$pageVar = $pageVars[$path];
 
 		$uri->setPath('');
 		$uri->setVar('option', 'com_content');
 		$uri->setVar('view', 'featured');
-		$uri->setVar('privacy_page', '1');
+		$uri->setVar($pageVar, '1');
 
 		return [
 			'option' => 'com_content',
 			'view' => 'featured',
-			'privacy_page' => '1',
+			$pageVar => '1',
 		];
 	}
 

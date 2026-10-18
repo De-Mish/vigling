@@ -66,6 +66,8 @@ $isContactsPage = ((int) $input->getInt('contacts_page', 0) === 1)
 	|| in_array('contacts', $pathAliases, true);
 $isPrivacyPolicyPage = ((int) $input->getInt('privacy_page', 0) === 1)
 	|| in_array('privacy-policy', $pathAliases, true);
+$isUserAgreementPage = ((int) $input->getInt('agreement_page', 0) === 1)
+	|| in_array('polzovatelskoe-soglashenie', $pathAliases, true);
 if ($isApplicationGuidePage) {
 	$page = 'page';
 }
@@ -76,6 +78,11 @@ if ($isPrivacyPolicyPage) {
 	$page = 'page';
 	$this->setTitle('Политика конфиденциальности');
 	$this->setMetaData('description', 'Политика конфиденциальности сервиса онлайн-записи Vigling.');
+}
+if ($isUserAgreementPage) {
+	$page = 'page';
+	$this->setTitle('Пользовательское соглашение');
+	$this->setMetaData('description', 'Пользовательское соглашение сервиса онлайн-записи Vigling.');
 }
 
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
@@ -431,7 +438,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 					</div>
 				<?php endif; ?>
 				<jdoc:include type="message" />
-				<?php $sbar = (!$isApplicationGuidePage && !$isContactsPage && !$isPrivacyPolicyPage && $this->countModules('sidebar')) ? 'w_sidebar' : 'wo_sidebar'; ?>
+				<?php $sbar = (!$isApplicationGuidePage && !$isContactsPage && !$isPrivacyPolicyPage && !$isUserAgreementPage && $this->countModules('sidebar')) ? 'w_sidebar' : 'wo_sidebar'; ?>
 				<div class="cont_<?php echo $sbar; ?> ">
 					<div class="cont">
 						<?php if ($isApplicationGuidePage) : ?>
@@ -489,11 +496,13 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 						</section>
 						<?php elseif ($isPrivacyPolicyPage) : ?>
 						<?php include __DIR__ . '/html/privacy-policy.php'; ?>
+						<?php elseif ($isUserAgreementPage) : ?>
+						<?php include __DIR__ . '/html/user-agreement.php'; ?>
 						<?php else : ?>
 						<jdoc:include type="component" />
 						<?php endif; ?>
 					</div>
-					<div class="sbar"<?php echo ($isApplicationGuidePage || $isContactsPage || $isPrivacyPolicyPage) ? ' style="display:none;"' : ''; ?>>
+					<div class="sbar"<?php echo ($isApplicationGuidePage || $isContactsPage || $isPrivacyPolicyPage || $isUserAgreementPage) ? ' style="display:none;"' : ''; ?>>
 						<jdoc:include type="modules" name="sidebar" style="html5" />
 					</div>
 				</div>

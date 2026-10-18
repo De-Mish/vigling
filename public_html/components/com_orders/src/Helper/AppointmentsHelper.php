@@ -216,7 +216,12 @@ class AppointmentsHelper
 			if ($selectedDay < $todayLocal) {
 				$selectedDay = $todayLocal;
 			}
-			$fromUtc = $selectedDay->setTimezone($utc)->format('Y-m-d H:i:s');
+			$dayStartUtc = $selectedDay->setTimezone($utc);
+			$nowUtc = new \DateTimeImmutable('now', $utc);
+			if ($selectedDay == $todayLocal && $nowUtc > $dayStartUtc) {
+				$dayStartUtc = $nowUtc;
+			}
+			$fromUtc = $dayStartUtc->format('Y-m-d H:i:s');
 			$toUtc = $selectedDay->modify('+1 day')->setTimezone($utc)->format('Y-m-d H:i:s');
 			$dayScope = 'oneday';
 			$dayOrder = 'ASC';
