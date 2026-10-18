@@ -1,12 +1,15 @@
 -- Read-only checks for the list pages. Run in phpMyAdmin (SQL tab), one block at a time.
--- Table prefix on the live site is joomla_ (change it if yours differs).
+-- Table prefix on the live site is joomla_ (confirmed). Select your database in phpMyAdmin first.
 -- Nothing here changes data.
 
--- 1) Which indexes exist on the tables the lists read.
-SHOW INDEX FROM joomla_fields_values;
-SHOW INDEX FROM joomla_vigling_user_services;
-SHOW INDEX FROM joomla_vigling_user_stock_services;
-SHOW INDEX FROM joomla_vigling_service_nodes;
+-- 1) Which indexes exist on the tables the lists read (one result table).
+SELECT table_name, index_name, GROUP_CONCAT(column_name ORDER BY seq_in_index) AS index_columns
+FROM information_schema.statistics
+WHERE table_schema = DATABASE()
+  AND table_name IN ('joomla_fields_values', 'joomla_vigling_user_services',
+                     'joomla_vigling_user_stock_services', 'joomla_vigling_service_nodes')
+GROUP BY table_name, index_name
+ORDER BY table_name, index_name;
 
 -- 2) Collation of the text id column that lists join on.
 -- If item_id is NOT utf8mb4_unicode_ci, the CAST(... ) COLLATE ... in the list queries
