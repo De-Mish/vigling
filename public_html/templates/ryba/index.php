@@ -107,6 +107,16 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 		html.vg-splash-off #vg-splash{opacity:0;pointer-events:none}
 		#vg-splash .vg-splash__tile{display:block;width:min(66vw,300px);height:auto;aspect-ratio:1/1;flex:none}
 		html body #vg-splash .vg-splash__name{position:absolute;left:0;right:0;top:calc(50% + min(33vw,150px) + 28px);margin:0;text-align:center;font:800 22px/1.2 Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:.26em!important;text-indent:.26em;color:#17150F}
+		#vg-progress{display:none}
+		@media (max-width:1020px),(display-mode:standalone),(display-mode:minimal-ui){
+			#vg-progress{display:block;position:fixed;top:0;left:0;right:0;height:3px;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .3s ease .1s;overflow:hidden}
+			#vg-progress.is-active{opacity:1;transition-delay:0s}
+			#vg-progress.is-done{opacity:0;transition-delay:.2s}
+			#vg-progress>i{display:block;position:relative;height:100%;width:100%;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#FDE547,#F9CE54 55%,#FD9704);border-radius:0 3px 3px 0;box-shadow:0 0 8px rgba(249,206,84,.85);transition:transform .22s ease-out}
+			#vg-progress.is-active>i::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:vg-progress-shine 1.1s linear infinite}
+		}
+		@keyframes vg-progress-shine{from{transform:translateX(-60px)}to{transform:translateX(100vw)}}
+		@media (prefers-reduced-motion:reduce){#vg-progress.is-active>i::after{animation:none}}
 	</style>
 	<script>
 	(function () {
@@ -132,6 +142,7 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<link rel="preconnect" href="https://stackpath.bootstrapcdn.com" crossorigin>
 	<link rel="preconnect" href="https://code.jquery.com" crossorigin>
 	<script src="<?php echo $rybaAsset('js/client-error.js'); ?>"></script>
+	<script src="<?php echo $rybaAsset('js/load-progress.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/phone-mask.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/jquery.min.js'); ?>"></script>
 	<script src="<?php echo $rybaAsset('js/slick.min.js'); ?>"></script>
