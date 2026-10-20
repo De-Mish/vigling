@@ -3131,11 +3131,6 @@ html body .contacts-settings-page .contacts-hover-tab__img {
     font-weight: 700;
     text-decoration: none !important;
   }
-  html body #easyprofile.view_profile-public .rd-pf-cta__book {
-    background: var(--rd-accent);
-    color: var(--rd-ink) !important;
-    box-shadow: var(--rd-sh-btn);
-  }
   html body #easyprofile.view_profile-public .rd-pf-cta__call {
     border: 1px solid var(--rd-ink);
     background: var(--rd-card);
