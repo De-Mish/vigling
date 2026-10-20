@@ -3924,7 +3924,7 @@ html body .pagination li a.active::before {
 /* ==========================================================================
    Stage 21: mobile / PWA polish
    (list cards without portfolio photo, compact city picker, service rows,
-   breadcrumbs closer to the top)
+   services block closer to the appointments list in the own profile)
    ========================================================================== */
 
 .rd-mhead {
@@ -4100,10 +4100,8 @@ html body .pagination li a.active::before {
     margin-top: 4px;
   }
 
-  /* inner pages: breadcrumbs sit higher and closer to the content below */
-  html body:not(#home) #content > .container > .breadcrumbs,
-  html body:not(#home) #content > .container > [aria-label="breadcrumbs"] .breadcrumbs {
-    margin-top: 18px;
-    margin-bottom: 10px;
+  /* own profile: services block sits closer to the appointments list above it */
+  html body #easyprofile.view_profile .view_profile-public--embed {
+    margin-top: 10px;
   }
 }
