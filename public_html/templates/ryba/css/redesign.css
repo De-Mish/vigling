@@ -4100,4 +4100,10 @@ html body .pagination li a.active::before {
     margin-top: 4px;
   }
 
+  /* inner pages: breadcrumbs sit higher and closer to the content below */
+  html body:not(#home) #content > .container > .breadcrumbs,
+  html body:not(#home) #content > .container > [aria-label="breadcrumbs"] .breadcrumbs {
+    margin-top: 18px;
+    margin-bottom: 10px;
+  }
 }
