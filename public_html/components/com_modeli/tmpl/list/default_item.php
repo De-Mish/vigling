@@ -138,6 +138,27 @@ $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardI
 
 $imgStyle = '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
 
+$avatarImage = '';
+if ($avatar !== '') {
+	$avatarRaw = $avatar;
+	$avatarDecoded = json_decode($avatarRaw, true);
+	if (is_string($avatarDecoded)) {
+		$avatarRaw = trim($avatarDecoded);
+	} elseif (is_array($avatarDecoded)) {
+		$avatarRaw = trim((string) reset($avatarDecoded));
+	}
+	if ($avatarRaw !== '') {
+		if (stripos($avatarRaw, 'http://') === 0 || stripos($avatarRaw, 'https://') === 0) {
+			$avatarImage = $avatarRaw;
+		} else {
+			$avatarClean = str_replace('\\', '/', ltrim($avatarRaw, '/'));
+			$avatarImage = stripos($avatarClean, 'images/') === 0 ? '/' . $avatarClean : '/images/profiler/' . $avatarClean;
+		}
+		$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarImage, true);
+	}
+}
+$masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
+
 $searchTitle = trim((string) ($item->title ?? $item->description ?? ''));
 $searchDescription = trim((string) ($item->description ?? ''));
 $categoryTitle = trim((string) ($item->category_title ?? ''));
@@ -164,6 +185,7 @@ if ($slotStartUtc !== '') {
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
+				<?php $mhName = (string) ($item->master_name ?? ''); $mhUrl = $profileUrl; $mhAvatarStyle = $masterAvatarStyle; $mhFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-mhead.php'; ?>
 				<div class="card-head">
 					<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($searchTitle !== '' ? $searchTitle : 'Поиск моделей', ENT_QUOTES, 'UTF-8'); ?></a>
 					<span class="card-price"><?php echo htmlspecialchars(number_format((float) $price, 0, '.', ' '), ENT_QUOTES, 'UTF-8'); ?> ₽</span>
@@ -179,7 +201,7 @@ if ($slotStartUtc !== '') {
 					<span class="vg-meta"><i class="vg-i vg-i--seat" aria-hidden="true"></i><span><?php echo $capacity > 0 ? (int) $capacity : 1; ?> мест</span></span>
 					<span class="vg-meta"><i class="vg-i vg-i--cal" aria-hidden="true"></i><span><?php if ($slotLabel !== '') : ?><span class="modeli-time-utc" data-time-utc="<?php echo htmlspecialchars($slotStartUtc, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($slotLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php else : ?><?php echo $bookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'; ?><?php endif; ?></span></span>
 				</span>
-				<span class="attr_left3 vg-meta"><i class="vg-i vg-i--user" aria-hidden="true"></i><span>Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></span>
+				<span class="attr_left3 vg-meta rd-mchip"><i class="vg-i vg-i--user" aria-hidden="true"></i><span>Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></span>
 				<?php $listExtraFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-specialties.php'; ?>
 				<?php if ($addr !== '') : ?>
 					<span class="category_cinfo-address"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?></span>

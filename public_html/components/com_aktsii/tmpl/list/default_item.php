@@ -141,6 +141,7 @@ $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecia
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
+				<?php $mhName = (string) $item->name; $mhUrl = $profileUrl; $mhAvatarStyle = $masterAvatarStyle; $mhFields = $fields; include JPATH_ROOT . '/templates/ryba/html/list-item-mhead.php'; ?>
 				<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($item->name); ?></a>
 				<?php $listExtraFields = $fields; include JPATH_ROOT . '/templates/ryba/html/list-item-specialties.php'; ?>
 				<?php if ($about !== '') : ?>
