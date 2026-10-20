@@ -4031,4 +4031,26 @@ html body .pagination li a.active::before {
     margin-top: 2px;
   }
 
+  /* city picker of the home feed: same size as its label */
+  html body#home .home-feed .home-feed__city {
+    gap: 8px;
+  }
+
+  html body#home .home-feed .home-feed__city-select {
+    /* 16px keeps iOS from zooming the page on focus; the scale brings it to the label's 14px */
+    flex: 0 0 auto;
+    width: 184px;
+    min-width: 0;
+    height: 32px !important;
+    min-height: 0 !important;
+    margin: -2px -23px -2px 0;
+    padding: 0 34px 0 14px !important;
+    font-size: 16px !important;
+    font-weight: 600;
+    background-position: right 12px center;
+    background-size: 14px;
+    transform: scale(.875);
+    transform-origin: left center;
+  }
+
 }
