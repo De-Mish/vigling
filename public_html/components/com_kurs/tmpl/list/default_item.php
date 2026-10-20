@@ -131,6 +131,7 @@ if ($slotStartUtc !== '') {
 	<div class="category__item-content">
 		<div class="category__item-content-left">
 			<div class="category__content-info">
+				<?php $mhName = (string) ($item->master_name ?? ''); $mhUrl = $profileUrl; $mhAvatarStyle = $masterAvatarStyle; $mhFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-mhead.php'; ?>
 				<div class="card-head">
 					<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($courseTitle !== '' ? $courseTitle : 'Курс', ENT_QUOTES, 'UTF-8'); ?></a>
 					<span class="card-price"><?php echo htmlspecialchars(number_format((float) $price, 0, '.', ' '), ENT_QUOTES, 'UTF-8'); ?> ₽</span>
@@ -146,7 +147,7 @@ if ($slotStartUtc !== '') {
 					<span class="vg-meta"><i class="vg-i vg-i--seat" aria-hidden="true"></i><span><?php echo $capacity > 0 ? (int) $capacity : 1; ?> мест</span></span>
 					<span class="vg-meta"><i class="vg-i vg-i--cal" aria-hidden="true"></i><span><?php if ($slotLabel !== '') : ?><span class="kurs-time-utc" data-time-utc="<?php echo htmlspecialchars($slotStartUtc, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($slotLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php else : ?><?php echo $bookingMode === 'fixed' ? 'Фиксированная дата' : 'Любое время'; ?><?php endif; ?></span></span>
 				</span>
-				<span class="attr_left3 vg-meta"><i class="vg-i vg-i--user" aria-hidden="true"></i><span>Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></span>
+				<span class="attr_left3 vg-meta rd-mchip"><i class="vg-i vg-i--user" aria-hidden="true"></i><span>Мастер: <?php echo htmlspecialchars((string) ($item->master_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></span>
 				<?php $listExtraFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-specialties.php'; ?>
 				<?php if ($addr !== '') : ?>
 					<span class="category_cinfo-address"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($addr, ENT_QUOTES, 'UTF-8'); ?></span>

@@ -3131,11 +3131,6 @@ html body .contacts-settings-page .contacts-hover-tab__img {
     font-weight: 700;
     text-decoration: none !important;
   }
-  html body #easyprofile.view_profile-public .rd-pf-cta__book {
-    background: var(--rd-accent);
-    color: var(--rd-ink) !important;
-    box-shadow: var(--rd-sh-btn);
-  }
   html body #easyprofile.view_profile-public .rd-pf-cta__call {
     border: 1px solid var(--rd-ink);
     background: var(--rd-card);
@@ -3923,5 +3918,190 @@ html body .pagination li a.active::before {
 
   html body .pagination__wrap .pagination li {
     margin-right: 0;
+  }
+}
+
+/* ==========================================================================
+   Stage 21: mobile / PWA polish
+   (list cards without portfolio photo, compact city picker, service rows,
+   services block closer to the appointments list in the own profile)
+   ========================================================================== */
+
+.rd-mhead {
+  display: none;
+}
+
+@media (max-width: 1020px), (display-mode: standalone), (display-mode: minimal-ui) {
+  /* list cards: avatar + owner name + specialties instead of the portfolio photo */
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) {
+    overflow: hidden !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-img {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    background-image: none !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-img:has(.rd-badges) {
+    padding: 14px 16px 0 !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-img .rd-badges {
+    position: static;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-img .rd-b--glass {
+    background: var(--rd-fill);
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-img .category__item-master {
+    display: none !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__item-content {
+    padding: 14px 16px 16px !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__content-info > a.category_cinfo-name,
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__content-info > .category_cinfo-specs,
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead) .category__content-info > .rd-mchip {
+    display: none !important;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item .rd-mhead {
+    display: flex;
+    flex: 0 0 100%;
+    order: -3;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 6px;
+    text-align: left;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item .rd-mhead__ava {
+    flex: 0 0 72px;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background-color: var(--rd-fill);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    box-shadow: 0 0 0 1px var(--rd-line);
+  }
+
+  html body :is(#content, #home-feed) .category .category__item .rd-mhead__txt {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item .rd-mhead__name {
+    display: block;
+    max-width: 100%;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.01em;
+    color: var(--rd-ink);
+    text-align: left;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item .rd-mhead__specs {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--rd-ink2);
+    text-align: left;
+  }
+
+  html body :is(#content, #home-feed) .category .category__item:has(.rd-mhead):has(.category__content-info-list) .category__content-info-list {
+    margin-top: 2px;
+  }
+
+  /* city picker of the home feed: same size as its label */
+  html body#home .home-feed .home-feed__city {
+    gap: 8px;
+  }
+
+  html body#home .home-feed .home-feed__city-select {
+    /* 16px keeps iOS from zooming the page on focus; the scale brings it to the label's 14px */
+    flex: 0 0 auto;
+    width: 184px;
+    min-width: 0;
+    height: 32px !important;
+    min-height: 0 !important;
+    margin: -2px -23px -2px 0;
+    padding: 0 34px 0 14px !important;
+    font-size: 16px !important;
+    font-weight: 600;
+    background-position: right 12px center;
+    background-size: 14px;
+    transform: scale(.875);
+    transform-origin: left center;
+  }
+
+  /* service rows of the profile: title on top, price and duration below, never floating around */
+  html body .master__services--fullbleed .priceList__item {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "name name name"
+      "price dur .";
+    align-items: center;
+    column-gap: 16px;
+    row-gap: 6px;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .priceList__item-coll {
+    float: none;
+    width: auto;
+    margin: 0;
+    min-width: 0;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .service-name {
+    grid-area: name;
+    line-height: 1.3;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .service-price {
+    grid-area: price;
+    white-space: nowrap;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .price__coll3 {
+    grid-area: dur;
+    white-space: nowrap;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .service-name::after {
+    display: none;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .clearFloat {
+    display: none;
+  }
+
+  html body .master__services--fullbleed .priceList__item > .service-rec {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+
+  /* own profile: services block sits closer to the appointments list above it */
+  html body #easyprofile.view_profile .view_profile-public--embed {
+    margin-top: 10px;
   }
 }

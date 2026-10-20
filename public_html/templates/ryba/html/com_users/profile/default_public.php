@@ -959,6 +959,19 @@ if (empty($isLkEmbed)) {
 	</style>
 	<script>
 	(function () {
+		try {
+			var url = new URL(window.location.href);
+			var src = String(url.searchParams.get('source') || '').toLowerCase();
+			if ({ catalog: 1, map: 1, profile: 1, widget: 1, share: 1 }[src]) {
+				sessionStorage.setItem('vigling_booking_source_<?php echo (int) $profileOwnerId; ?>', src);
+				url.searchParams.delete('source');
+				window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+			}
+		} catch (e) {}
+	})();
+	</script>
+	<script>
+	(function () {
 		var link = document.querySelector('[data-vg-catalog-back="1"]');
 		if (!link) return;
 		link.addEventListener('click', function (event) {
@@ -1042,24 +1055,10 @@ if (empty($isLkEmbed)) {
 			<div class="clearFloat"></div>
 		</div>
 		<?php endif; ?>
-		<?php if (empty($isLkEmbed) && (int) $currentUser->id !== $profileOwnerId && !empty($pricesStructuredWithIds)) : ?>
+		<?php if (empty($isLkEmbed) && (int) $currentUser->id !== $profileOwnerId && !empty($pricesStructuredWithIds) && $phonePublic && $phone !== '') : ?>
 		<div class="rd-pf-cta">
-			<a class="rd-pf-cta__book" href="#" data-rd-pf-book="1">Записаться</a>
-			<?php if ($phonePublic && $phone !== '') : ?>
 			<a class="rd-pf-cta__call" href="tel:<?php echo $this->escape(preg_replace('/[^\d\+]/', '', $phone)); ?>">Позвонить</a>
-			<?php endif; ?>
 		</div>
-		<script>
-		(function () {
-			var btn = document.querySelector('[data-rd-pf-book="1"]');
-			var target = document.querySelector('.master__services');
-			if (!btn || !target) return;
-			btn.addEventListener('click', function (event) {
-				event.preventDefault();
-				target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			});
-		})();
-		</script>
 		<?php endif; ?>
 		<?php if (empty($isLkEmbed)) : ?>
 		<div class="masters__gall-small">
@@ -2465,6 +2464,9 @@ if (empty($isLkEmbed)) {
 			try {
 				var params = new URLSearchParams(window.location.search);
 				var fromUrl = String(params.get('source') || '').toLowerCase();
+				if (!fromUrl) {
+					fromUrl = String(sessionStorage.getItem('vigling_booking_source_<?php echo (int) $profileOwnerId; ?>') || '').toLowerCase();
+				}
 				if (allowed[fromUrl]) {
 					src = fromUrl;
 				}

@@ -823,8 +823,8 @@ dd #jform_about {
   display: inline-block;
   margin-left: 20px;
   vertical-align: middle;
-  width: 32px;
-  height: 32px;
+  width: 28.8px;
+  height: 28.8px;
   border-radius: 50%;
   box-shadow: 0 2px 9px rgba(0, 0, 0, 0.11);
   cursor: pointer;
@@ -5209,7 +5209,7 @@ body#home .home-search-links a.homepage-link-btn:focus {
   text-align: center;
   color: #f9ce54;
   font-family: "GothamPro-Bold", Arial, sans-serif;
-  font-size: 22px;
+  font-size: 19.8px;
   font-weight: 700;
   font-style: normal;
   line-height: 1;
