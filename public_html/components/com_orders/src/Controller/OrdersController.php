@@ -156,6 +156,14 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
+		}
+		if (\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($masterId)) {
+			$this->setMessage(\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE, 'warning');
+			$this->setRedirectAndExit();
+			return;
+		}
 		$serviceName = trim((string) ($table->service_name ?? ''));
 		if ($serviceName === '') {
 			$this->setMessage('У исходной записи не указана услуга', 'error');
