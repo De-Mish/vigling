@@ -95,6 +95,11 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$event->updateEventResult(['success' => false, 'message' => 'Не указан мастер']);
 			return;
 		}
+		require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
+		if (\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($masterId) && (int) $user->id !== $masterId) {
+			$event->updateEventResult(['success' => false, 'message' => \Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE]);
+			return;
+		}
 		if ($bookingKind !== 'course' && $bookingKind !== 'search' && $serviceName === '') {
 			$event->updateEventResult(['success' => false, 'message' => 'Выберите или введите услугу']);
 			return;

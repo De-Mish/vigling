@@ -1077,6 +1077,46 @@ if (empty($isLkEmbed)) {
 	<div class="clearFloat"></div>
 </div>
 
+<?php
+// TEMPORARY: online booking is paused except for allowlisted masters (see BookingPauseHelper).
+require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
+$bookingPaused = empty($isLkEmbed)
+	&& (int) $currentUser->id !== $profileOwnerId
+	&& \Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($profileOwnerId);
+if ($bookingPaused) : ?>
+<style>
+	.vg-booking-paused { margin: 0 0 16px; padding: 14px 16px; border-radius: 12px; background: #FFF4D1; border-left: 4px solid #F9CE54; color: #17150F; font-size: 15px; line-height: 1.45; font-weight: 600; }
+	html body .master__services .btn_add-master { opacity: .4; cursor: not-allowed; }
+</style>
+<script>
+(function () {
+	var message = <?php echo json_encode(\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE, JSON_UNESCAPED_UNICODE); ?>;
+	window.addEventListener('click', function (event) {
+		var target = event.target && event.target.closest ? event.target.closest('.btn_add-master, [data-target="#zapis"]') : null;
+		if (!target) {
+			return;
+		}
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		var banner = document.querySelector('.vg-booking-paused');
+		if (banner && banner.scrollIntoView) {
+			banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}, true);
+	document.addEventListener('DOMContentLoaded', function () {
+		var container = document.querySelector('section.master__services > .container');
+		if (!container) {
+			return;
+		}
+		var banner = document.createElement('div');
+		banner.className = 'vg-booking-paused';
+		banner.setAttribute('role', 'status');
+		banner.textContent = message;
+		container.insertBefore(banner, container.firstChild);
+	});
+})();
+</script>
+<?php endif; ?>
 <section class="master__services master__services--fullbleed master__block master__block--services">
 	<div class="container">
 		<style>
