@@ -4122,3 +4122,37 @@ html.vg-lb-open { overflow: hidden; }
 .vg-lb__nav--prev { left: 12px; }
 .vg-lb__nav--next { right: 12px; }
 .vg-lb__nav[hidden] { display: none; }
+
+/* Stage 23: master profile cleanup (call button, online dot, service groups without gaps) */
+html body #easyprofile.view_profile-public .rd-pf-cta,
+html body #easyprofile.view_profile-public .rd-pf-cta__call,
+html body #easyprofile.view_profile-public .masters__big-info-head-master-online {
+  display: none !important;
+}
+
+html body section.master__block--services .accordionItem:not(:last-child) {
+  margin-bottom: 1px;
+}
+
+/* Empty day on the appointments page: quiet grey line with a gold dot */
+html body .appointments-page .alert.alert-info:is(.appointments-day-empty, .appointments-empty--day):not([hidden]) {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #F6F6F4 !important;
+  box-shadow: none !important;
+  color: #444 !important;
+  font-size: 15px;
+  line-height: 1.4;
+}
+html body .appointments-page .alert.alert-info:is(.appointments-day-empty, .appointments-empty--day)::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F9CE54;
+}
