@@ -4105,3 +4105,20 @@ html body .pagination li a.active::before {
     margin-top: 10px;
   }
 }
+
+/* Stage 22: own lightbox (replaces fancyBox) */
+html.vg-lb-open { overflow: hidden; }
+.vg-lb { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center; }
+.vg-lb[hidden] { display: none; }
+.vg-lb__backdrop { position: absolute; inset: 0; background: rgba(17, 17, 17, .86); }
+.vg-lb__stage { position: relative; max-width: 94vw; max-height: 86vh; display: flex; align-items: center; justify-content: center; }
+.vg-lb__stage img { display: block; max-width: 94vw; max-height: 86vh; width: auto; height: auto; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, .4); }
+.vg-lb__html { max-width: min(92vw, 520px); max-height: 86vh; overflow: auto; padding: 24px; border-radius: 20px; background: #fff; color: #111; }
+.vg-lb__caption { position: absolute; left: 0; right: 0; bottom: 14px; padding: 0 56px; text-align: center; color: #fff; font: 500 14px/20px var(--rd-font, Inter, sans-serif); }
+.vg-lb__caption[hidden] { display: none; }
+.vg-lb__close, .vg-lb__nav { position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: #111; font-size: 28px; line-height: 1; cursor: pointer; }
+.vg-lb__close { top: 12px; right: 12px; }
+.vg-lb__nav { top: 50%; transform: translateY(-50%); }
+.vg-lb__nav--prev { left: 12px; }
+.vg-lb__nav--next { right: 12px; }
+.vg-lb__nav[hidden] { display: none; }
