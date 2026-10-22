@@ -19,7 +19,7 @@ $nowUtc = new \DateTime('now', $utc);
 $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option') === 'com_users';
 ?>
 <?php if (empty($displayRows)) : ?>
-	<p class="alert alert-info"><?php echo $this->escape($emptyMessage); ?><?php if (!$onProfile) : ?> <a href="<?php echo Route::_('index.php?option=com_users&view=profile'); ?>">Перейти в профиль</a><?php endif; ?></p>
+	<p class="alert alert-info<?php echo $emptyMessage === 'На этот день записей нет.' ? ' appointments-empty--day' : ''; ?>"><?php echo $this->escape($emptyMessage); ?><?php if (!$onProfile) : ?> <a href="<?php echo Route::_('index.php?option=com_users&view=profile'); ?>">Перейти в профиль</a><?php endif; ?></p>
 <?php else : ?>
 	<div class="appointments-cards">
 			<?php foreach ($displayRows as $row) :
