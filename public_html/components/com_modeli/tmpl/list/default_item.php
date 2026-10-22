@@ -187,14 +187,14 @@ if ($slotStartUtc !== '') {
 			<div class="category__content-info">
 				<?php $mhName = (string) ($item->master_name ?? ''); $mhUrl = $profileUrl; $mhAvatarStyle = $masterAvatarStyle; $mhFields = $masterFields; include JPATH_ROOT . '/templates/ryba/html/list-item-mhead.php'; ?>
 				<div class="card-head">
-					<a class="category_cinfo-name" href="<?php echo $profileUrl; ?>"><?php echo htmlspecialchars($searchTitle !== '' ? $searchTitle : 'Поиск моделей', ENT_QUOTES, 'UTF-8'); ?></a>
 					<span class="card-price"><?php echo htmlspecialchars(number_format((float) $price, 0, '.', ' '), ENT_QUOTES, 'UTF-8'); ?> ₽</span>
 					<?php if ($categoryTitle !== '') : ?>
 						<span class="category_cinfo-chip"><?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span>
 					<?php endif; ?>
 				</div>
-				<?php if ($searchDescription !== '') : ?>
-					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($searchDescription, 0, 150), ENT_QUOTES, 'UTF-8') . (mb_strlen($searchDescription) > 150 ? '…' : ''); ?></span>
+				<?php $searchSpec = $searchDescription !== '' ? $searchDescription : $searchTitle; ?>
+				<?php if ($searchSpec !== '') : ?>
+					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($searchSpec, 0, 150), ENT_QUOTES, 'UTF-8') . (mb_strlen($searchSpec) > 150 ? '…' : ''); ?></span>
 				<?php endif; ?>
 				<span class="card-facts">
 					<span class="vg-meta"><i class="vg-i vg-i--clock" aria-hidden="true"></i><span><?php echo (int) $durationMin; ?> мин</span></span>
