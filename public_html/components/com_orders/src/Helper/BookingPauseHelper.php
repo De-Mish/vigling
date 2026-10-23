@@ -16,7 +16,7 @@ final class BookingPauseHelper
 {
 	public const ENABLED = true;
 
-	public const ALLOWED_MASTER_IDS = [144765];
+	public const ALLOWED_MASTER_IDS = [144765, 144766];
 
 	public const MESSAGE = 'Онлайн-запись скоро откроется. Сейчас вы можете смотреть профили мастеров, услуги и цены.';
 
