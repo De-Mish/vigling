@@ -9,20 +9,17 @@ Both keep the transparent background and look the same.
 ----------------------------------------------------------------------
 2026-10-23: files that are in git but are missing on the server (HTTP 404)
 ----------------------------------------------------------------------
-The server does not pick up new image files and the new lightbox script from git.
-Upload them by hand into the site root (the folder that contains index.php, usually public_html),
-keeping the same relative paths:
+The server does not pick up new image files from git. Two launch-screen images must be uploaded by hand
+into the site root (the folder that contains index.php, manifest.json and configuration.php), keeping the same relative paths:
 
-  icons/vigling-pwa-splash-192.png          (app launch screen, requested on every page)
-  icons/vigling-pwa-splash-512.png          (app launch screen, requested on every page)
-  templates/ryba/js/vg-lightbox.js          (own lightbox that replaced fancyBox; the install-guide pictures open in it)
+  icons/vigling-pwa-splash-192.png
+  icons/vigling-pwa-splash-512.png
 
-Quickest way: upload upload-missing-files-2026-10-23.zip into the site root with the file manager
-and use "Extract" there. The folders icons/ and templates/ryba/js/ already exist, the three files are added.
+Both go into the existing folder "icons" (the one that already holds vigling-pwa-192.png, vigling-pwa-512.png and so on).
+Easiest check of the folder: find vigling-pwa-192.png in the file manager and upload the two splash files right next to it.
 
-Check afterwards (all three must open, not show the 404 page):
+Check afterwards (both must open as pictures, not the 404 page):
   https://vigling.ru/icons/vigling-pwa-splash-192.png
   https://vigling.ru/icons/vigling-pwa-splash-512.png
-  https://vigling.ru/templates/ryba/js/vg-lightbox.js
-Then open the "Установка приложения" page and tap a picture: it should open in a window over the page.
-After the check you can delete the zip from the server.
+
+(The lightbox script is no longer a separate file: it was moved into templates/ryba/js/redesign.js, which deploys from git.)
