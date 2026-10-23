@@ -1708,7 +1708,7 @@ li {
 
 .search__section .container:after {
   content: "";
-  background-image: url(../images/depositphotos.png);
+  background-image: none;
   background-repeat: no-repeat;
   width: 530px;
   height: 410px;

@@ -985,7 +985,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<?php if ($courseCategoryTitle !== '') : ?>
 														<span class="service-name">Категория: <?php echo $this->escape($courseCategoryTitle); ?></span>
 														<?php endif; ?>
-														<?php if ($courseDescription !== '') : ?>
+														<?php if ($courseDescription !== '' && $courseDescription !== $courseTitle) : ?>
 														<span class="course-description"><label>Описание:</label><?php echo $this->escape($courseDescription); ?></span>
 														<?php endif; ?>
 														<span class="price"><label>Стоимость:</label><?php echo number_format((int) $coursePrice, 0, '', ' '); ?>&nbsp;₽</span>
@@ -1039,7 +1039,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 													<?php if (trim((string) ($archivedCourse['category_title'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Категория:</label> <?php echo $this->escape(trim((string) $archivedCourse['category_title'])); ?></div>
 													<?php endif; ?>
-													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '') : ?>
+													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '' && trim((string) $archivedCourse['description']) !== $archivedTitle) : ?>
 													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedCourse['description'])); ?></div>
 													<?php endif; ?>
 													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo number_format((int) ($archivedCourse['price'] ?? 0), 0, '', ' '); ?> ₽</div>
