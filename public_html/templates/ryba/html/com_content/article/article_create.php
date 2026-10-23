@@ -58,6 +58,14 @@ try {
         $deny('Нужно войти в аккаунт');
     }
 
+    $masterHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/MasterGroupHelper.php';
+    if (is_file($masterHelper)) {
+        require_once $masterHelper;
+        if (!\Joomla\Plugin\User\Vigling\Helper\MasterGroupHelper::isMaster($user)) {
+            $deny('Услуги могут добавлять только мастера');
+        }
+    }
+
     $db = Factory::getContainer()->get('DatabaseDriver');
     $prefix = $db->getPrefix();
 
@@ -76,7 +84,7 @@ try {
     // Получить POST параметры с очисткой
     $category = isset($_POST['category']) ? (int)$_POST['category'] : 0;
     $user_id = (int) $user->id;
-    $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $name = isset($_POST['name']) ? mb_substr(trim(strip_tags((string) $_POST['name'])), 0, 255) : '';
     $specialisation = isset($_POST['specialisation']) ? (int)$_POST['specialisation'] : 0;
     $type = isset($_POST['type']) ? trim($_POST['type']) : '';
     $duration = isset($_POST['duration']) ? trim($_POST['duration']) : '';
@@ -253,7 +261,8 @@ try {
     }
 
 } catch (Exception $e) {
-    echo '<div class="message"><h2>Произошла ошибка</h2><p>' . htmlspecialchars($e->getMessage()) . '</p></div>';
+    \Joomla\CMS\Log\Log::add('article_create failed: ' . $e->getMessage(), \Joomla\CMS\Log\Log::ERROR, 'article_create');
+    echo '<div class="message"><h2>Произошла ошибка</h2><p>Не удалось сохранить услугу. Попробуйте ещё раз.</p></div>';
     exit(1);
 }
 
