@@ -81,7 +81,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			} catch (\Throwable $e) {
 			}
 		}
-		$durationMin = (int) $input->post->get('duration_min', 60);
+		$durationMin = max(15, min(480, (int) $input->post->get('duration_min', 60)));
+		$serviceName = mb_substr(trim(strip_tags($serviceName)), 0, 255);
 		$catalogSvcId = (int) $input->post->get('svc_id', 0);
 		$catalogFullName = '';
 		if ($catalogSvcId <= 0) {
@@ -155,7 +156,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
 		if (!$db->loadResult()) {
-			$event->updateEventResult(['success' => false, 'message' => 'Таблица ' . $table . ' не найдена. Выполните миграцию бронирований.']);
+			$event->updateEventResult(['success' => false, 'message' => 'Запись временно недоступна. Попробуйте позже.']);
 			return;
 		}
 		$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
@@ -181,7 +182,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 
-		$bookingKind = in_array($bookingKind, ['service', 'stock', 'course', 'search', 'journal'], true) ? $bookingKind : 'service';
+		$bookingKind = in_array($bookingKind, ['service', 'stock', 'course', 'search'], true) ? $bookingKind : 'service';
 		if ($bookingKind === 'course' && !$hasCourseBookingColumns) {
 			$event->updateEventResult(['success' => false, 'message' => 'Для записи на курс не выполнена миграция booking-схемы']);
 			return;
@@ -309,6 +310,12 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$event->updateEventResult(['success' => false, 'message' => 'Услуга не найдена в прайсе мастера']);
 				return;
 			}
+			if ($catalogItem === null) {
+				$catalogSvcId = 0;
+				$catalogTagId = 0;
+				$catalogPrice = 0;
+				$catalogTimeSum = 0;
+			}
 			if ($catalogItem !== null) {
 				if (($catalogItem['name'] ?? '') !== '') {
 					$serviceName = (string) $catalogItem['name'];
@@ -328,6 +335,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$timeTo->modify('+' . max(15, min(480, $durationMin)) . ' minutes');
 				$timeToDb = $timeTo->format('Y-m-d H:i:s');
 			}
+		}
+
+		if ($bookingKind !== 'service' && $bookingKind !== 'stock') {
+			$catalogSvcId = 0;
+			$catalogTagId = 0;
+			$catalogPrice = 0;
+			$catalogTimeSum = 0;
 		}
 
 		$occupiedMin = $durationMin;
@@ -484,7 +498,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				} catch (\Throwable $rollbackError) {
 				}
 			}
-			$msg = $e->getMessage();
+			$rawMsg = $e->getMessage();
+			$msg = $rawMsg;
 			if (strpos($msg, 'Duplicate entry') !== false) {
 				if (strpos($msg, 'uniq_user_course_id') !== false) {
 					$msg = 'Вы уже записаны на этот курс';
@@ -502,6 +517,19 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$msg = 'Курс или слот курса не найден';
 			} elseif ($msg === 'search-not-found') {
 				$msg = 'Предложение поиска или слот не найден';
+			}
+			$knownMessages = [
+				'Вы уже записаны на этот курс',
+				'Вы уже записаны на это предложение поиска',
+				'Запись на это время уже есть',
+				'Акция закончилась',
+				'Акция не найдена',
+				'Курс или слот курса не найден',
+				'Предложение поиска или слот не найден',
+			];
+			if (!in_array($msg, $knownMessages, true)) {
+				\Joomla\CMS\Log\Log::add('lkbooking save failed: ' . $rawMsg, \Joomla\CMS\Log\Log::ERROR, 'lkbooking');
+				$msg = 'Не удалось сохранить запись. Попробуйте ещё раз.';
 			}
 			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения: ' . $msg]);
 			return;
