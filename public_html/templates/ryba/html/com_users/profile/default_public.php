@@ -2044,7 +2044,9 @@ if ($bookingPaused) : ?>
 								<?php if ($courseCategoryTitle !== '') : ?>
 								<div class="stockList__item-coll course__coll1b"><?php echo $this->escape($courseCategoryTitle); ?></div>
 								<?php endif; ?>
+								<?php if ($courseDescription === '' || $courseDescription !== $courseTitle) : ?>
 								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($courseDescription !== '' ? $courseDescription : 'Описание курса не заполнено'); ?></div>
+								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll4"><?php echo number_format($coursePrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
 								<div class="stockList__item-coll stock__coll5"><?php echo $courseDurationMin; ?> мин</div><br>
 								<div class="stockList__item-coll stock__coll6 course__seats<?php echo $courseIsFull ? ' is-full' : ''; ?>">Свободно мест: <?php echo $courseSeatsLeft; ?> из <?php echo $courseCapacityTotal; ?></div>
@@ -2136,11 +2138,10 @@ if ($bookingPaused) : ?>
 									<img src="<?php echo $this->escape($vgImageUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
-								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?></div>
 								<?php if ($searchCategoryTitle !== '') : ?>
 								<div class="stockList__item-coll course__coll1b"><?php echo $this->escape($searchCategoryTitle); ?></div>
 								<?php endif; ?>
-								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($searchDescription !== '' ? $searchDescription : 'Описание поиска не заполнено'); ?></div>
+								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($searchDescription !== '' ? $searchDescription : ($searchTitle !== '' ? $searchTitle : 'Описание поиска не заполнено')); ?></div>
 								<div class="stockList__item-coll stock__coll4"><?php echo number_format($searchPrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
 								<div class="stockList__item-coll stock__coll5"><?php echo $searchDurationMin; ?> мин</div><br>
 								<div class="stockList__item-coll stock__coll6 course__seats<?php echo $searchIsFull ? ' is-full' : ''; ?>">Свободно мест: <?php echo $searchSeatsLeft; ?> из <?php echo $searchCapacityTotal; ?></div>
