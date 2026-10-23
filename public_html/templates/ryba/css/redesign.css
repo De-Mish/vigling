@@ -4131,7 +4131,7 @@ html body #easyprofile.view_profile-public .masters__big-info-head-master-online
 }
 
 html body section.master__block--services .accordionItem:not(:last-child) {
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
 
 /* Empty day on the appointments page: quiet grey line with a gold dot */
