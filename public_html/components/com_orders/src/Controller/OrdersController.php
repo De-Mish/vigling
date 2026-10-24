@@ -1169,12 +1169,29 @@ class OrdersController extends BaseController
 		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo($masterId, 'group_reschedule_reply', $masterTitle, $masterText);
 
 		$pending = 0;
-		foreach (GroupRescheduleHelper::replies($db, $proposalId) as $other) {
+		$liveReplies = GroupRescheduleHelper::replies($db, $proposalId);
+		foreach ($liveReplies as $other) {
 			if ((string) $other['status'] === 'pending') {
 				$pending++;
 			}
 		}
-		if ($pending === 0) {
+		if ($liveReplies === []) {
+			$labelCap = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
+			$proposal = GroupRescheduleHelper::loadProposal($db, $proposalId);
+			$applied = $proposal !== null ? $this->runGroupApply($db, $proposal, $masterId) : null;
+			if ($applied === null || !$applied['ok']) {
+				GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
+			}
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+				$masterId,
+				'group_reschedule_result',
+				'Все участники отказались от записи',
+				$applied !== null && $applied['ok']
+					? $labelCap . ' «' . $title . '»: участников не осталось, время изменено на ' . \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::formatTime($masterId, $newStartDb) . '.'
+					: $labelCap . ' «' . $title . '»: участников не осталось, но новое время применить не удалось (' . ($applied['message'] ?? 'ошибка') . '). Время осталось прежним.',
+				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
+			);
+		} elseif ($pending === 0) {
 			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
 				$masterId,
 				'group_reschedule_ready',
@@ -1248,6 +1265,20 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		$result = $this->runGroupApply($db, $proposal, $masterId);
+		$this->setMessage($result['message'], $result['ok'] ? 'message' : 'error');
+		$this->setRedirectAndExit();
+	}
+
+	/**
+	 * Moves the slot and everyone who agreed to the proposed time; the rest are removed.
+	 * Used by the master's confirmation and when the last participant leaves.
+	 *
+	 * @param array<string,mixed> $proposal
+	 * @return array{ok:bool,message:string,moved:int,removed:int}
+	 */
+	private function runGroupApply(\Joomla\Database\DatabaseInterface $db, array $proposal, int $masterId): array
+	{
 		$proposalId = (int) $proposal['id'];
 		$kind = (string) $proposal['kind'];
 		$slotId = (int) $proposal['slot_id'];
@@ -1258,9 +1289,7 @@ class OrdersController extends BaseController
 		$context = $isCourse ? self::loadCourseSlotContext($db, $slotId) : self::loadSearchSlotContext($db, $slotId);
 		if ($context === null || (int) ($context['is_active'] ?? 0) !== 1 || (int) $context['master_id'] !== $masterId) {
 			GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
-			$this->setMessage('Слот больше не существует, предложение закрыто', 'error');
-			$this->setRedirectAndExit();
-			return;
+			return self::groupApplyResult(false, 'Слот больше не существует, предложение закрыто');
 		}
 
 		$utc = new \DateTimeZone('UTC');
@@ -1285,17 +1314,13 @@ class OrdersController extends BaseController
 					\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
 				);
 			}
-			$this->setMessage('Время уже прошло, предложение о переносе закрыто', 'error');
-			$this->setRedirectAndExit();
-			return;
+			return self::groupApplyResult(false, 'Время уже прошло, предложение о переносе закрыто');
 		}
 
 		$masterTimezone = self::getUserTimezoneById($masterId, (string) Factory::getApplication()->get('offset', 'UTC'));
 		$scheduleCheck = self::validateMasterSchedule($masterId, $startUtc, $endUtc, $masterTimezone);
 		if (!$scheduleCheck['ok']) {
-			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
-			$this->setRedirectAndExit();
-			return;
+			return self::groupApplyResult(false, (string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'));
 		}
 
 		$tableName = $db->getPrefix() . 'vigling_bookings';
@@ -1313,25 +1338,17 @@ class OrdersController extends BaseController
 		$transactionStarted = false;
 		try {
 			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
-				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
-				$this->setRedirectAndExit();
-				return;
+				return self::groupApplyResult(false, 'Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз');
 			}
 			$lockHeld = true;
 			if (self::hasCourseSlotsOverlap($db, $masterId, $newStartDb, $newEndDb, $isCourse ? $slotId : 0)) {
-				$this->setMessage($isCourse ? 'Это время занято другим курсом' : 'Это время занято курсом', 'error');
-				$this->setRedirectAndExit();
-				return;
+				return self::groupApplyResult(false, $isCourse ? 'Это время занято другим курсом' : 'Это время занято курсом');
 			}
 			if (self::hasSearchSlotsOverlap($db, $masterId, $newStartDb, $newEndDb, $isCourse ? 0 : $slotId)) {
-				$this->setMessage($isCourse ? 'Это время занято поиском' : 'Это время занято другим поиском', 'error');
-				$this->setRedirectAndExit();
-				return;
+				return self::groupApplyResult(false, $isCourse ? 'Это время занято поиском' : 'Это время занято другим поиском');
 			}
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $newStartDb, $newEndDb, 0, $slotBookingIds)) {
-				$this->setMessage('Это время уже занято', 'error');
-				$this->setRedirectAndExit();
-				return;
+				return self::groupApplyResult(false, 'Это время уже занято');
 			}
 
 			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
@@ -1385,9 +1402,7 @@ class OrdersController extends BaseController
 				} catch (\Throwable $rollbackError) {
 				}
 			}
-			$this->setMessage('Не удалось применить перенос, ничего не изменено. Попробуйте ещё раз.', 'error');
-			$this->setRedirectAndExit();
-			return;
+			return self::groupApplyResult(false, 'Не удалось применить перенос, ничего не изменено. Попробуйте ещё раз.');
 		} finally {
 			if ($lockHeld) {
 				OrderTable::releaseMasterBookingLock($db, $masterId);
@@ -1409,8 +1424,15 @@ class OrdersController extends BaseController
 			);
 		}
 
-		$this->setMessage('Перенос подтверждён. Перенесено участников: ' . $moved . ', снято с записи: ' . count($removed) . '.');
-		$this->setRedirectAndExit();
+		return self::groupApplyResult(true, 'Перенос подтверждён. Перенесено участников: ' . $moved . ', снято с записи: ' . count($removed) . '.', $moved, count($removed));
+	}
+
+	/**
+	 * @return array{ok:bool,message:string,moved:int,removed:int}
+	 */
+	private static function groupApplyResult(bool $ok, string $message, int $moved = 0, int $removed = 0): array
+	{
+		return ['ok' => $ok, 'message' => $message, 'moved' => $moved, 'removed' => $removed];
 	}
 
 	public function completeByMaster()

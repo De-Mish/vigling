@@ -316,7 +316,9 @@ class DisplayController extends BaseController
 			}
 			$openAsMaster = [];
 			foreach ($helper::openProposalsForMaster($db, $userId) as $row) {
-				$openAsMaster[(int) $row['proposal']['id']] = true;
+				if (array_sum($row['counts']) > 0) {
+					$openAsMaster[(int) $row['proposal']['id']] = true;
+				}
 			}
 		} catch (\Throwable $e) {
 			return $items;

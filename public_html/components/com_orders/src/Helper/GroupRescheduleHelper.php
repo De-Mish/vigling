@@ -214,6 +214,21 @@ final class GroupRescheduleHelper
 	}
 
 	/**
+	 * An open request that still has someone to ask. When everybody has left, it no longer blocks the slot.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	public static function blockingProposalForSlot(DatabaseInterface $db, string $kind, int $slotId): ?array
+	{
+		$proposal = self::openProposalForSlot($db, $kind, $slotId);
+		if ($proposal === null || self::replies($db, (int) $proposal['id']) === []) {
+			return null;
+		}
+
+		return $proposal;
+	}
+
+	/**
 	 * @return array<int, array<string,mixed>>
 	 */
 	public static function replies(DatabaseInterface $db, int $proposalId): array

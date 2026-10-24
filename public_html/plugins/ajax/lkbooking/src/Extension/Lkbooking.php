@@ -824,7 +824,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 		$helper = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class;
 
-		return $helper::isAvailable($db) && $helper::openProposalForSlot($db, $kind, $slotId) !== null;
+		return $helper::isAvailable($db) && $helper::blockingProposalForSlot($db, $kind, $slotId) !== null;
 	}
 
 	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string
