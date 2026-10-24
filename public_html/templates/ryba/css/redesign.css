@@ -4227,3 +4227,21 @@ html body .btn_add-stock.plus-stock {
     margin-top: -18px;
   }
 }
+
+/* portfolio strip: first 3 thumbs eager, rest on demand */
+html body #easyprofile.view_profile-public .masters__small-img-item.is-deferred {
+  display: none !important;
+}
+html body #easyprofile.view_profile-public .masters__small-img-more {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--rd-surface-2, #f1efe9);
+  color: var(--rd-ink, #17150f);
+  font: 700 15px/54px var(--rd-font, inherit);
+  text-align: center;
+  cursor: pointer;
+}
