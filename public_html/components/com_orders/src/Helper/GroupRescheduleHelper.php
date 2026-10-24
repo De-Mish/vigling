@@ -271,6 +271,38 @@ final class GroupRescheduleHelper
 	}
 
 	/**
+	 * The booking's place in a request that is still open, or null.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	public static function openReplyForBooking(DatabaseInterface $db, int $bookingId): ?array
+	{
+		if ($bookingId <= 0) {
+			return null;
+		}
+		try {
+			$db->setQuery(
+				$db->getQuery(true)
+					->select([
+						'r.id AS reply_id', 'r.proposal_id', 'r.user_id', 'r.status AS reply_status',
+						'p.kind', 'p.master_id', 'p.title',
+					])
+					->from($db->quoteName('#__vigling_group_reschedule_replies', 'r'))
+					->join('INNER', $db->quoteName('#__vigling_group_reschedules', 'p') . ' ON p.id = r.proposal_id')
+					->where('r.booking_id = ' . $bookingId)
+					->where('p.status = ' . $db->quote('open'))
+					->order('r.id DESC')
+					->setLimit(1)
+			);
+			$row = $db->loadAssoc();
+		} catch (\Throwable $e) {
+			return null;
+		}
+
+		return is_array($row) ? $row : null;
+	}
+
+	/**
 	 * Requests waiting for the person's answer, keyed by booking id.
 	 *
 	 * @return array<int, array<string,mixed>>

@@ -109,8 +109,73 @@ class OrderTable extends Table
 		return (int) $db->loadResult() === 1;
 	}
 
+	private static bool $notificationsSilenced = false;
+
+	/**
+	 * While on, the standard "booking cancelled / rescheduled" push of the pushnotifybooking plugin is skipped.
+	 * Used by flows that send their own, more specific notice (the group reschedule).
+	 */
+	public static function silenceNotifications(bool $on): void
+	{
+		self::$notificationsSilenced = $on;
+	}
+
+	public static function notificationsSilenced(): bool
+	{
+		return self::$notificationsSilenced;
+	}
+
+	/** @var array<int,string> user id => lock name, held on this connection */
+	private static array $heldUserLocks = [];
+
+	private static function userBookingLockName(int $userId): string
+	{
+		return 'vigling-book-user-' . $userId;
+	}
+
+	/**
+	 * Serialises bookings of the same person with different specialists, so the "no two appointments at once" check
+	 * cannot be passed by two requests at the same moment. Always take it after the master lock and in ascending
+	 * user order; it is released together with the master lock.
+	 *
+	 * @param int[] $userIds
+	 */
+	public static function acquireUserBookingLocks(DatabaseInterface $db, array $userIds, int $timeoutSeconds = 5): bool
+	{
+		$userIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
+		sort($userIds);
+		foreach ($userIds as $userId) {
+			if (isset(self::$heldUserLocks[$userId])) {
+				continue;
+			}
+			$name = self::userBookingLockName($userId);
+			$db->setQuery('SELECT GET_LOCK(' . $db->quote($name) . ', ' . (int) $timeoutSeconds . ')');
+			if ((int) $db->loadResult() !== 1) {
+				self::releaseUserBookingLocks($db);
+
+				return false;
+			}
+			self::$heldUserLocks[$userId] = $name;
+		}
+
+		return true;
+	}
+
+	public static function releaseUserBookingLocks(DatabaseInterface $db): void
+	{
+		foreach (self::$heldUserLocks as $userId => $name) {
+			try {
+				$db->setQuery('SELECT RELEASE_LOCK(' . $db->quote($name) . ')');
+				$db->loadResult();
+			} catch (\Throwable $e) {
+			}
+			unset(self::$heldUserLocks[$userId]);
+		}
+	}
+
 	public static function releaseMasterBookingLock(DatabaseInterface $db, int $masterId): void
 	{
+		self::releaseUserBookingLocks($db);
 		if ($masterId <= 0) {
 			return;
 		}
