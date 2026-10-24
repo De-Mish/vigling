@@ -10,6 +10,11 @@ use Joomla\Input\Input;
 
 class AppointmentsHelper
 {
+	/**
+	 * Cabinet address as a real URL, not HTML.
+	 * Callers that print it in markup escape it once. A second escape turns
+	 * `&` into `&amp;amp;`, and the day, month, archive and "show more" links stop working.
+	 */
 	public static function profileUrl(array $extra = []): string
 	{
 		$app = Factory::getApplication();
@@ -42,7 +47,7 @@ class AppointmentsHelper
 			$query['Itemid'] = $profileItemId;
 		}
 
-		return Route::_('index.php?' . http_build_query($query));
+		return Route::_('index.php?' . http_build_query($query), false);
 	}
 
 	public static function redirectUrlFromRequest(?Input $input = null): string
@@ -160,7 +165,7 @@ class AppointmentsHelper
 		$target->weekNextUrl = self::profileUrl(['zapisi' => 'week']);
 		$target->monthPrevUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->modify('-1 month')->format('Y-m')]);
 		$target->monthNextUrl = self::profileUrl(['zapisi' => 'month', 'month' => $monthStart->modify('+1 month')->format('Y-m')]);
-		$target->weekRangeUrl = Route::_('index.php?option=com_orders&task=orders.weekRange&format=json');
+		$target->weekRangeUrl = Route::_('index.php?option=com_orders&task=orders.weekRange&format=json', false);
 
 		$dayScope = '';
 		$dayOrder = 'ASC';
