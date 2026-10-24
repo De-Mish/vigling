@@ -8,6 +8,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
+use Viglin\Component\Orders\Site\Helper\CatalogPriceHelper;
 use Viglin\Component\Orders\Site\Helper\ReviewHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
 
@@ -182,10 +183,33 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
+		if (!class_exists(CatalogPriceHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/CatalogPriceHelper.php';
+		}
+		$current = CatalogPriceHelper::findCurrentService(
+			$masterId,
+			(int) ($table->svc_id ?? 0),
+			(int) ($table->tag_id ?? 0),
+			$serviceName
+		);
+		$currentItem = $current['item'];
+		if ($current['has_catalog'] && $currentItem === null) {
+			$this->setMessage('Мастер больше не оказывает эту услугу. Выберите услугу в профиле мастера.', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$currentTimeSum = 0;
+		if ($currentItem !== null) {
+			$serviceName = $currentItem['name'] !== '' ? $currentItem['name'] : $serviceName;
+			$durationMin = $currentItem['duration'];
+			$currentTimeSum = $currentItem['duration'] + $currentItem['pause_min'];
+		} else {
+			$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
+			$currentTimeSum = isset($table->time_sum) ? (int) $table->time_sum : 0;
+		}
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
-		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, isset($table->time_sum) ? (int) $table->time_sum : 0);
+		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, $currentTimeSum);
 		$timeDb = $time->format('Y-m-d H:i:s');
 		$timeToDb = $timeTo->format('Y-m-d H:i:s');
 		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
@@ -227,6 +251,11 @@ class OrdersController extends BaseController
 				$this->setRedirectAndExit();
 				return;
 			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $user->id, $masterId, $timeDb, $timeToDb, 0)) {
+				$this->setMessage('У вас уже есть запись на это время к другому специалисту', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 
 			OrderTable::ensureBookingCommentColumns($db);
 			OrderTable::ensureSourceColumn($db);
@@ -247,7 +276,10 @@ class OrdersController extends BaseController
 			if (isset($columns['source'])) {
 				$payload['source'] = 'profile';
 			}
-			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone', 'service_full_name', 'remind_minutes'];
+			$copyIfPresent = ['contact_name', 'contact_phone', 'remind_minutes'];
+			if ($currentItem === null) {
+				$copyIfPresent = array_merge($copyIfPresent, ['svc_id', 'tag_id', 'price', 'time_sum', 'service_full_name']);
+			}
 			foreach ($copyIfPresent as $columnName) {
 				if (!isset($columns[$columnName]) || !isset($table->$columnName)) {
 					continue;
@@ -257,6 +289,22 @@ class OrdersController extends BaseController
 					continue;
 				}
 				$payload[$columnName] = $value;
+			}
+			if ($currentItem !== null) {
+				$fresh = [
+					'svc_id' => $currentItem['svc_id'],
+					'tag_id' => $currentItem['tag_id'],
+					'price' => $currentItem['price'],
+					'time_sum' => $currentTimeSum,
+					'service_full_name' => $currentItem['category'] !== ''
+						? mb_substr($currentItem['category'] . ' - ' . $currentItem['name'], 0, 255)
+						: '',
+				];
+				foreach ($fresh as $columnName => $value) {
+					if (isset($columns[$columnName]) && $value !== '' && $value !== 0) {
+						$payload[$columnName] = $value;
+					}
+				}
 			}
 			if (isset($columns['time_sum']) && empty($payload['time_sum'])) {
 				$payload['time_sum'] = $durationMin;
@@ -389,6 +437,11 @@ class OrdersController extends BaseController
 			}
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, (int) $table->id)) {
 				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $table->user_id, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('У вас уже есть запись на это время к другому специалисту', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
@@ -546,6 +599,11 @@ class OrdersController extends BaseController
 			}
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, (int) $table->id)) {
 				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $table->user_id, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('У клиента уже есть запись на это время к другому специалисту', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
@@ -1596,6 +1654,38 @@ class OrdersController extends BaseController
 			$query->where($db->quoteName('id') . ' NOT IN (' . implode(', ', $excludeIds) . ')');
 		}
 		$db->setQuery($query);
+		return ((int) $db->loadResult()) > 0;
+	}
+
+	/**
+	 * A person can be in one place at a time: the same user must not hold two overlapping
+	 * appointments with different specialists. Self-bookings (master_id = user_id, made for
+	 * people outside the site) never count, and neither do journal blocks (user_id = 0).
+	 */
+	private static function hasUserBookingOverlap(
+		\Joomla\Database\DatabaseInterface $db,
+		string $tableName,
+		int $userId,
+		int $masterId,
+		string $startUtc,
+		string $endUtc,
+		int $excludeId = 0
+	): bool {
+		if ($userId <= 0 || $userId === $masterId) {
+			return false;
+		}
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName($tableName))
+			->where($db->quoteName('user_id') . ' = ' . $userId)
+			->where($db->quoteName('master_id') . ' <> ' . $userId)
+			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+		if ($excludeId > 0) {
+			$query->where($db->quoteName('id') . ' <> ' . $excludeId);
+		}
+		$db->setQuery($query);
+
 		return ((int) $db->loadResult()) > 0;
 	}
 

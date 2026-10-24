@@ -96,12 +96,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$event->updateEventResult(['success' => false, 'message' => 'Не указан мастер']);
 			return;
 		}
-		if ((int) $user->id === $masterId) {
-			$event->updateEventResult(['success' => false, 'message' => 'Нельзя записаться к самому себе']);
-			return;
-		}
 		require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
-		if (\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($masterId)) {
+		if (\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($masterId) && (int) $user->id !== $masterId) {
 			$event->updateEventResult(['success' => false, 'message' => \Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE]);
 			return;
 		}
@@ -384,7 +380,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$courseContext,
 			$searchContext,
 			$hasCourseBookingColumns,
-			$hasSearchBookingColumns
+			$hasSearchBookingColumns,
+			$timeToDb
 		);
 		if ($conflict !== null) {
 			$event->updateEventResult(['success' => false, 'message' => $conflict]);
@@ -477,7 +474,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$courseContext,
 				$searchContext,
 				$hasCourseBookingColumns,
-				$hasSearchBookingColumns
+				$hasSearchBookingColumns,
+				$timeToDb
 			);
 			if ($conflict !== null) {
 				$db->transactionRollback();
@@ -594,7 +592,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		?array $courseContext,
 		?array $searchContext,
 		bool $hasCourseBookingColumns,
-		bool $hasSearchBookingColumns
+		bool $hasSearchBookingColumns,
+		string $presenceEndDb = ''
 	): ?string {
 		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId)) {
 			return 'Вы уже записаны на этот курс';
@@ -635,6 +634,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, 0) >= $capacityTotal) {
 				return 'На этом предложении поиска больше нет свободных мест';
 			}
+		}
+
+		if (self::hasUserBookingOverlap($db, $tableName, $userId, $masterId, $timeDb, $presenceEndDb !== '' ? $presenceEndDb : $timeToDb)) {
+			return 'У вас уже есть запись на это время к другому специалисту';
 		}
 
 		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : 0)) {
@@ -782,6 +785,28 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 
 		return ['ok' => true, 'message' => ''];
+	}
+
+	/**
+	 * One person cannot be at two specialists at once, whether the person is a client or a specialist
+	 * attending someone else's service or course. Self-bookings (master_id = user_id) are made for
+	 * people outside the site and are not counted.
+	 */
+	private static function hasUserBookingOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $userId, int $masterId, string $startUtc, string $endUtc): bool
+	{
+		if ($userId <= 0 || $userId === $masterId) {
+			return false;
+		}
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName($tableName))
+			->where($db->quoteName('user_id') . ' = ' . $userId)
+			->where($db->quoteName('master_id') . ' <> ' . $userId)
+			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+		$db->setQuery($query);
+
+		return ((int) $db->loadResult()) > 0;
 	}
 
 	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string
