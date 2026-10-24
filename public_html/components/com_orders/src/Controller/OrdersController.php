@@ -46,6 +46,11 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if (self::hasStarted($table)) {
+			$this->setMessage('Прошедшую запись нельзя отменить, её можно только удалить из списка', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
 		if (!$table->delete($id)) {
 			$this->setMessage($table->getError() ?: 'Ошибка отмены записи', 'error');
 			$this->setRedirectAndExit();
@@ -429,6 +434,11 @@ class OrdersController extends BaseController
 		}
 		if ((int) $table->master_id !== (int) $user->id) {
 			$this->setMessage('Нет прав на отмену этой записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if (self::hasStarted($table)) {
+			$this->setMessage('Прошедшую запись нельзя отменить, её можно только удалить из списка', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
@@ -1802,6 +1812,21 @@ class OrdersController extends BaseController
 		$groups = array_map('intval', $groups);
 
 		return in_array(3, $groups, true) || in_array(8, $groups, true);
+	}
+
+	private static function hasStarted(OrderTable $table): bool
+	{
+		$raw = trim((string) ($table->time ?? ''));
+		if ($raw === '') {
+			return false;
+		}
+		try {
+			$start = new \DateTimeImmutable($raw, new \DateTimeZone('UTC'));
+		} catch (\Throwable $e) {
+			return false;
+		}
+
+		return $start < new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 	}
 
 	private static function parseUtcDateTime(string $raw): ?\DateTimeImmutable

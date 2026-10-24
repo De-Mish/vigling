@@ -1064,11 +1064,20 @@ if (empty($isLkEmbed)) {
 		<div class="masters__gall-small">
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
+				<?php $portfolioEagerLimit = 3; ?>
 				<?php foreach ($portfolioSlides as $slideIdx => $slide) : ?>
-					<div class="masters__small-img-item<?php echo (int) $slideIdx === 0 ? ' is-current' : ''; ?>" style="width: 54px; display: inline-block;" data-full-src="<?php echo $this->escape($slide['full']); ?>">
-						<img src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" loading="lazy" decoding="async">
+					<?php $slideDeferred = (int) $slideIdx >= $portfolioEagerLimit; ?>
+					<div class="masters__small-img-item<?php echo (int) $slideIdx === 0 ? ' is-current' : ''; ?><?php echo $slideDeferred ? ' is-deferred' : ''; ?>" style="width: 54px; display: inline-block;" data-full-src="<?php echo $this->escape($slide['full']); ?>">
+						<?php if ($slideDeferred) : ?>
+						<img data-src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" decoding="async">
+						<?php else : ?>
+						<img src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" decoding="async">
+						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
+				<?php if ($portfolioCountTotal > $portfolioEagerLimit) : ?>
+					<button type="button" class="masters__small-img-more" data-vg-gallery-more aria-label="Показать все фотографии">+<?php echo (int) ($portfolioCountTotal - $portfolioEagerLimit); ?></button>
+				<?php endif; ?>
 			</div>
 			<div class="clearFloat"></div>
 		</div>
