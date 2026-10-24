@@ -146,7 +146,23 @@
 		}
 	}
 
+	function markSpecialistsNav() {
+		if (!document.querySelector('#easyprofile.view_profile-public')) {
+			return;
+		}
+		var menu = document.querySelector('.header--desktop .header__menu');
+		if (!menu || menu.querySelector('li.current')) {
+			return;
+		}
+		var link = menu.querySelector('.nav-item > a[href^="/poisk-spetsialistov"]');
+		if (link && link.parentElement) {
+			link.parentElement.classList.add('current');
+			link.setAttribute('aria-current', 'page');
+		}
+	}
+
 	function init() {
+		markSpecialistsNav();
 		initFilterSheet();
 		initStickyFilter();
 		formatTimes();
