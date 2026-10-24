@@ -220,9 +220,10 @@ final class GroupRescheduleHelper
 	{
 		$db->setQuery(
 			$db->getQuery(true)
-				->select('*')
-				->from($db->quoteName('#__vigling_group_reschedule_replies'))
-				->where($db->quoteName('proposal_id') . ' = ' . $proposalId)
+				->select('r.*')
+				->from($db->quoteName('#__vigling_group_reschedule_replies', 'r'))
+				->join('INNER', $db->quoteName('#__vigling_bookings', 'b') . ' ON b.id = r.booking_id')
+				->where('r.proposal_id = ' . $proposalId)
 		);
 
 		return $db->loadAssocList() ?: [];
@@ -272,6 +273,7 @@ final class GroupRescheduleHelper
 				])
 				->from($db->quoteName('#__vigling_group_reschedule_replies', 'r'))
 				->join('INNER', $db->quoteName('#__vigling_group_reschedules', 'p') . ' ON p.id = r.proposal_id')
+				->join('INNER', $db->quoteName('#__vigling_bookings', 'b') . ' ON b.id = r.booking_id')
 				->where('r.user_id = ' . $userId)
 				->where('r.status = ' . $db->quote('pending'))
 				->where('p.status = ' . $db->quote('open'));
