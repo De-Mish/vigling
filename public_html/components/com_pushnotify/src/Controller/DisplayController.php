@@ -273,12 +273,70 @@ class DisplayController extends BaseController
 			require_once JPATH_SITE . '/components/com_pushnotify/src/Helper/CriticalNoticeHelper.php';
 		}
 		$items = \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::listForUser($userId);
+		$items = $this->dropStaleActionNotices($items, $userId);
 		foreach ($items as &$item) {
 			$item['id'] = (int) $item['id'];
 			$item['requires_action'] = (int) $item['requires_action'] === 1;
+			unset($item['ref_type'], $item['ref_id']);
 		}
 		unset($item);
 		$this->jsonResponse(['success' => true, 'items' => $items]);
+	}
+
+	/**
+	 * Action notices about a group reschedule disappear on their own once there is nothing left to answer
+	 * (the person cancelled the booking by other means, the request was closed, and so on).
+	 *
+	 * @param array<int, array<string,mixed>> $items
+	 * @return array<int, array<string,mixed>>
+	 */
+	private function dropStaleActionNotices(array $items, int $userId): array
+	{
+		$refParticipant = 'group_reschedule';
+		$refMaster = 'group_reschedule_master';
+		$needsCheck = false;
+		foreach ($items as $item) {
+			if ((int) $item['requires_action'] === 1 && in_array((string) $item['ref_type'], [$refParticipant, $refMaster], true)) {
+				$needsCheck = true;
+				break;
+			}
+		}
+		if (!$needsCheck) {
+			return $items;
+		}
+		try {
+			if (!class_exists(\Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class, false)) {
+				require_once JPATH_SITE . '/components/com_orders/src/Helper/GroupRescheduleHelper.php';
+			}
+			$db = $this->getDb();
+			$helper = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class;
+			$pendingProposals = [];
+			foreach ($helper::pendingRepliesForUser($db, $userId) as $row) {
+				$pendingProposals[(int) $row['proposal_id']] = true;
+			}
+			$openAsMaster = [];
+			foreach ($helper::openProposalsForMaster($db, $userId) as $row) {
+				$openAsMaster[(int) $row['proposal']['id']] = true;
+			}
+		} catch (\Throwable $e) {
+			return $items;
+		}
+
+		$result = [];
+		foreach ($items as $item) {
+			if ((int) $item['requires_action'] === 1) {
+				$refId = (int) $item['ref_id'];
+				$stale = ((string) $item['ref_type'] === $refParticipant && !isset($pendingProposals[$refId]))
+					|| ((string) $item['ref_type'] === $refMaster && !isset($openAsMaster[$refId]));
+				if ($stale) {
+					\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::resolveByRef((string) $item['ref_type'], $refId, $userId);
+					continue;
+				}
+			}
+			$result[] = $item;
+		}
+
+		return $result;
 	}
 
 	public function ackCritical()

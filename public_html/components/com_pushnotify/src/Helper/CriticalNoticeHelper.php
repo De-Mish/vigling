@@ -79,7 +79,7 @@ final class CriticalNoticeHelper
 		try {
 			$db = self::db();
 			$query = $db->getQuery(true)
-				->select('id, notice_type, title, body, url, requires_action, created_at')
+				->select('id, notice_type, title, body, url, requires_action, ref_type, ref_id, created_at')
 				->from($db->quoteName(self::TABLE))
 				->where($db->quoteName('user_id') . ' = ' . $userId)
 				->where($db->quoteName('acknowledged_at') . ' IS NULL')
