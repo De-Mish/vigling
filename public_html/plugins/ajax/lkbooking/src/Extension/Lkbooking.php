@@ -595,6 +595,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		bool $hasSearchBookingColumns,
 		string $presenceEndDb = ''
 	): ?string {
+		$groupSlotId = $bookingKind === 'course' ? $courseSlotId : ($bookingKind === 'search' ? $searchSlotId : 0);
+		if ($groupSlotId > 0 && self::groupSlotHasOpenReschedule($db, $bookingKind, $groupSlotId)) {
+			return 'Мастер согласует перенос с участниками, запись временно закрыта. Попробуйте позже.';
+		}
 		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId)) {
 			return 'Вы уже записаны на этот курс';
 		}
@@ -807,6 +811,20 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$db->setQuery($query);
 
 		return ((int) $db->loadResult()) > 0;
+	}
+
+	private static function groupSlotHasOpenReschedule(\Joomla\Database\DatabaseInterface $db, string $kind, int $slotId): bool
+	{
+		$path = JPATH_SITE . '/components/com_orders/src/Helper/GroupRescheduleHelper.php';
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class, false) && is_file($path)) {
+			require_once $path;
+		}
+		if (!class_exists(\Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class, false)) {
+			return false;
+		}
+		$helper = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class;
+
+		return $helper::isAvailable($db) && $helper::openProposalForSlot($db, $kind, $slotId) !== null;
 	}
 
 	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string

@@ -8,7 +8,7 @@ use Joomla\CMS\Factory;
 
 class InboxHelper
 {
-	public static function add(int $userId, string $notificationType, string $title, string $body, ?int $orderId = null): void
+	public static function add(int $userId, string $notificationType, string $title, string $body, ?int $orderId = null, bool $force = false): void
 	{
 		if (!class_exists(NotificationSettingsHelper::class)) {
 			$path = JPATH_SITE . '/components/com_pushnotify/src/Helper/NotificationSettingsHelper.php';
@@ -16,7 +16,7 @@ class InboxHelper
 				require_once $path;
 			}
 		}
-		if (!NotificationSettingsHelper::isInboxEnabled($notificationType)) {
+		if (!$force && !NotificationSettingsHelper::isInboxEnabled($notificationType)) {
 			return;
 		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
