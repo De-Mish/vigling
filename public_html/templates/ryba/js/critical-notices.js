@@ -43,7 +43,14 @@
 		badge = el('span', 'vg-crit-badge');
 		button.appendChild(badge);
 		button.addEventListener('click', openModal);
-		document.body.appendChild(button);
+		var bar = document.querySelector('.header-mobile__bar');
+		var toggle = bar ? bar.querySelector('.header-mobile__toggle') : null;
+		if (bar && toggle && bar.getClientRects().length > 0) {
+			button.classList.add('is-in-header');
+			bar.insertBefore(button, toggle);
+		} else {
+			document.body.appendChild(button);
+		}
 	}
 
 	function updateButton() {
