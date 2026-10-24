@@ -736,17 +736,27 @@ final class UserCoursesService
 
         if ($slotId > 0) {
             if ($slotInfo !== null) {
+                $holdOldTime = false;
                 if ($bookingCount > 0 && $timeChanged && $orderTable !== null) {
-                    self::rescheduleBookingsForSlot($db, $slotId, $userId, $startDb, $endDb, $orderTable);
+                    $asked = self::askParticipantsAboutMove($db, $courseId, $slotId, $userId, $slotInfo, $startDb, $endDb);
+                    if ($asked !== null) {
+                        $holdOldTime = true;
+                        self::warn('Перенос не применён сразу: участникам (' . $asked . ') отправлен запрос. Время изменится после того, как вы подтвердите перенос в разделе «Мои записи».');
+                    } else {
+                        self::rescheduleBookingsForSlot($db, $slotId, $userId, $startDb, $endDb, $orderTable);
+                    }
                 }
                 $update = $db->getQuery(true)
                     ->update($db->quoteName('#__vigling_course_slots'))
-                    ->set($db->quoteName('starts_at_utc') . ' = ' . $db->quote($startDb))
-                    ->set($db->quoteName('ends_at_utc') . ' = ' . $db->quote($endDb))
                     ->set($db->quoteName('capacity_total') . ' = ' . $capacity)
                     ->set($db->quoteName('is_active') . ' = 1')
                     ->where($db->quoteName('id') . ' = ' . $slotId)
                     ->where($db->quoteName('course_id') . ' = ' . $courseId);
+                if (!$holdOldTime) {
+                    $update
+                        ->set($db->quoteName('starts_at_utc') . ' = ' . $db->quote($startDb))
+                        ->set($db->quoteName('ends_at_utc') . ' = ' . $db->quote($endDb));
+                }
                 $db->setQuery($update)->execute();
                 return;
             }
@@ -894,6 +904,23 @@ final class UserCoursesService
             ->where($db->quoteName('master_id') . ' = ' . $masterId);
         $db->setQuery($query);
         return array_map('intval', $db->loadColumn() ?: []);
+    }
+
+    /**
+     * @param array<string,mixed> $slotInfo
+     */
+    private static function askParticipantsAboutMove(DatabaseInterface $db, int $entityId, int $slotId, int $masterId, array $slotInfo, string $startDb, string $endDb): ?int
+    {
+        $path = JPATH_SITE . '/components/com_orders/src/Helper/GroupRescheduleHelper.php';
+        if (!class_exists(\Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class, false)) {
+            if (!is_file($path)) {
+                return null;
+            }
+            require_once $path;
+        }
+        $helper = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::class;
+
+        return $helper::proposeFromSlotEdit($db, $helper::KIND_COURSE, $slotId, $entityId, $masterId, $slotInfo, $startDb, $endDb);
     }
 
     private static function warn(string $message): void
