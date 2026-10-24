@@ -835,7 +835,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 												<div class="service__wrap">
 													<?php foreach ((array) ($cat['items'] ?? []) as $item) : ?>
 													<p class="service__item service__item--readonly">
-														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName((string) ($cat['title'] ?? ''), (string) ($item['name'] ?? ''))); ?></span>
+														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName('', (string) ($item['name'] ?? ''))); ?></span>
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="price"><label>Стоимость:</label><?php echo number_format((int) ($item['price'] ?? 0), 0, '', ' '); ?>&nbsp;₽</span>
@@ -873,7 +873,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 												<div class="service__wrap">
 													<?php foreach ((array) ($cat['items'] ?? []) as $item) : ?>
 													<p class="service__item service__item--readonly">
-														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName((string) ($cat['title'] ?? ''), (string) ($item['name'] ?? ''))); ?></span>
+														<span class="service-name"><?php echo $this->escape($formatProfileServiceDisplayName('', (string) ($item['name'] ?? ''))); ?></span>
 														<span class="time"><label>Время:</label><?php echo (int) ($item['duration'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="time2"><label>Перерыв:</label><?php echo (int) ($item['pause_min'] ?? 0); ?>&nbsp;мин.</span>
 														<span class="price"><label>Стоимость:</label><?php echo number_format((int) ($item['price'] ?? 0), 0, '', ' '); ?>&nbsp;₽</span>

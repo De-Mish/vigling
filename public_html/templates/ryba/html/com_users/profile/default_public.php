@@ -1882,8 +1882,8 @@ if ($bookingPaused) : ?>
 							$isHighlightedService = $highlightSearchService
 								&& $serviceMatchesSearchFilter($cat, $item, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 						?>
-						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>" data-legacy-cat-id="<?php echo $itemLegacyCatId; ?>">
-							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?></div>
+						<div class="priceList__item<?php echo $isHighlightedService ? ' highlighted-service' : ''; ?>" data-full-name="<?php echo $this->escape($catTitle . ' - ' . (string) ($item['name'] ?? '')); ?>" data-cat-id="<?php echo $itemCatId; ?>" data-svc-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-tag-id="<?php echo $itemTagId; ?>" data-legacy-cat-id="<?php echo $itemLegacyCatId; ?>">
+							<div class="priceList__item-coll price__coll1 service-name"><?php echo $this->escape((string) ($item['name'] ?? '')); ?></div>
 							<div class="priceList__item-coll price__coll2 service-price">от <?php echo number_format((int) ($item['price'] ?? 0), 0, '.', ' '); ?> <span class="price_span">₽</span></div>
 							<div class="priceList__item-coll price__coll3"><?php echo (int) ($item['duration'] ?? 0); ?> мин</div>
 							<button type="button" id="btn_order" class="btn_add-master plus" aria-label="<?php echo $this->escape('Записаться: ' . (string) ($item['name'] ?? '')); ?>" data-booking-toggle="1" data-toggle="modal" data-target="#zapis" data-service-id="<?php echo $this->escape((string) ($item['svc_id'] ?? '')); ?>" data-service-name="<?php echo $this->escape((string) ($item['name'] ?? '')); ?>" data-srv-time="<?php echo $this->escape($srvTime); ?>"></button>
@@ -1943,10 +1943,10 @@ if ($bookingPaused) : ?>
 										&& $serviceMatchesSearchFilter($stockCategory, $stockItem, $filterServiceId, $filterTagId, $filterServiceTitle, $filterTagTitle);
 								?>
 								<?php $stockDiscountPct = ($stockOldPrice > $stockPrice && $stockPrice > 0) ? (int) round(($stockOldPrice - $stockPrice) / $stockOldPrice * 100) : 0; ?>
-								<div class="stockList__item<?php echo $stockIsSoldOut ? ' is-unavailable' : ''; ?><?php echo $isHighlightedStock ? ' highlighted-service' : ''; ?><?php echo $stockDiscountPct > 0 ? ' has-old-price' : ''; ?>" data-cat-id="<?php echo (int) ($stockCategory['cat_id'] ?? 0); ?>" data-svc-id="<?php echo $this->escape((string) ($stockItem['svc_id'] ?? '')); ?>" data-stock-service-id="<?php echo $stockServiceId; ?>" data-tag-id="<?php echo (int) ($stockItem['tag_id'] ?? 0); ?>" data-legacy-cat-id="<?php echo (int) ($stockItem['legacy_cat_id'] ?? 0); ?>">
+								<div class="stockList__item<?php echo $stockIsSoldOut ? ' is-unavailable' : ''; ?><?php echo $isHighlightedStock ? ' highlighted-service' : ''; ?><?php echo $stockDiscountPct > 0 ? ' has-old-price' : ''; ?>" data-full-name="<?php echo $this->escape($stockCategoryTitle . ' - ' . (string) ($stockItem['name'] ?? '')); ?>" data-cat-id="<?php echo (int) ($stockCategory['cat_id'] ?? 0); ?>" data-svc-id="<?php echo $this->escape((string) ($stockItem['svc_id'] ?? '')); ?>" data-stock-service-id="<?php echo $stockServiceId; ?>" data-tag-id="<?php echo (int) ($stockItem['tag_id'] ?? 0); ?>" data-legacy-cat-id="<?php echo (int) ($stockItem['legacy_cat_id'] ?? 0); ?>">
 									<?php if ($stockDiscountPct > 0) : ?><div class="stockList__item-coll stock__badges"><span class="card-disc">−<?php echo $stockDiscountPct; ?>%</span></div><?php endif; ?>
-									<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($stockCategoryTitle . ' - ' . (string) ($stockItem['name'] ?? '')); ?></div>
-									<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($stockDescription !== '' ? $stockDescription : 'Акционное предложение'); ?></div>
+									<div class="stockList__item-coll stock__coll1"><?php echo $this->escape((string) ($stockItem['name'] ?? '')); ?></div>
+									<?php if ($stockDescription !== '') : ?><div class="stockList__item-coll stock__coll2"><?php echo $this->escape($stockDescription); ?></div><?php endif; ?>
 									<div class="stockList__item-coll stock__coll4"><?php echo number_format($stockPrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
 									<?php if ($stockDiscountPct > 0) : ?><div class="stockList__item-coll stock__coll3"><?php echo number_format($stockOldPrice, 0, '.', ' '); ?> <i class="old_price">₽</i></div><?php endif; ?>
 									<div class="stockList__item-coll stock__coll5"><?php echo $stockDurationMin; ?> мин</div>
@@ -2415,12 +2415,6 @@ if ($bookingPaused) : ?>
 						<img src="/templates/ryba/icons/social_icons/<?php echo $this->escape($social['icon']); ?>" alt="<?php echo $this->escape($social['label']); ?>">
 					</a>
 				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
-			<?php if ($addr !== '') : ?>
-			<div class="master__about-address">
-				<img src="/templates/ryba/images/loclo.png" alt="">
-				<?php echo $this->escape($addr); ?>
 			</div>
 			<?php endif; ?>
 			<?php if ($addrExtraDisplay !== '') : ?>
@@ -2954,7 +2948,7 @@ if ($bookingPaused) : ?>
 			var isStockItem = item.classList.contains('stockList__item');
 			var titleSelector = isStockItem ? '.stock__coll1' : '.price__coll1';
 			var priceSelector = isStockItem ? '.stock__coll4' : '.price__coll2';
-			var title = ((item.querySelector(titleSelector) || {}).textContent || '').trim();
+			var title = (item.getAttribute('data-full-name') || (item.querySelector(titleSelector) || {}).textContent || '').trim();
 			var priceText = ((item.querySelector(priceSelector) || {}).textContent || '').trim();
 			var price = parseInteger(priceText, 0);
 			var oldPriceText = isStockItem ? ((item.querySelector('.stock__coll3') || {}).textContent || '').trim() : '';
