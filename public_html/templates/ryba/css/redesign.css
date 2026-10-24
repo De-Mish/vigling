@@ -4266,6 +4266,22 @@ html body #easyprofile.view_profile-public .masters__small-img-more {
 @media (min-width: 1021px) {
   .vg-crit-btn { bottom: 24px; right: 24px; }
 }
+.vg-crit-btn.is-in-header {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  margin: 0 10px 0 auto;
+  animation: none;
+  box-shadow: none;
+}
+.vg-crit-btn.is-in-header svg {
+  width: 22px;
+  height: 22px;
+}
 .vg-crit-btn svg {
   width: 26px;
   height: 26px;
