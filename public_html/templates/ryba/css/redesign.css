@@ -159,18 +159,9 @@ html body .header--desktop .header__menu .mod-menu > li.current > a,
 html body .header--desktop .header__menu .nav > li.current > a,
 html body .header--desktop .header__menu .mod-menu > li > a[aria-current="page"],
 html body .header--desktop .header__menu .nav > li > a[aria-current="page"] {
-  background: var(--rd-accent);
-  color: var(--rd-ink);
-  font-weight: 700;
-  box-shadow: var(--rd-sh-btn);
-}
-
-html body .header--desktop .header__menu .mod-menu > li.current > a:hover,
-html body .header--desktop .header__menu .nav > li.current > a:hover,
-html body .header--desktop .header__menu .mod-menu > li > a[aria-current="page"]:hover,
-html body .header--desktop .header__menu .nav > li > a[aria-current="page"]:hover {
-  background: var(--rd-accent-d);
-  color: var(--rd-ink);
+  background: var(--rd-ink);
+  color: #fff;
+  box-shadow: none;
 }
 
 html body .header--desktop .header__logo a {
