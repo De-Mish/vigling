@@ -152,12 +152,10 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	<script src="https://code.jquery.com/jquery-migrate-1.4.1.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
 <?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.full.min.js"></script>
 <?php endif; ?>
 	<jdoc:include type="metas" />
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.css">
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 <?php if (in_array($option, ['com_poisk', 'com_aktsii', 'com_kurs', 'com_modeli'], true)) : ?>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">

@@ -64,7 +64,12 @@ if ($userID) {
         $db->setQuery($query);
         $editData = $db->loadAssoc();
 
-        if (!$editData) {
+        $editIdentity = Factory::getApplication()->getIdentity();
+        $canEditService = $editData
+            && $userID > 0
+            && ((int) $editData['created_by'] === $userID || ($editIdentity && $editIdentity->authorise('core.admin')));
+
+        if (!$canEditService) {
             $task = 'create';
             $editData = [];
         } else {

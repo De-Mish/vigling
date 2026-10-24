@@ -39,147 +39,45 @@ class OrderTable extends Table
 		return $result;
 	}
 
-	public static function ensureBookingCommentColumns(DatabaseInterface $db): bool
+	private static function bookingTableHasColumns(DatabaseInterface $db, array $names): bool
 	{
-		static $ensured = null;
-		if ($ensured !== null) {
-			return $ensured;
-		}
 		try {
 			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			$after = 'service_name';
-			if (!isset($columns['comment'])) {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD COLUMN ' . $db->quoteName('comment') . ' VARCHAR(500) NULL DEFAULT NULL'
-					. ' AFTER ' . $db->quoteName($after)
-				)->execute();
-				$columns['comment'] = true;
-				$after = 'comment';
-			} else {
-				$after = 'comment';
-			}
-			if (!isset($columns['contact_name'])) {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD COLUMN ' . $db->quoteName('contact_name') . ' VARCHAR(150) NULL DEFAULT NULL'
-					. ' AFTER ' . $db->quoteName($after)
-				)->execute();
-				$columns['contact_name'] = true;
-				$after = 'contact_name';
-			} else {
-				$after = 'contact_name';
-			}
-			if (!isset($columns['contact_phone'])) {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD COLUMN ' . $db->quoteName('contact_phone') . ' VARCHAR(50) NULL DEFAULT NULL'
-					. ' AFTER ' . $db->quoteName($after)
-				)->execute();
-			}
-
-			$ensured = true;
-			return true;
 		} catch (\Throwable $e) {
-			$ensured = false;
 			return false;
 		}
+		foreach ($names as $name) {
+			if (!isset($columns[$name])) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	public static function ensureBookingCommentColumns(DatabaseInterface $db): bool
+	{
+		return self::bookingTableHasColumns($db, ['comment', 'contact_name', 'contact_phone']);
 	}
 
 	public static function ensureStockServiceIdColumn(DatabaseInterface $db): bool
 	{
-		try {
-			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			if (isset($columns['stock_service_id'])) {
-				return true;
-			}
-			$after = 'service_name';
-			if (isset($columns['search_slot_id'])) {
-				$after = 'search_slot_id';
-			} elseif (isset($columns['course_slot_id'])) {
-				$after = 'course_slot_id';
-			}
-			$db->setQuery(
-				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-				. ' ADD COLUMN ' . $db->quoteName('stock_service_id') . ' BIGINT UNSIGNED DEFAULT NULL'
-				. ' AFTER ' . $db->quoteName($after)
-			)->execute();
-			try {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD KEY ' . $db->quoteName('idx_stock_service_id') . ' (' . $db->quoteName('stock_service_id') . ')'
-				)->execute();
-			} catch (\Throwable $e) {
-			}
-
-			return true;
-		} catch (\Throwable $e) {
-			return false;
-		}
+		return self::bookingTableHasColumns($db, ['stock_service_id']);
 	}
 
 	public static function ensureServiceFullNameColumn(DatabaseInterface $db): bool
 	{
-		try {
-			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			if (isset($columns['service_full_name'])) {
-				return true;
-			}
-			$db->setQuery(
-				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-				. ' ADD COLUMN ' . $db->quoteName('service_full_name') . ' VARCHAR(255) NULL DEFAULT NULL'
-				. ' AFTER ' . $db->quoteName('service_name')
-			)->execute();
-
-			return true;
-		} catch (\Throwable $e) {
-			return false;
-		}
+		return self::bookingTableHasColumns($db, ['service_full_name']);
 	}
 
 	public static function ensureRemindMinutesColumn(DatabaseInterface $db): bool
 	{
-		try {
-			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			if (isset($columns['remind_minutes'])) {
-				return true;
-			}
-			$after = isset($columns['source']) ? 'source' : 'service_name';
-			$db->setQuery(
-				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-				. ' ADD COLUMN ' . $db->quoteName('remind_minutes') . ' SMALLINT UNSIGNED NULL DEFAULT NULL'
-				. ' AFTER ' . $db->quoteName($after)
-			)->execute();
-
-			return true;
-		} catch (\Throwable $e) {
-			return false;
-		}
+		return self::bookingTableHasColumns($db, ['remind_minutes']);
 	}
 
 	public static function ensureSourceColumn(DatabaseInterface $db): bool
 	{
-		try {
-			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			if (isset($columns['source'])) {
-				return true;
-			}
-			$after = 'service_name';
-			if (isset($columns['contact_phone'])) {
-				$after = 'contact_phone';
-			} elseif (isset($columns['comment'])) {
-				$after = 'comment';
-			}
-			$db->setQuery(
-				'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-				. ' ADD COLUMN ' . $db->quoteName('source') . ' VARCHAR(32) NULL DEFAULT NULL'
-				. ' AFTER ' . $db->quoteName($after)
-			)->execute();
-
-			return true;
-		} catch (\Throwable $e) {
-			return false;
-		}
+		return self::bookingTableHasColumns($db, ['source']);
 	}
 
 	public static function restoreStockOffer(DatabaseInterface $db, int $stockServiceId, int $masterId): void

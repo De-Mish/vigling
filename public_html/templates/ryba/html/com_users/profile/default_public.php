@@ -1064,11 +1064,20 @@ if (empty($isLkEmbed)) {
 		<div class="masters__gall-small">
 			<span class="masters__gall-small-count"><i>Еще <?php echo (int) $portfolioCountTotal; ?><br> фотографий</i></span>
 			<div class="masters__small-img">
+				<?php $portfolioEagerLimit = 3; ?>
 				<?php foreach ($portfolioSlides as $slideIdx => $slide) : ?>
-					<div class="masters__small-img-item<?php echo (int) $slideIdx === 0 ? ' is-current' : ''; ?>" style="width: 54px; display: inline-block;" data-full-src="<?php echo $this->escape($slide['full']); ?>">
-						<img src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" loading="lazy" decoding="async">
+					<?php $slideDeferred = (int) $slideIdx >= $portfolioEagerLimit; ?>
+					<div class="masters__small-img-item<?php echo (int) $slideIdx === 0 ? ' is-current' : ''; ?><?php echo $slideDeferred ? ' is-deferred' : ''; ?>" style="width: 54px; display: inline-block;" data-full-src="<?php echo $this->escape($slide['full']); ?>">
+						<?php if ($slideDeferred) : ?>
+						<img data-src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" decoding="async">
+						<?php else : ?>
+						<img src="<?php echo $this->escape($slide['thumb']); ?>" alt="" width="54" height="54" decoding="async">
+						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
+				<?php if ($portfolioCountTotal > $portfolioEagerLimit) : ?>
+					<button type="button" class="masters__small-img-more" data-vg-gallery-more aria-label="Показать все фотографии">+<?php echo (int) ($portfolioCountTotal - $portfolioEagerLimit); ?></button>
+				<?php endif; ?>
 			</div>
 			<div class="clearFloat"></div>
 		</div>
@@ -1077,6 +1086,46 @@ if (empty($isLkEmbed)) {
 	<div class="clearFloat"></div>
 </div>
 
+<?php
+// TEMPORARY: online booking is paused except for allowlisted masters (see BookingPauseHelper).
+require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
+$bookingPaused = empty($isLkEmbed)
+	&& (int) $currentUser->id !== $profileOwnerId
+	&& \Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($profileOwnerId);
+if ($bookingPaused) : ?>
+<style>
+	.vg-booking-paused { margin: 0 0 16px; padding: 14px 16px; border-radius: 12px; background: #FFF4D1; border-left: 4px solid #F9CE54; color: #17150F; font-size: 15px; line-height: 1.45; font-weight: 600; }
+	html body .master__services .btn_add-master { opacity: .4; cursor: not-allowed; }
+</style>
+<script>
+(function () {
+	var message = <?php echo json_encode(\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE, JSON_UNESCAPED_UNICODE); ?>;
+	window.addEventListener('click', function (event) {
+		var target = event.target && event.target.closest ? event.target.closest('.btn_add-master, [data-target="#zapis"]') : null;
+		if (!target) {
+			return;
+		}
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		var banner = document.querySelector('.vg-booking-paused');
+		if (banner && banner.scrollIntoView) {
+			banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}, true);
+	document.addEventListener('DOMContentLoaded', function () {
+		var container = document.querySelector('section.master__services > .container');
+		if (!container) {
+			return;
+		}
+		var banner = document.createElement('div');
+		banner.className = 'vg-booking-paused';
+		banner.setAttribute('role', 'status');
+		banner.textContent = message;
+		container.insertBefore(banner, container.firstChild);
+	});
+})();
+</script>
+<?php endif; ?>
 <section class="master__services master__services--fullbleed master__block master__block--services">
 	<div class="container">
 		<style>
@@ -2004,7 +2053,9 @@ if (empty($isLkEmbed)) {
 								<?php if ($courseCategoryTitle !== '') : ?>
 								<div class="stockList__item-coll course__coll1b"><?php echo $this->escape($courseCategoryTitle); ?></div>
 								<?php endif; ?>
+								<?php if ($courseDescription === '' || $courseDescription !== $courseTitle) : ?>
 								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($courseDescription !== '' ? $courseDescription : 'Описание курса не заполнено'); ?></div>
+								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll4"><?php echo number_format($coursePrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
 								<div class="stockList__item-coll stock__coll5"><?php echo $courseDurationMin; ?> мин</div><br>
 								<div class="stockList__item-coll stock__coll6 course__seats<?php echo $courseIsFull ? ' is-full' : ''; ?>">Свободно мест: <?php echo $courseSeatsLeft; ?> из <?php echo $courseCapacityTotal; ?></div>
@@ -2096,11 +2147,10 @@ if (empty($isLkEmbed)) {
 									<img src="<?php echo $this->escape($vgImageUrl($searchMediaUrl, true)); ?>" alt="<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?>" style="max-width:180px; border-radius:8px;" loading="lazy">
 								</div>
 								<?php endif; ?>
-								<div class="stockList__item-coll stock__coll1"><?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?></div>
 								<?php if ($searchCategoryTitle !== '') : ?>
 								<div class="stockList__item-coll course__coll1b"><?php echo $this->escape($searchCategoryTitle); ?></div>
 								<?php endif; ?>
-								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($searchDescription !== '' ? $searchDescription : 'Описание поиска не заполнено'); ?></div>
+								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($searchDescription !== '' ? $searchDescription : ($searchTitle !== '' ? $searchTitle : 'Описание поиска не заполнено')); ?></div>
 								<div class="stockList__item-coll stock__coll4"><?php echo number_format($searchPrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
 								<div class="stockList__item-coll stock__coll5"><?php echo $searchDurationMin; ?> мин</div><br>
 								<div class="stockList__item-coll stock__coll6 course__seats<?php echo $searchIsFull ? ' is-full' : ''; ?>">Свободно мест: <?php echo $searchSeatsLeft; ?> из <?php echo $searchCapacityTotal; ?></div>

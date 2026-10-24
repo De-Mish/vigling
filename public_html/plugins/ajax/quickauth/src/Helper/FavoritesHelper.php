@@ -17,31 +17,6 @@ final class FavoritesHelper
 
 	public static function ensureTable(DatabaseInterface $db): void
 	{
-		$table = self::tableName($db);
-		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
-		if (!$db->loadResult()) {
-			$db->setQuery(
-				'CREATE TABLE IF NOT EXISTS ' . $db->quoteName('#__vigling_user_favorites') . " (
-					`id` int unsigned NOT NULL AUTO_INCREMENT,
-					`user_id` int NOT NULL,
-					`master_id` int NOT NULL,
-					`comment` varchar(90) NOT NULL DEFAULT '',
-					`created_at` datetime NOT NULL,
-					PRIMARY KEY (`id`),
-					UNIQUE KEY `uniq_user_master` (`user_id`,`master_id`),
-					KEY `idx_master_id` (`master_id`)
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-			)->execute();
-			return;
-		}
-
-		$db->setQuery('SHOW COLUMNS FROM ' . $db->quoteName('#__vigling_user_favorites') . ' LIKE ' . $db->quote('comment'));
-		if (!$db->loadResult()) {
-			$db->setQuery(
-				'ALTER TABLE ' . $db->quoteName('#__vigling_user_favorites')
-				. ' ADD ' . $db->quoteName('comment') . " varchar(90) NOT NULL DEFAULT ''"
-			)->execute();
-		}
 	}
 
 	public static function listForUser(DatabaseInterface $db, int $userId): array

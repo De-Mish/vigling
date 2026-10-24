@@ -81,7 +81,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			} catch (\Throwable $e) {
 			}
 		}
-		$durationMin = (int) $input->post->get('duration_min', 60);
+		$durationMin = max(15, min(480, (int) $input->post->get('duration_min', 60)));
+		$serviceName = mb_substr(trim(strip_tags($serviceName)), 0, 255);
 		$catalogSvcId = (int) $input->post->get('svc_id', 0);
 		$catalogFullName = '';
 		if ($catalogSvcId <= 0) {
@@ -93,6 +94,11 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		if ($masterId <= 0) {
 			$event->updateEventResult(['success' => false, 'message' => 'Не указан мастер']);
+			return;
+		}
+		require_once JPATH_SITE . '/components/com_orders/src/Helper/BookingPauseHelper.php';
+		if (\Viglin\Component\Orders\Site\Helper\BookingPauseHelper::isPausedFor($masterId) && (int) $user->id !== $masterId) {
+			$event->updateEventResult(['success' => false, 'message' => \Viglin\Component\Orders\Site\Helper\BookingPauseHelper::MESSAGE]);
 			return;
 		}
 		if ($bookingKind !== 'course' && $bookingKind !== 'search' && $serviceName === '') {
@@ -150,7 +156,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
 		if (!$db->loadResult()) {
-			$event->updateEventResult(['success' => false, 'message' => 'Таблица ' . $table . ' не найдена. Выполните миграцию бронирований.']);
+			$event->updateEventResult(['success' => false, 'message' => 'Запись временно недоступна. Попробуйте позже.']);
 			return;
 		}
 		$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
@@ -176,7 +182,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
 
-		$bookingKind = in_array($bookingKind, ['service', 'stock', 'course', 'search', 'journal'], true) ? $bookingKind : 'service';
+		$bookingKind = in_array($bookingKind, ['service', 'stock', 'course', 'search'], true) ? $bookingKind : 'service';
 		if ($bookingKind === 'course' && !$hasCourseBookingColumns) {
 			$event->updateEventResult(['success' => false, 'message' => 'Для записи на курс не выполнена миграция booking-схемы']);
 			return;
@@ -304,6 +310,12 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$event->updateEventResult(['success' => false, 'message' => 'Услуга не найдена в прайсе мастера']);
 				return;
 			}
+			if ($catalogItem === null) {
+				$catalogSvcId = 0;
+				$catalogTagId = 0;
+				$catalogPrice = 0;
+				$catalogTimeSum = 0;
+			}
 			if ($catalogItem !== null) {
 				if (($catalogItem['name'] ?? '') !== '') {
 					$serviceName = (string) $catalogItem['name'];
@@ -323,6 +335,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$timeTo->modify('+' . max(15, min(480, $durationMin)) . ' minutes');
 				$timeToDb = $timeTo->format('Y-m-d H:i:s');
 			}
+		}
+
+		if ($bookingKind !== 'service' && $bookingKind !== 'stock') {
+			$catalogSvcId = 0;
+			$catalogTagId = 0;
+			$catalogPrice = 0;
+			$catalogTimeSum = 0;
 		}
 
 		$occupiedMin = $durationMin;
@@ -361,7 +380,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$courseContext,
 			$searchContext,
 			$hasCourseBookingColumns,
-			$hasSearchBookingColumns
+			$hasSearchBookingColumns,
+			$timeToDb
 		);
 		if ($conflict !== null) {
 			$event->updateEventResult(['success' => false, 'message' => $conflict]);
@@ -454,7 +474,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$courseContext,
 				$searchContext,
 				$hasCourseBookingColumns,
-				$hasSearchBookingColumns
+				$hasSearchBookingColumns,
+				$timeToDb
 			);
 			if ($conflict !== null) {
 				$db->transactionRollback();
@@ -479,7 +500,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				} catch (\Throwable $rollbackError) {
 				}
 			}
-			$msg = $e->getMessage();
+			$rawMsg = $e->getMessage();
+			$msg = $rawMsg;
 			if (strpos($msg, 'Duplicate entry') !== false) {
 				if (strpos($msg, 'uniq_user_course_id') !== false) {
 					$msg = 'Вы уже записаны на этот курс';
@@ -497,6 +519,19 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$msg = 'Курс или слот курса не найден';
 			} elseif ($msg === 'search-not-found') {
 				$msg = 'Предложение поиска или слот не найден';
+			}
+			$knownMessages = [
+				'Вы уже записаны на этот курс',
+				'Вы уже записаны на это предложение поиска',
+				'Запись на это время уже есть',
+				'Акция закончилась',
+				'Акция не найдена',
+				'Курс или слот курса не найден',
+				'Предложение поиска или слот не найден',
+			];
+			if (!in_array($msg, $knownMessages, true)) {
+				\Joomla\CMS\Log\Log::add('lkbooking save failed: ' . $rawMsg, \Joomla\CMS\Log\Log::ERROR, 'lkbooking');
+				$msg = 'Не удалось сохранить запись. Попробуйте ещё раз.';
 			}
 			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения: ' . $msg]);
 			return;
@@ -557,7 +592,8 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		?array $courseContext,
 		?array $searchContext,
 		bool $hasCourseBookingColumns,
-		bool $hasSearchBookingColumns
+		bool $hasSearchBookingColumns,
+		string $presenceEndDb = ''
 	): ?string {
 		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId)) {
 			return 'Вы уже записаны на этот курс';
@@ -598,6 +634,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			if ($capacityTotal > 0 && self::countSearchBookings($db, $searchId, 0) >= $capacityTotal) {
 				return 'На этом предложении поиска больше нет свободных мест';
 			}
+		}
+
+		if (self::hasUserBookingOverlap($db, $tableName, $userId, $masterId, $timeDb, $presenceEndDb !== '' ? $presenceEndDb : $timeToDb)) {
+			return 'У вас уже есть запись на это время к другому специалисту';
 		}
 
 		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : 0)) {
@@ -745,6 +785,28 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 
 		return ['ok' => true, 'message' => ''];
+	}
+
+	/**
+	 * One person cannot be at two specialists at once, whether the person is a client or a specialist
+	 * attending someone else's service or course. Self-bookings (master_id = user_id) are made for
+	 * people outside the site and are not counted.
+	 */
+	private static function hasUserBookingOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $userId, int $masterId, string $startUtc, string $endUtc): bool
+	{
+		if ($userId <= 0 || $userId === $masterId) {
+			return false;
+		}
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName($tableName))
+			->where($db->quoteName('user_id') . ' = ' . $userId)
+			->where($db->quoteName('master_id') . ' <> ' . $userId)
+			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+		$db->setQuery($query);
+
+		return ((int) $db->loadResult()) > 0;
 	}
 
 	private static function occupiedEndSql(\Joomla\Database\DatabaseInterface $db, string $tableName): string

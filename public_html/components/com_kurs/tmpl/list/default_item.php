@@ -139,7 +139,7 @@ if ($slotStartUtc !== '') {
 						<span class="category_cinfo-chip"><?php echo htmlspecialchars($categoryTitle, ENT_QUOTES, 'UTF-8'); ?></span>
 					<?php endif; ?>
 				</div>
-				<?php if ($courseDescription !== '') : ?>
+				<?php if ($courseDescription !== '' && $courseDescription !== $courseTitle) : ?>
 					<span class="category_cinfo-spec"><?php echo htmlspecialchars(mb_substr($courseDescription, 0, 150), ENT_QUOTES, 'UTF-8') . (mb_strlen($courseDescription) > 150 ? '…' : ''); ?></span>
 				<?php endif; ?>
 				<span class="card-facts">

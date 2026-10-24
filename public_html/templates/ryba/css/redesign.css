@@ -4105,3 +4105,143 @@ html body .pagination li a.active::before {
     margin-top: 10px;
   }
 }
+
+/* Stage 22: own lightbox (replaces fancyBox) */
+html.vg-lb-open { overflow: hidden; }
+.vg-lb { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center; }
+.vg-lb[hidden] { display: none; }
+.vg-lb__backdrop { position: absolute; inset: 0; background: rgba(17, 17, 17, .86); }
+.vg-lb__stage { position: relative; max-width: 94vw; max-height: 86vh; display: flex; align-items: center; justify-content: center; }
+.vg-lb__stage img { display: block; max-width: 94vw; max-height: 86vh; width: auto; height: auto; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, .4); }
+.vg-lb__html { max-width: min(92vw, 520px); max-height: 86vh; overflow: auto; padding: 24px; border-radius: 20px; background: #fff; color: #111; }
+.vg-lb__caption { position: absolute; left: 0; right: 0; bottom: 14px; padding: 0 56px; text-align: center; color: #fff; font: 500 14px/20px var(--rd-font, Inter, sans-serif); }
+.vg-lb__caption[hidden] { display: none; }
+.vg-lb__close, .vg-lb__nav { position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: #111; font-size: 28px; line-height: 1; cursor: pointer; }
+.vg-lb__close { top: 12px; right: 12px; }
+.vg-lb__nav { top: 50%; transform: translateY(-50%); }
+.vg-lb__nav--prev { left: 12px; }
+.vg-lb__nav--next { right: 12px; }
+.vg-lb__nav[hidden] { display: none; }
+
+/* Stage 23: master profile cleanup (call button, online dot, service groups without gaps) */
+html body #easyprofile.view_profile-public .rd-pf-cta,
+html body #easyprofile.view_profile-public .rd-pf-cta__call,
+html body #easyprofile.view_profile-public .masters__big-info-head-master-online {
+  display: none !important;
+}
+
+html body section.master__block--services .accordionItem:not(:last-child) {
+  margin-bottom: 2px;
+}
+
+/* Empty day on the appointments page: quiet grey line with a gold dot */
+html body .appointments-page .alert.alert-info:is(.appointments-day-empty, .appointments-empty--day):not([hidden]) {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #F6F6F4 !important;
+  box-shadow: none !important;
+  color: #444 !important;
+  font-size: 15px;
+  line-height: 1.4;
+}
+html body .appointments-page .alert.alert-info:is(.appointments-day-empty, .appointments-empty--day)::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F9CE54;
+}
+
+/* "+" booking button: the cross is drawn with two bars so it is exactly centered in the circle (a text glyph sits low) */
+html body .btn_add-master.plus::before,
+html body .btn_add-master.plus::after,
+html body .btn_add-stock.plus-stock::before,
+html body .btn_add-stock.plus-stock::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 2.5px;
+  margin: -1.25px 0 0 -7px;
+  border-radius: 1.5px;
+  background: currentColor;
+}
+html body .btn_add-master.plus::after,
+html body .btn_add-stock.plus-stock::after {
+  transform: rotate(90deg);
+}
+html body .btn_add-master.plus,
+html body .btn_add-stock.plus-stock {
+  padding: 0;
+  line-height: 0;
+}
+
+/* desktop profile: duration under the service name, aligned to its left edge */
+@media (min-width: 1021px) and (not (display-mode: standalone)) and (not (display-mode: minimal-ui)) {
+  html body .master__services--fullbleed .priceList__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name price"
+      "dur price"
+      "rec rec";
+    align-items: center;
+    column-gap: 16px;
+    row-gap: 4px;
+  }
+  html body .master__services--fullbleed .priceList__item > .priceList__item-coll {
+    float: none;
+    width: auto;
+    margin: 0;
+    min-width: 0;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-name {
+    grid-area: name;
+    align-self: end;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-price {
+    grid-area: price;
+    white-space: nowrap;
+    text-align: right;
+  }
+  html body .master__services--fullbleed .priceList__item > .price__coll3 {
+    grid-area: dur;
+    justify-self: start;
+    align-self: start;
+    white-space: nowrap;
+  }
+  html body .master__services--fullbleed .priceList__item > .clearFloat {
+    display: none;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-rec {
+    grid-area: rec;
+  }
+  html body .master__services--fullbleed .priceList__item .btn_add-master.plus {
+    top: 50%;
+    margin-top: -18px;
+  }
+}
+
+/* portfolio strip: first 3 thumbs eager, rest on demand */
+html body #easyprofile.view_profile-public .masters__small-img-item.is-deferred {
+  display: none !important;
+}
+html body #easyprofile.view_profile-public .masters__small-img-more {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--rd-surface-2, #f1efe9);
+  color: var(--rd-ink, #17150f);
+  font: 700 15px/54px var(--rd-font, inherit);
+  text-align: center;
+  cursor: pointer;
+}

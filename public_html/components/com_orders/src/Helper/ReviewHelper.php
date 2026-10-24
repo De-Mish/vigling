@@ -19,55 +19,13 @@ class ReviewHelper
 			return $ensured;
 		}
 		try {
-			$prefix = $db->getPrefix();
-			$table = $prefix . 'vigling_reviews';
-			$db->setQuery('SHOW TABLES LIKE ' . $db->quote($table));
-			if (!$db->loadResult()) {
-				$db->setQuery(
-					'CREATE TABLE ' . $db->quoteName($table) . ' ('
-					. $db->quoteName('id') . ' INT UNSIGNED NOT NULL AUTO_INCREMENT,'
-					. $db->quoteName('booking_id') . ' INT UNSIGNED NOT NULL,'
-					. $db->quoteName('from_user_id') . ' INT UNSIGNED NOT NULL,'
-					. $db->quoteName('to_user_id') . ' INT UNSIGNED NOT NULL,'
-					. $db->quoteName('direction') . ' VARCHAR(24) NOT NULL,'
-					. $db->quoteName('rating') . ' TINYINT UNSIGNED NOT NULL,'
-					. $db->quoteName('review_text') . ' VARCHAR(1000) NULL DEFAULT NULL,'
-					. $db->quoteName('is_anonymous') . ' TINYINT(1) NOT NULL DEFAULT 0,'
-					. $db->quoteName('created') . ' DATETIME NOT NULL,'
-					. $db->quoteName('modified') . ' DATETIME NOT NULL,'
-					. ' PRIMARY KEY (' . $db->quoteName('id') . '),'
-					. ' UNIQUE KEY ' . $db->quoteName('uniq_booking_direction') . ' (' . $db->quoteName('booking_id') . ', ' . $db->quoteName('direction') . '),'
-					. ' KEY ' . $db->quoteName('idx_to_user') . ' (' . $db->quoteName('to_user_id') . ', ' . $db->quoteName('direction') . ')'
-					. ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
-				)->execute();
-			}
-
-			$columns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
-			$after = isset($columns['comment']) ? 'comment' : 'service_name';
-			if (!isset($columns['client_after_comment'])) {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD COLUMN ' . $db->quoteName('client_after_comment') . ' VARCHAR(500) NULL DEFAULT NULL'
-					. ' AFTER ' . $db->quoteName($after)
-				)->execute();
-				$after = 'client_after_comment';
-			} else {
-				$after = 'client_after_comment';
-			}
-			if (!isset($columns['master_after_comment'])) {
-				$db->setQuery(
-					'ALTER TABLE ' . $db->quoteName('#__vigling_bookings')
-					. ' ADD COLUMN ' . $db->quoteName('master_after_comment') . ' VARCHAR(500) NULL DEFAULT NULL'
-					. ' AFTER ' . $db->quoteName($after)
-				)->execute();
-			}
-
-			$ensured = true;
-			return true;
+			$db->setQuery('SHOW TABLES LIKE ' . $db->quote($db->getPrefix() . 'vigling_reviews'));
+			$ensured = (bool) $db->loadResult();
 		} catch (\Throwable $e) {
 			$ensured = false;
-			return false;
 		}
+
+		return $ensured;
 	}
 
 	public static function normalizeComment(string $raw): string

@@ -196,6 +196,17 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 
+		if (!$this->allowResendByIp()) {
+			$event->updateEventResult([
+				'success' => false,
+				'message' => Text::_('PLG_AJAX_QUICKAUTH_RESEND_GENERIC'),
+				'reason_key' => 'rate_limited',
+				'requires_verification' => true,
+				'resend_allowed' => false,
+			]);
+			return;
+		}
+
 		try {
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$userId = (int) ($app->getIdentity()->id ?? 0);
@@ -240,6 +251,46 @@ final class Quickauth extends CMSPlugin implements SubscriberInterface
 				'resend_allowed' => false,
 			]);
 			return;
+		}
+	}
+
+	private function allowResendByIp(): bool
+	{
+		$limit = 10;
+		$window = 3600;
+		$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+		if ($ip === '') {
+			return true;
+		}
+		$dir = JPATH_CACHE . '/quickauth_resend';
+		try {
+			if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+				return true;
+			}
+			$file = $dir . '/' . sha1($ip) . '.json';
+			$handle = @fopen($file, 'c+');
+			if (!$handle) {
+				return true;
+			}
+			flock($handle, LOCK_EX);
+			$raw = stream_get_contents($handle);
+			$stamps = json_decode($raw ?: '[]', true);
+			$stamps = is_array($stamps) ? $stamps : [];
+			$now = time();
+			$stamps = array_values(array_filter($stamps, static fn ($t) => is_int($t) && $t > $now - $window));
+			$allowed = count($stamps) < $limit;
+			if ($allowed) {
+				$stamps[] = $now;
+			}
+			ftruncate($handle, 0);
+			rewind($handle);
+			fwrite($handle, json_encode($stamps));
+			flock($handle, LOCK_UN);
+			fclose($handle);
+
+			return $allowed;
+		} catch (\Throwable $e) {
+			return true;
 		}
 	}
 

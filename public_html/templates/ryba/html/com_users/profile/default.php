@@ -985,7 +985,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 														<?php if ($courseCategoryTitle !== '') : ?>
 														<span class="service-name">Категория: <?php echo $this->escape($courseCategoryTitle); ?></span>
 														<?php endif; ?>
-														<?php if ($courseDescription !== '') : ?>
+														<?php if ($courseDescription !== '' && $courseDescription !== $courseTitle) : ?>
 														<span class="course-description"><label>Описание:</label><?php echo $this->escape($courseDescription); ?></span>
 														<?php endif; ?>
 														<span class="price"><label>Стоимость:</label><?php echo number_format((int) $coursePrice, 0, '', ' '); ?>&nbsp;₽</span>
@@ -1039,7 +1039,7 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 													<?php if (trim((string) ($archivedCourse['category_title'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Категория:</label> <?php echo $this->escape(trim((string) $archivedCourse['category_title'])); ?></div>
 													<?php endif; ?>
-													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '') : ?>
+													<?php if (trim((string) ($archivedCourse['description'] ?? '')) !== '' && trim((string) $archivedCourse['description']) !== $archivedTitle) : ?>
 													<div class="stocks-archive__row"><label>Описание:</label> <?php echo $this->escape(trim((string) $archivedCourse['description'])); ?></div>
 													<?php endif; ?>
 													<div class="stocks-archive__row"><label>Стоимость:</label> <?php echo number_format((int) ($archivedCourse['price'] ?? 0), 0, '', ' '); ?> ₽</div>
@@ -1092,16 +1092,17 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 												}
 											}
 										?>
+										<?php $searchShownDescription = $searchDescription !== '' ? $searchDescription : $searchTitle; ?>
 										<label class="checkbox type_master_open">
-											<?php echo $this->escape($searchTitle !== '' ? $searchTitle : 'Поиск моделей'); ?><b></b>
+											<b></b>
 											<div class="flex_wrap">
 												<div class="service__wrap">
 													<p class="service__item service__item--readonly course__item--readonly">
 														<?php if ($searchCategoryTitle !== '') : ?>
 														<span class="service-name">Категория: <?php echo $this->escape($searchCategoryTitle); ?></span>
 														<?php endif; ?>
-														<?php if ($searchDescription !== '') : ?>
-														<span class="course-description"><label>Описание:</label><?php echo $this->escape($searchDescription); ?></span>
+														<?php if ($searchShownDescription !== '') : ?>
+														<span class="course-description"><label>Описание:</label><?php echo $this->escape($searchShownDescription); ?></span>
 														<?php endif; ?>
 														<span class="price"><label>Стоимость:</label><?php echo number_format((int) $searchPrice, 0, '', ' '); ?>&nbsp;₽</span>
 														<span class="time"><label>Время:</label><?php echo $searchDurationMin; ?>&nbsp;мин.</span>
@@ -1147,7 +1148,9 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 											?>
 											<article class="stocks-archive__card">
 												<div class="stocks-archive__card-body">
+													<?php if (trim((string) ($archivedSearch['description'] ?? '')) === '') : ?>
 													<div class="stocks-archive__name"><?php echo $this->escape($archivedTitle !== '' ? $archivedTitle : 'Поиск моделей'); ?></div>
+													<?php endif; ?>
 													<?php if (trim((string) ($archivedSearch['category_title'] ?? '')) !== '') : ?>
 													<div class="stocks-archive__row"><label>Категория:</label> <?php echo $this->escape(trim((string) $archivedSearch['category_title'])); ?></div>
 													<?php endif; ?>
