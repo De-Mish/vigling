@@ -454,6 +454,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				return;
 			}
 			$lockHeld = true;
+			if (!OrderTable::acquireUserBookingLocks($db, [(int) $user->id])) {
+				$event->updateEventResult(['success' => false, 'message' => 'Сейчас идёт другая запись этого клиента, попробуйте ещё раз']);
+				return;
+			}
 
 			$db->transactionStart();
 			$transactionStarted = true;

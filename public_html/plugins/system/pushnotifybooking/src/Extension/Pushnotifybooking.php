@@ -91,6 +91,9 @@ final class Pushnotifybooking extends CMSPlugin implements SubscriberInterface
 		}
 		$order = self::$deletedOrder;
 		self::$deletedOrder = null;
+		if (self::notificationsSilenced()) {
+			return;
+		}
 		BookingNotifyHelper::notifyCancelled($order);
 	}
 
@@ -125,12 +128,22 @@ final class Pushnotifybooking extends CMSPlugin implements SubscriberInterface
 		$newTime = isset($table->time) ? trim((string) $table->time) : '';
 		$oldTime = self::$beforeStoreTime !== null ? trim((string) self::$beforeStoreTime) : null;
 		self::$beforeStoreTime = null;
+		if (self::notificationsSilenced()) {
+			return;
+		}
 		$isReschedule = $oldTime !== null && $newTime !== '' && self::timesDiffer($oldTime, $newTime);
 		if ($isReschedule) {
 			BookingNotifyHelper::notifyRescheduled($order);
 		} elseif ($oldTime === null) {
 			BookingNotifyHelper::notifyConfirmedOrRescheduled($order);
 		}
+	}
+
+	private static function notificationsSilenced(): bool
+	{
+		$class = \Viglin\Component\Orders\Site\Table\OrderTable::class;
+
+		return class_exists($class, false) && $class::notificationsSilenced();
 	}
 
 	private function isBookingsTable($table): bool

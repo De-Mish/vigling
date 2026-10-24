@@ -67,7 +67,7 @@ class OrdersController extends BaseController
 			return;
 		}
 		if ($openReply !== null) {
-			$this->afterGroupBookingRemoved($groupDb, $openReply, true);
+			$this->afterGroupBookingRemoved($groupDb, $openReply);
 		}
 		$this->setMessage('Запись отменена');
 		$this->setRedirectAndExit();
@@ -248,6 +248,11 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
+			if (!OrderTable::acquireUserBookingLocks($db, [(int) $user->id])) {
+				$this->setMessage('Сейчас идёт другая запись этого клиента, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
@@ -437,6 +442,11 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
+			if (!OrderTable::acquireUserBookingLocks($db, [(int) $table->user_id])) {
+				$this->setMessage('Сейчас идёт другая запись этого клиента, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
@@ -515,7 +525,7 @@ class OrdersController extends BaseController
 			return;
 		}
 		if ($openReply !== null) {
-			$this->afterGroupBookingRemoved($groupDb, $openReply, false);
+			$this->afterGroupBookingRemoved($groupDb, $openReply);
 		}
 		$this->setMessage('Запись отменена');
 		$this->setRedirectAndExit();
@@ -604,6 +614,11 @@ class OrdersController extends BaseController
 				return;
 			}
 			$lockHeld = true;
+			if (!OrderTable::acquireUserBookingLocks($db, [(int) $table->user_id])) {
+				$this->setMessage('Сейчас идёт другая запись этого клиента, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 			if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $occupiedToDb)) {
 				$this->setMessage('Это время занято курсом', 'error');
 				$this->setRedirectAndExit();
@@ -1163,7 +1178,13 @@ class OrdersController extends BaseController
 			$masterTitle = 'Участник согласился на перенос';
 			$message = 'Вы согласились на перенос. Новое время вступит в силу, когда мастер подтвердит перенос.';
 		} else {
-			if (!$table->delete($bookingId)) {
+			OrderTable::silenceNotifications(true);
+			try {
+				$deleted = $table->delete($bookingId);
+			} finally {
+				OrderTable::silenceNotifications(false);
+			}
+			if (!$deleted) {
 				$this->setMessage($table->getError() ?: 'Не удалось отказаться от записи', 'error');
 				$this->setRedirectAndExit();
 				return;
@@ -1186,24 +1207,15 @@ class OrdersController extends BaseController
 
 	/**
 	 * A participant's booking disappeared while a request was open (cancelled by the person or by the master).
+	 * The standard cancellation push already tells the other side, so only the request itself is settled here.
 	 *
 	 * @param array<string,mixed> $openReply
 	 */
-	private function afterGroupBookingRemoved(\Joomla\Database\DatabaseInterface $db, array $openReply, bool $byParticipant): void
+	private function afterGroupBookingRemoved(\Joomla\Database\DatabaseInterface $db, array $openReply): void
 	{
 		$proposalId = (int) $openReply['proposal_id'];
 		GroupRescheduleHelper::loadNotices();
 		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::resolveByRef(GroupRescheduleHelper::REF_PARTICIPANT, $proposalId, (int) $openReply['user_id']);
-		if ($byParticipant) {
-			$userName = GroupRescheduleHelper::userName((int) $openReply['user_id']);
-			$label = GroupRescheduleHelper::kindLabel((string) $openReply['kind']);
-			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo(
-				(int) $openReply['master_id'],
-				'group_reschedule_reply',
-				'Участник отменил запись',
-				($userName !== '' ? $userName : 'Участник') . ' отменил(а) запись: ' . $label . ' «' . (string) $openReply['title'] . '».'
-			);
-		}
 		$this->settleGroupProposal($db, $proposalId, (string) $openReply['reply_status'] === 'pending');
 	}
 
@@ -1384,6 +1396,7 @@ class OrdersController extends BaseController
 		}
 
 		$moved = 0;
+		$movedUserIds = [];
 		$removed = [];
 		$lockHeld = false;
 		$transactionStarted = false;
@@ -1392,6 +1405,13 @@ class OrdersController extends BaseController
 				return self::groupApplyResult(false, 'Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз');
 			}
 			$lockHeld = true;
+			$participantUserIds = [];
+			foreach ($replyByBooking as $participantReply) {
+				$participantUserIds[] = (int) $participantReply['user_id'];
+			}
+			if (!OrderTable::acquireUserBookingLocks($db, $participantUserIds)) {
+				return self::groupApplyResult(false, 'Сейчас идёт другая запись участника, попробуйте ещё раз');
+			}
 			if (self::hasCourseSlotsOverlap($db, $masterId, $newStartDb, $newEndDb, $isCourse ? $slotId : 0)) {
 				return self::groupApplyResult(false, $isCourse ? 'Это время занято другим курсом' : 'Это время занято курсом');
 			}
@@ -1405,6 +1425,7 @@ class OrdersController extends BaseController
 			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
 			$db->transactionStart();
 			$transactionStarted = true;
+			OrderTable::silenceNotifications(true);
 			foreach ($slotBookingIds as $bookingId) {
 				$table = new OrderTable($db, $dispatcher);
 				if (!$table->load((int) $bookingId) || (int) $table->master_id !== $masterId) {
@@ -1429,6 +1450,9 @@ class OrdersController extends BaseController
 						throw new \RuntimeException($table->getError() ?: 'Ошибка переноса записи');
 					}
 					$moved++;
+					if (!$ownBooking) {
+						$movedUserIds[] = $participantId;
+					}
 					continue;
 				}
 				$table->delete((int) $bookingId);
@@ -1455,11 +1479,23 @@ class OrdersController extends BaseController
 			}
 			return self::groupApplyResult(false, 'Не удалось применить перенос, ничего не изменено. Попробуйте ещё раз.');
 		} finally {
+			OrderTable::silenceNotifications(false);
 			if ($lockHeld) {
 				OrderTable::releaseMasterBookingLock($db, $masterId);
 			}
 		}
 
+		$labelCap = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
+		foreach (array_unique($movedUserIds) as $movedUserId) {
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo(
+				(int) $movedUserId,
+				'group_reschedule_applied',
+				'Перенос подтверждён',
+				$labelCap . ' «' . $title . '» перенесён на '
+					. \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::formatTime((int) $movedUserId, $newStartDb)
+					. '. Ваша запись сохранена.'
+			);
+		}
 		foreach ($removed as [$removedUserId, $reason]) {
 			if ($removedUserId <= 0 || $removedUserId === $masterId) {
 				continue;
