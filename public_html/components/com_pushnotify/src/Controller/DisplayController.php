@@ -264,6 +264,39 @@ class DisplayController extends BaseController
 		}
 	}
 
+	public function getCritical()
+	{
+		$userId = $this->requireUser();
+		if ($userId === null) return;
+
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_pushnotify/src/Helper/CriticalNoticeHelper.php';
+		}
+		$items = \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::listForUser($userId);
+		foreach ($items as &$item) {
+			$item['id'] = (int) $item['id'];
+			$item['requires_action'] = (int) $item['requires_action'] === 1;
+		}
+		unset($item);
+		$this->jsonResponse(['success' => true, 'items' => $items]);
+	}
+
+	public function ackCritical()
+	{
+		$userId = $this->requireUser();
+		if ($userId === null) return;
+
+		if (!Session::checkToken('post')) {
+			$this->jsonResponse(['success' => false, 'message' => 'Неверный токен']);
+			return;
+		}
+		if (!class_exists(\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_pushnotify/src/Helper/CriticalNoticeHelper.php';
+		}
+		$ok = \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::acknowledge($userId, (int) $this->input->post->getInt('id'));
+		$this->jsonResponse(['success' => $ok]);
+	}
+
 	public function getInbox()
 	{
 		$userId = $this->requireUser();

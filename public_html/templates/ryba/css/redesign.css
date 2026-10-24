@@ -4227,3 +4227,154 @@ html body .btn_add-stock.plus-stock {
     margin-top: -18px;
   }
 }
+
+/* portfolio strip: first 3 thumbs eager, rest on demand */
+html body #easyprofile.view_profile-public .masters__small-img-item.is-deferred {
+  display: none !important;
+}
+html body #easyprofile.view_profile-public .masters__small-img-more {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--rd-surface-2, #f1efe9);
+  color: var(--rd-ink, #17150f);
+  font: 700 15px/54px var(--rd-font, inherit);
+  text-align: center;
+  cursor: pointer;
+}
+
+/* critical notices: envelope + must-read modal */
+.vg-crit-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 2147483000;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--rd-accent, #F9CE54);
+  color: var(--rd-ink, #17150F);
+  box-shadow: var(--rd-sh-btn, 0 6px 14px rgba(233, 183, 42, .38));
+  cursor: pointer;
+  animation: vg-crit-pulse 2.4s ease-in-out infinite;
+}
+@media (min-width: 1021px) {
+  .vg-crit-btn { bottom: 24px; right: 24px; }
+}
+.vg-crit-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.vg-crit-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--rd-hot, #C2410C);
+  color: #fff;
+  font: 700 12px/20px var(--rd-font, inherit);
+  text-align: center;
+}
+@keyframes vg-crit-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 206, 84, .55); }
+  50% { box-shadow: 0 0 0 12px rgba(249, 206, 84, 0); }
+}
+.vg-crit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(23, 21, 15, .55);
+}
+html.vg-crit-open { overflow: hidden; }
+.vg-crit-dialog {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 20px;
+  border-radius: var(--rd-r-card, 20px);
+  background: #fff;
+  color: var(--rd-ink, #17150F);
+  font-family: var(--rd-font, inherit);
+}
+.vg-crit-dialog__head { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+.vg-crit-card {
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #F6F4EE;
+}
+.vg-crit-card.is-action {
+  background: var(--rd-accent-soft, #FFF5D1);
+  box-shadow: inset 4px 0 0 var(--rd-accent, #F9CE54);
+}
+.vg-crit-card__title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.vg-crit-card__body { font-size: 14px; line-height: 1.45; white-space: pre-line; }
+.vg-crit-card__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.vg-crit-link,
+.vg-crit-ok,
+.vg-crit-close {
+  display: inline-block;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--rd-r-pill, 999px);
+  font: 700 14px/40px var(--rd-font, inherit);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.vg-crit-link { background: var(--rd-ink, #17150F); color: #fff; }
+.vg-crit-ok { background: var(--rd-accent, #F9CE54); color: var(--rd-ink, #17150F); }
+.vg-crit-close { width: 100%; margin-top: 6px; background: #ECE9E0; color: var(--rd-ink, #17150F); }
+
+/* reschedule request form inside an appointment card */
+.gr-request {
+  margin: 10px 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--rd-accent-soft, #FFF5D1);
+  box-shadow: inset 4px 0 0 var(--rd-accent, #F9CE54);
+}
+.gr-request__title { font-weight: 700; margin-bottom: 6px; }
+.gr-request__times { font-size: 14px; line-height: 1.5; margin-bottom: 10px; }
+.gr-request__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gr-request__actions .btn { min-height: 40px; }
+.gr-request__hint { margin-top: 8px; font-size: 13px; color: var(--rd-ink2, #5B574B); }
+.gr-panel {
+  margin: 10px 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: #F6F4EE;
+}
+.gr-panel__title { font-weight: 700; margin-bottom: 4px; }
+.gr-panel__stats { font-size: 14px; margin-bottom: 10px; }
+.gr-panel__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gr-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ECE9E0;
+}
+.gr-chip--agreed { background: var(--rd-ok-soft, #E4F4EA); color: var(--rd-ok, #17803F); }
+.gr-chip--pending { background: var(--rd-accent-soft, #FFF5D1); }

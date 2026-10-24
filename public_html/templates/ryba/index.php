@@ -675,6 +675,10 @@ $this->setMetaData('viewport', 'width=device-width, initial-scale=1');
 	$pushnotifyIsClientsPage = ($option === 'com_orders' && $view === 'orders' && $layout === 'clients')
 		|| ($pushnotifyIsZapisiTab && $pushnotifyUserIsMaster);
 	?>
+	<?php if ($pushnotifyLoggedIn) : ?>
+	<script>window.VG_CRIT = <?php echo json_encode(['base' => $pushnotifyBase, 'tokenName' => $pushnotifyTokenName, 'user' => (int) $pushnotifyUser->id]); ?>;</script>
+	<script src="<?php echo $rybaAsset('js/critical-notices.js'); ?>" defer></script>
+	<?php endif; ?>
 	<?php if ($pushnotifyHasFirebase) : ?>
 	<script src="<?php echo $pushnotifyRoot; ?>/media/com_pushnotify/js/push-notifications.js"></script>
 	<script>

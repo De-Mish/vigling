@@ -17,6 +17,18 @@ $emptyMessage = $emptyMessage ?? 'Записей пока нет.';
 $utc = new \DateTimeZone('UTC');
 $nowUtc = new \DateTime('now', $utc);
 $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option') === 'com_users';
+
+require_once JPATH_SITE . '/components/com_orders/src/Helper/GroupRescheduleHelper.php';
+$grViewerId = (int) (\Joomla\CMS\Factory::getApplication()->getIdentity()->id ?? 0);
+$grPending = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::pendingRepliesForUser($db, $grViewerId);
+$grMasterOpen = \Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper::openProposalsForMaster($db, $grViewerId);
+$grIso = static function (string $utc): string {
+	try {
+		return (new \DateTimeImmutable($utc, new \DateTimeZone('UTC')))->format('c');
+	} catch (\Throwable $e) {
+		return '';
+	}
+};
 ?>
 <?php if (empty($displayRows)) : ?>
 	<p class="alert alert-info<?php echo $emptyMessage === 'На этот день записей нет.' ? ' appointments-empty--day' : ''; ?>"><?php echo $this->escape($emptyMessage); ?><?php if (!$onProfile) : ?> <a href="<?php echo Route::_('index.php?option=com_users&view=profile'); ?>">Перейти в профиль</a><?php endif; ?></p>
@@ -65,6 +77,38 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 						<div class="appointments-card__label">Контакты</div>
 						<div class="appointments-card__value">Участники внутри слота</div>
 					</div>
+					<?php
+					$grOpen = $grMasterOpen[($isSearchGroup ? 'search' : 'course') . ':' . (int) $row['slot_id']] ?? null;
+					if ($grOpen !== null) :
+						$grProposal = $grOpen['proposal'];
+						$grCounts = $grOpen['counts'];
+						$grNewIso = $grIso((string) $grProposal['new_start_utc']);
+					?>
+					<div class="gr-panel">
+						<div class="gr-panel__title">Перенос ждёт вашего подтверждения</div>
+						<div class="gr-panel__stats">
+							Новое время: <span class="lk-time-utc" data-time-utc="<?php echo $this->escape($grNewIso); ?>">—</span><br>
+							Согласились: <?php echo (int) $grCounts['agreed']; ?>,
+							ждут ответа: <?php echo (int) $grCounts['pending']; ?>,
+							отказались и сняты с записи: <?php echo (int) $grCounts['declined']; ?>.
+							Согласившиеся будут перенесены, не ответившие — сняты с записи. Подтвердить можно, не дожидаясь всех.
+						</div>
+						<div class="gr-panel__actions">
+							<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.applyGroupReschedule'); ?>" class="form-inline" style="display:inline;">
+								<input type="hidden" name="<?php echo $token; ?>" value="1">
+								<input type="hidden" name="proposal_id" value="<?php echo (int) $grProposal['id']; ?>">
+								<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
+								<button type="submit" class="btn btn-sm btn-success"<?php echo (int) $grCounts['pending'] > 0 ? ' onclick="return confirm(\'Не ответили участников: ' . (int) $grCounts['pending'] . '. Они будут сняты с записи. Подтвердить перенос?\');"' : ''; ?>>Подтвердить перенос</button>
+							</form>
+							<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.cancelGroupReschedule'); ?>" class="form-inline" style="display:inline;">
+								<input type="hidden" name="<?php echo $token; ?>" value="1">
+								<input type="hidden" name="proposal_id" value="<?php echo (int) $grProposal['id']; ?>">
+								<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
+								<button type="submit" class="btn btn-sm btn-default" onclick="return confirm('Отменить предложение о переносе? Запись останется на прежнее время.');">Отменить перенос</button>
+							</form>
+						</div>
+					</div>
+					<?php endif; ?>
 					<div class="appointments-card__row appointments-card__row--actions">
 						<div class="appointments-card__label">Действия</div>
 						<div class="appointments-card__value orders-actions">
@@ -88,7 +132,9 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 							<div class="course-participant">
 								<div class="course-participant-head">
 									<div>
-										<div class="course-participant-name"><?php echo viglingAppointmentsRenderPeople($participant); ?></div>
+										<div class="course-participant-name"><?php echo viglingAppointmentsRenderPeople($participant); ?><?php
+											$grState = $grOpen['by_booking'][(int) $participant->id] ?? '';
+											if ($grState === 'agreed') : ?><span class="gr-chip gr-chip--agreed">согласен на перенос</span><?php elseif ($grState === 'pending') : ?><span class="gr-chip gr-chip--pending">ждём ответ</span><?php endif; ?></div>
 										<div class="course-meta"><?php echo $participantContacts !== [] ? htmlspecialchars(implode(', ', $participantContacts)) : '—'; ?></div>
 										<?php if (trim((string) ($participant->comment ?? '')) !== '') : ?>
 											<div class="order-comment"><?php echo htmlspecialchars((string) $participant->comment); ?></div>
@@ -188,6 +234,27 @@ $onProfile = \Joomla\CMS\Factory::getApplication()->getInput()->getCmd('option')
 					<div class="appointments-card__label">Контакты</div>
 					<div class="appointments-card__value"><?php echo $contacts !== [] ? htmlspecialchars(implode(', ', $contacts)) : '—'; ?></div>
 				</div>
+				<?php
+				$grRequest = !$isBlock ? ($grPending[(int) ($item->id ?? 0)] ?? null) : null;
+				if ($grRequest !== null) :
+					$grLabel = ($grRequest['kind'] ?? '') === 'search' ? 'поиск моделей' : 'курс';
+				?>
+				<div class="gr-request">
+					<div class="gr-request__title">Мастер предлагает перенести <?php echo $this->escape($grLabel); ?> «<?php echo $this->escape((string) $grRequest['title']); ?>»</div>
+					<div class="gr-request__times">
+						Было: <span class="lk-time-utc" data-time-utc="<?php echo $this->escape($grIso((string) $grRequest['old_start_utc'])); ?>">—</span><br>
+						Станет: <strong><span class="lk-time-utc" data-time-utc="<?php echo $this->escape($grIso((string) $grRequest['new_start_utc'])); ?>">—</span></strong>
+					</div>
+					<form method="post" action="<?php echo Route::_('index.php?option=com_orders&task=orders.respondGroupReschedule'); ?>" class="gr-request__actions">
+						<input type="hidden" name="<?php echo $token; ?>" value="1">
+						<input type="hidden" name="reply_id" value="<?php echo (int) $grRequest['reply_id']; ?>">
+						<input type="hidden" name="return" value="<?php echo $returnEncoded; ?>">
+						<button type="submit" name="decision" value="agree" class="btn btn-success">Согласен(на) на перенос</button>
+						<button type="submit" name="decision" value="decline" class="btn btn-default" onclick="return confirm('Отказаться от записи? Она будет снята.');">Отказаться от записи</button>
+					</form>
+					<div class="gr-request__hint">Новое время вступит в силу после подтверждения мастера. Выберите один из двух вариантов.</div>
+				</div>
+				<?php endif; ?>
 				<div class="appointments-card__row appointments-card__row--actions">
 					<div class="appointments-card__label">Действия</div>
 					<div class="appointments-card__value orders-actions">

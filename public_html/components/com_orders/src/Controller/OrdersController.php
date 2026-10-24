@@ -8,11 +8,19 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
+use Viglin\Component\Orders\Site\Helper\CatalogPriceHelper;
+use Viglin\Component\Orders\Site\Helper\GroupRescheduleHelper;
 use Viglin\Component\Orders\Site\Helper\ReviewHelper;
 use Viglin\Component\Orders\Site\Table\OrderTable;
 
 if (!class_exists(ReviewHelper::class, false)) {
 	require_once JPATH_SITE . '/components/com_orders/src/Helper/ReviewHelper.php';
+}
+if (!class_exists(\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::class, false)) {
+	require_once JPATH_SITE . '/components/com_orders/src/Helper/AppointmentsHelper.php';
+}
+if (!class_exists(GroupRescheduleHelper::class, false)) {
+	require_once JPATH_SITE . '/components/com_orders/src/Helper/GroupRescheduleHelper.php';
 }
 
 class OrdersController extends BaseController
@@ -43,6 +51,11 @@ class OrdersController extends BaseController
 		}
 		if ((int) $table->user_id !== (int) $user->id) {
 			$this->setMessage('Нет прав на отмену этой записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if (self::hasStarted($table)) {
+			$this->setMessage('Прошедшую запись нельзя отменить, её можно только удалить из списка', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
@@ -177,10 +190,33 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
-		$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
+		if (!class_exists(CatalogPriceHelper::class, false)) {
+			require_once JPATH_SITE . '/components/com_orders/src/Helper/CatalogPriceHelper.php';
+		}
+		$current = CatalogPriceHelper::findCurrentService(
+			$masterId,
+			(int) ($table->svc_id ?? 0),
+			(int) ($table->tag_id ?? 0),
+			$serviceName
+		);
+		$currentItem = $current['item'];
+		if ($current['has_catalog'] && $currentItem === null) {
+			$this->setMessage('Мастер больше не оказывает эту услугу. Выберите услугу в профиле мастера.', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$currentTimeSum = 0;
+		if ($currentItem !== null) {
+			$serviceName = $currentItem['name'] !== '' ? $currentItem['name'] : $serviceName;
+			$durationMin = $currentItem['duration'];
+			$currentTimeSum = $currentItem['duration'] + $currentItem['pause_min'];
+		} else {
+			$durationMin = max(15, min(480, self::deriveDurationMinFromOrder($table)));
+			$currentTimeSum = isset($table->time_sum) ? (int) $table->time_sum : 0;
+		}
 		$timeTo = clone $time;
 		$timeTo->modify('+' . $durationMin . ' minutes');
-		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, isset($table->time_sum) ? (int) $table->time_sum : 0);
+		$occupiedTo = self::occupiedProbeEnd($time, $durationMin, $currentTimeSum);
 		$timeDb = $time->format('Y-m-d H:i:s');
 		$timeToDb = $timeTo->format('Y-m-d H:i:s');
 		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
@@ -222,6 +258,11 @@ class OrdersController extends BaseController
 				$this->setRedirectAndExit();
 				return;
 			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $user->id, $masterId, $timeDb, $timeToDb, 0)) {
+				$this->setMessage('У вас уже есть запись на это время к другому специалисту', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 
 			OrderTable::ensureBookingCommentColumns($db);
 			OrderTable::ensureSourceColumn($db);
@@ -242,7 +283,10 @@ class OrdersController extends BaseController
 			if (isset($columns['source'])) {
 				$payload['source'] = 'profile';
 			}
-			$copyIfPresent = ['svc_id', 'tag_id', 'price', 'time_sum', 'contact_name', 'contact_phone', 'service_full_name', 'remind_minutes'];
+			$copyIfPresent = ['contact_name', 'contact_phone', 'remind_minutes'];
+			if ($currentItem === null) {
+				$copyIfPresent = array_merge($copyIfPresent, ['svc_id', 'tag_id', 'price', 'time_sum', 'service_full_name']);
+			}
 			foreach ($copyIfPresent as $columnName) {
 				if (!isset($columns[$columnName]) || !isset($table->$columnName)) {
 					continue;
@@ -252,6 +296,22 @@ class OrdersController extends BaseController
 					continue;
 				}
 				$payload[$columnName] = $value;
+			}
+			if ($currentItem !== null) {
+				$fresh = [
+					'svc_id' => $currentItem['svc_id'],
+					'tag_id' => $currentItem['tag_id'],
+					'price' => $currentItem['price'],
+					'time_sum' => $currentTimeSum,
+					'service_full_name' => $currentItem['category'] !== ''
+						? mb_substr($currentItem['category'] . ' - ' . $currentItem['name'], 0, 255)
+						: '',
+				];
+				foreach ($fresh as $columnName => $value) {
+					if (isset($columns[$columnName]) && $value !== '' && $value !== 0) {
+						$payload[$columnName] = $value;
+					}
+				}
 			}
 			if (isset($columns['time_sum']) && empty($payload['time_sum'])) {
 				$payload['time_sum'] = $durationMin;
@@ -387,6 +447,11 @@ class OrdersController extends BaseController
 				$this->setRedirectAndExit();
 				return;
 			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $table->user_id, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('У вас уже есть запись на это время к другому специалисту', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
 			$table->time = $timeDb;
 			$table->time_to = $timeToDb;
 			if (!$table->store()) {
@@ -429,6 +494,11 @@ class OrdersController extends BaseController
 		}
 		if ((int) $table->master_id !== (int) $user->id) {
 			$this->setMessage('Нет прав на отмену этой записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if (self::hasStarted($table)) {
+			$this->setMessage('Прошедшую запись нельзя отменить, её можно только удалить из списка', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
@@ -536,6 +606,11 @@ class OrdersController extends BaseController
 			}
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $occupiedToDb, (int) $table->id)) {
 				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $table->user_id, $masterId, $timeDb, $timeToDb, (int) $table->id)) {
+				$this->setMessage('У клиента уже есть запись на это время к другому специалисту', 'error');
 				$this->setRedirectAndExit();
 				return;
 			}
@@ -719,6 +794,10 @@ class OrdersController extends BaseController
 			if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, 0, $excludeIds)) {
 				$this->setMessage('Это время уже занято', 'error');
 				$this->setRedirectAndExit();
+				return;
+			}
+
+			if ($this->proposeGroupMove($db, GroupRescheduleHelper::KIND_COURSE, $courseSlotId, (int) ($courseContext['course_id'] ?? 0), $masterId, $courseContext, $timeDb, $timeToDb)) {
 				return;
 			}
 
@@ -916,6 +995,10 @@ class OrdersController extends BaseController
 				return;
 			}
 
+			if ($this->proposeGroupMove($db, GroupRescheduleHelper::KIND_SEARCH, $searchSlotId, (int) ($searchContext['search_id'] ?? 0), $masterId, $searchContext, $timeDb, $timeToDb)) {
+				return;
+			}
+
 			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
 			$table = new OrderTable($db, $dispatcher);
 			foreach ($excludeIds as $bookingId) {
@@ -941,6 +1024,392 @@ class OrdersController extends BaseController
 			}
 		}
 		$this->setMessage('Поиск моделей перенесён для всех участников');
+		$this->setRedirectAndExit();
+	}
+
+	/**
+	 * A group slot with participants is not moved straight away: every participant is asked first.
+	 * Returns true when a request was created (the response is already redirected).
+	 *
+	 * @param array<string,mixed> $context
+	 */
+	private function proposeGroupMove(
+		\Joomla\Database\DatabaseInterface $db,
+		string $kind,
+		int $slotId,
+		int $entityId,
+		int $masterId,
+		array $context,
+		string $newStartDb,
+		string $newEndDb
+	): bool {
+		if (!GroupRescheduleHelper::isAvailable($db)) {
+			return false;
+		}
+		$participants = GroupRescheduleHelper::participants($db, $kind, $slotId, $masterId);
+		if ($participants === []) {
+			return false;
+		}
+		$title = GroupRescheduleHelper::entityTitle($db, $kind, $entityId);
+		$result = GroupRescheduleHelper::createProposal(
+			$db,
+			$kind,
+			$slotId,
+			$entityId,
+			$masterId,
+			$title,
+			(string) ($context['starts_at_utc'] ?? ''),
+			(string) ($context['ends_at_utc'] ?? ''),
+			$newStartDb,
+			$newEndDb,
+			$participants
+		);
+		if (!$result['ok']) {
+			$this->setMessage($result['message'], 'error');
+			$this->setRedirectAndExit();
+
+			return true;
+		}
+		$this->setMessage(
+			'Предложение о переносе отправлено участникам (' . (int) $result['count'] . '). '
+			. 'Время изменится только после того, как вы подтвердите перенос в карточке: согласившиеся будут перенесены, '
+			. 'не ответившие — сняты. Подтвердить можно, не дожидаясь всех ответов.'
+		);
+		$this->setRedirectAndExit();
+
+		return true;
+	}
+
+	public function respondGroupReschedule()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$replyId = (int) $this->input->get('reply_id', 0);
+		$decision = (string) $this->input->get('decision', '', 'cmd');
+		if ($replyId <= 0 || !in_array($decision, ['agree', 'decline'], true)) {
+			$this->setMessage('Выберите ответ: согласиться на перенос или отказаться от записи', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		if (!GroupRescheduleHelper::isAvailable($db)) {
+			$this->setMessage('Запрос не найден', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$reply = GroupRescheduleHelper::loadReplyForUser($db, $replyId, (int) $user->id);
+		if ($reply === null) {
+			$this->setMessage('Запрос не найден', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$proposalId = (int) $reply['proposal_id'];
+		if ((string) $reply['proposal_status'] !== 'open' || (string) $reply['reply_status'] !== 'pending') {
+			$this->setMessage('Этот запрос уже закрыт', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$utc = new \DateTimeZone('UTC');
+		$now = new \DateTimeImmutable('now', $utc);
+		$oldStart = new \DateTimeImmutable((string) $reply['old_start_utc'], $utc);
+		$newStart = new \DateTimeImmutable((string) $reply['new_start_utc'], $utc);
+		if ($oldStart <= $now || $newStart <= $now) {
+			GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
+			$this->setMessage('Время переноса уже прошло, запрос закрыт', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+
+		$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+		$table = new OrderTable($db, $dispatcher);
+		$bookingId = (int) $reply['booking_id'];
+		if (!$table->load($bookingId) || (int) $table->user_id !== (int) $user->id) {
+			$this->setMessage('Запись не найдена', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$masterId = (int) $reply['master_id'];
+		$title = (string) $reply['title'];
+		$label = GroupRescheduleHelper::kindLabel((string) $reply['kind']);
+		$userName = GroupRescheduleHelper::userName((int) $user->id);
+		$userName = $userName !== '' ? $userName : 'Участник';
+		$newStartDb = (string) $reply['new_start_utc'];
+		$newEndDb = (string) $reply['new_end_utc'];
+
+		if ($decision === 'agree') {
+			$tableName = $db->getPrefix() . 'vigling_bookings';
+			if (self::hasUserBookingOverlap($db, $tableName, (int) $user->id, $masterId, $newStartDb, $newEndDb, $bookingId)) {
+				$this->setMessage('На новое время у вас уже есть запись к другому специалисту. Согласиться нельзя — можно только отказаться от записи.', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			GroupRescheduleHelper::setReplyStatus($db, $replyId, 'agreed');
+			$masterText = $userName . ' согласен(на) на перенос: ' . $label . ' «' . $title . '».';
+			$masterTitle = 'Участник согласился на перенос';
+			$message = 'Вы согласились на перенос. Новое время вступит в силу, когда мастер подтвердит перенос.';
+		} else {
+			if (!$table->delete($bookingId)) {
+				$this->setMessage($table->getError() ?: 'Не удалось отказаться от записи', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			GroupRescheduleHelper::setReplyStatus($db, $replyId, 'declined');
+			$masterText = $userName . ' отказался(ась) от записи: ' . $label . ' «' . $title . '». Запись снята.';
+			$masterTitle = 'Участник отказался от записи';
+			$message = 'Вы отказались от записи, она снята.';
+		}
+
+		GroupRescheduleHelper::loadNotices();
+		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::resolveByRef(GroupRescheduleHelper::REF_PARTICIPANT, $proposalId, (int) $user->id);
+		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo($masterId, 'group_reschedule_reply', $masterTitle, $masterText);
+
+		$pending = 0;
+		foreach (GroupRescheduleHelper::replies($db, $proposalId) as $other) {
+			if ((string) $other['status'] === 'pending') {
+				$pending++;
+			}
+		}
+		if ($pending === 0) {
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+				$masterId,
+				'group_reschedule_ready',
+				'Все участники ответили на перенос',
+				'Ответили все участники: ' . $label . ' «' . $title . '». Подтвердите перенос, чтобы согласившиеся были перенесены на новое время.',
+				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list']),
+				true,
+				GroupRescheduleHelper::REF_MASTER,
+				$proposalId
+			);
+		}
+
+		$this->setMessage($message);
+		$this->setRedirectAndExit();
+	}
+
+	public function cancelGroupReschedule()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$proposal = GroupRescheduleHelper::isAvailable($db)
+			? GroupRescheduleHelper::loadProposal($db, (int) $this->input->get('proposal_id', 0))
+			: null;
+		if ($proposal === null || (int) $proposal['master_id'] !== (int) $user->id || (string) $proposal['status'] !== 'open') {
+			$this->setMessage('Предложение о переносе не найдено', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$proposalId = (int) $proposal['id'];
+		$replies = GroupRescheduleHelper::replies($db, $proposalId);
+		GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
+		$label = GroupRescheduleHelper::kindLabel((string) $proposal['kind']);
+		foreach ($replies as $reply) {
+			if ((string) $reply['status'] === 'declined') {
+				continue;
+			}
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+				(int) $reply['user_id'],
+				'group_reschedule_cancelled',
+				'Перенос отменён',
+				'Мастер отменил перенос: ' . $label . ' «' . $proposal['title'] . '». Ваша запись остаётся на прежнее время.',
+				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
+			);
+		}
+		$this->setMessage('Предложение о переносе отменено');
+		$this->setRedirectAndExit();
+	}
+
+	public function applyGroupReschedule()
+	{
+		Session::checkToken('request') or $this->setRedirectAndExit();
+		$user = Factory::getApplication()->getIdentity();
+		if (!$user->id) {
+			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$proposal = GroupRescheduleHelper::isAvailable($db)
+			? GroupRescheduleHelper::loadProposal($db, (int) $this->input->get('proposal_id', 0))
+			: null;
+		$masterId = (int) $user->id;
+		if ($proposal === null || (int) $proposal['master_id'] !== $masterId || (string) $proposal['status'] !== 'open') {
+			$this->setMessage('Предложение о переносе не найдено или уже закрыто', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		$proposalId = (int) $proposal['id'];
+		$kind = (string) $proposal['kind'];
+		$slotId = (int) $proposal['slot_id'];
+		$isCourse = $kind === GroupRescheduleHelper::KIND_COURSE;
+		$label = GroupRescheduleHelper::kindLabel($kind);
+		$title = (string) $proposal['title'];
+
+		$context = $isCourse ? self::loadCourseSlotContext($db, $slotId) : self::loadSearchSlotContext($db, $slotId);
+		if ($context === null || (int) ($context['is_active'] ?? 0) !== 1 || (int) $context['master_id'] !== $masterId) {
+			GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
+			$this->setMessage('Слот больше не существует, предложение закрыто', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+
+		$utc = new \DateTimeZone('UTC');
+		$nowUtc = new \DateTimeImmutable('now', $utc);
+		$newStartDb = (string) $proposal['new_start_utc'];
+		$newEndDb = (string) $proposal['new_end_utc'];
+		$startUtc = new \DateTimeImmutable($newStartDb, $utc);
+		$endUtc = new \DateTimeImmutable($newEndDb, $utc);
+		$currentStart = new \DateTimeImmutable((string) $context['starts_at_utc'], $utc);
+		if ($startUtc <= $nowUtc || $currentStart <= $nowUtc) {
+			$replies = GroupRescheduleHelper::replies($db, $proposalId);
+			GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
+			foreach ($replies as $reply) {
+				if ((string) $reply['status'] === 'declined') {
+					continue;
+				}
+				\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+					(int) $reply['user_id'],
+					'group_reschedule_cancelled',
+					'Перенос отменён',
+					'Время истекло, перенос не состоялся: ' . $label . ' «' . $title . '». Ваша запись остаётся без изменений.',
+					\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
+				);
+			}
+			$this->setMessage('Время уже прошло, предложение о переносе закрыто', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+
+		$masterTimezone = self::getUserTimezoneById($masterId, (string) Factory::getApplication()->get('offset', 'UTC'));
+		$scheduleCheck = self::validateMasterSchedule($masterId, $startUtc, $endUtc, $masterTimezone);
+		if (!$scheduleCheck['ok']) {
+			$this->setMessage((string) ($scheduleCheck['message'] ?? 'Выбранное время вне рабочего графика мастера'), 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+
+		$tableName = $db->getPrefix() . 'vigling_bookings';
+		$slotBookingIds = $isCourse
+			? self::getCourseSlotBookingIds($db, $slotId, $masterId)
+			: self::getSearchSlotBookingIds($db, $slotId, $masterId);
+		$replyByBooking = [];
+		foreach (GroupRescheduleHelper::replies($db, $proposalId) as $reply) {
+			$replyByBooking[(int) $reply['booking_id']] = $reply;
+		}
+
+		$moved = 0;
+		$removed = [];
+		$lockHeld = false;
+		$transactionStarted = false;
+		try {
+			if (!OrderTable::acquireMasterBookingLock($db, $masterId)) {
+				$this->setMessage('Сейчас идёт другая запись к этому специалисту, попробуйте ещё раз', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			$lockHeld = true;
+			if (self::hasCourseSlotsOverlap($db, $masterId, $newStartDb, $newEndDb, $isCourse ? $slotId : 0)) {
+				$this->setMessage($isCourse ? 'Это время занято другим курсом' : 'Это время занято курсом', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasSearchSlotsOverlap($db, $masterId, $newStartDb, $newEndDb, $isCourse ? 0 : $slotId)) {
+				$this->setMessage($isCourse ? 'Это время занято поиском' : 'Это время занято другим поиском', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+			if (self::hasBookingsOverlap($db, $tableName, $masterId, $newStartDb, $newEndDb, 0, $slotBookingIds)) {
+				$this->setMessage('Это время уже занято', 'error');
+				$this->setRedirectAndExit();
+				return;
+			}
+
+			$dispatcher = Factory::getContainer()->get(\Joomla\Event\DispatcherInterface::class);
+			$db->transactionStart();
+			$transactionStarted = true;
+			foreach ($slotBookingIds as $bookingId) {
+				$table = new OrderTable($db, $dispatcher);
+				if (!$table->load((int) $bookingId) || (int) $table->master_id !== $masterId) {
+					continue;
+				}
+				$participantId = (int) $table->user_id;
+				$reply = $replyByBooking[(int) $bookingId] ?? null;
+				$agreed = $reply !== null && (string) $reply['status'] === 'agreed';
+				$ownBooking = $participantId <= 0 || $participantId === $masterId;
+				if ($agreed || $ownBooking) {
+					if (!$ownBooking && self::hasUserBookingOverlap($db, $tableName, $participantId, $masterId, $newStartDb, $newEndDb, (int) $bookingId)) {
+						$table->delete((int) $bookingId);
+						$removed[] = [$participantId, 'на новое время у вас уже есть запись к другому специалисту'];
+						if ($reply !== null) {
+							GroupRescheduleHelper::setReplyStatus($db, (int) $reply['id'], 'removed');
+						}
+						continue;
+					}
+					$table->time = $newStartDb;
+					$table->time_to = $newEndDb;
+					if (!$table->store()) {
+						throw new \RuntimeException($table->getError() ?: 'Ошибка переноса записи');
+					}
+					$moved++;
+					continue;
+				}
+				$table->delete((int) $bookingId);
+				$removed[] = [$participantId, 'вы не ответили на запрос о переносе'];
+				if ($reply !== null) {
+					GroupRescheduleHelper::setReplyStatus($db, (int) $reply['id'], 'removed');
+				}
+			}
+
+			if ($isCourse) {
+				self::updateCourseSlotTime($db, $slotId, $newStartDb, $newEndDb);
+			} else {
+				self::updateSearchSlotTime($db, $slotId, $newStartDb, $newEndDb);
+			}
+			GroupRescheduleHelper::closeProposal($db, $proposalId, 'applied');
+			$db->transactionCommit();
+			$transactionStarted = false;
+		} catch (\Throwable $e) {
+			if ($transactionStarted) {
+				try {
+					$db->transactionRollback();
+				} catch (\Throwable $rollbackError) {
+				}
+			}
+			$this->setMessage('Не удалось применить перенос, ничего не изменено. Попробуйте ещё раз.', 'error');
+			$this->setRedirectAndExit();
+			return;
+		} finally {
+			if ($lockHeld) {
+				OrderTable::releaseMasterBookingLock($db, $masterId);
+			}
+		}
+
+		foreach ($removed as [$removedUserId, $reason]) {
+			if ($removedUserId <= 0 || $removedUserId === $masterId) {
+				continue;
+			}
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+				$removedUserId,
+				'group_reschedule_removed',
+				'Вы сняты с записи',
+				mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1) . ' «' . $title . '» перенесён на '
+					. \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::formatTime($removedUserId, $newStartDb)
+					. ', но ' . $reason . '. Ваша запись снята; при желании запишитесь заново.',
+				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
+			);
+		}
+
+		$this->setMessage('Перенос подтверждён. Перенесено участников: ' . $moved . ', снято с записи: ' . count($removed) . '.');
 		$this->setRedirectAndExit();
 	}
 
@@ -1589,6 +2058,38 @@ class OrdersController extends BaseController
 		return ((int) $db->loadResult()) > 0;
 	}
 
+	/**
+	 * A person can be in one place at a time: the same user must not hold two overlapping
+	 * appointments with different specialists. Self-bookings (master_id = user_id, made for
+	 * people outside the site) never count, and neither do journal blocks (user_id = 0).
+	 */
+	private static function hasUserBookingOverlap(
+		\Joomla\Database\DatabaseInterface $db,
+		string $tableName,
+		int $userId,
+		int $masterId,
+		string $startUtc,
+		string $endUtc,
+		int $excludeId = 0
+	): bool {
+		if ($userId <= 0 || $userId === $masterId) {
+			return false;
+		}
+		$query = $db->getQuery(true)
+			->select('COUNT(*)')
+			->from($db->quoteName($tableName))
+			->where($db->quoteName('user_id') . ' = ' . $userId)
+			->where($db->quoteName('master_id') . ' <> ' . $userId)
+			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+		if ($excludeId > 0) {
+			$query->where($db->quoteName('id') . ' <> ' . $excludeId);
+		}
+		$db->setQuery($query);
+
+		return ((int) $db->loadResult()) > 0;
+	}
+
 	private static function loadCourseSlotContext(\Joomla\Database\DatabaseInterface $db, int $courseSlotId): ?array
 	{
 		if ($courseSlotId <= 0) {
@@ -1802,6 +2303,21 @@ class OrdersController extends BaseController
 		$groups = array_map('intval', $groups);
 
 		return in_array(3, $groups, true) || in_array(8, $groups, true);
+	}
+
+	private static function hasStarted(OrderTable $table): bool
+	{
+		$raw = trim((string) ($table->time ?? ''));
+		if ($raw === '') {
+			return false;
+		}
+		try {
+			$start = new \DateTimeImmutable($raw, new \DateTimeZone('UTC'));
+		} catch (\Throwable $e) {
+			return false;
+		}
+
+		return $start < new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 	}
 
 	private static function parseUtcDateTime(string $raw): ?\DateTimeImmutable
