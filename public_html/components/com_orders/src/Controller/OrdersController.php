@@ -59,10 +59,15 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		$groupDb = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$openReply = GroupRescheduleHelper::isAvailable($groupDb) ? GroupRescheduleHelper::openReplyForBooking($groupDb, $id) : null;
 		if (!$table->delete($id)) {
 			$this->setMessage($table->getError() ?: 'Ошибка отмены записи', 'error');
 			$this->setRedirectAndExit();
 			return;
+		}
+		if ($openReply !== null) {
+			$this->afterGroupBookingRemoved($groupDb, $openReply, true);
 		}
 		$this->setMessage('Запись отменена');
 		$this->setRedirectAndExit();
@@ -502,10 +507,15 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		$groupDb = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+		$openReply = GroupRescheduleHelper::isAvailable($groupDb) ? GroupRescheduleHelper::openReplyForBooking($groupDb, $id) : null;
 		if (!$table->delete($id)) {
 			$this->setMessage($table->getError() ?: 'Ошибка отмены записи', 'error');
 			$this->setRedirectAndExit();
 			return;
+		}
+		if ($openReply !== null) {
+			$this->afterGroupBookingRemoved($groupDb, $openReply, false);
 		}
 		$this->setMessage('Запись отменена');
 		$this->setRedirectAndExit();
@@ -1168,6 +1178,51 @@ class OrdersController extends BaseController
 		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::resolveByRef(GroupRescheduleHelper::REF_PARTICIPANT, $proposalId, (int) $user->id);
 		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo($masterId, 'group_reschedule_reply', $masterTitle, $masterText);
 
+		$this->settleGroupProposal($db, $proposalId, true);
+
+		$this->setMessage($message);
+		$this->setRedirectAndExit();
+	}
+
+	/**
+	 * A participant's booking disappeared while a request was open (cancelled by the person or by the master).
+	 *
+	 * @param array<string,mixed> $openReply
+	 */
+	private function afterGroupBookingRemoved(\Joomla\Database\DatabaseInterface $db, array $openReply, bool $byParticipant): void
+	{
+		$proposalId = (int) $openReply['proposal_id'];
+		GroupRescheduleHelper::loadNotices();
+		\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::resolveByRef(GroupRescheduleHelper::REF_PARTICIPANT, $proposalId, (int) $openReply['user_id']);
+		if ($byParticipant) {
+			$userName = GroupRescheduleHelper::userName((int) $openReply['user_id']);
+			$label = GroupRescheduleHelper::kindLabel((string) $openReply['kind']);
+			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::notifyInfo(
+				(int) $openReply['master_id'],
+				'group_reschedule_reply',
+				'Участник отменил запись',
+				($userName !== '' ? $userName : 'Участник') . ' отменил(а) запись: ' . $label . ' «' . (string) $openReply['title'] . '».'
+			);
+		}
+		$this->settleGroupProposal($db, $proposalId, (string) $openReply['reply_status'] === 'pending');
+	}
+
+	/**
+	 * Nobody left to ask: apply the new time. Everybody answered: ask the master to confirm.
+	 */
+	private function settleGroupProposal(\Joomla\Database\DatabaseInterface $db, int $proposalId, bool $answerWasPending): void
+	{
+		$proposal = GroupRescheduleHelper::loadProposal($db, $proposalId);
+		if ($proposal === null || (string) $proposal['status'] !== 'open') {
+			return;
+		}
+		$masterId = (int) $proposal['master_id'];
+		$title = (string) $proposal['title'];
+		$label = GroupRescheduleHelper::kindLabel((string) $proposal['kind']);
+		$newStartDb = (string) $proposal['new_start_utc'];
+		$notice = '\\Viglin\\Component\\Pushnotify\\Site\\Helper\\CriticalNoticeHelper';
+		$url = \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list']);
+
 		$pending = 0;
 		$liveReplies = GroupRescheduleHelper::replies($db, $proposalId);
 		foreach ($liveReplies as $other) {
@@ -1177,35 +1232,31 @@ class OrdersController extends BaseController
 		}
 		if ($liveReplies === []) {
 			$labelCap = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
-			$proposal = GroupRescheduleHelper::loadProposal($db, $proposalId);
-			$applied = $proposal !== null ? $this->runGroupApply($db, $proposal, $masterId) : null;
-			if ($applied === null || !$applied['ok']) {
+			$applied = $this->runGroupApply($db, $proposal, $masterId);
+			if (!$applied['ok']) {
 				GroupRescheduleHelper::closeProposal($db, $proposalId, 'cancelled');
 			}
-			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+			$notice::add(
 				$masterId,
 				'group_reschedule_result',
-				'Все участники отказались от записи',
-				$applied !== null && $applied['ok']
-					? $labelCap . ' «' . $title . '»: участников не осталось, время изменено на ' . \Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::formatTime($masterId, $newStartDb) . '.'
-					: $labelCap . ' «' . $title . '»: участников не осталось, но новое время применить не удалось (' . ($applied['message'] ?? 'ошибка') . '). Время осталось прежним.',
-				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list'])
+				'Участников не осталось',
+				$applied['ok']
+					? $labelCap . ' «' . $title . '»: участников не осталось, время изменено на ' . $notice::formatTime($masterId, $newStartDb) . '.'
+					: $labelCap . ' «' . $title . '»: участников не осталось, но новое время применить не удалось (' . $applied['message'] . '). Время осталось прежним.',
+				$url
 			);
-		} elseif ($pending === 0) {
-			\Viglin\Component\Pushnotify\Site\Helper\CriticalNoticeHelper::add(
+		} elseif ($pending === 0 && $answerWasPending) {
+			$notice::add(
 				$masterId,
 				'group_reschedule_ready',
 				'Все участники ответили на перенос',
 				'Ответили все участники: ' . $label . ' «' . $title . '». Подтвердите перенос, чтобы согласившиеся были перенесены на новое время.',
-				\Viglin\Component\Orders\Site\Helper\AppointmentsHelper::profileUrl(['zapisi' => 'list']),
+				$url,
 				true,
 				GroupRescheduleHelper::REF_MASTER,
 				$proposalId
 			);
 		}
-
-		$this->setMessage($message);
-		$this->setRedirectAndExit();
 	}
 
 	public function cancelGroupReschedule()
