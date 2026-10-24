@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+    <name>PLG_SYSTEM_VIGLINGRECAPTCHA</name>
+    <author>Vigling</author>
+    <creationDate>2026-03</creationDate>
+    <version>1.0.0</version>
+    <description>PLG_SYSTEM_VIGLINGRECAPTCHA_DESCRIPTION</description>
+    <namespace path="src">Joomla\Plugin\System\Viglingrecaptcha</namespace>
+    <files>
+        <folder plugin="viglingrecaptcha">services</folder>
+        <folder>src</folder>
+    </files>
+    <languages>
+        <language tag="ru-RU">language/ru-RU/plg_system_viglingrecaptcha.ini</language>
+        <language tag="ru-RU">language/ru-RU/plg_system_viglingrecaptcha.sys.ini</language>
+    </languages>
+    <config>
+        <fields name="params">
+            <fieldset name="basic" label="PLG_SYSTEM_VIGLINGRECAPTCHA_FIELDSET_BASIC">
+                <field name="enabled" type="radio" default="1" label="JSTATUS" class="btn-group btn-group-yesno">
+                    <option value="1">JENABLED</option>
+                    <option value="0">JDISABLED</option>
+                </field>
+                <field name="site_key" type="text" label="PLG_SYSTEM_VIGLINGRECAPTCHA_SITE_KEY_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_SITE_KEY_DESC" filter="raw" />
+                <field name="secret_key" type="text" label="PLG_SYSTEM_VIGLINGRECAPTCHA_SECRET_KEY_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_SECRET_KEY_DESC" filter="raw" />
+                <field name="score_threshold" type="number" default="0.5" min="0" max="1" step="0.1" label="PLG_SYSTEM_VIGLINGRECAPTCHA_SCORE_THRESHOLD_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_SCORE_THRESHOLD_DESC" />
+                <field name="verify_timeout_ms" type="number" default="2500" min="1000" max="10000" step="100" label="PLG_SYSTEM_VIGLINGRECAPTCHA_VERIFY_TIMEOUT_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_VERIFY_TIMEOUT_DESC" />
+                <field name="fail_policy" type="list" default="open" label="PLG_SYSTEM_VIGLINGRECAPTCHA_FAIL_POLICY_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_FAIL_POLICY_DESC">
+                    <option value="open">PLG_SYSTEM_VIGLINGRECAPTCHA_FAIL_POLICY_OPEN</option>
+                    <option value="closed">PLG_SYSTEM_VIGLINGRECAPTCHA_FAIL_POLICY_CLOSED</option>
+                </field>
+                <field name="protect_registration" type="radio" default="1" label="PLG_SYSTEM_VIGLINGRECAPTCHA_PROTECT_REGISTRATION_LABEL" class="btn-group btn-group-yesno">
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+                <field name="protect_quickauth_register" type="radio" default="1" label="PLG_SYSTEM_VIGLINGRECAPTCHA_PROTECT_QUICKAUTH_LABEL" class="btn-group btn-group-yesno">
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+                <field name="protect_booking_quickauth_register" type="radio" default="1" label="PLG_SYSTEM_VIGLINGRECAPTCHA_PROTECT_BOOKING_QUICKAUTH_LABEL" class="btn-group btn-group-yesno">
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+                <field name="log_level" type="list" default="warning" label="PLG_SYSTEM_VIGLINGRECAPTCHA_LOG_LEVEL_LABEL" description="PLG_SYSTEM_VIGLINGRECAPTCHA_LOG_LEVEL_DESC">
+                    <option value="debug">PLG_SYSTEM_VIGLINGRECAPTCHA_LOG_LEVEL_DEBUG</option>
+                    <option value="warning">PLG_SYSTEM_VIGLINGRECAPTCHA_LOG_LEVEL_WARNING</option>
+                    <option value="error">PLG_SYSTEM_VIGLINGRECAPTCHA_LOG_LEVEL_ERROR</option>
+                </field>
+            </fieldset>
+        </fields>
+    </config>
+</extension>

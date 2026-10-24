@@ -1,0 +1,1905 @@
+/* Shared UI templates. Loaded after every other stylesheet.
+
+   1. «Записаться» on list cards: one design and one placement for specialists,
+      promotions, courses, model search, favourites and the home feed. The
+      promotions card (/poisk-aktsij) is the template:
+        up to 768px  - 85x30 pill, bottom-left corner, Inter, yellow gradient;
+        769px and up - 85x37 oval, bottom-right corner.
+      The class name is repeated to out-rank the per-catalog inline <style>
+      blocks and the mobile redesign rules, which pin the button with
+      !important in several different ways.
+   2. Filter fields: the text is centred vertically in every field. */
+
+@media (max-width: 768px) {
+  html body .category .category__item.category__item {
+    position: relative !important;
+    padding-bottom: 50px !important;
+    box-sizing: border-box;
+  }
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    position: absolute !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    z-index: 3;
+    display: block !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    align-self: flex-start !important;
+    width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 4px 0 !important;
+    transform: none !important;
+    font-family: "Inter", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 22px !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    color: #000 !important;
+    border-radius: 15px !important;
+    background-color: #f9ce54 !important;
+    background-image: linear-gradient(#ffdb6e, #f2b72a) !important;
+    box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.35) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  html body .category .category__item.category__item {
+    position: relative !important;
+    box-sizing: border-box;
+  }
+  html body .category:not(.jsn_list) .category__item.category__item {
+    padding-bottom: 58px !important;
+  }
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    position: absolute !important;
+    top: auto !important;
+    right: 9px !important;
+    bottom: 9px !important;
+    left: auto !important;
+    z-index: 3;
+    display: block !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    align-self: flex-start !important;
+    width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
+    height: calc((13px * 1.4 + 12px) * 1.215) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: calc((13px * 1.4 + 12px) * 1.215) !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    color: #111 !important;
+    border-radius: calc((13px * 1.4 + 12px) * 1.215 / 2) !important;
+    background-color: #f7cc53 !important;
+    background-image: none !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    right: 8px !important;
+    bottom: 8px !important;
+  }
+}
+
+@media (min-width: 1021px) and (display-mode: browser) {
+  html body .category .category__item a.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis.btn__time-zapis {
+    width: 87px !important;
+    min-width: 87px !important;
+    max-width: 87px !important;
+    margin: 0 -1px !important;
+  }
+}
+
+/* Text of the first line of a promotions card (name) starts below the card edge,
+   level with the photo (the name now comes first and would otherwise touch the edge). */
+@media (max-width: 768px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-top: 12px !important;
+  }
+}
+@media (min-width: 769px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-top: 16px !important;
+  }
+}
+
+/* Filter fields (list sidebars): text centred vertically. */
+html body .category__masters-sidebar .chosen-container-single .chosen-single,
+html body .filter .chosen-container-single .chosen-single {
+  display: flex !important;
+  align-items: center;
+}
+html body .category__masters-sidebar .chosen-container-single .chosen-single > span,
+html body .filter .chosen-container-single .chosen-single > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (min-width: 769px) {
+  html body .category__masters-sidebar .chosen-container-single .chosen-single,
+  html body .filter .chosen-container-single .chosen-single {
+    min-height: 27px;
+    padding-bottom: 0 !important;
+  }
+  html body .category__masters-sidebar input.filed__master,
+  html body .filter input.filed__master {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+}
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices {
+  padding-bottom: 0;
+}
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices li.search-field input[type="text"] {
+  margin: 2px 0;
+}
+
+/* "Перенести" buttons (client and master cabinets): base colour #e3e1db, shadow untouched. */
+html body .btn.btn.btn-xs.btn-warning.reschedule-open,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:hover,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:focus,
+html body .btn.btn.btn-xs.btn-warning.reschedule-open:active {
+  background-color: #e3e1db !important;
+  background-image: none !important;
+}
+
+/* "Отменить" buttons: base colour #ff0036, same shadow as "Перенести". */
+html body .btn.btn.btn-xs.btn-danger,
+html body .btn.btn.btn-xs.btn-danger:hover,
+html body .btn.btn.btn-xs.btn-danger:focus,
+html body .btn.btn.btn-xs.btn-danger:active {
+  background-color: #ff0036 !important;
+  background-image: none !important;
+}
+@media (max-width: 768px) {
+  html body .btn.btn.btn-xs.btn-danger {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 2px 0 #D49A10, 0 15px 25px -8px rgba(0, 0, 0, .42) !important;
+  }
+}
+
+/* Master profile: promotions / courses / model search cards.
+   Full width, "+" button in the lower right corner of the card. */
+html body .master__services .stockList {
+  margin-right: 0;
+}
+html body .master__services .stockList__item.stockList__item.courseList__item {
+  padding-bottom: 62px !important;
+}
+html body .master__services .courseList__item .btn_add-master.plus-course.plus-course {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: auto;
+  align-self: auto;
+  position: absolute;
+  top: auto;
+  left: auto;
+  right: 18px;
+  bottom: 18px;
+  margin: 0 !important;
+}
+html body .master__services .stockList__item:not(.courseList__item) {
+  padding-bottom: 52px;
+}
+html body .master__services .stockList__item:not(.courseList__item) .btn_add-master.plus-stock {
+  top: auto;
+  right: 0;
+  bottom: 8px;
+}
+@media (max-width: 768px) {
+  html body .master__services .master__offer-box {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    border-radius: 0 !important;
+  }
+  html body .master__services .courseList__item .btn_add-master.plus-course.plus-course {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+/* Master profile: working hours rows get the same pitch in every profile and viewport. */
+html body .master__about-time .category__content-info-list li span {
+  line-height: 17px;
+}
+html body .master__about-time .category__content-info-list li span:first-child {
+  width: auto;
+}
+
+/* Specialist filter column (and everything under its title) 1px higher. */
+html body .category__masters-sidebar {
+  margin-top: -1px;
+}
+@media (max-width: 1020px) {
+  html body .category__masters-sidebar {
+    margin-top: 29px;
+  }
+}
+
+/* Mobile and installed-app cards: the avatar / media image is centred on the
+   same vertical axis as the «Записаться» pill (pill: left 8px + 85px wide,
+   axis at 50.5px). The text column moves right together with the avatar. */
+@media (max-width: 768px) {
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__item-img {
+    left: 8px !important;
+  }
+  html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item .category__content-info.category__content-info {
+    padding-left: 110px !important;
+  }
+  html body .category.jsn_list .category__item.category__item {
+    padding-left: 14.5px !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+  }
+  html body .category.jsn_stockList.search-catalog .category__item.category__item,
+  html body .category.jsn_stockList.course-catalog .category__item.category__item {
+    padding-left: 0.5px !important;
+  }
+}
+
+
+/* ==========================================================================
+   Card hierarchy (all viewports): the name leads, the price is the leader of
+   promotion / course / model cards, details are one icon column + text.
+   ========================================================================== */
+.vg-i {
+  display: inline-block;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  background-color: currentColor;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+}
+.vg-i--home { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); }
+.vg-i--card { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='18' height='12' rx='2.5'/%3E%3Cpath d='M3 10.5h18'/%3E%3C/svg%3E"); }
+.vg-i--kid { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='7' r='3'/%3E%3Cpath d='M6 20c0-3.6 2.7-6 6-6s6 2.4 6 6'/%3E%3C/svg%3E"); }
+.vg-i--user { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.4'/%3E%3Cpath d='M5.5 20c0-3.4 2.9-5.5 6.5-5.5s6.5 2.1 6.5 5.5'/%3E%3C/svg%3E"); }
+.vg-i--clock { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E"); }
+.vg-i--seat { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M3.5 19c0-3 2.4-5 5.5-5s5.5 2 5.5 5'/%3E%3Cpath d='M16 5.5a3 3 0 0 1 0 5.6M18.5 14.4c1.6.7 2.5 2.2 2.5 4.6'/%3E%3C/svg%3E"); }
+.vg-i--cal { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5.5' width='16' height='14.5' rx='2.5'/%3E%3Cpath d='M4 10h16M8.5 3.5v4M15.5 3.5v4'/%3E%3C/svg%3E"); }
+.vg-i--phone { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 5.7 5.7L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E"); }
+.vg-i--pin { --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E"); }
+
+html body .category__item .vg-meta,
+html body .category__item .category__content-info .category_cinfo-address {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  float: none !important;
+  position: static !important;
+  z-index: auto !important;
+  background: none !important;
+  width: auto;
+  margin: 0 0 5px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  color: #5d636b !important;
+}
+html body .category__item .vg-meta > span {
+  float: none !important;
+  position: static !important;
+  z-index: auto !important;
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  font: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+}
+html body .category__item .vg-meta b {
+  font-weight: 400 !important;
+  color: inherit !important;
+  font-style: normal !important;
+}
+html body .category__item .vg-meta .vg-i,
+html body .category__item .category__content-info .category_cinfo-address i {
+  margin: 2px 0 0 !important;
+  color: #9aa0a8 !important;
+}
+html body .category__item .category__content-info .category_cinfo-address i {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  font-size: 0;
+  line-height: 0;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E");
+}
+html body .category__item .category__content-info .category_cinfo-address i::before {
+  display: none !important;
+}
+html body .category__item .category__content-info .category_cinfo-specs {
+  display: block;
+  margin: 3px 0 9px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #111;
+}
+html body .category__item .category__content-info .category_cinfo-spec {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 8px !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  color: #6b7077 !important;
+}
+html body .category__item a.category_cinfo-name {
+  font-size: 19px !important;
+  line-height: 23px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.2px;
+  color: #111 !important;
+  overflow-wrap: anywhere;
+}
+
+/* price = leader */
+html body .category__item .card-price {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .category__item .card-price-old {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #9aa0a8;
+  text-decoration: line-through;
+}
+html body .category__item .card-disc {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: #111;
+  color: #f7cc53;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 800;
+}
+html body .category__item .category_cinfo-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  height: 24px;
+  margin: 8px 0 0;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: #fff3c9;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 600;
+}
+html body .category__item .card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 6px;
+}
+html body .category__item .card-facts .vg-meta {
+  margin: 0 !important;
+}
+html body .category__item .stock-offer .card-price,
+html body .category__item .stock-offer .card-price-old,
+html body .category__item .stock-offer .card-disc,
+html body .category__item .stock-offer .card-facts,
+html body .category__item .stock-offer .card-facts > span {
+  float: none !important;
+  position: static !important;
+  background-image: none;
+  z-index: auto !important;
+}
+html body .category__item .stock-offer .card-price,
+html body .category__item .stock-offer .card-price-old {
+  padding: 0 !important;
+  background: none !important;
+}
+html body .category__item .stock-offer .card-disc {
+  background: #111 !important;
+  padding: 3px 7px !important;
+}
+html body .category__item .vg-meta--warn {
+  color: #c2410c !important;
+  font-weight: 600 !important;
+}
+
+/* promotions: service block inside the card */
+html body .category__item .stock-offer {
+  display: block;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+html body .category__item .stock-offer::before {
+  display: none !important;
+}
+html body .category__item .stock-offer > span,
+html body .category__item .stock-offer > div {
+  float: none !important;
+  position: static !important;
+  background: none !important;
+  padding: 0 !important;
+  z-index: auto !important;
+}
+html body .category__item .stock-offer__name {
+  display: block;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body .category__item .stock-offer__price {
+  display: flex !important;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 6px;
+}
+html body .category__item .stock-offer__price .card-price {
+  display: inline-block;
+  margin: 0;
+  font-size: 30px;
+  line-height: 34px;
+}
+html body .category__item .stock-offer__note {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #8a8f98;
+}
+html body .category.jsn_stockList:not(.search-catalog):not(.course-catalog) .category__item a.category_cinfo-name {
+  font-size: 15px !important;
+  line-height: 20px !important;
+  font-weight: 700 !important;
+}
+html body .category__item .category__content-info-list--stocks {
+  margin-top: 4px !important;
+}
+html body .category__item .card-head {
+  display: block;
+}
+@media (max-width: 768px) {
+  html body .category.jsn_stockList.search-catalog .category__content-info > .card-head,
+  html body .category.jsn_stockList.course-catalog .category__content-info > .card-head {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 12px 0 0 !important;
+    min-height: 108px;
+    box-sizing: border-box !important;
+  }
+  html body .category.jsn_stockList.search-catalog .category__content-info > .card-head .category_cinfo-name,
+  html body .category.jsn_stockList.course-catalog .category__content-info > .card-head .category_cinfo-name {
+    min-height: 0;
+  }
+}
+
+/* ==========================================================================
+   Master profile: header, service rows, promotion block, sticky action bar.
+   ========================================================================== */
+html body .masters__big-info-attr .vg-meta,
+html body .masters__big-info-attr .attr_left2 {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  float: none !important;
+  margin: 0 0 5px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+  color: #5d636b !important;
+}
+html body .masters__big-info-attr .vg-meta > span {
+  float: none !important;
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font: inherit !important;
+  color: inherit !important;
+}
+html body .masters__big-info-attr .vg-meta .vg-i,
+html body .masters__big-info-attr .attr_left2 i {
+  flex: none;
+  margin: 2px 0 0 !important;
+  color: #9aa0a8 !important;
+}
+html body .masters__big-info-attr .attr_left2 i {
+  width: 15px;
+  height: 15px;
+  font-size: 0;
+  line-height: 0;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E");
+}
+html body .masters__big-info-attr .attr_left2 i::before {
+  display: none !important;
+}
+html body .masters__big-info-attr .attr_left1 {
+  display: block;
+  margin: 0 0 8px !important;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  font-weight: 700 !important;
+  color: #111 !important;
+}
+html body #content .masters__big-info-attr .attr-rating {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: #fff3c9;
+  color: #6b4d00;
+  font-size: 14px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+html body #content .masters__big-info-attr .attr-rating::before {
+  content: "\2605";
+  margin-right: 5px;
+  color: #f2a900;
+}
+html body .h3biginfo1,
+html body .masters__big-info-head h3 {
+  font-weight: 800;
+}
+@media (max-width: 768px) {
+  html body .masters__big-info-attr .h3biginfo1 {
+    float: none;
+    width: auto;
+    margin: 0 0 6px;
+    font-size: 26px;
+    line-height: 30px;
+  }
+  html body .masters__big-info-attr .masters__attr-left {
+    clear: both;
+  }
+  html body .masters__big-info-attr .masters__attr-right {
+    margin-top: 9px;
+  }
+}
+
+/* service rows */
+html body .master__services .priceList__item .price__coll2 {
+  font-weight: 800;
+  color: #111;
+}
+html body .master__services .priceList__item .price__coll3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6b7077;
+}
+html body .master__services .priceList__item .price__coll3::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* "+" is the one action colour */
+html body .btn_add-master.plus:not(.is-disabled):not(:disabled) {
+  border: 0;
+  background: linear-gradient(180deg, #ffd96b, #f7b928);
+  color: #111;
+  font-weight: 600;
+  box-shadow: 0 2px 0 #d49a10, 0 6px 12px -4px rgba(0, 0, 0, .3);
+}
+
+/* promotion block */
+html body .master__services .stockList__item:not(.courseList__item) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 12px 0;
+  padding: 16px 16px 60px;
+  border-radius: 16px;
+  border: 0;
+  background: #fff7da;
+  box-sizing: border-box;
+}
+html body .master__services .stockList__item:not(.courseList__item) > .stockList__item-coll {
+  float: none;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  text-align: left;
+}
+html body .master__services .stockList__item:not(.courseList__item) > .clearFloat {
+  display: none;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 100%;
+  margin-bottom: 8px;
+}
+html body .master__services .stock__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 700;
+}
+html body .master__services .stock__badges .card-disc {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: #111;
+  color: #f7cc53;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 800;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll1 {
+  flex: 0 0 100%;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll1::after {
+  display: none;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll2 {
+  flex: 0 0 100%;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll4 {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .master__services .stockList__item:not(.courseList__item):not(.has-old-price) .stock__coll4 {
+  flex-basis: 100%;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll4 i {
+  font-style: normal;
+}
+html body .master__services .stockList__item:not(.courseList__item)::after {
+  content: "";
+  order: 1;
+  flex: 0 0 100%;
+  height: 0;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll3 {
+  flex: 0 0 auto;
+  margin: 8px 0 0 10px !important;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #9aa0a8;
+  text-decoration: line-through;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll3 i {
+  font-style: normal;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll5 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  order: 2;
+  margin: 8px 14px 0 0 !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll5::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body .master__services .stockList__item:not(.courseList__item) .stock__coll6 {
+  flex: 0 1 auto;
+  order: 2;
+  margin-top: 8px !important;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #c2410c;
+}
+html body .master__services .stockList__item:not(.courseList__item) .btn_add-master.plus-stock {
+  right: 16px;
+  bottom: 14px;
+}
+
+/* sticky action bar (mobile and installed app) */
+.vg-profile-bar {
+  display: none;
+}
+@media (max-width: 768px) {
+  html body.vg-has-profile-bar {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+  html body .vg-profile-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex;
+    gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -6px 18px -8px rgba(0, 0, 0, .25);
+  }
+  html body .vg-profile-bar a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 48px;
+    border-radius: 24px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  html body .vg-profile-bar__call {
+    flex: 0 0 auto;
+    padding: 0 20px;
+    border: 1.5px solid #111;
+    background: #fff;
+    color: #111;
+  }
+  html body .vg-profile-bar__book {
+    flex: 1 1 auto;
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    box-shadow: 0 2px 0 #d49a10, 0 8px 14px -6px rgba(0, 0, 0, .35);
+  }
+  html body .vg-profile-bar .vg-i {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ==========================================================================
+   Account (cabinet and profile editing): tab strip, header actions.
+   ========================================================================== */
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  list-style: none;
+  box-sizing: border-box;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab.z-tab {
+  display: block !important;
+  flex: none;
+  float: none !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  max-width: none !important;
+  height: 34px;
+  min-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 17px !important;
+  background: #eef0f3 !important;
+  color: #5d636b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 34px !important;
+  white-space: nowrap;
+  box-shadow: none !important;
+}
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link.z-link,
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link:hover,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop > li.z-tab.z-tab.z-active > a.z-link.z-link.z-link.z-link.z-link.z-link.z-link:hover {
+  display: inline-flex !important;
+  border: 0 !important;
+  background: linear-gradient(180deg, #ffd96b, #f7b928) !important;
+  color: #111 !important;
+  font-weight: 800 !important;
+}
+@media (max-width: 1020px) {
+html body #content #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop,
+html body #content #easyprofile #jsn-form #jsn-profile-tabs.z-tabs-desktop.z-tabs-desktop {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    width: calc(100% + 32px);
+    max-width: none;
+    padding: 4px 16px !important;
+  }
+  html body #content #jsn-profile-tabs.z-tabs-desktop::-webkit-scrollbar {
+    display: none;
+  }
+}
+html body #content .view_profile-header .jsn-p-title h3,
+html body #content .jsn-p-title h3 {
+  font-weight: 800;
+}
+@media (max-width: 768px) {
+  html body #content .view_profile-header .jsn-p-title h3,
+  html body #content .jsn-p-title h3 {
+    font-size: 26px;
+    line-height: 30px;
+  }
+}
+@media (max-width: 768px) {
+  html body #content .jsn-p-opt > a.btn[data-open-tab="profile-tab11"] {
+    display: none !important;
+  }
+}
+
+/* Appointment cards: time leads, one detail per line, actions in one row. */
+html body .appointments-cards .appointments-card,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card {
+  display:flex !important;
+  flex-direction:column;
+  padding:14px 16px !important;
+  border:0 !important;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 2px 14px rgba(0, 0, 0, .09);
+}
+html body .appointments-cards .appointments-card__row,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row,
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people {
+  display:block !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+}
+html body .appointments-cards .appointments-card__row--when,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when { order:1 !important; }
+html body .appointments-cards .appointments-card__row--service,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service { order:2 !important; }
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people,
+html body .appointments-cards .appointments-card__row--who,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--who { order:3 !important; }
+html body .appointments-cards .appointments-card__row--contacts,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts { order:4 !important; }
+html body .appointments-cards .appointments-card__row--feedback,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--feedback { order:5 !important; }
+html body .appointments-cards .appointments-card__row--actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions { order:6 !important; }
+html body .appointments-cards .appointments-card__participants,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__participants { order:7 !important; }
+html body .appointments-cards .appointments-card__row--when .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when .appointments-card__label,
+html body .appointments-cards .appointments-card__row--service .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service .appointments-card__label,
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__label,
+html body .appointments-cards .appointments-card__row--actions .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .appointments-card__label {
+  position:absolute;
+  width:1px !important;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}
+html body .appointments-cards .appointments-card__row--when .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--when .appointments-card__value {
+  font-size:22px;
+  line-height:28px;
+  font-weight:800;
+  letter-spacing:-0.3px;
+  color:#111;
+}
+html body .appointments-cards .appointments-card__row--service,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service {
+  margin:2px 0 8px !important;
+}
+html body .appointments-cards .appointments-card__row--service .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--service .appointments-card__value {
+  font-size:16px;
+  line-height:21px;
+  font-weight:700;
+  color:#111;
+}
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people {
+  display:grid !important;
+  grid-template-columns:auto 1fr !important;
+  gap:2px 10px;
+  margin-bottom:6px;
+}
+html body .appointments-cards .appointments-card__people .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people .appointments-card__label {
+  font-size:12px;
+  line-height:18px;
+  font-weight:500;
+  color:#8a8f98;
+}
+html body .appointments-cards .appointments-card__people .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people .appointments-card__value {
+  font-size:13px;
+  line-height:18px;
+  color:#5d636b;
+}
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__value,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__value {
+  display:flex !important;
+  gap:8px;
+  font-size:13px;
+  line-height:18px;
+  color:#5d636b;
+  word-break:break-word;
+}
+html body .appointments-cards .appointments-card__row--contacts .appointments-card__value::before,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts .appointments-card__value::before {
+  content:"";
+  flex:none !important;
+  width:15px !important;
+  height:15px;
+  margin-top:2px;
+  background-color:#9aa0a8;
+  -webkit-mask:var(--vg-i) center / contain no-repeat;
+  mask:var(--vg-i) center / contain no-repeat;
+  --vg-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 5.7 5.7L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E");
+}
+html body .appointments-cards .appointments-card__row--actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions {
+  margin-top:10px;
+  padding-top:0;
+  border-top:0 !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions {
+  display:flex !important;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:0 !important;
+  padding:0 !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions > .btn,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > .btn,
+html body .appointments-cards .appointments-card__row--actions .orders-actions > form,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > form {
+  flex:1 1 120px !important;
+  margin:0 !important;
+  display:block !important;
+}
+html body .appointments-cards .appointments-card__row--actions .orders-actions > form .btn,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions .orders-actions > form .btn {
+  width:100% !important;
+}
+
+/* Cabinet lists (services, promotions, courses, model search): site card look. */
+html body #content .view_profile-tabs .pricesValue > label.checkbox,
+html body #content .view_profile-tabs .stock_pricesValue > label.checkbox,
+html body #content .view_profile-tabs .coursesValue > label.checkbox,
+html body #content .view_profile-tabs .searchesValue > label.checkbox {
+  display: block;
+  margin: 0 0 14px;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+}
+html body #content .view_profile-tabs .service__item--readonly {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 10px 0 0 !important;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: #5d636b;
+}
+html body #content .view_profile-tabs .stock_pricesValue .service__item--readonly,
+html body #content .view_profile-tabs .coursesValue .service__item--readonly,
+html body #content .view_profile-tabs .searchesValue .service__item--readonly {
+  background: #fff7da;
+  box-shadow: none;
+}
+html body #content .view_profile-tabs .service__item--readonly > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  float: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font: inherit;
+  color: inherit;
+}
+html body #content .view_profile-tabs .service__item--readonly > span > label {
+  margin: 0 !important;
+  font-weight: 400;
+  color: #8a8f98;
+}
+html body #content .view_profile-tabs .service__item--readonly > .price {
+  order: 1;
+  flex: 0 0 100%;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #111;
+}
+html body #content .view_profile-tabs .service__item--readonly > .price > label,
+html body #content .view_profile-tabs .service__item--readonly > .course-description > label {
+  display: none;
+}
+html body #content .view_profile-tabs .service__item--readonly > .service-name {
+  order: 0;
+  flex: 0 0 100%;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #111;
+}
+html body #content .view_profile-tabs .stock_pricesValue .service__item--readonly > .service-name {
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 800;
+}
+html body #content .view_profile-tabs .coursesValue .service__item--readonly > .service-name,
+html body #content .view_profile-tabs .searchesValue .service__item--readonly > .service-name {
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 10px !important;
+  border-radius: 11px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 700;
+}
+html body #content .view_profile-tabs .service__item--readonly > .course-description {
+  order: 0;
+  flex: 0 0 100%;
+}
+html body #content .view_profile-tabs .service__item--readonly > .time,
+html body #content .view_profile-tabs .service__item--readonly > .time2,
+html body #content .view_profile-tabs .service__item--readonly > .course-mode {
+  order: 2;
+}
+html body #content .view_profile-tabs .service__item--readonly > .time::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background-color: #9aa0a8;
+  -webkit-mask: var(--vg-i) center / contain no-repeat;
+  mask: var(--vg-i) center / contain no-repeat;
+  --vg-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+}
+html body #content .view_profile-tabs .stocks-subnav {
+  display: flex;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 3px;
+  border-radius: 20px;
+  background: #f1f2f4;
+}
+html body #content .view_profile-tabs .stocks-subnav__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+html body #content .view_profile-tabs .stocks-subnav__btn.is-active {
+  background: #f7cc53;
+  color: #111;
+}
+
+/* Notifications (cabinet): one card, grey hint. */
+html body #content #jsn_notify .push-notify-block {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+}
+html body #content #jsn_notify .push-notify-row-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+}
+html body #content #jsn_notify .push-notify-hint {
+  margin: 8px 0 0;
+}
+html body #content #jsn_notify .push-notify-hint strong {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  color: #6b7077;
+}
+
+/* Profile editing, part 1: fields, specialties, password, action bar (mobile and installed app). */
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label,
+  html body #content #easyprofile.profile-edit .control-group > .control-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label {
+    display: block;
+    margin: 0 0 6px;
+  }
+  html body #content #easyprofile.profile-edit .control-group > .control-label > label .star {
+    color: #e5484d;
+  }
+  html body #content #easyprofile.profile-edit .controls input[type="text"],
+  html body #content #easyprofile.profile-edit .controls input[type="email"],
+  html body #content #easyprofile.profile-edit .controls input[type="password"],
+  html body #content #easyprofile.profile-edit .controls input[type="number"],
+  html body #content #easyprofile.profile-edit .controls input[type="tel"],
+  html body #content #easyprofile.profile-edit .controls input[type="date"],
+  html body #content #easyprofile.profile-edit .controls select {
+    box-sizing: border-box;
+    height: 48px;
+    padding: 0 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background-color: #fff;
+    color: #111;
+    font-size: 16px;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .controls textarea {
+    box-sizing: border-box;
+    min-height: 88px;
+    padding: 12px 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background-color: #fff;
+    color: #111;
+    font-size: 16px;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .controls input:focus,
+  html body #content #easyprofile.profile-edit .controls select:focus,
+  html body #content #easyprofile.profile-edit .controls textarea:focus {
+    outline: 0;
+    border-color: #f7b928;
+    box-shadow: 0 0 0 3px rgba(247, 185, 40, .25);
+  }
+  html body #content #easyprofile.profile-edit .phone-public-toggle {
+    color: #5d636b;
+    font-size: 14px;
+  }
+
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    flex: 0 0 auto !important;
+    width: auto;
+    max-width: 100% !important;
+    height: 40px;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    border-radius: 20px;
+    background: #eef0f3;
+    color: #3d434a;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1 !important;
+    cursor: pointer;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox > input[type="checkbox"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    pointer-events: none;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox:has(input:checked) {
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit #jsn-form #jform_vyberite_spetsialnos > label.checkbox:has(input:focus-visible) {
+    outline: 2px solid #111;
+    outline-offset: 2px;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-login-hint {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff7da;
+    color: #3d434a;
+    font-size: 14px;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter {
+    display: block;
+    width: 100%;
+    height: 8px;
+    margin: 8px 0 0;
+    border: 0;
+    border-radius: 4px;
+    background: #eef0f3;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-bar {
+    height: 8px;
+    border: 0;
+    border-radius: 4px;
+    background: #eef0f3;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-optimum-value {
+    border-radius: 4px;
+    background: #2fa84f;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-suboptimum-value {
+    border-radius: 4px;
+    background: #f7b928;
+  }
+  html body #content #easyprofile.profile-edit .password-group meter::-webkit-meter-even-less-good-value {
+    border-radius: 4px;
+    background: #e5484d;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-group {
+    display: flex;
+    gap: 8px;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-group > input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  html body #content #easyprofile.profile-edit .password-group .input-password-toggle {
+    flex: 0 0 auto;
+    height: 48px;
+    padding: 0 14px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    background: #fff;
+    color: #3d434a;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer {
+    position: fixed !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex !important;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 !important;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    border: 0;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -6px 18px -8px rgba(0, 0, 0, .25);
+  }
+  html body #content #easyprofile.profile-edit .lk-edit-form-footer.lk-edit-form-footer > button {
+    flex: 1 1 0;
+    height: 48px;
+    margin: 0 !important;
+  }
+}
+
+/* Profile editing, part 2: schedule, services, promotions, courses, model search, notifications. */
+@media (max-width: 768px) {
+  html body #content #easyprofile.profile-edit .schedule-day-list .schedule-day-row {
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: #f4f5f7;
+    box-shadow: none;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-list .schedule-day-row.is-active {
+    background: #fff7da;
+    box-shadow: 0 0 0 1.5px #f7cc53 inset;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-label {
+    font-size: 16px;
+    font-weight: 800;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .schedule-time-label > span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .schedule-day-list select.schedule-time-select {
+    width: 100%;
+    height: 44px;
+    font-size: 15px;
+  }
+
+  html body #content #easyprofile.profile-edit .controls > fieldset[id$="_servis"],
+  html body #content #easyprofile.profile-edit .controls > fieldset#jform_vyberite_usl {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  html body #content #easyprofile.profile-edit fieldset[id$="_servis"] > label.type_master_open,
+  html body #content #easyprofile.profile-edit fieldset#jform_vyberite_usl > label.type_master_open {
+    font-size: 19px;
+    font-weight: 800;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .type_master_open .flex_wrap {
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  html body #content #easyprofile.profile-edit .service_list .service__item {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 10px;
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 14px !important;
+    padding: 14px !important;
+    border: 0 !important;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > .time,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .time2,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .stock_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .old_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_duration,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_price,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_duration {
+    grid-column: auto;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px;
+    width: auto !important;
+    font-size: 14px;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span > label {
+    display: block !important;
+    flex: 0 0 100%;
+    width: 100% !important;
+    margin: 0 !important;
+    float: none !important;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+    text-align: left !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > span > span {
+    flex: 0 0 100%;
+    width: 100% !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item select,
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="number"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="text"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="date"],
+  html body #content #easyprofile.profile-edit .service_list .service__item textarea {
+    flex: 1 1 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item select,
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="number"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="text"],
+  html body #content #easyprofile.profile-edit .service_list .service__item input[type="date"] {
+    height: 48px !important;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > select.service-select,
+  html body #content #easyprofile.profile-edit .service_list .service__item > select.stock-service-select {
+    font-weight: 700;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item > .price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .stock_price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .course_price input,
+  html body #content #easyprofile.profile-edit .service_list .service__item > .search_price input {
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .service_list .service__item .btn-remove-service,
+  html body #content #easyprofile.profile-edit .service_list .service__item .stock-remove {
+    justify-self: start;
+    height: 40px;
+    padding: 0 18px !important;
+    border: 1.5px solid #e5484d !important;
+    border-radius: 20px;
+    background: #fff !important;
+    color: #e5484d !important;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  html body #content #easyprofile.profile-edit .btn-add-service.btn-add-service {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    height: 46px;
+    margin: 4px 0 18px;
+    padding: 0 20px;
+    border-radius: 23px;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  html body #content #easyprofile.profile-edit .lk-notify-subnav {
+    gap: 8px;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-subnav__btn {
+    min-height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 18px;
+    background: #eef0f3;
+    color: #5d636b;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-subnav__btn.is-active {
+    background: linear-gradient(180deg, #ffd96b, #f7b928);
+    color: #111;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-settings,
+  html body #content #easyprofile.profile-edit .lk-notify-panel,
+  html body #content #easyprofile.profile-edit .lk-notify-grid-wrap {
+    width: 100%;
+    overflow: visible;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid,
+  html body #content #easyprofile.profile-edit .lk-notify-grid tbody {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid thead {
+    display: none;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    margin: 0 0 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, .09);
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid th[scope="row"] {
+    display: block;
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin: 0 0 4px;
+    padding: 0;
+    border: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td {
+    display: contents;
+    border: 0;
+    text-align: left;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:not(:has(select))::before {
+    align-self: center;
+    padding: 12px 0;
+    border-top: 1px solid #eef0f3;
+    font-size: 15px;
+    font-weight: 600;
+    color: #111;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(2):not(:has(select))::before {
+    content: "Запись";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(3):not(:has(select))::before {
+    content: "Перенос";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:nth-child(4):not(:has(select))::before {
+    content: "Отмена";
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"] {
+    position: relative;
+    align-self: center;
+    justify-self: end;
+    width: 46px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    background: #d5d9de !important;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: background .15s;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    transition: transform .15s;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:checked {
+    background: #f7b928 !important;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:checked::after {
+    transform: translateX(18px);
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td > input[type="checkbox"]:focus-visible {
+    outline: 2px solid #111;
+    outline-offset: 2px;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:has(select) {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 12px 0 0;
+    border: 0;
+    border-top: 1px solid #eef0f3;
+    text-align: left;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-grid td:has(select)::before {
+    content: "Напоминание о начале записи";
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d636b;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-remind {
+    display: block;
+    width: 100%;
+  }
+  html body #content #easyprofile.profile-edit .lk-notify-remind select {
+    height: 46px;
+    border: 1.5px solid #dfe3e8;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+}
+
+/* Filters: the high-density chosen sprite no longer shows under the yellow cross. */
+html body .filter .chosen-container-single .chosen-single abbr.search-choice-close,
+html body .filter .chosen-container-multi .chosen-choices li.search-choice .search-choice-close,
+html body .category__masters-sidebar .chosen-container-single .chosen-single abbr.search-choice-close,
+html body .category__masters-sidebar .chosen-container-multi .chosen-choices li.search-choice .search-choice-close {
+  background-image: none !important;
+}
+
+/* Filters: 3px between fields. */
+html body .category__masters-sidebar .masters-sidebar__body > .clearable {
+  margin-bottom: 3px;
+}
+
+/* Filters: date and time fields, 2px apart, each with a yellow clear cross. */
+html body .category__masters-sidebar .vg-avail-field {
+  position: relative;
+  display: block;
+}
+html body .category__masters-sidebar .vg-avail-field + .vg-avail-field {
+  margin-top: 2px;
+}
+html body .category__masters-sidebar .vg-avail-field > input.filed__master {
+  padding-right: 24px;
+}
+html body .category__masters-sidebar .vg-avail-clear {
+  position: absolute;
+  top: 6px;
+  right: 3px;
+  display: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+html body .category__masters-sidebar .vg-avail-field.has-value > .vg-avail-clear {
+  display: block;
+}
+html body .category__masters-sidebar .vg-avail-clear::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+html body .category__masters-sidebar .vg-avail-clear::after {
+  content: "×";
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  margin-top: -5px;
+  color: #F9CE54;
+  font-size: 15px;
+  line-height: normal;
+}
+
+/* Favourites: saved profiles fill the content width exactly (no fixed width, no negative shifts). */
+html body #easyprofile .lk-favorites-list .category__masters {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+html body #easyprofile .lk-favorites-list .lk-fav-item .category__item {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+html body #easyprofile .lk-favorites-list .lk-fav-comment-wrap {
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
+}
+@media (min-width: 769px) {
+  html body #easyprofile .lk-favorites-list .lk-fav-item .category__item-content {
+    width: calc(100% - 231px);
+  }
+  html body #easyprofile .lk-favorites-list .lk-fav-item .category__item-content-left {
+    width: calc(100% - 175px);
+  }
+}
+
+/* Master profile: courses and model search cards, same card as promotions. */
+html body .master__services .stockList__item.stockList__item.courseList__item {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 12px 0 !important;
+  padding: 16px 16px 62px !important;
+  border-radius: 16px;
+  background: #fff7da;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+html body .master__services .courseList__item > .stockList__item-coll {
+  float: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left;
+}
+html body .master__services .courseList__item .stock__badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 100%;
+  margin-bottom: 8px !important;
+}
+html body .master__services .courseList__item .course__coll0 {
+  flex: 0 0 100%;
+  width: 100% !important;
+  margin: 0 0 10px !important;
+}
+html body .master__services .courseList__item .course__coll0 img {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 180px;
+  aspect-ratio: auto;
+  object-fit: cover;
+  border-radius: 12px !important;
+}
+html body .master__services .courseList__item .stock__coll1 {
+  flex: 0 0 100%;
+  font-family: inherit;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+html body .master__services .courseList__item .stock__coll1::after {
+  display: none;
+}
+html body .master__services .courseList__item .course__coll1b {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 24px;
+  margin-top: 8px !important;
+  padding: 0 10px !important;
+  border-radius: 12px;
+  background: #ffe28a;
+  color: #6b4d00;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 600;
+}
+html body .master__services .courseList__item .stock__coll2 {
+  flex: 0 0 100%;
+  margin-top: 6px !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+  overflow-wrap: anywhere;
+}
+html body .master__services .courseList__item .stock__coll4 {
+  flex: 0 0 100%;
+  margin-top: 8px !important;
+  font-family: inherit;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+html body .master__services .courseList__item .stock__coll4 i {
+  font-style: normal;
+}
+html body .master__services .courseList__item .stock__coll5 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin: 8px 14px 0 0 !important;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7077;
+}
+html body .master__services .courseList__item .stock__coll5::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body .master__services .courseList__item .course__seats {
+  flex: 0 1 auto;
+  margin-top: 8px !important;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #c2410c;
+}
+html body .master__services .courseList__item .course__seats.is-full {
+  color: #9b1c1c;
+}
+html body .master__services .courseList__item .course__coll7 {
+  flex: 0 0 100%;
+  margin-top: 6px !important;
+  font-size: 12px;
+  line-height: 16px;
+  color: #8a8f98;
+}
+html body .master__services .courseList__item > .clearFloat,
+html body .master__services .courseList__item > br {
+  display: none !important;
+}
+@media (min-width: 769px) {
+  html body .master__services .courseList__item .course__coll0 img {
+    width: 240px !important;
+    max-width: 100% !important;
+    height: 160px;
+  }
+}
+
+/* Profile: «Отзывы» block 2px lower, its heading and «О мастере» 2px smaller. */
+html body .review__master.review__master {
+  border-top: 2px solid transparent;
+}
+html body .review__master h2,
+html body .master__about h2 {
+  font-size: 22px;
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+	<name>plg_system_pushnotifybooking</name>
+	<author>Viglin</author>
+	<creationDate>2026-02</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_SYSTEM_PUSHNOTIFYBOOKING_XML_DESCRIPTION</description>
+	<namespace path="src">Viglin\Plugin\System\Pushnotifybooking</namespace>
+	<files>
+		<folder plugin="pushnotifybooking">services</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="en-GB">language/en-GB/plg_system_pushnotifybooking.ini</language>
+		<language tag="en-GB">language/en-GB/plg_system_pushnotifybooking.sys.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_system_pushnotifybooking.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_system_pushnotifybooking.sys.ini</language>
+	</languages>
+</extension>

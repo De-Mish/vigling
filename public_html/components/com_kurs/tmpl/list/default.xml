@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+	<layout title="Курсы" option="COM_KURS_LIST_LAYOUT">
+		<message><![CDATA[Показывает отдельную витрину курсов.]]></message>
+	</layout>
+</metadata>

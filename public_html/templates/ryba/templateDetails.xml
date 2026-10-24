@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="template" client="site">
+	<name>ryba</name>
+	<version>1.0</version>
+	<creationDate>01/01/2020</creationDate>
+	<author>Evgeny Kamentcev</author>
+	<authorEmail>info@jk-site.ru</authorEmail>
+	<copyright>Copyright (C) 2005 - 2020 JK-SITE. All rights reserved.</copyright>
+	<description>TPL_RYBA</description>
+	<files>
+		<filename>joomla.asset.json</filename>
+		<filename>component.php</filename>
+		<filename>error.php</filename>
+		<filename>offline.php</filename>
+		<filename>favicon.png</filename>
+		<filename>index.php</filename>
+		<filename>templateDetails.xml</filename>
+		<folder>css</folder>
+		<folder>html</folder>
+		<folder>images</folder>
+		<folder>feedback</folder>
+		<folder>js</folder>
+		<folder>fonts</folder>
+	</files>
+	<positions>
+		<position>top</position>
+		<position>offcanvas</position>
+		<position>topmenu</position>
+		<position>breadcrumbs</position>
+		<position>addmaster</position>
+		<position>content</position>
+		<position>loadapps</position>
+		<position>topposts</position>
+		<position>bottommenu</position>
+		<position>sidebar</position>
+		<position>slider</position>
+		<position>debug</position>
+	</positions>
+	<config>
+		<fields name="params">
+			<fieldset name="slider" label="Слайдер">
+				<field name="slider_z_1" type="textarea" filter="raw" label="Заголовок слайд 1" />
+				<field name="slider_u_1" type="textarea" filter="raw" label="Подзаголовок слайд 1" />
+				<field name="slider_i_1" type="media" default="" label="Картинка слайд 1" />
+				<field name="slider_z_2" type="textarea" filter="raw" label="Заголовок слайд 2" />
+				<field name="slider_u_2" type="textarea" filter="raw" label="Подзаголовок слайд 2" />
+				<field name="slider_i_2" type="media" default="" label="Картинка слайд 2" />
+				<field name="slider_z_3" type="textarea" filter="raw" label="Заголовок слайд 3" />
+				<field name="slider_u_3" type="textarea" filter="raw" label="Подзаголовок слайд 3" />
+				<field name="slider_i_3" type="media" default="" label="Картинка слайд 3" />
+				<field name="slider_z_4" type="textarea" filter="raw" label="Заголовок слайд 4" />
+				<field name="slider_u_4" type="textarea" filter="raw" label="Подзаголовок слайд 4" />
+				<field name="slider_i_4" type="media" default="" label="Картинка слайд 4" />
+				<field name="slider_z_5" type="textarea" filter="raw" label="Заголовок слайд 5" />
+				<field name="slider_u_5" type="textarea" filter="raw" label="Подзаголовок слайд 5" />
+				<field name="slider_i_5" type="media" default="" label="Картинка слайд 5" />
+			</fieldset>
+			<fieldset name="advanced">
+				<field name="email" type="email" label="E-Mail" description="E-Mail для писем" default="" />
+				<field name="instagram" type="url" default="" label="Instagram" />
+				<field name="appstore" type="url" default="" label="Приложение App Store" />
+				<field name="googleplay" type="url" default="" label="Приложение Google Play" />
+			</fieldset>
+			<fieldset name="pages" label="Страницы">
+				<field
+					name="contacts_page_html"
+					type="editor"
+					filter="raw"
+					label="Страница контактов (HTML)"
+					description="Контент для страницы контактов. Поддерживается HTML."
+					buttons="true"
+					hide="pagebreak,readmore" />
+			</fieldset>
+		</fields>
+	</config>
+</extension>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="user" method="upgrade">
+	<name>PLG_USER_VIGLING_NAME</name>
+	<author>Vigling</author>
+	<creationDate>2025-01</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_USER_VIGLING_DESCRIPTION</description>
+	<namespace path="src">Joomla\Plugin\User\Vigling</namespace>
+	<files>
+		<folder plugin="vigling">services</folder>
+		<folder>forms</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="en-GB">language/en-GB/plg_user_vigling.ini</language>
+		<language tag="en-GB">language/en-GB/plg_user_vigling.sys.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_user_vigling.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_user_vigling.sys.ini</language>
+	</languages>
+</extension>

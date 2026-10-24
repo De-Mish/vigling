@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="ajax" method="upgrade">
+	<name>PLG_AJAX_QUICKAUTH</name>
+	<author>Vigling</author>
+	<creationDate>2026-02</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_AJAX_QUICKAUTH_DESCRIPTION</description>
+	<namespace path="src">Viglin\Plugin\Ajax\Quickauth</namespace>
+	<files>
+		<folder plugin="quickauth">services</folder>
+		<folder>src</folder>
+	</files>
+	<languages>
+		<language tag="ru-RU">language/ru-RU/plg_ajax_quickauth.ini</language>
+		<language tag="ru-RU">language/ru-RU/plg_ajax_quickauth.sys.ini</language>
+	</languages>
+</extension>

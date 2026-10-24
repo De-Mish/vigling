@@ -1,0 +1,124 @@
+:root {
+  --vg-gold: #f7cc53;
+  --vg-gold-hover: #f9e09b;
+  --vg-ink: #111111;
+  --vg-radius-pill: 999px;
+  --vg-radius-card: 12px;
+  --vg-radius-control: 8px;
+  --vg-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  --vg-gutter: 16px;
+}
+
+/* Primary pill buttons: one gold, one fully-round radius. */
+.btn__time-zapis,
+.calc__btn .btn-next,
+.del__btn .btn-del,
+.btn-fin,
+#prof,
+.quick-auth-form .btn__time-zapis,
+.pwa-install-actions .btn,
+.reg-type-page #member-registration .btn.validate,
+.reg-type-page #member-registration .com-users-registration__submit .controls .btn.validate {
+  background-color: var(--vg-gold);
+  border-color: var(--vg-gold);
+  color: var(--vg-ink);
+  border-radius: var(--vg-radius-pill) !important;
+  box-shadow: var(--vg-shadow);
+}
+
+.btn__time-zapis:hover,
+.calc__btn .btn-next:hover,
+.del__btn .btn-del:hover,
+.btn-fin:hover,
+#prof:hover,
+.reg-type-page #member-registration .btn.validate:hover {
+  background-color: var(--vg-gold-hover);
+  border-color: var(--vg-gold-hover);
+  color: var(--vg-ink);
+}
+
+/* Outline pills (home search, desktop nav chrome). */
+body#home .home-search-links a.homepage-link-btn,
+.header--desktop .header__menu .mod-menu > li > a,
+.header--desktop .header__menu .nav > li > a {
+  border-radius: var(--vg-radius-pill) !important;
+  border-color: var(--vg-gold);
+}
+
+.header--desktop .header__menu .mod-menu > li.current > a,
+.header--desktop .header__menu .nav > li.current > a,
+.header--desktop .header__menu .mod-menu > li > a[aria-current="page"],
+.header--desktop .header__menu .nav > li > a[aria-current="page"] {
+  background-color: var(--vg-gold);
+  border-color: var(--vg-gold);
+  color: var(--vg-ink);
+}
+
+/* Booking slot chips and day toggles: same gold, pill radius. */
+.calendar__master-item label.btn-select,
+.calendar__stock-item label.btnstk-select,
+.days__btns label,
+.days__stks label {
+  border-radius: var(--vg-radius-pill) !important;
+}
+
+.calendar__master-item input:checked + label.btn-select,
+.calendar__stock-item input:checked + label.btnstk-select,
+.days__btns input:checked + label,
+.days__stks input:checked + label,
+.thumbnail.select,
+.thumbnail:hover,
+.fixed-slot-time-btn.is-selected {
+  background-color: var(--vg-gold);
+  border-color: var(--vg-gold);
+}
+
+.serviceList button,
+#at_home b::before,
+#zapis .screen4 label::before,
+#stocks .screen4 label::before,
+#rpl .screen4 label::before,
+#rplStock .screen4 label::before {
+  background-color: var(--vg-gold);
+  border-color: var(--vg-gold);
+}
+
+h2:after,
+.h2:after,
+.category__masters-sidebar h2:after,
+.registration h1:after {
+  background-color: var(--vg-gold);
+}
+
+/* Cards and review blocks already rounded: snap to one radius. */
+.review__master-body-item,
+.pwa-install-card,
+.modal-content,
+.category.jsn_list .category__item,
+.category.jsn_stockList .category__item {
+  border-radius: var(--vg-radius-card);
+}
+
+.category__item-img {
+  border-top-left-radius: var(--vg-radius-card);
+  border-bottom-left-radius: var(--vg-radius-card);
+}
+
+/* Boxed form controls (not underline-only profile fields). */
+.form-control,
+select.form-control,
+textarea.form-control,
+.reg-type-page #member-registration .form-control {
+  border-radius: var(--vg-radius-control);
+}
+
+/* Mobile: keep blocks centered with a consistent side gutter. */
+@media (max-width: 1020px) {
+  .container,
+  .container2,
+  .slider-container {
+    padding-left: var(--vg-gutter);
+    padding-right: var(--vg-gutter);
+    box-sizing: border-box;
+  }
+}

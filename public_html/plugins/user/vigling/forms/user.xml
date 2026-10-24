@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form>
+	<fields>
+		<fieldset name="jsn_decode" label="PLG_USER_VIGLING_TAB_LABEL">
+			<field
+				name="jsn_decoded_display"
+				type="jsndecode"
+				label=""
+				description=""
+			/>
+		</fieldset>
+	</fields>
+</form>

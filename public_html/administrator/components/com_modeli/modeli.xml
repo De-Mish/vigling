@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="component" method="upgrade">
+	<name>com_modeli</name>
+	<author>Viglin</author>
+	<creationDate>2026-04</creationDate>
+	<copyright>Viglin</copyright>
+	<license>GNU General Public License version 2 or later</license>
+	<version>1.0.0</version>
+	<description>COM_MODELI_DESCRIPTION</description>
+	<namespace path="src">Viglin\Component\Modeli</namespace>
+	<files folder="site">
+		<folder>src</folder>
+		<folder>tmpl</folder>
+	</files>
+	<administration>
+		<menu>com_modeli</menu>
+		<files folder="admin">
+			<folder>services</folder>
+			<folder>src</folder>
+		</files>
+	</administration>
+</extension>

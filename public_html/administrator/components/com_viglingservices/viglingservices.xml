@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="component" method="upgrade">
+	<name>com_viglingservices</name>
+	<author>Viglin</author>
+	<creationDate>2026-02</creationDate>
+	<copyright>Viglin</copyright>
+	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+	<version>1.0.0</version>
+	<description>COM_VIGLINGSERVICES_DESCRIPTION</description>
+	<namespace path="src">Viglin\Component\Viglingservices</namespace>
+	<administration>
+		<menu img="class:list">COM_VIGLINGSERVICES</menu>
+		<files folder="admin">
+			<filename>access.xml</filename>
+			<folder>forms</folder>
+			<folder>services</folder>
+			<folder>src</folder>
+			<folder>tmpl</folder>
+		</files>
+		<languages folder="admin">
+			<language tag="ru-RU">language/ru-RU/ru-RU.com_viglingservices.ini</language>
+			<language tag="ru-RU">language/ru-RU/ru-RU.com_viglingservices.sys.ini</language>
+		</languages>
+	</administration>
+</extension>

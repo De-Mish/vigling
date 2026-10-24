@@ -1,0 +1,97 @@
+@font-face {
+  font-family: "GothamPro";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-cyrillic-400.woff2) format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "GothamPro";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-latin-400.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "GothamPro-Black";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-cyrillic-900.woff2) format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "GothamPro-Black";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-latin-900.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "GothamPro-Bold";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-cyrillic-700.woff2) format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "GothamPro-Bold";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-latin-700.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "GothamPro-Light";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-cyrillic-300.woff2) format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "GothamPro-Light";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-latin-300.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "GothamPro-Medium";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-cyrillic-500.woff2) format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "GothamPro-Medium";
+  font-display: swap;
+  src: url(/templates/ryba/fonts/montserrat/Montserrat-latin-500.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+:root {
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-4xl: 80px;
+  --container-width: 1170px;
+  --container-padding: 20px;
+  --color-primary: #f7cc53;
+  --color-primary-hover: #F9E09B;
+  --color-primary-dark: #d4a832;
+  --color-text: #111;
+  --color-text-muted: #666;
+  --color-border: #e0e0e0;
+  --color-shadow: rgba(0,0,0,0.06);
+  --color-shadow-hover: rgba(0,0,0,0.12);
+  --radius-md: 10px;
+  --radius-lg: 15px;
+  --radius-xl: 20px;
+  --radius-full: 50px;
+  --font-family-base: 'GothamPro', sans-serif;
+  --font-family-heading: 'GothamPro-Bold', sans-serif;
+  --font-family-medium: 'GothamPro-Medium', sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --transition-base: 0.25s ease;
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
