@@ -4156,3 +4156,74 @@ html body .appointments-page .alert.alert-info:is(.appointments-day-empty, .appo
   border-radius: 50%;
   background: #F9CE54;
 }
+
+/* "+" booking button: the cross is drawn with two bars so it is exactly centered in the circle (a text glyph sits low) */
+html body .btn_add-master.plus::before,
+html body .btn_add-master.plus::after,
+html body .btn_add-stock.plus-stock::before,
+html body .btn_add-stock.plus-stock::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 2.5px;
+  margin: -1.25px 0 0 -7px;
+  border-radius: 1.5px;
+  background: currentColor;
+}
+html body .btn_add-master.plus::after,
+html body .btn_add-stock.plus-stock::after {
+  transform: rotate(90deg);
+}
+html body .btn_add-master.plus,
+html body .btn_add-stock.plus-stock {
+  padding: 0;
+  line-height: 0;
+}
+
+/* desktop profile: duration under the service name, aligned to its left edge */
+@media (min-width: 1021px) and (not (display-mode: standalone)) and (not (display-mode: minimal-ui)) {
+  html body .master__services--fullbleed .priceList__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name price"
+      "dur price"
+      "rec rec";
+    align-items: center;
+    column-gap: 16px;
+    row-gap: 4px;
+  }
+  html body .master__services--fullbleed .priceList__item > .priceList__item-coll {
+    float: none;
+    width: auto;
+    margin: 0;
+    min-width: 0;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-name {
+    grid-area: name;
+    align-self: end;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-price {
+    grid-area: price;
+    white-space: nowrap;
+    text-align: right;
+  }
+  html body .master__services--fullbleed .priceList__item > .price__coll3 {
+    grid-area: dur;
+    justify-self: start;
+    align-self: start;
+    white-space: nowrap;
+  }
+  html body .master__services--fullbleed .priceList__item > .clearFloat {
+    display: none;
+  }
+  html body .master__services--fullbleed .priceList__item > .service-rec {
+    grid-area: rec;
+  }
+  html body .master__services--fullbleed .priceList__item .btn_add-master.plus {
+    top: 50%;
+    margin-top: -18px;
+  }
+}
