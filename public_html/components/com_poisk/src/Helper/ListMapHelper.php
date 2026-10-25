@@ -124,6 +124,16 @@ class ListMapHelper
 		$query['city'] = '';
 	}
 
+	/**
+	 * Fields the public map needs. Entrance, floor and apartment stay off the pin.
+	 *
+	 * @return list<string>
+	 */
+	public static function pinFieldNames(): array
+	{
+		return ['sity', 'area', 'street', 'house_number'];
+	}
+
 	public static function pinFromFields(
 		int $userId,
 		string $name,
@@ -133,14 +143,20 @@ class ListMapHelper
 		array $extra = []
 	): array {
 		$sity = self::decodeCityValue($fields['sity'] ?? '');
-		$area = trim((string) ($fields['area'] ?? ''));
-		// Public pins stay at city and district. Street and house never leave the server.
-		$parts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$sity, $area])));
-		$addr = implode(', ', $parts);
-		$localParts = array_values(array_filter(array_map([self::class, 'normalizeAddressPart'], [$area])));
-		$addrLocal = implode(', ', $localParts);
-		$queryParts = array_values(array_unique(array_filter($parts)));
-		$query = count($queryParts) >= 2 ? implode(', ', $queryParts) : ($sity !== '' ? $sity : '');
+		$area = self::decodeCityValue($fields['area'] ?? '');
+		$street = self::decodeCityValue($fields['street'] ?? '');
+		$house = self::decodeCityValue($fields['house_number'] ?? '');
+		// Most precise string first. The map geocodes that point; the clusterer
+		// then groups nearby houses into a street and nearby streets into a district
+		// as the zoom changes. A district-only query put every pin on one point.
+		$queries = self::geocodeQueries($sity, $area, $street, $house);
+		$query = $queries[0] ?? '';
+		$addr = implode(', ', array_values(array_filter([$sity, $area, $street, $house], static function (string $part): bool {
+			return $part !== '';
+		})));
+		$addrLocal = implode(', ', array_values(array_filter([$area, $street, $house], static function (string $part): bool {
+			return $part !== '';
+		})));
 		$href = $profileHref;
 		if ($href !== '' && strpos($href, 'source=') === false) {
 			$href .= (strpos($href, '?') === false ? '?' : '&') . 'source=map';
@@ -151,11 +167,49 @@ class ListMapHelper
 			'name' => $name,
 			'city' => $sity,
 			'area' => $area,
+			'street' => $street,
+			'house' => $house,
 			'query' => $query,
+			'queries' => $queries,
 			'href' => $href,
 			'line' => $servicesText,
 			'addr' => $addr !== '' ? $addr : ($sity !== '' ? $sity : 'Адрес не указан'),
 			'addr_local' => $addrLocal !== '' ? $addrLocal : 'Адрес не указан',
 		], $extra);
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private static function geocodeQueries(string $city, string $area, string $street, string $house): array
+	{
+		$queries = [];
+		$push = static function (array $parts) use (&$queries): void {
+			$parts = array_values(array_unique(array_filter($parts, static function (string $part): bool {
+				return $part !== '';
+			})));
+			if ($parts === []) {
+				return;
+			}
+			$query = implode(', ', $parts);
+			if (!in_array($query, $queries, true)) {
+				$queries[] = $query;
+			}
+		};
+
+		if ($street !== '' && $house !== '') {
+			$push([$city, $street, $house]);
+		}
+		if ($street !== '') {
+			$push([$city, $street]);
+		}
+		if ($area !== '') {
+			$push([$city, $area]);
+		}
+		if ($city !== '') {
+			$push([$city]);
+		}
+
+		return $queries;
 	}
 }
