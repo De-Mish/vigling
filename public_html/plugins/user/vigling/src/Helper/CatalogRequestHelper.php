@@ -18,6 +18,8 @@ use Joomla\Database\DatabaseInterface;
 final class CatalogRequestHelper
 {
 	public const SUBJECT = 'Нужных услуг нет в каталоге';
+	public const REVIEW_SUBJECT = 'Запрос отзывов из других источников';
+	public const SUCCESS = 'Спасибо, заявка отправлена';
 
 	private const DAILY_LIMIT = 8;
 	private const DUPLICATE_SECONDS = 900;
@@ -28,7 +30,25 @@ final class CatalogRequestHelper
 	public static function submit($app): array
 	{
 		try {
-			return self::deliver($app);
+			if (!Session::checkToken('post')) {
+				return ['success' => false, 'message' => 'Неверный токен. Обновите страницу и отправьте заявку ещё раз.'];
+			}
+			$user = method_exists($app, 'getIdentity') ? $app->getIdentity() : null;
+			if (!$user || empty($user->id)) {
+				return ['success' => false, 'message' => 'Нужна авторизация.'];
+			}
+			$action = (string) $app->getInput()->post->get('action', '', 'cmd');
+			if ($action === 'catalog_request') {
+				return self::deliverCatalog($app, $user);
+			}
+			if ($action === 'contact_admin') {
+				return self::deliverContact($app, $user);
+			}
+			if ($action === 'external_reviews') {
+				return self::deliverReviews($app, $user);
+			}
+
+			return ['success' => false, 'message' => 'Неизвестное действие.'];
 		} catch (\Throwable $e) {
 			return ['success' => false, 'message' => 'Не удалось отправить заявку. Попробуйте позже.'];
 		}
@@ -107,60 +127,120 @@ final class CatalogRequestHelper
 		return array_values($directory);
 	}
 
-	private static function deliver($app): array
+	private static function deliverCatalog($app, $user): array
 	{
-		if (!Session::checkToken('post')) {
-			return ['success' => false, 'message' => 'Неверный токен. Обновите страницу и отправьте заявку ещё раз.'];
-		}
-
-		$user = method_exists($app, 'getIdentity') ? $app->getIdentity() : null;
-		if (!$user || empty($user->id)) {
-			return ['success' => false, 'message' => 'Нужна авторизация.'];
-		}
 		if (!MasterGroupHelper::isMaster($user)) {
 			return ['success' => false, 'message' => 'Заявку может отправить только мастер.'];
 		}
 
-		$input = $app->getInput();
-		if ((string) $input->post->get('action', '', 'cmd') !== 'catalog_request') {
-			return ['success' => false, 'message' => 'Неизвестное действие.'];
-		}
-
-		$directory = self::directory();
-		$parsed = self::parseRequest($input->post, $directory);
+		$post = $app->getInput()->post;
+		$parsed = self::parseRequest($post, self::directory());
 		if (!$parsed['ok']) {
 			return ['success' => false, 'message' => $parsed['message']];
 		}
 
-		$db = Factory::getContainer()->get(DatabaseInterface::class);
+		$lines = self::senderLines($user);
+		$lines[] = 'Специализация: ' . $parsed['specialization'];
+		$lines[] = 'Услуга: ' . $parsed['service'];
+		$lines[] = 'Метод: ' . $parsed['method'];
+
+		return self::sendToAdmins($app, $user, self::SUBJECT, self::htmlMessage($lines), 'vg:catalog');
+	}
+
+	private static function deliverContact($app, $user): array
+	{
+		$post = $app->getInput()->post;
+		$subject = self::cleanText((string) $post->get('subject', '', 'string'), 120);
+		$body = self::cleanBody((string) $post->get('body', '', 'raw'));
+		if (self::tooShort($subject)) {
+			return ['success' => false, 'message' => 'Введите тему сообщения.'];
+		}
+		if (self::tooLong((string) $post->get('subject', '', 'string'), 120)) {
+			return ['success' => false, 'message' => 'Тема слишком длинная.'];
+		}
+		if (self::tooShort($body)) {
+			return ['success' => false, 'message' => 'Напишите сообщение.'];
+		}
+		if (mb_strlen($body, 'UTF-8') >= 4000 && self::tooLongBody((string) $post->get('body', '', 'raw'), 4000)) {
+			return ['success' => false, 'message' => 'Сообщение слишком длинное.'];
+		}
+
+		$lines = self::senderLines($user);
+		$message = self::htmlMessage($lines) . "<br>\n" . nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), false);
+
+		return self::sendToAdmins($app, $user, $subject, $message, 'vg:contact');
+	}
+
+	private static function deliverReviews($app, $user): array
+	{
+		$rawSources = $app->getInput()->post->get('sources', [], 'array');
+		if (!is_array($rawSources)) {
+			$rawSources = [];
+		}
+		$links = [];
+		foreach ($rawSources as $raw) {
+			if (!is_scalar($raw)) {
+				continue;
+			}
+			$link = self::cleanLink((string) $raw);
+			if ($link === '') {
+				continue;
+			}
+			if (!self::isLink($link)) {
+				return ['success' => false, 'message' => 'Проверьте ссылки: нужна ссылка на страницу источника.'];
+			}
+			$links[] = $link;
+		}
+		$links = array_values(array_unique($links));
+		if ($links === []) {
+			return ['success' => false, 'message' => 'Вставьте ссылку хотя бы на один источник.'];
+		}
+		if (count($links) > 12) {
+			return ['success' => false, 'message' => 'Можно отправить не больше 12 источников.'];
+		}
+
+		$lines = self::senderLines($user);
+		foreach ($links as $index => $link) {
+			$lines[] = 'Источник ' . ($index + 1) . ': ' . $link;
+		}
+
+		return self::sendToAdmins($app, $user, self::REVIEW_SUBJECT, self::htmlMessage($lines), 'vg:reviews');
+	}
+
+	private static function senderLines($user): array
+	{
 		$userId = (int) $user->id;
 		$name = trim((string) ($user->name ?? ''));
 		if ($name === '') {
 			$name = trim((string) ($user->username ?? ''));
 		}
 		if ($name === '') {
-			$name = 'Мастер #' . $userId;
+			$name = 'Пользователь #' . $userId;
 		}
-		$email = trim((string) ($user->email ?? ''));
-		$profileUrl = rtrim(Uri::root(), '/') . '/' . $userId;
+		$role = MasterGroupHelper::isMaster($user) ? 'Мастер' : 'Клиент';
 		$lines = [
-			'Мастер: ' . $name . ' (id ' . $userId . ')',
+			$role . ': ' . $name . ' (id ' . $userId . ')',
 		];
+		$email = trim((string) ($user->email ?? ''));
 		if ($email !== '') {
 			$lines[] = 'Email: ' . $email;
 		}
-		$lines[] = 'Профиль: ' . $profileUrl;
-		$lines[] = 'Специализация: ' . $parsed['specialization'];
-		$lines[] = 'Услуга: ' . $parsed['service'];
-		$lines[] = 'Метод: ' . $parsed['method'];
-		$message = self::htmlMessage($lines);
+		$lines[] = 'Профиль: ' . rtrim(Uri::root(), '/') . '/' . $userId;
 
+		return $lines;
+	}
+
+	private static function sendToAdmins($app, $user, string $subject, string $message, string $marker): array
+	{
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+		$userId = (int) $user->id;
+		$storedMessage = '<!-- ' . $marker . ' -->' . $message;
 		$duplicateSince = Factory::getDate('-' . self::DUPLICATE_SECONDS . ' seconds')->toSql();
-		if (self::countMessages($db, $userId, $duplicateSince, $message) > 0) {
+		if (self::countMessages($db, $userId, $duplicateSince, $storedMessage, $subject, null) > 0) {
 			return ['success' => false, 'message' => 'Такая заявка уже отправлена.'];
 		}
 		$daySince = Factory::getDate('-1 day')->toSql();
-		if (self::countMessages($db, $userId, $daySince, null) >= self::DAILY_LIMIT) {
+		if (self::countMessages($db, $userId, $daySince, null, null, $marker) >= self::DAILY_LIMIT) {
 			return ['success' => false, 'message' => 'За последние сутки уже отправлено много заявок. Попробуйте завтра.'];
 		}
 
@@ -178,8 +258,8 @@ final class CatalogRequestHelper
 			$saved = $model->save([
 				'user_id_from' => $userId,
 				'user_id_to' => $adminId,
-				'subject' => self::SUBJECT,
-				'message' => $message,
+				'subject' => $subject,
+				'message' => $storedMessage,
 			]);
 			$storedId = method_exists($model, 'getState') ? (int) $model->getState('message.id', 0) : 0;
 			if ($saved || $storedId > 0) {
@@ -193,7 +273,7 @@ final class CatalogRequestHelper
 
 		return [
 			'success' => true,
-			'message' => 'Заявка отправлена. Администратор увидит её в панели управления.',
+			'message' => self::SUCCESS,
 		];
 	}
 
@@ -311,6 +391,46 @@ final class CatalogRequestHelper
 		return $value;
 	}
 
+	private static function cleanBody(string $value, int $max): string
+	{
+		$value = strip_tags($value);
+		$value = str_replace(["\r\n", "\r"], "\n", $value);
+		$value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value) ?? '';
+		$value = preg_replace("/\n{3,}/", "\n\n", $value) ?? '';
+		$value = trim($value);
+		if (mb_strlen($value, 'UTF-8') > $max) {
+			return mb_substr($value, 0, $max, 'UTF-8');
+		}
+
+		return $value;
+	}
+
+	private static function tooLongBody(string $raw, int $max): bool
+	{
+		return mb_strlen(self::cleanBody($raw, $max + 1), 'UTF-8') > $max;
+	}
+
+	private static function cleanLink(string $value): string
+	{
+		$value = trim(strip_tags($value));
+		$value = preg_replace('/\s+/u', '', $value) ?? '';
+		if (preg_match('#^(javascript|data|vbscript):#i', $value)) {
+			return '';
+		}
+
+		return $value;
+	}
+
+	private static function isLink(string $value): bool
+	{
+		$length = mb_strlen($value, 'UTF-8');
+		if ($length < 4 || $length > 500) {
+			return false;
+		}
+
+		return (bool) preg_match('#^(https?://|www\.)#i', $value) || str_contains($value, '.');
+	}
+
 	private static function tooShort(string $value): bool
 	{
 		return mb_strlen($value, 'UTF-8') < 2;
@@ -339,16 +459,21 @@ final class CatalogRequestHelper
 		return implode("<br>\n", $safe);
 	}
 
-	private static function countMessages(DatabaseInterface $db, int $userId, string $since, ?string $message): int
+	private static function countMessages(DatabaseInterface $db, int $userId, string $since, ?string $message, ?string $subject, ?string $marker): int
 	{
 		$query = $db->getQuery(true)
 			->select('COUNT(*)')
 			->from($db->quoteName('#__messages'))
 			->where($db->quoteName('user_id_from') . ' = ' . $userId)
-			->where($db->quoteName('subject') . ' = ' . $db->quote(self::SUBJECT))
 			->where($db->quoteName('date_time') . ' >= ' . $db->quote($since));
+		if ($subject !== null) {
+			$query->where($db->quoteName('subject') . ' = ' . $db->quote($subject));
+		}
 		if ($message !== null) {
 			$query->where($db->quoteName('message') . ' = ' . $db->quote($message));
+		}
+		if ($marker !== null) {
+			$query->where($db->quoteName('message') . ' LIKE ' . $db->quote('%' . $db->escape($marker, true) . '%', false));
 		}
 		$db->setQuery($query);
 

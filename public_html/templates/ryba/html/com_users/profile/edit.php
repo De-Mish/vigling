@@ -138,8 +138,8 @@ if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 }
 
 $tabs = $isMaster
-	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'catalog_request', 'stocks', 'courses', 'searches', 'notifications', 'login']
-	: ['profile', 'notifications', 'login'];
+	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'notifications', 'login', 'catalog_request', 'contact_admin', 'external_reviews']
+	: ['profile', 'notifications', 'login', 'contact_admin', 'external_reviews'];
 
 $tabTitles = [
 	'profile' => 'Профиль',
@@ -147,6 +147,8 @@ $tabTitles = [
 	'speciality' => 'Специальность',
 	'services' => 'Услуги и цены',
 	'catalog_request' => 'Обновить услуги',
+	'contact_admin' => 'Связаться с администрацией',
+	'external_reviews' => 'Загрузить сторонние отзывы',
 	'stocks' => 'Акции',
 	'courses' => 'Курсы',
 	'searches' => 'Поиск моделей',
@@ -161,6 +163,8 @@ $tabFields = [
 	'speciality' => [],
 	'services' => [],
 	'catalog_request' => [],
+	'contact_admin' => [],
+	'external_reviews' => [],
 	'stocks' => [],
 	'courses' => [],
 	'searches' => [],
@@ -1286,7 +1290,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 									$vgCatalogRequestEndpoint = Route::_('index.php?option=com_ajax&plugin=vigling&group=user&format=json', false);
 									$vgCatalogRequestToken = \Joomla\CMS\Session\Session::getFormToken();
 									?>
-									<div id="vg-catalog-request" class="vg-catalog-request" data-endpoint="<?php echo $this->escape($vgCatalogRequestEndpoint); ?>" data-token="<?php echo $this->escape($vgCatalogRequestToken); ?>">
+									<div id="vg-catalog-request" class="vg-admin-request vg-catalog-request" data-endpoint="<?php echo $this->escape($vgCatalogRequestEndpoint); ?>" data-token="<?php echo $this->escape($vgCatalogRequestToken); ?>">
 										<p class="vg-catalog-request__lead">Если нужной услуги нет в каталоге, отправьте заявку администратору. Список ваших услуг и цен при этом не меняется.</p>
 										<div class="control-group">
 											<div class="control-label"><label>Тема</label></div>
@@ -1300,14 +1304,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 													<?php foreach ($vgCatalogRequestTree as $vgCatalogCategory) : ?>
 													<option value="<?php echo (int) $vgCatalogCategory['id']; ?>"><?php echo $this->escape($vgCatalogCategory['title']); ?></option>
 													<?php endforeach; ?>
-													<option value="new">Создать специализацию</option>
+													<option value="new" class="vg-option-create" style="background:#000;color:#fff;">Создать специализацию</option>
 												</select>
 											</div>
 										</div>
 										<div class="control-group" id="vg-catalog-spec-text-wrap" hidden>
 											<div class="control-label"><label for="vg-catalog-spec-text">Новая специализация</label></div>
 											<div class="controls">
-												<input type="text" id="vg-catalog-spec-text" maxlength="120" placeholder="Введите предлагаемую специализацию" autocomplete="off">
+												<input type="text" class="vg-create-field" id="vg-catalog-spec-text" maxlength="120" placeholder="Введите предлагаемую специализацию" autocomplete="off">
 											</div>
 										</div>
 										<div class="control-group" id="vg-catalog-service-wrap" hidden>
@@ -1321,7 +1325,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 										<div class="control-group" id="vg-catalog-service-text-wrap" hidden>
 											<div class="control-label"><label for="vg-catalog-service-text">Новая услуга</label></div>
 											<div class="controls">
-												<input type="text" id="vg-catalog-service-text" maxlength="160" placeholder="Введите предлагаемую услугу" autocomplete="off">
+												<input type="text" class="vg-create-field" id="vg-catalog-service-text" maxlength="160" placeholder="Введите предлагаемую услугу" autocomplete="off">
 											</div>
 										</div>
 										<div class="control-group" id="vg-catalog-method-wrap" hidden>
@@ -1333,39 +1337,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 										<div class="control-group">
 											<div class="controls">
 												<button type="button" class="dale" id="vg-catalog-request-send">Отправить заявку</button>
-												<span class="vg-catalog-request__msg" id="vg-catalog-request-msg" role="status"></span>
+												<p class="vg-request-status" id="vg-catalog-request-msg" role="status" hidden></p>
 											</div>
 										</div>
 									</div>
-									<style>
-									.vg-catalog-request__lead {
-										margin: 0 0 16px;
-										max-width: 640px;
-										color: #55677d;
-										font-size: 14px;
-										line-height: 1.45;
-									}
-									.vg-catalog-request__subject {
-										margin: 7px 0 0;
-										font-weight: 600;
-									}
-									.vg-catalog-request .controls input,
-									.vg-catalog-request .controls select {
-										max-width: 420px;
-										width: 100%;
-										box-sizing: border-box;
-									}
-									.vg-catalog-request input::placeholder {
-										color: rgba(85, 103, 125, 0.45);
-									}
-									.vg-catalog-request [hidden] {
-										display: none !important;
-									}
-									.vg-catalog-request__msg {
-										display: block;
-										margin-top: 8px;
-									}
-									</style>
 									<script>
 									(function () {
 										var root = document.getElementById('vg-catalog-request');
@@ -1411,9 +1386,16 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 											});
 											var create = document.createElement('option');
 											create.value = 'new';
+											create.className = 'vg-option-create';
 											create.textContent = 'Создать услугу';
+											create.style.background = '#000';
+											create.style.color = '#fff';
 											service.appendChild(create);
 											service.value = '';
+										}
+										function paintCreate(select) {
+											if (!select) return;
+											select.classList.toggle('is-create', select.value === 'new');
 										}
 										function sync() {
 											var mode = spec.value;
@@ -1431,9 +1413,18 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 												service.innerHTML = '';
 											}
 											var serviceIsNew = specIsNew || service.value === 'new';
-											var serviceChosen = specIsNew || service.value === 'new' || /^[1-9]\d*$/.test(service.value || '');
 											show(serviceTextWrap, specChosen && serviceIsNew);
-											show(methodWrap, specChosen && serviceChosen);
+											var methodReady = false;
+											if (specIsNew) {
+												methodReady = specText.value.trim().length >= 2 && serviceText.value.trim().length >= 2;
+											} else if (byId[mode]) {
+												if (service.value === 'new') methodReady = serviceText.value.trim().length >= 2;
+												else methodReady = /^[1-9]\d*$/.test(service.value || '');
+											}
+											if (!methodReady) method.value = '';
+											show(methodWrap, methodReady);
+											paintCreate(spec);
+											paintCreate(service);
 										}
 										spec.addEventListener('change', function () {
 											method.value = '';
@@ -1442,15 +1433,22 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 										});
 										service.addEventListener('change', function () {
 											method.value = '';
+											if (service.value !== 'new') serviceText.value = '';
 											sync();
 										});
+										specText.addEventListener('input', sync);
+										serviceText.addEventListener('input', sync);
 										root.addEventListener('keydown', function (e) {
 											var tag = e.target && e.target.tagName;
 											if (e.key === 'Enter' && (tag === 'INPUT' || tag === 'SELECT')) e.preventDefault();
 										});
-										function fail(text) {
+										function showStatus(text, isError) {
+											msg.hidden = false;
+											msg.classList.toggle('is-error', !!isError);
 											msg.textContent = text;
-											msg.style.color = '#c00';
+										}
+										function fail(text) {
+											showStatus(text, true);
 										}
 										send.addEventListener('click', function () {
 											if (!spec.value) {
@@ -1497,14 +1495,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 											body.set('service_text', serviceMode === 'new' ? serviceText.value.trim() : '');
 											body.set('method_text', method.value.trim());
 											send.disabled = true;
+											msg.hidden = true;
 											msg.textContent = '';
 											fetch(endpoint, { method: 'POST', body: body, credentials: 'same-origin' })
 												.then(function (r) { return r.json(); })
 												.then(function (data) {
 													var res = (data && data.data && typeof data.data.success !== 'undefined') ? data.data : (data || {});
 													if (res.success) {
-														msg.style.color = '#0a0';
-														msg.textContent = res.message || 'Заявка отправлена. Администратор увидит её в панели управления.';
+														showStatus(res.message || 'Спасибо, заявка отправлена', false);
 														spec.value = '';
 														specText.value = '';
 														serviceText.value = '';
@@ -1520,6 +1518,191 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 												.finally(function () { send.disabled = false; });
 										});
 										sync();
+									})();
+									</script>
+								<?php elseif ($tabKey === 'contact_admin') : ?>
+									<?php
+									$vgContactEndpoint = Route::_('index.php?option=com_ajax&plugin=vigling&group=user&format=json', false);
+									$vgContactToken = \Joomla\CMS\Session\Session::getFormToken();
+									?>
+									<div id="vg-contact-admin" class="vg-admin-request" data-endpoint="<?php echo $this->escape($vgContactEndpoint); ?>" data-token="<?php echo $this->escape($vgContactToken); ?>">
+										<p class="vg-admin-request__lead">Напишите администрации. Тема станет темой письма, текст ниже — самим письмом.</p>
+										<div class="control-group">
+											<div class="control-label"><label for="vg-contact-subject">Тема</label></div>
+											<div class="controls">
+												<input type="text" id="vg-contact-subject" maxlength="120" placeholder="Тема сообщения" autocomplete="off">
+											</div>
+										</div>
+										<div class="control-group">
+											<div class="control-label"><label for="vg-contact-body">Сообщение</label></div>
+											<div class="controls">
+												<textarea id="vg-contact-body" maxlength="4000" placeholder="Напишите сообщение"></textarea>
+											</div>
+										</div>
+										<div class="control-group">
+											<div class="controls">
+												<button type="button" class="dale" id="vg-contact-send">Отправить</button>
+												<p class="vg-request-status" id="vg-contact-msg" role="status" hidden></p>
+											</div>
+										</div>
+									</div>
+									<script>
+									(function () {
+										var root = document.getElementById('vg-contact-admin');
+										if (!root) return;
+										var subject = document.getElementById('vg-contact-subject');
+										var body = document.getElementById('vg-contact-body');
+										var send = document.getElementById('vg-contact-send');
+										var msg = document.getElementById('vg-contact-msg');
+										if (!subject || !body || !send || !msg) return;
+										var token = root.getAttribute('data-token') || '';
+										var endpoint = root.getAttribute('data-endpoint') || '';
+										function showStatus(text, isError) {
+											msg.hidden = false;
+											msg.classList.toggle('is-error', !!isError);
+											msg.textContent = text;
+										}
+										root.addEventListener('keydown', function (e) {
+											if (e.key === 'Enter' && e.target && e.target.tagName === 'INPUT') e.preventDefault();
+										});
+										send.addEventListener('click', function () {
+											if (subject.value.trim().length < 2) {
+												showStatus('Введите тему сообщения.', true);
+												return;
+											}
+											if (body.value.trim().length < 2) {
+												showStatus('Напишите сообщение.', true);
+												return;
+											}
+											var fd = new FormData();
+											fd.set('action', 'contact_admin');
+											if (token) fd.set(token, '1');
+											fd.set('subject', subject.value.trim());
+											fd.set('body', body.value.trim());
+											send.disabled = true;
+											msg.hidden = true;
+											fetch(endpoint, { method: 'POST', body: fd, credentials: 'same-origin' })
+												.then(function (r) { return r.json(); })
+												.then(function (data) {
+													var res = (data && data.data && typeof data.data.success !== 'undefined') ? data.data : (data || {});
+													if (res.success) {
+														showStatus(res.message || 'Спасибо, заявка отправлена', false);
+														subject.value = '';
+														body.value = '';
+													} else {
+														showStatus(res.message || 'Не удалось отправить заявку.', true);
+													}
+												})
+												.catch(function () { showStatus('Не удалось отправить заявку.', true); })
+												.finally(function () { send.disabled = false; });
+										});
+									})();
+									</script>
+								<?php elseif ($tabKey === 'external_reviews') : ?>
+									<?php
+									$vgReviewsEndpoint = Route::_('index.php?option=com_ajax&plugin=vigling&group=user&format=json', false);
+									$vgReviewsToken = \Joomla\CMS\Session\Session::getFormToken();
+									?>
+									<div id="vg-external-reviews" class="vg-admin-request" data-endpoint="<?php echo $this->escape($vgReviewsEndpoint); ?>" data-token="<?php echo $this->escape($vgReviewsToken); ?>">
+										<p class="vg-admin-request__lead">Пришлите ссылки на отзывы с других площадок. Администратор получит заявку в сообщениях Joomla.</p>
+										<div class="control-group">
+											<div class="control-label"><label>Тема</label></div>
+											<div class="controls"><p class="vg-admin-request__subject">Запрос отзывов из других источников</p></div>
+										</div>
+										<div class="control-group">
+											<div class="control-label"><label>Источники</label></div>
+											<div class="controls">
+												<div class="vg-source-list" id="vg-review-sources">
+													<?php for ($vgSourceIndex = 1; $vgSourceIndex <= 3; $vgSourceIndex++) : ?>
+													<div class="vg-source">
+														<label for="vg-review-source-<?php echo $vgSourceIndex; ?>">Источник <?php echo $vgSourceIndex; ?></label>
+														<input type="url" class="vg-source-link" id="vg-review-source-<?php echo $vgSourceIndex; ?>" maxlength="500" placeholder="Вставьте ссылку" autocomplete="off">
+													</div>
+													<?php endfor; ?>
+												</div>
+												<button type="button" class="vg-source-more" id="vg-review-add">
+													<span class="vg-source-more__plus" aria-hidden="true">+</span>
+													Ещё источник
+												</button>
+											</div>
+										</div>
+										<div class="control-group">
+											<div class="controls">
+												<button type="button" class="dale" id="vg-review-send">Отправить заявку</button>
+												<p class="vg-request-status" id="vg-review-msg" role="status" hidden></p>
+											</div>
+										</div>
+									</div>
+									<script>
+									(function () {
+										var root = document.getElementById('vg-external-reviews');
+										if (!root) return;
+										var list = document.getElementById('vg-review-sources');
+										var add = document.getElementById('vg-review-add');
+										var send = document.getElementById('vg-review-send');
+										var msg = document.getElementById('vg-review-msg');
+										if (!list || !add || !send || !msg) return;
+										var token = root.getAttribute('data-token') || '';
+										var endpoint = root.getAttribute('data-endpoint') || '';
+										function showStatus(text, isError) {
+											msg.hidden = false;
+											msg.classList.toggle('is-error', !!isError);
+											msg.textContent = text;
+										}
+										function addSource() {
+											var count = list.querySelectorAll('.vg-source').length;
+											if (count >= 12) return;
+											var index = count + 1;
+											var row = document.createElement('div');
+											row.className = 'vg-source';
+											var label = document.createElement('label');
+											label.setAttribute('for', 'vg-review-source-' + index);
+											label.textContent = 'Источник ' + index;
+											var input = document.createElement('input');
+											input.type = 'url';
+											input.className = 'vg-source-link';
+											input.id = 'vg-review-source-' + index;
+											input.maxLength = 500;
+											input.placeholder = 'Вставьте ссылку';
+											input.autocomplete = 'off';
+											row.appendChild(label);
+											row.appendChild(input);
+											list.appendChild(row);
+										}
+										add.addEventListener('click', addSource);
+										root.addEventListener('keydown', function (e) {
+											if (e.key === 'Enter' && e.target && e.target.tagName === 'INPUT') e.preventDefault();
+										});
+										send.addEventListener('click', function () {
+											var links = [];
+											list.querySelectorAll('.vg-source-link').forEach(function (input) {
+												var value = input.value.trim();
+												if (value) links.push(value);
+											});
+											if (!links.length) {
+												showStatus('Вставьте ссылку хотя бы на один источник.', true);
+												return;
+											}
+											var fd = new FormData();
+											fd.set('action', 'external_reviews');
+											if (token) fd.set(token, '1');
+											links.forEach(function (link) { fd.append('sources[]', link); });
+											send.disabled = true;
+											msg.hidden = true;
+											fetch(endpoint, { method: 'POST', body: fd, credentials: 'same-origin' })
+												.then(function (r) { return r.json(); })
+												.then(function (data) {
+													var res = (data && data.data && typeof data.data.success !== 'undefined') ? data.data : (data || {});
+													if (res.success) {
+														showStatus(res.message || 'Спасибо, заявка отправлена', false);
+														list.querySelectorAll('.vg-source-link').forEach(function (input) { input.value = ''; });
+													} else {
+														showStatus(res.message || 'Не удалось отправить заявку.', true);
+													}
+												})
+												.catch(function () { showStatus('Не удалось отправить заявку.', true); })
+												.finally(function () { send.disabled = false; });
+										});
 									})();
 									</script>
 								<?php elseif ($isMaster && $tabKey === 'stocks') : ?>
@@ -1724,6 +1907,125 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 </div>
 
 <style>
+.profile-edit .vg-admin-request__lead {
+	margin: 0 0 18px;
+	max-width: 640px;
+	color: #343a40;
+	font-size: 14px;
+	line-height: 1.45;
+}
+.profile-edit .vg-admin-request__subject {
+	margin: 8px 0 0;
+	font-family: "GothamPro-Bold", Arial, sans-serif;
+	font-size: 16px;
+	color: #111;
+}
+.profile-edit .vg-admin-request .controls input,
+.profile-edit .vg-admin-request .controls select,
+.profile-edit .vg-admin-request .controls textarea {
+	max-width: 480px;
+	width: 100%;
+	box-sizing: border-box;
+	border: 0;
+	border-bottom: 1px solid #f7cc53;
+	border-radius: 0;
+	background: transparent;
+	color: #111;
+	padding: 8px 2px;
+}
+.profile-edit .vg-admin-request .controls textarea {
+	min-height: 140px;
+	resize: vertical;
+	border: 1px solid #f7cc53;
+	border-radius: 12px;
+	padding: 12px 14px;
+	background: #fff;
+}
+.profile-edit .vg-admin-request input::placeholder,
+.profile-edit .vg-admin-request textarea::placeholder {
+	color: rgba(85, 103, 125, 0.45);
+}
+.profile-edit .vg-admin-request select option.vg-option-create {
+	background: #000;
+	color: #fff;
+}
+.profile-edit .vg-admin-request select.is-create {
+	background: #000;
+	color: #fff;
+	border-bottom-color: #000;
+}
+.profile-edit .vg-admin-request .vg-create-field {
+	background: #000;
+	color: #fff;
+	border: 0;
+	border-radius: 12px;
+	padding: 10px 14px;
+}
+.profile-edit .vg-admin-request .vg-create-field::placeholder {
+	color: rgba(255, 255, 255, 0.55);
+}
+.profile-edit .vg-admin-request [hidden] {
+	display: none !important;
+}
+.profile-edit .vg-admin-request .dale {
+	margin-left: 0;
+}
+.profile-edit .vg-request-status {
+	display: inline-block;
+	margin: 14px 0 0;
+	padding: 12px 18px;
+	max-width: 480px;
+	border-radius: 21px;
+	background: #f7cc53;
+	color: #111;
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+	font-family: "GothamPro-Bold", Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.35;
+}
+.profile-edit .vg-request-status.is-error {
+	background: #fff;
+	border: 1px solid #111;
+}
+.profile-edit .vg-source-list {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	max-width: 480px;
+}
+.profile-edit .vg-source label {
+	display: block;
+	margin-bottom: 4px;
+	color: #55677d;
+	font-size: 13px;
+}
+.profile-edit .vg-source-more {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 14px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #111;
+	cursor: pointer;
+	font-family: "GothamPro-Bold", Arial, sans-serif;
+	font-size: 14px;
+}
+.profile-edit .vg-source-more__plus {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border: 1px solid #111;
+	border-radius: 50%;
+	background: #f7cc53;
+	color: #111;
+	font-size: 24px;
+	line-height: 1;
+	font-weight: 400;
+}
 .profile-edit {
 	padding-bottom: 42px;
 }
