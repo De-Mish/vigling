@@ -9,8 +9,14 @@ $vgMapTotal = isset($vgMapTotal) ? (int) $vgMapTotal : 0;
 $vgMapCityLocked = !empty($vgMapCityLocked);
 
 $doc = \Joomla\CMS\Factory::getDocument();
-$doc->addStyleSheet(Uri::root(true) . '/templates/ryba/css/list-map.css', ['version' => 'auto']);
-$doc->addScript(Uri::root(true) . '/templates/ryba/js/list-map.js', ['version' => 'auto'], ['defer' => true]);
+// File time, not the site-wide media version. That version stays the same after an upload,
+// and the script is cached for a week, so the browser kept the old map and the sunflower spiral.
+$vgMapAssetVersion = static function (string $relative): string {
+	$path = JPATH_ROOT . '/templates/ryba/' . ltrim($relative, '/');
+	return is_file($path) ? (string) filemtime($path) : '1';
+};
+$doc->addStyleSheet(Uri::root(true) . '/templates/ryba/css/list-map.css', ['version' => $vgMapAssetVersion('css/list-map.css')]);
+$doc->addScript(Uri::root(true) . '/templates/ryba/js/list-map.js', ['version' => $vgMapAssetVersion('js/list-map.js')], ['defer' => true]);
 ?>
 <div
 	id="map"
