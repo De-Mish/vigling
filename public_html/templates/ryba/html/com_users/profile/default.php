@@ -658,8 +658,6 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					</div>
 					<a class="btn btn-xs btn-default" href="<?php echo Route::_('index.php?option=com_users&task=profile.edit&user_id=' . (int) $this->data->id); ?>">
 						<i class="jsn-icon jsn-icon-cog"></i> Настройки профиля</a>
-					<a class="btn btn-xs btn-default" href="<?php echo $zapisiUrl; ?>" data-open-tab="profile-tab11">
-						<i class="jsn-icon jsn-icon-calendar"></i> Записи</a>
 				<?php else : ?>
 					<button type="button" class="btn btn-xs btn-primary" id="lk-booking-toggle" aria-expanded="false">
 						Записаться

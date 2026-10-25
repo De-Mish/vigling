@@ -138,7 +138,7 @@ if (!is_file(JPATH_ROOT . '/templates/ryba/images/master.png')) {
 }
 
 $tabs = $isMaster
-	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'stocks', 'courses', 'searches', 'notifications', 'login']
+	? ['profile', 'portfolio', 'speciality', 'schedule', 'services', 'catalog_request', 'stocks', 'courses', 'searches', 'notifications', 'login']
 	: ['profile', 'notifications', 'login'];
 
 $tabTitles = [
@@ -146,6 +146,7 @@ $tabTitles = [
 	'portfolio' => 'Портфолио',
 	'speciality' => 'Специальность',
 	'services' => 'Услуги и цены',
+	'catalog_request' => 'Обновить услуги',
 	'stocks' => 'Акции',
 	'courses' => 'Курсы',
 	'searches' => 'Поиск моделей',
@@ -159,6 +160,7 @@ $tabFields = [
 	'portfolio' => [],
 	'speciality' => [],
 	'services' => [],
+	'catalog_request' => [],
 	'stocks' => [],
 	'courses' => [],
 	'searches' => [],
@@ -1271,6 +1273,255 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 											<input type="hidden" name="jform[vigling_searches_payload]" id="jform_vigling_searches_payload" value="" disabled>
 										</div>
 									</div>
+								<?php elseif ($isMaster && $tabKey === 'catalog_request') : ?>
+									<?php
+									$vgCatalogRequestHelper = JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogRequestHelper.php';
+									if (is_file($vgCatalogRequestHelper)) {
+										require_once $vgCatalogRequestHelper;
+									}
+									$vgCatalogRequestTree = class_exists(\Joomla\Plugin\User\Vigling\Helper\CatalogRequestHelper::class, false)
+										? \Joomla\Plugin\User\Vigling\Helper\CatalogRequestHelper::directory()
+										: [];
+									$vgCatalogRequestJson = json_encode($vgCatalogRequestTree, $jsJsonFlags) ?: '[]';
+									$vgCatalogRequestEndpoint = Route::_('index.php?option=com_ajax&plugin=vigling&group=user&format=json', false);
+									$vgCatalogRequestToken = \Joomla\CMS\Session\Session::getFormToken();
+									?>
+									<div id="vg-catalog-request" class="vg-catalog-request" data-endpoint="<?php echo $this->escape($vgCatalogRequestEndpoint); ?>" data-token="<?php echo $this->escape($vgCatalogRequestToken); ?>">
+										<p class="vg-catalog-request__lead">Если нужной услуги нет в каталоге, отправьте заявку администратору. Список ваших услуг и цен при этом не меняется.</p>
+										<div class="control-group">
+											<div class="control-label"><label>Тема</label></div>
+											<div class="controls"><p class="vg-catalog-request__subject">Нужных услуг нет в каталоге</p></div>
+										</div>
+										<div class="control-group">
+											<div class="control-label"><label for="vg-catalog-spec">Специализация</label></div>
+											<div class="controls">
+												<select id="vg-catalog-spec">
+													<option value="">Выберите специализацию</option>
+													<?php foreach ($vgCatalogRequestTree as $vgCatalogCategory) : ?>
+													<option value="<?php echo (int) $vgCatalogCategory['id']; ?>"><?php echo $this->escape($vgCatalogCategory['title']); ?></option>
+													<?php endforeach; ?>
+													<option value="new">Создать специализацию</option>
+												</select>
+											</div>
+										</div>
+										<div class="control-group" id="vg-catalog-spec-text-wrap" hidden>
+											<div class="control-label"><label for="vg-catalog-spec-text">Новая специализация</label></div>
+											<div class="controls">
+												<input type="text" id="vg-catalog-spec-text" maxlength="120" placeholder="Введите предлагаемую специализацию" autocomplete="off">
+											</div>
+										</div>
+										<div class="control-group" id="vg-catalog-service-wrap" hidden>
+											<div class="control-label"><label for="vg-catalog-service">Услуга</label></div>
+											<div class="controls">
+												<select id="vg-catalog-service">
+													<option value="">Выберите услугу</option>
+												</select>
+											</div>
+										</div>
+										<div class="control-group" id="vg-catalog-service-text-wrap" hidden>
+											<div class="control-label"><label for="vg-catalog-service-text">Новая услуга</label></div>
+											<div class="controls">
+												<input type="text" id="vg-catalog-service-text" maxlength="160" placeholder="Введите предлагаемую услугу" autocomplete="off">
+											</div>
+										</div>
+										<div class="control-group" id="vg-catalog-method-wrap" hidden>
+											<div class="control-label"><label for="vg-catalog-method">Метод</label></div>
+											<div class="controls">
+												<input type="text" id="vg-catalog-method" maxlength="200" placeholder="Введите метод услуги" autocomplete="off">
+											</div>
+										</div>
+										<div class="control-group">
+											<div class="controls">
+												<button type="button" class="dale" id="vg-catalog-request-send">Отправить заявку</button>
+												<span class="vg-catalog-request__msg" id="vg-catalog-request-msg" role="status"></span>
+											</div>
+										</div>
+									</div>
+									<style>
+									.vg-catalog-request__lead {
+										margin: 0 0 16px;
+										max-width: 640px;
+										color: #55677d;
+										font-size: 14px;
+										line-height: 1.45;
+									}
+									.vg-catalog-request__subject {
+										margin: 7px 0 0;
+										font-weight: 600;
+									}
+									.vg-catalog-request .controls input,
+									.vg-catalog-request .controls select {
+										max-width: 420px;
+										width: 100%;
+										box-sizing: border-box;
+									}
+									.vg-catalog-request input::placeholder {
+										color: rgba(85, 103, 125, 0.45);
+									}
+									.vg-catalog-request [hidden] {
+										display: none !important;
+									}
+									.vg-catalog-request__msg {
+										display: block;
+										margin-top: 8px;
+									}
+									</style>
+									<script>
+									(function () {
+										var root = document.getElementById('vg-catalog-request');
+										if (!root) return;
+										var tree = <?php echo $vgCatalogRequestJson; ?>;
+										var byId = {};
+										(tree || []).forEach(function (row) {
+											if (row && row.id) byId[String(row.id)] = row;
+										});
+										var spec = document.getElementById('vg-catalog-spec');
+										var specTextWrap = document.getElementById('vg-catalog-spec-text-wrap');
+										var specText = document.getElementById('vg-catalog-spec-text');
+										var serviceWrap = document.getElementById('vg-catalog-service-wrap');
+										var service = document.getElementById('vg-catalog-service');
+										var serviceTextWrap = document.getElementById('vg-catalog-service-text-wrap');
+										var serviceText = document.getElementById('vg-catalog-service-text');
+										var methodWrap = document.getElementById('vg-catalog-method-wrap');
+										var method = document.getElementById('vg-catalog-method');
+										var send = document.getElementById('vg-catalog-request-send');
+										var msg = document.getElementById('vg-catalog-request-msg');
+										var token = root.getAttribute('data-token') || '';
+										var endpoint = root.getAttribute('data-endpoint') || '';
+										if (!spec || !service || !method || !send || !msg) return;
+
+										function show(el, on) {
+											if (!el) return;
+											if (on) el.removeAttribute('hidden');
+											else el.setAttribute('hidden', 'hidden');
+										}
+										function fillServices(categoryId) {
+											var row = byId[String(categoryId)];
+											var items = row && row.services ? row.services : [];
+											service.innerHTML = '';
+											var blank = document.createElement('option');
+											blank.value = '';
+											blank.textContent = 'Выберите услугу';
+											service.appendChild(blank);
+											items.forEach(function (item) {
+												var opt = document.createElement('option');
+												opt.value = String(item.id);
+												opt.textContent = item.title || '';
+												service.appendChild(opt);
+											});
+											var create = document.createElement('option');
+											create.value = 'new';
+											create.textContent = 'Создать услугу';
+											service.appendChild(create);
+											service.value = '';
+										}
+										function sync() {
+											var mode = spec.value;
+											var specIsNew = mode === 'new';
+											var specChosen = specIsNew || !!byId[mode];
+											show(specTextWrap, specIsNew);
+											show(serviceWrap, specChosen && !specIsNew);
+											if (specChosen && !specIsNew) {
+												if (service.getAttribute('data-for') !== mode) {
+													fillServices(mode);
+													service.setAttribute('data-for', mode);
+												}
+											} else if (service.getAttribute('data-for')) {
+												service.setAttribute('data-for', '');
+												service.innerHTML = '';
+											}
+											var serviceIsNew = specIsNew || service.value === 'new';
+											var serviceChosen = specIsNew || service.value === 'new' || /^[1-9]\d*$/.test(service.value || '');
+											show(serviceTextWrap, specChosen && serviceIsNew);
+											show(methodWrap, specChosen && serviceChosen);
+										}
+										spec.addEventListener('change', function () {
+											method.value = '';
+											serviceText.value = '';
+											sync();
+										});
+										service.addEventListener('change', function () {
+											method.value = '';
+											sync();
+										});
+										root.addEventListener('keydown', function (e) {
+											var tag = e.target && e.target.tagName;
+											if (e.key === 'Enter' && (tag === 'INPUT' || tag === 'SELECT')) e.preventDefault();
+										});
+										function fail(text) {
+											msg.textContent = text;
+											msg.style.color = '#c00';
+										}
+										send.addEventListener('click', function () {
+											if (!spec.value) {
+												fail('Выберите специализацию.');
+												return;
+											}
+											var specIsNew = spec.value === 'new';
+											if (specIsNew && specText.value.trim().length < 2) {
+												fail('Введите предлагаемую специализацию.');
+												return;
+											}
+											var serviceMode = 'new';
+											var serviceId = '0';
+											if (!specIsNew) {
+												if (!service.value) {
+													fail('Выберите услугу.');
+													return;
+												}
+												if (service.value === 'new') {
+													if (serviceText.value.trim().length < 2) {
+														fail('Введите предлагаемую услугу.');
+														return;
+													}
+												} else {
+													serviceMode = 'existing';
+													serviceId = service.value;
+												}
+											} else if (serviceText.value.trim().length < 2) {
+												fail('Введите предлагаемую услугу.');
+												return;
+											}
+											if (method.value.trim().length < 2) {
+												fail('Введите метод услуги.');
+												return;
+											}
+											var body = new FormData();
+											body.set('action', 'catalog_request');
+											if (token) body.set(token, '1');
+											body.set('specialization_mode', specIsNew ? 'new' : 'existing');
+											body.set('specialization_id', specIsNew ? '0' : spec.value);
+											body.set('specialization_text', specIsNew ? specText.value.trim() : '');
+											body.set('service_mode', serviceMode);
+											body.set('service_id', serviceId);
+											body.set('service_text', serviceMode === 'new' ? serviceText.value.trim() : '');
+											body.set('method_text', method.value.trim());
+											send.disabled = true;
+											msg.textContent = '';
+											fetch(endpoint, { method: 'POST', body: body, credentials: 'same-origin' })
+												.then(function (r) { return r.json(); })
+												.then(function (data) {
+													var res = (data && data.data && typeof data.data.success !== 'undefined') ? data.data : (data || {});
+													if (res.success) {
+														msg.style.color = '#0a0';
+														msg.textContent = res.message || 'Заявка отправлена. Администратор увидит её в панели управления.';
+														spec.value = '';
+														specText.value = '';
+														serviceText.value = '';
+														method.value = '';
+														service.setAttribute('data-for', '');
+														service.innerHTML = '';
+														sync();
+													} else {
+														fail(res.message || 'Не удалось отправить заявку.');
+													}
+												})
+												.catch(function () { fail('Не удалось отправить заявку.'); })
+												.finally(function () { send.disabled = false; });
+										});
+										sync();
+									})();
+									</script>
 								<?php elseif ($isMaster && $tabKey === 'stocks') : ?>
 									<div class="control-group stock_prices-group">
 										<div class="control-label"><label for="jform_stocks_servis">Акции</label></div>

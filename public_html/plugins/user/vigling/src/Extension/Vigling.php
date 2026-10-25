@@ -4,6 +4,7 @@ namespace Joomla\Plugin\User\Vigling\Extension;
 
 use Joomla\CMS\Event\Model\NormaliseRequestDataEvent;
 use Joomla\CMS\Event\Model\PrepareFormEvent;
+use Joomla\CMS\Event\Plugin\AjaxEvent;
 use Joomla\CMS\Event\User\AfterSaveEvent;
 use Joomla\CMS\Event\User\BeforeSaveEvent;
 use Joomla\CMS\Factory;
@@ -13,6 +14,7 @@ use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
+use Joomla\Plugin\User\Vigling\Helper\CatalogRequestHelper;
 use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
 use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
@@ -67,9 +69,15 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
             'onContentPrepareForm' => ['onContentPrepareForm', -50],
             'onContentNormaliseRequestData' => ['onContentNormaliseRequestData', -50],
             'onUserBeforeSave' => ['onUserBeforeSave', 50],
+            'onAjaxVigling' => 'onAjaxVigling',
             // Run after Joomla's custom-fields save path, then persist schedule from the raw profile POST.
             'onUserAfterSave' => ['onUserAfterSave', -100],
         ];
+    }
+
+    public function onAjaxVigling(AjaxEvent $event): void
+    {
+        $event->updateEventResult(CatalogRequestHelper::submit($event->getApplication()));
     }
 
     public function onUserBeforeSave(BeforeSaveEvent $event): void
