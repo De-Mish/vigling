@@ -30,7 +30,7 @@ class MapController extends BaseController
 				return (int) ($item->id ?? 0);
 			}, $items)));
 			$fieldsByUser = $userIds !== []
-				? PoiskHelper::getFieldsForUserIds($userIds, ['sity', 'area'])
+				? PoiskHelper::getFieldsForUserIds($userIds, ListMapHelper::pinFieldNames())
 				: [];
 
 			$pins = [];

@@ -87,40 +87,53 @@
 		});
 	}
  
-	function hashString(value) {
-		var hash = 0;
-		var text = String(value || '');
-		for (var i = 0; i < text.length; i++) {
-			hash = ((hash << 5) - hash) + text.charCodeAt(i);
-			hash |= 0;
+	function pinQueries(pin) {
+		var list = [];
+		var source = pin && Array.isArray(pin.queries) ? pin.queries : [];
+		source.forEach(function (item) {
+			var query = String(item || '').trim();
+			if (query && list.indexOf(query) === -1) {
+				list.push(query);
+			}
+		});
+		var primary = String((pin && pin.query) || '').trim();
+		if (primary && list.indexOf(primary) === -1) {
+			list.unshift(primary);
 		}
-		return Math.abs(hash);
-	}
- 
-	function groupKey(pin) {
-		var city = String(pin.city || '').trim();
-		var area = String(pin.area || '').trim();
-		if (city && area) {
-			return city + ', ' + area;
+		var city = String((pin && pin.city) || '').trim();
+		if (city && list.indexOf(city) === -1) {
+			list.push(city);
 		}
-		return city || 'Москва';
+		if (!list.length) {
+			list.push(city || 'Москва');
+		}
+		return list;
 	}
- 
-	function streetQuery(pin) {
-		return String(pin.query || '').trim();
+
+	function locateQueries(ymaps, queries, cityName) {
+		var cityCenter = cityLatLon(cityName || 'Москва');
+		function acceptable(coords) {
+			return !!(coords && coords.length >= 2 && isFinite(coords[0]) && isFinite(coords[1])
+				&& distanceKm(coords, cityCenter) <= 80);
+		}
+		function tryAt(index) {
+			if (index >= queries.length) {
+				return Promise.resolve(cityCenter);
+			}
+			var query = queries[index];
+			if (cityKey(query) === cityKey(cityName)) {
+				return Promise.resolve(cityCenter);
+			}
+			return geocodeAddress(ymaps, query).then(function (coords) {
+				if (acceptable(coords)) {
+					return coords;
+				}
+				return tryAt(index + 1);
+			});
+		}
+		return tryAt(0);
 	}
- 
-	function offsetAroundCity(cityName, key) {
-		var center = cityLatLon(cityName);
-		var hash = hashString(key);
-		var angle = (hash % 360) * Math.PI / 180;
-		var distance = 0.018 + ((hash >> 8) % 10) * 0.004;
-		return [
-			center[0] + Math.sin(angle) * distance,
-			center[1] + Math.cos(angle) * distance * 1.55
-		];
-	}
- 
+
 	function pinHref(pin) {
 		var href = String((pin && pin.href) || '').trim();
 		if (!href || href === '#') {
@@ -176,11 +189,11 @@
 	}
  
 	var GOLDEN_ANGLE = 2.399963229728653;
-	var SPREAD_STEP_M = 60;
+	var SPREAD_STEP_M = 12;
 
-	// Pins of one city/district share a single geocoded point (street and house are not published),
-	// so they are laid out on a sunflower spiral around it: every pin gets its own position
-	// and the clusterer can split them while zooming in.
+	// Only pins that geocode to the same point (one house, or no street at all) are nudged
+	// apart, so each marker stays clickable. Distinct streets and houses keep their own point;
+	// the clusterer groups a district, then a street, as the map zooms in.
 	function spreadCoords(base, index, total) {
 		if (!base || total < 2) {
 			return base ? base.slice() : base;
@@ -595,21 +608,6 @@
 		});
 	}
  
-	function groupCenter(ymaps, key, groupPins) {
-		var cityName = String(key.split(',')[0] || '').trim() || 'Москва';
-		var cityCenter = cityLatLon(cityName);
-		if (key.indexOf(',') === -1) {
-			return Promise.resolve(cityCenter);
-		}
-		var query = streetQuery(groupPins[0] || {}) || key;
-		return geocodeAddress(ymaps, query).then(function (coords) {
-			if (coords && distanceKm(coords, cityCenter) <= 80) {
-				return coords;
-			}
-			return offsetAroundCity(cityName, key);
-		});
-	}
-
 	function clusterAnchor(cluster) {
 		var bounds = cluster.getBounds();
 		var center = bounds
@@ -701,53 +699,31 @@
 		}
 
 		var groups = {};
-		pins.forEach(function (pin) {
-			var key = groupKey(pin);
-			if (!groups[key]) {
-				groups[key] = [];
-			}
-			groups[key].push(pin);
-		});
-
+		var groupOrder = [];
 		var unknownCities = [];
-		Object.keys(groups).forEach(function (key) {
-			var cityName = String(key.split(',')[0] || '').trim();
+		pins.forEach(function (pin) {
+			var queries = pinQueries(pin);
+			var key = queries.join('\n');
+			if (!groups[key]) {
+				groups[key] = {
+					queries: queries,
+					city: String(pin.city || fallbackCity || 'Москва').trim() || 'Москва',
+					pins: []
+				};
+				groupOrder.push(key);
+			}
+			groups[key].pins.push(pin);
+			var cityName = groups[key].city;
 			if (cityName && !CITY_LL[cityKey(cityName)] && unknownCities.indexOf(cityName) === -1) {
 				unknownCities.push(cityName);
 			}
 		});
 
-		return runPool(unknownCities, function (cityName) {
-			return resolveCityLatLon(ymaps, cityName);
-		}, 4).then(function () {
-			var keys = Object.keys(groups);
-			var centers = {};
-			return runPool(keys, function (key) {
-				return groupCenter(ymaps, key, groups[key]).then(function (coords) {
-					centers[key] = coords;
-				});
-			}, 4).then(function () {
-				return centers;
-			});
-		}).then(function (centers) {
-
 		var placemarks = [];
-		var buckets = {};
-		var bucketOrder = [];
-		Object.keys(groups).forEach(function (key) {
-			var baseCoords = centers[key] || offsetAroundCity(String(key.split(',')[0] || '').trim() || 'Москва', key);
-			var bucketKey = baseCoords[0].toFixed(4) + ',' + baseCoords[1].toFixed(4);
-			if (!buckets[bucketKey]) {
-				buckets[bucketKey] = { base: baseCoords, pins: [] };
-				bucketOrder.push(bucketKey);
-			}
-			groups[key].forEach(function (pin) {
-				buckets[bucketKey].pins.push(pin);
-			});
-		});
-		bucketOrder.forEach(function (bucketKey) {
-			var baseCoords = buckets[bucketKey].base;
-			var groupPins = buckets[bucketKey].pins;
+		var mapRoot = root || mapObj.container.getElement().closest('.vg-list-map');
+
+		function addGroup(groupPins, baseCoords) {
+			var marks = [];
 			groupPins.forEach(function (pin, index) {
 				var coords = spreadCoords(baseCoords, index, groupPins.length);
 				var mark = new ymaps.Placemark(coords, {
@@ -775,12 +751,14 @@
 						event.stopPropagation();
 					}
 				});
+				marks.push(mark);
 				placemarks.push(mark);
 			});
-		});
+			if (marks.length) {
+				clusterer.add(marks);
+			}
+		}
 
-		clusterer.add(placemarks);
-		var mapRoot = root || mapObj.container.getElement().closest('.vg-list-map');
 		clusterer.events.add('click', function (event) {
 			var target = event.get('target');
 			var pin = pinFromTarget(target);
@@ -818,7 +796,17 @@
 		});
 		bindPointerFallback(mapRoot, mapObj, placemarks);
 
-		return fitCityView(mapObj, clusterer, fallbackCity, cityLocked, ymaps);
+		return runPool(unknownCities, function (cityName) {
+			return resolveCityLatLon(ymaps, cityName);
+		}, 4).then(function () {
+			return runPool(groupOrder, function (key) {
+				var group = groups[key];
+				return locateQueries(ymaps, group.queries, group.city).then(function (coords) {
+					addGroup(group.pins, coords || cityLatLon(group.city));
+				});
+			}, 4);
+		}).then(function () {
+			return fitCityView(mapObj, clusterer, fallbackCity, cityLocked, ymaps);
 		});
 	}
 
