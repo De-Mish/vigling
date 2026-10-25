@@ -9,14 +9,10 @@ $app = Factory::getApplication();
 $currentUser = $app->getIdentity();
 $isGuest = $currentUser->guest;
 $input = $app->getInput();
-$filterCatId = (int) ($currentCatId ?? $input->getUint('cat_id', 0));
 $filterServiceId = (int) ($currentService ?? $input->getUint('service', 0));
 $filterTagId = (int) ($currentTag ?? $input->getUint('tag', 0));
 $profileUrl = rtrim(Uri::root(true), '/') . '/' . (int) $item->id;
 $profileQuery = [];
-if ($filterCatId > 0) {
-	$profileQuery['cat_id'] = $filterCatId;
-}
 if ($filterServiceId > 0) {
 	$profileQuery['service'] = $filterServiceId;
 }
