@@ -150,7 +150,10 @@ $doc->addStyleSheet(\Joomla\CMS\Uri\Uri::root(true) . '/templates/ryba/css/chose
 					include __DIR__ . '/default_item.php';
 				endforeach; ?>
 				<?php if ($pagination && $pagination->pagesTotal > 1) : ?>
-					<div class="pagination__wrap" style="clear:both"><?php echo $pagination->getPagesLinks(); ?></div>
+					<div class="pagination__wrap" style="clear:both"><?php
+						require_once JPATH_PLUGINS . '/user/vigling/src/Helper/CatalogPaginationHelper.php';
+						echo \Joomla\Plugin\User\Vigling\Helper\CatalogPaginationHelper::links($pagination);
+					?></div>
 				<?php endif; ?>
 			<?php endif; ?>
 		</div>
