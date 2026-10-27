@@ -15,6 +15,7 @@ use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\SubscriberInterface;
 use Joomla\Plugin\User\Vigling\Helper\CatalogRequestHelper;
+use Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper;
 use Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper;
 use Joomla\Plugin\User\Vigling\Helper\JsnDecodeHelper;
 use Joomla\Plugin\User\Vigling\Helper\UserProfileExtraFieldsHelper;
@@ -77,7 +78,14 @@ final class Vigling extends CMSPlugin implements SubscriberInterface
 
     public function onAjaxVigling(AjaxEvent $event): void
     {
-        $event->updateEventResult(CatalogRequestHelper::submit($event->getApplication()));
+        $app = $event->getApplication();
+        $action = (string) $app->getInput()->get('action', '', 'cmd');
+        if ($action === 'health') {
+            $event->updateEventResult(SiteGuardHelper::health());
+
+            return;
+        }
+        $event->updateEventResult(CatalogRequestHelper::submit($app));
     }
 
     public function onUserBeforeSave(BeforeSaveEvent $event): void

@@ -55,6 +55,14 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$event->updateEventResult(['success' => false, 'message' => 'Нужна авторизация']);
 			return;
 		}
+		if (!self::guardEnabled('booking_create')) {
+			$event->updateEventResult(['success' => false, 'message' => self::guardDisabledMessage('booking_create')]);
+			return;
+		}
+		if (!self::guardAllowCreate((int) $user->id)) {
+			$event->updateEventResult(['success' => false, 'message' => 'Слишком много записей за короткое время. Попробуйте через несколько минут.']);
+			return;
+		}
 
 		$masterId = (int) $input->post->get('master_id', 0);
 		$bookingKind = trim((string) $input->post->get('booking_kind', 'service', 'string'));
@@ -535,6 +543,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			];
 			if (!in_array($msg, $knownMessages, true)) {
 				\Joomla\CMS\Log\Log::add('lkbooking save failed: ' . $rawMsg, \Joomla\CMS\Log\Log::ERROR, 'lkbooking');
+				self::guardNote('booking_save_failed', ['master_id' => $masterId]);
 				$msg = 'Не удалось сохранить запись. Попробуйте ещё раз.';
 			}
 			$event->updateEventResult(['success' => false, 'message' => 'Ошибка сохранения: ' . $msg]);
@@ -559,11 +568,88 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			'search_slot_id' => $searchSlotId > 0 ? $searchSlotId : null,
 		];
 
+		self::guardRecord('created', $order);
 		if (class_exists(BookingNotifyHelper::class)) {
 			BookingNotifyHelper::notifyConfirmedOrRescheduled($order);
 		}
 
 		$event->updateEventResult(['success' => true, 'message' => 'Вы записались!']);
+	}
+
+	private static function guardClass(): ?string
+	{
+		$class = \Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::class;
+		if (!class_exists($class, false)) {
+			$path = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+
+		return class_exists($class, false) ? $class : null;
+	}
+
+	private static function guardEnabled(string $flag): bool
+	{
+		try {
+			$class = self::guardClass();
+
+			return $class === null || $class::enabled($flag);
+		} catch (\Throwable $e) {
+			return true;
+		}
+	}
+
+	private static function guardDisabledMessage(string $flag): string
+	{
+		try {
+			$class = self::guardClass();
+			if ($class !== null) {
+				return $class::disabledMessage($flag);
+			}
+		} catch (\Throwable $e) {
+		}
+
+		return 'Запись временно недоступна. Попробуйте позже.';
+	}
+
+	private static function guardAllowCreate(int $userId): bool
+	{
+		try {
+			$class = self::guardClass();
+
+			return $class === null || $class::allowBookingCreate($userId);
+		} catch (\Throwable $e) {
+			return true;
+		}
+	}
+
+	/**
+	 * @param array<string, mixed> $order
+	 */
+	private static function guardRecord(string $action, array $order): void
+	{
+		try {
+			$class = self::guardClass();
+			if ($class !== null) {
+				$class::record($action, $order);
+			}
+		} catch (\Throwable $e) {
+		}
+	}
+
+	/**
+	 * @param array<string, scalar|null> $context
+	 */
+	private static function guardNote(string $event, array $context): void
+	{
+		try {
+			$class = self::guardClass();
+			if ($class !== null) {
+				$class::note($event, $context);
+			}
+		} catch (\Throwable $e) {
+		}
 	}
 
 	private static function ensureOrderTableLoaded(): void

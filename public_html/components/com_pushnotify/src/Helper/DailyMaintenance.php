@@ -34,6 +34,14 @@ final class DailyMaintenance
 			self::ensureIndexes($db);
 		} catch (\Throwable $e) {
 		}
+		try {
+			$guard = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+			if (is_file($guard)) {
+				require_once $guard;
+				\Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::maintain($db);
+			}
+		} catch (\Throwable $e) {
+		}
 
 		@file_put_contents($stamp, (string) time(), LOCK_EX);
 	}

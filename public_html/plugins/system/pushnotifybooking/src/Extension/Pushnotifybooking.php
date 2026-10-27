@@ -91,6 +91,7 @@ final class Pushnotifybooking extends CMSPlugin implements SubscriberInterface
 		}
 		$order = self::$deletedOrder;
 		self::$deletedOrder = null;
+		self::guardAudit('removed', $order);
 		if (self::notificationsSilenced()) {
 			return;
 		}
@@ -128,14 +129,39 @@ final class Pushnotifybooking extends CMSPlugin implements SubscriberInterface
 		$newTime = isset($table->time) ? trim((string) $table->time) : '';
 		$oldTime = self::$beforeStoreTime !== null ? trim((string) self::$beforeStoreTime) : null;
 		self::$beforeStoreTime = null;
+		$isReschedule = $oldTime !== null && $newTime !== '' && self::timesDiffer($oldTime, $newTime);
+		if ($isReschedule) {
+			self::guardAudit('rescheduled', $order);
+		} elseif ($oldTime === null) {
+			self::guardAudit('created', $order);
+		}
 		if (self::notificationsSilenced()) {
 			return;
 		}
-		$isReschedule = $oldTime !== null && $newTime !== '' && self::timesDiffer($oldTime, $newTime);
 		if ($isReschedule) {
 			BookingNotifyHelper::notifyRescheduled($order);
 		} elseif ($oldTime === null) {
 			BookingNotifyHelper::notifyConfirmedOrRescheduled($order);
+		}
+	}
+
+	/**
+	 * @param array<string, mixed> $order
+	 */
+	private static function guardAudit(string $action, array $order): void
+	{
+		try {
+			$class = \Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::class;
+			if (!class_exists($class, false)) {
+				$path = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+				if (is_file($path)) {
+					require_once $path;
+				}
+			}
+			if (class_exists($class, false)) {
+				$class::record($action, $order);
+			}
+		} catch (\Throwable $e) {
 		}
 	}
 

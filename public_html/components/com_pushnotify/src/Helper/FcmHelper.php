@@ -292,6 +292,19 @@ class FcmHelper
 				$query->where($db->quoteName('id') . ' IN (' . implode(',', $onlyIds) . ')');
 				$limit = \count($onlyIds);
 			}
+			$hasNotBefore = false;
+			try {
+				$queueColumns = array_change_key_case((array) $db->getTableColumns('#__vigling_push_queue', false), CASE_LOWER);
+				$hasNotBefore = isset($queueColumns['not_before']);
+			} catch (\Throwable $e) {
+				$hasNotBefore = false;
+			}
+			if ($hasNotBefore && $onlyIds === []) {
+				$query->where(
+					'(' . $db->quoteName('not_before') . ' IS NULL OR '
+					. $db->quoteName('not_before') . ' <= ' . $db->quote(gmdate('Y-m-d H:i:s')) . ')'
+				);
+			}
 			$db->setQuery($query, 0, max(1, $limit));
 			$rows = $db->loadObjectList() ?: [];
 			foreach ($rows as $row) {
@@ -321,7 +334,17 @@ class FcmHelper
 					(string) $row->notification_type,
 					(string) ($row->recipient_role ?? '')
 				);
-				$done = ((int) ($result['sent'] ?? 0) > 0) || ((int) ($result['failed'] ?? 1) === 0) || ($attempts + 1) >= 3;
+				$sentCount = (int) ($result['sent'] ?? 0);
+				$failedCount = (int) ($result['failed'] ?? 1);
+				$exhausted = ($attempts + 1) >= 3;
+				$failed = $sentCount === 0 && $failedCount > 0;
+				if ($failed && !$exhausted && $hasNotBefore) {
+					self::delayRetry($db, $id, $attempts);
+				}
+				if ($failed && $exhausted) {
+					self::keepDeadLetter($db, $row, $attempts + 1);
+				}
+				$done = $sentCount > 0 || $failedCount === 0 || $exhausted;
 				if ($done) {
 					$db->setQuery(
 						$db->getQuery(true)
@@ -355,11 +378,95 @@ class FcmHelper
 				`recipient_role` VARCHAR(32) NOT NULL DEFAULT \'\',
 				`attempts` TINYINT UNSIGNED NOT NULL DEFAULT 0,
 				`created_at` DATETIME NOT NULL,
+				`not_before` DATETIME NULL DEFAULT NULL,
 				PRIMARY KEY (`id`),
 				KEY `idx_created` (`created_at`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
 		)->execute();
+		try {
+			$columns = array_change_key_case((array) $db->getTableColumns('#__vigling_push_queue', false), CASE_LOWER);
+			if (!isset($columns['not_before'])) {
+				$db->setQuery(
+					'ALTER TABLE ' . $db->quoteName('#__vigling_push_queue')
+					. ' ADD COLUMN ' . $db->quoteName('not_before') . ' DATETIME NULL DEFAULT NULL'
+				)->execute();
+			}
+		} catch (\Throwable $e) {
+		}
+		try {
+			$db->setQuery(
+				'CREATE TABLE IF NOT EXISTS ' . $db->quoteName('#__vigling_push_dead') . ' (
+					`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+					`user_id` INT UNSIGNED NOT NULL,
+					`title` VARCHAR(255) NOT NULL,
+					`body` TEXT NOT NULL,
+					`payload` MEDIUMTEXT NOT NULL,
+					`notification_type` VARCHAR(64) NOT NULL,
+					`recipient_role` VARCHAR(32) NOT NULL DEFAULT \'\',
+					`attempts` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+					`failed_at` DATETIME NOT NULL,
+					`reason` VARCHAR(64) NOT NULL DEFAULT \'\',
+					PRIMARY KEY (`id`),
+					KEY `idx_failed` (`failed_at`)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+			)->execute();
+		} catch (\Throwable $e) {
+		}
 		$ready = true;
+	}
+
+	private static function delayRetry($db, int $id, int $failedAttempts): void
+	{
+		if ($id <= 0) {
+			return;
+		}
+		try {
+			$guard = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+			$delay = 60;
+			if (is_file($guard)) {
+				require_once $guard;
+				$class = \Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::class;
+				if (class_exists($class, false)) {
+					$delay = $class::backoffSeconds($failedAttempts);
+				}
+			}
+			$when = gmdate('Y-m-d H:i:s', time() + $delay);
+			$db->setQuery(
+				'UPDATE ' . $db->quoteName('#__vigling_push_queue')
+				. ' SET ' . $db->quoteName('not_before') . ' = ' . $db->quote($when)
+				. ' WHERE ' . $db->quoteName('id') . ' = ' . $id
+			)->execute();
+		} catch (\Throwable $e) {
+		}
+	}
+
+	private static function keepDeadLetter($db, object $row, int $attempts): void
+	{
+		try {
+			$dead = new \stdClass();
+			$dead->user_id = (int) ($row->user_id ?? 0);
+			$dead->title = (string) ($row->title ?? '');
+			$dead->body = (string) ($row->body ?? '');
+			$dead->payload = (string) ($row->payload ?? '{}');
+			$dead->notification_type = substr((string) ($row->notification_type ?? ''), 0, 64);
+			$dead->recipient_role = substr((string) ($row->recipient_role ?? ''), 0, 32);
+			$dead->attempts = max(0, $attempts);
+			$dead->failed_at = gmdate('Y-m-d H:i:s');
+			$dead->reason = 'attempts_exhausted';
+			$db->insertObject('#__vigling_push_dead', $dead);
+			$guard = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+			if (is_file($guard)) {
+				require_once $guard;
+				$class = \Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::class;
+				if (class_exists($class, false)) {
+					$class::note('push_dead', [
+						'user_id' => (int) $dead->user_id,
+						'attempts' => (int) $dead->attempts,
+					]);
+				}
+			}
+		} catch (\Throwable $e) {
+		}
 	}
 
 	private static function log($userId, $notificationType, $title, $body, $status, $fcmResponse, $recipientRole = '')
