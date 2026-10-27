@@ -34,6 +34,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		if ($id <= 0) {
 			$this->setMessage('Неверный идентификатор записи', 'error');
@@ -82,6 +85,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		if ($id <= 0) {
 			$this->setMessage('Неверный идентификатор записи', 'error');
@@ -118,6 +124,7 @@ class OrdersController extends BaseController
 		$prefix = $db->getPrefix();
 		$tbl = $prefix . 'vigling_bookings';
 		$db->setQuery('DELETE FROM ' . $db->quoteName($tbl) . ' WHERE ' . $db->quoteName('id') . ' = ' . (int) $id)->execute();
+		self::guardRecord('removed', $table);
 		$this->setMessage('Запись удалена');
 		$this->setRedirectAndExit();
 	}
@@ -128,6 +135,14 @@ class OrdersController extends BaseController
 		$user = Factory::getApplication()->getIdentity();
 		if (!$user->id) {
 			$this->setMessage('Нужна авторизация', 'error');
+			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_create')) {
+			return;
+		}
+		if (!$this->allowAnotherBooking((int) $user->id)) {
+			$this->setMessage('Слишком много записей за короткое время. Попробуйте через несколько минут.', 'error');
 			$this->setRedirectAndExit();
 			return;
 		}
@@ -349,6 +364,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		$timeUtcStr = trim((string) $this->input->get('time_utc', '', 'string'));
 		$timeStr = trim((string) $this->input->get('time', '', 'string'));
@@ -492,6 +510,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		if ($id <= 0) {
 			$this->setMessage('Неверный идентификатор записи', 'error');
@@ -538,6 +559,9 @@ class OrdersController extends BaseController
 		if (!$user->id) {
 			$this->setMessage('Нужна авторизация', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
 			return;
 		}
 		$id = (int) $this->input->get('id', 0);
@@ -665,6 +689,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 
 		$courseSlotId = (int) $this->input->get('course_slot_id', 0);
 		if ($courseSlotId <= 0) {
@@ -723,6 +750,9 @@ class OrdersController extends BaseController
 		if (!$user->id) {
 			$this->setMessage('Нужна авторизация', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
 			return;
 		}
 
@@ -863,6 +893,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 
 		$searchSlotId = (int) $this->input->get('search_slot_id', 0);
 		if ($searchSlotId <= 0) {
@@ -921,6 +954,9 @@ class OrdersController extends BaseController
 		if (!$user->id) {
 			$this->setMessage('Нужна авторизация', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
 			return;
 		}
 
@@ -1114,6 +1150,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
+			return;
+		}
 		$replyId = (int) $this->input->get('reply_id', 0);
 		$decision = (string) $this->input->get('decision', '', 'cmd');
 		if ($replyId <= 0 || !in_array($decision, ['agree', 'decline'], true)) {
@@ -1280,6 +1319,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
+			return;
+		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$proposal = GroupRescheduleHelper::isAvailable($db)
 			? GroupRescheduleHelper::loadProposal($db, (int) $this->input->get('proposal_id', 0))
@@ -1316,6 +1358,9 @@ class OrdersController extends BaseController
 		if (!$user->id) {
 			$this->setMessage('Нужна авторизация', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_reschedule')) {
 			return;
 		}
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
@@ -1531,6 +1576,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_complete')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		if ($id <= 0) {
 			$this->setMessage('Неверный идентификатор записи', 'error');
@@ -1569,6 +1617,7 @@ class OrdersController extends BaseController
 		$db->setQuery(
 			'UPDATE ' . $db->quoteName($tbl) . ' SET ' . $db->quoteName('completed') . ' = 1 WHERE ' . $db->quoteName('id') . ' = ' . (int) $id
 		)->execute();
+		self::guardRecord('completed', $table);
 		$this->setMessage('Запись отмечена как выполненная');
 		$this->setRedirectAndExit();
 	}
@@ -1662,6 +1711,9 @@ class OrdersController extends BaseController
 			$this->setRedirectAndExit();
 			return;
 		}
+		if ($this->denyIfBookingFlagOff('booking_cancel')) {
+			return;
+		}
 		$id = (int) $this->input->get('id', 0);
 		if ($id <= 0) {
 			$this->setMessage('Неверный идентификатор записи', 'error');
@@ -1691,6 +1743,7 @@ class OrdersController extends BaseController
 		$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
 		$tbl = $db->getPrefix() . 'vigling_bookings';
 		$db->setQuery('DELETE FROM ' . $db->quoteName($tbl) . ' WHERE ' . $db->quoteName('id') . ' = ' . (int) $id)->execute();
+		self::guardRecord('removed', $table);
 		$this->setMessage('Запись удалена');
 		$this->setRedirectAndExit();
 	}
@@ -1702,6 +1755,9 @@ class OrdersController extends BaseController
 		if (!$user->id || !self::isMasterUser($user)) {
 			$this->setMessage('Доступ только для мастеров', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_journal')) {
 			return;
 		}
 
@@ -1810,6 +1866,12 @@ class OrdersController extends BaseController
 
 			try {
 				$db->setQuery($query)->execute();
+				self::guardRecord('journal_created', [
+					'id' => (int) $db->insertid(),
+					'user_id' => 0,
+					'master_id' => $masterId,
+					'time' => $startDb,
+				]);
 			} catch (\Throwable $e) {
 				$this->setMessage('Не удалось сохранить блок времени', 'error');
 				$this->setRedirectAndExit();
@@ -1832,6 +1894,9 @@ class OrdersController extends BaseController
 		if (!$user->id || !self::isMasterUser($user)) {
 			$this->setMessage('Доступ только для мастеров', 'error');
 			$this->setRedirectAndExit();
+			return;
+		}
+		if ($this->denyIfBookingFlagOff('booking_journal')) {
 			return;
 		}
 
@@ -1865,6 +1930,7 @@ class OrdersController extends BaseController
 			. ' AND ' . $db->quoteName('master_id') . ' = ' . (int) $user->id
 			. ' AND ' . $db->quoteName('user_id') . ' = 0'
 		)->execute();
+		self::guardRecord('journal_removed', $table);
 
 		$this->setMessage('Блок удалён');
 		$this->setRedirectAndExit();
@@ -1958,6 +2024,10 @@ class OrdersController extends BaseController
 		$user = $app->getIdentity();
 		if (!$user->id) {
 			$this->jsonResponse(['success' => false, 'message' => 'Нужна авторизация']);
+			return;
+		}
+		if ($this->bookingFlagOff('booking_reschedule')) {
+			$this->jsonResponse(['success' => false, 'message' => $this->bookingFlagMessage('booking_reschedule')]);
 			return;
 		}
 		$viewerId = (int) $user->id;
@@ -2726,5 +2796,87 @@ class OrdersController extends BaseController
 		} catch (\Throwable $e) {
 		}
 		return $fallback;
+	}
+
+	private function denyIfBookingFlagOff(string $flag): bool
+	{
+		if (!$this->bookingFlagOff($flag)) {
+			return false;
+		}
+		$this->setMessage($this->bookingFlagMessage($flag), 'error');
+		$this->setRedirectAndExit();
+
+		return true;
+	}
+
+	private function bookingFlagOff(string $flag): bool
+	{
+		try {
+			$class = self::guardClass();
+
+			return $class !== null && !$class::enabled($flag);
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
+	private function bookingFlagMessage(string $flag): string
+	{
+		try {
+			$class = self::guardClass();
+			if ($class !== null) {
+				return $class::disabledMessage($flag);
+			}
+		} catch (\Throwable $e) {
+		}
+
+		return 'Действие временно недоступно. Попробуйте позже.';
+	}
+
+	private function allowAnotherBooking(int $userId): bool
+	{
+		try {
+			$class = self::guardClass();
+
+			return $class === null || $class::allowBookingCreate($userId);
+		} catch (\Throwable $e) {
+			return true;
+		}
+	}
+
+	/**
+	 * @param object|array<string, mixed> $order
+	 */
+	private static function guardRecord(string $action, $order): void
+	{
+		try {
+			$class = self::guardClass();
+			if ($class === null) {
+				return;
+			}
+			if (is_object($order)) {
+				$order = [
+					'id' => (int) ($order->id ?? 0),
+					'user_id' => (int) ($order->user_id ?? 0),
+					'master_id' => (int) ($order->master_id ?? 0),
+					'time' => (string) ($order->time ?? ''),
+				];
+			}
+			$class::record($action, $order);
+		} catch (\Throwable $e) {
+		}
+	}
+
+	private static function guardClass(): ?string
+	{
+		$class = \Joomla\Plugin\User\Vigling\Helper\SiteGuardHelper::class;
+		if (!class_exists($class, false)) {
+			$path = JPATH_PLUGINS . '/user/vigling/src/Helper/SiteGuardHelper.php';
+			if (is_file($path)) {
+				require_once $path;
+			}
+		}
+
+		return class_exists($class, false) ? $class : null;
 	}
 }
