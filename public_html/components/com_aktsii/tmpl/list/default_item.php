@@ -134,8 +134,8 @@ if (!class_exists(\Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::class)) 
 }
 $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardImage, true);
 $avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($avatarImage, (int) $item->id, true);
-$imgStyle = $cardImage !== '' ? '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
-$masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
+$imgStyle = $cardImage !== '' ? '--rd-img: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $cardImage), ENT_QUOTES, 'UTF-8') . '\'); background-image: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $cardImage), ENT_QUOTES, 'UTF-8') . '\');' : '';
+$masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $avatarImage), ENT_QUOTES, 'UTF-8') . '\'); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
 ?>
 <div class="category__item" data-address="<?php echo htmlspecialchars($addr); ?>">
 	<div class="category__item-content">

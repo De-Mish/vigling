@@ -153,10 +153,10 @@ $defaultImg = '/templates/ryba/images/master.png';
 								$avatarImage = ImageUploadHelper::avatarWebUrl($avatarImage, $itemId, true);
 							}
 							$cardImage = $portfolioImage !== '' ? $portfolioImage : $avatarImage;
-							$imgStyle = $cardImage !== '' ? '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');' : '';
+							$imgStyle = $cardImage !== '' ? '--rd-img: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $cardImage), ENT_QUOTES, 'UTF-8') . '\'); background-image: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $cardImage), ENT_QUOTES, 'UTF-8') . '\');' : '';
 							$masterAvatarStyle = $avatarImage !== ''
-								? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;'
-								: 'background-image: url(' . htmlspecialchars($defaultImg, ENT_QUOTES, 'UTF-8') . '); background-size: cover;';
+								? 'background-image: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $avatarImage), ENT_QUOTES, 'UTF-8') . '\'); background-size: cover;'
+								: 'background-image: url(\'' . htmlspecialchars(str_replace([' ', '(', ')', "'", '"'], ['%20', '%28', '%29', '%27', '%22'], $defaultImg), ENT_QUOTES, 'UTF-8') . '\'); background-size: cover;';
 							$profileUrl = rtrim(Uri::root(true), '/') . '/' . $itemId;
 							?>
 						<div class="lk-fav-item">
