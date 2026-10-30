@@ -668,10 +668,6 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 			$lkSummary = $isOwn ? \Viglin\Component\Orders\Site\Helper\AppointmentsHelper::summary((int) $this->data->id, (bool) $profileIsMaster) : null;
 			if ($lkSummary !== null) :
 				$lkNext = $lkSummary['next'];
-				$lkGrowth = null;
-				if ($profileIsMaster && $lkSummary['prevMonth'] > 0) {
-					$lkGrowth = (int) round(($lkSummary['month'] - $lkSummary['prevMonth']) / $lkSummary['prevMonth'] * 100);
-				}
 				?>
 			<div class="rd-lk-tiles">
 				<a class="rd-lk-tile rd-lk-tile--next" href="<?php echo $zapisiUrl; ?>" data-open-tab="profile-tab11">
@@ -689,17 +685,6 @@ $this->lkFavoritesTokenValue = $pushnotifyTokenValue;
 					<span class="rd-lk-tile__label">Записей на 7 дней</span>
 					<span class="rd-lk-tile__value"><?php echo (int) $lkSummary['week']; ?></span>
 					<span class="rd-lk-tile__meta">Всего предстоящих: <?php echo (int) $lkSummary['upcoming']; ?></span>
-				</div>
-				<div class="rd-lk-tile">
-					<span class="rd-lk-tile__label">Приёмов за месяц</span>
-					<span class="rd-lk-tile__value"><?php echo (int) $lkSummary['month']; ?></span>
-					<span class="rd-lk-tile__meta">
-						<?php if ($lkGrowth !== null) : ?>
-						<span class="rd-lk-growth<?php echo $lkGrowth < 0 ? ' is-down' : ''; ?>"><?php echo $lkGrowth > 0 ? '+' : ''; ?><?php echo $lkGrowth; ?>%</span> к тому же периоду прошлого месяца
-						<?php else : ?>
-						С начала месяца
-						<?php endif; ?>
-					</span>
 				</div>
 				<?php else : ?>
 				<div class="rd-lk-tile">
