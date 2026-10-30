@@ -139,6 +139,9 @@ $cardImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($cardI
 $imgStyle = '--rd-img: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . '); background-image: url(' . htmlspecialchars($cardImage, ENT_QUOTES, 'UTF-8') . ');';
 
 $avatarImage = '';
+if ($avatar === '') {
+	$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl('', (int) ($item->master_id ?? 0), true);
+}
 if ($avatar !== '') {
 	$avatarRaw = $avatar;
 	$avatarDecoded = json_decode($avatarRaw, true);
@@ -154,7 +157,9 @@ if ($avatar !== '') {
 			$avatarClean = str_replace('\\', '/', ltrim($avatarRaw, '/'));
 			$avatarImage = stripos($avatarClean, 'images/') === 0 ? '/' . $avatarClean : '/images/profiler/' . $avatarClean;
 		}
-		$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::webUrl($avatarImage, true);
+		$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl($avatarImage, (int) ($item->master_id ?? 0), true);
+	} else {
+		$avatarImage = \Joomla\Plugin\User\Vigling\Helper\ImageUploadHelper::avatarWebUrl('', (int) ($item->master_id ?? 0), true);
 	}
 }
 $masterAvatarStyle = $avatarImage !== '' ? 'background-image: url(' . htmlspecialchars($avatarImage, ENT_QUOTES, 'UTF-8') . '); background-size: cover;' : 'background-image: url(/templates/ryba/images/master.png); background-size: cover;';
