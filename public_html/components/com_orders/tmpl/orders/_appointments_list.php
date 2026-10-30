@@ -47,7 +47,7 @@ $grIso = static function (string $utc): string {
 					$timeUtc = $item->time ? new \DateTime($item->time, $utc) : null;
 					$timeIso = $timeUtc ? $timeUtc->format('c') : '';
 					$isPast = $timeUtc ? ($timeUtc < $nowUtc) : false;
-					$rowClass = 'appointments-card orders-row orders-row--course-summary' . ($isPast ? ' orders-row--past' : '');
+					$rowClass = 'appointments-card orders-row orders-row--course-summary appointments-card--' . ($isSearchGroup ? 'search' : 'course') . ($isPast ? ' orders-row--past' : '');
 					$toggleId = ($isSearchGroup ? 'search' : 'course') . '-participants-' . (int) $row['slot_id'];
 					$entityTitle = trim((string) ($item->service_display_name ?? $item->service_name));
 					$entityCategoryTitle = trim((string) ($isSearchGroup ? ($item->search_category_title ?? '') : ($item->course_category_title ?? '')));
@@ -168,7 +168,7 @@ $grIso = static function (string $utc): string {
 				$isPast = $timeUtc ? ($timeUtc < $nowUtc) : false;
 				$completed = !empty($item->completed);
 				$isBlock = (($row['type'] ?? '') === 'block') || (int) ($item->user_id ?? 0) <= 0;
-				$rowClass = 'appointments-card orders-row' . ($isPast ? ' orders-row--past' : '');
+				$rowClass = 'appointments-card orders-row' . ($isBlock ? '' : ' appointments-card--service') . ($isPast ? ' orders-row--past' : '');
 				$contacts = !empty($item->_viewer_is_master) ? viglingAppointmentsContactBits($item) : [];
 				$serviceLabel = trim((string) ($item->service_display_name ?? $item->service_name ?? ''));
 				if ($isBlock) {
