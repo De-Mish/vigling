@@ -4394,3 +4394,76 @@ html.vg-crit-open { overflow: hidden; }
 }
 .gr-chip--agreed { background: var(--rd-ok-soft, #E4F4EA); color: var(--rd-ok, #17803F); }
 .gr-chip--pending { background: var(--rd-accent-soft, #FFF5D1); }
+
+/* Cabinet lists (services, promotions, courses, model search): full-width, compact cards. */
+html body #content .view_profile-tabs .course__item--readonly,
+html body #content .view_profile-tabs .service__item--readonly {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+html body #content .view_profile-tabs .pricesValue > label.checkbox,
+html body #content .view_profile-tabs .stock_pricesValue > label.checkbox,
+html body #content .view_profile-tabs .coursesValue > label.checkbox,
+html body #content .view_profile-tabs .searchesValue > label.checkbox {
+  margin: 0 0 6px;
+  font-size: 18px;
+  line-height: 22px;
+}
+html body #content .view_profile-tabs .service__item--readonly {
+  margin: 6px 0 0 !important;
+  padding: 10px 14px !important;
+  gap: 2px 12px;
+}
+html body #content .view_profile-tabs .service__item--readonly > .price {
+  font-size: 22px;
+  line-height: 26px;
+}
+
+/* Appointment cards: same language as the rest of the cabinet (cream card, ink links, pill buttons). */
+html body .appointments-cards .appointments-card,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card {
+  padding: 14px 16px !important;
+  border: 1px solid var(--rd-line, #ECE8DC) !important;
+  border-radius: var(--rd-r-card, 20px) !important;
+  background: var(--rd-card, #fff) !important;
+  box-shadow: none !important;
+}
+html body .appointments-cards .appointments-card + .appointments-card,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card + .appointments-card { margin-top: 8px !important; }
+html body .appointments-cards .appointments-card__people,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people {
+  grid-template-columns: 64px 1fr !important;
+  gap: 4px 10px !important;
+  margin: 0 0 8px !important;
+  padding: 8px 0 !important;
+  border-top: 1px solid var(--rd-line, #ECE8DC) !important;
+  border-bottom: 1px solid var(--rd-line, #ECE8DC) !important;
+}
+html body .appointments-cards .appointments-card__people .appointments-card__label,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__people .appointments-card__label {
+  font-size: 11px !important;
+  line-height: 20px !important;
+  font-weight: 600 !important;
+  letter-spacing: .04em !important;
+  text-transform: uppercase !important;
+  color: var(--rd-mute, #7A756A) !important;
+}
+html body .appointments-cards .appointments-person,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-person {
+  font-size: 14px !important;
+  line-height: 20px !important;
+  font-weight: 600 !important;
+  color: var(--rd-ink, #17150F) !important;
+}
+html body .appointments-cards .appointments-person a,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-person a {
+  color: var(--rd-ink, #17150F) !important;
+  text-decoration: underline !important;
+  text-decoration-color: var(--rd-accent-d, #E9B72A) !important;
+  text-underline-offset: 3px !important;
+}
+html body .appointments-cards .appointments-card__row--contacts,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--contacts { margin-top: 2px !important; }
+html body .appointments-cards .appointments-card__row--actions,
+html body #easyprofile #jsn_zapisi .appointments-page .appointments-cards .appointments-card__row--actions { margin-top: 12px !important; }
