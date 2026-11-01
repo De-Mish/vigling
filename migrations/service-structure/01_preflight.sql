@@ -1,5 +1,3 @@
--- 01_preflight.sql : READ-ONLY checks. Creates only the helper table `joomla_mig_plan`.
--- Replace nothing: the table prefix is already `joomla_`.
 SET NAMES utf8mb4;
 DROP TABLE IF EXISTS `joomla_mig_plan`;
 CREATE TABLE `joomla_mig_plan` (
@@ -739,8 +737,6 @@ INSERT INTO `joomla_mig_plan` (`seq`,`action`,`node_id`,`type`,`level`,`title`,`
 (714,'add',NULL,'service',3,'Увлажняющий уход / патчи под глаза','увлажняющий-уход-патчи-под-глаза',NULL,NULL,NULL,NULL,NULL,712),
 (715,'add',NULL,'service',3,'Массаж лица (Асахи / лимфодренажный)','массаж-лица-асахи-лимфодренажный',NULL,NULL,NULL,NULL,NULL,712),
 (716,'add',NULL,'service',3,'Уход для лица / Чёрная маска во время мытья головы','уход-для-лица-черная-маска-во-время-мытья-головы',NULL,NULL,NULL,NULL,NULL,712);
-
--- ---- resolve ids that the file does not carry ---------------------------------------
 UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id
    SET p.art_id=n.legacy_id
  WHERE p.type='group' AND p.art_id IS NULL AND p.node_id IS NOT NULL AND p.action IN ('del','ren');
@@ -760,48 +756,38 @@ UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_
   JOIN `joomla_tags` t ON t.id=m.tag_id AND LOWER(TRIM(t.title)) COLLATE utf8mb4_unicode_ci=LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci
    SET p.tag_id=t.id
  WHERE p.type='service' AND p.tag_id IS NULL AND p.node_id IS NOT NULL AND p.action IN ('del','ren');
-
 SELECT '1. plan nodes missing in service_nodes (expect 0)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p LEFT JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id
  WHERE p.node_id IS NOT NULL AND n.id IS NULL;
-
 SELECT '2. target categories missing (expect 0)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p LEFT JOIN `joomla_categories` c ON c.id=p.cat_id AND c.extension='com_content'
  WHERE p.cat_id>0 AND p.action='add' AND c.id IS NULL;
-
 SELECT '3. articles missing in #__content (expect 0)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p LEFT JOIN `joomla_content` c ON c.id=p.art_id
  WHERE p.art_id IS NOT NULL AND p.action<>'add' AND c.id IS NULL;
-
 SELECT '4. article title differs from node title (expect 0; list below)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id JOIN `joomla_content` c ON c.id=p.art_id
  WHERE p.type='group' AND LOWER(TRIM(c.title)) COLLATE utf8mb4_unicode_ci<>LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci;
 SELECT p.node_id, n.title AS node_title, c.id AS article_id, c.title AS article_title
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id JOIN `joomla_content` c ON c.id=p.art_id
  WHERE p.type='group' AND LOWER(TRIM(c.title)) COLLATE utf8mb4_unicode_ci<>LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci LIMIT 20;
-
 SELECT '5. tag title differs from node title (expect 0; list below)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id JOIN `joomla_tags` t ON t.id=p.tag_id
  WHERE p.type='service' AND LOWER(TRIM(t.title)) COLLATE utf8mb4_unicode_ci<>LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci;
 SELECT p.node_id, n.title AS node_title, t.id AS tag_id, t.title AS tag_title
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id JOIN `joomla_tags` t ON t.id=p.tag_id
  WHERE p.type='service' AND LOWER(TRIM(t.title)) COLLATE utf8mb4_unicode_ci<>LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci LIMIT 20;
-
 SELECT '6. existing services without a tag id (info; they only lose the node)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` WHERE type='service' AND node_id IS NOT NULL AND action IN ('del','ren') AND tag_id IS NULL;
-
 SELECT '7. (article, tag) pairs not found in tag map (info)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p LEFT JOIN `joomla_contentitem_tag_map` m
     ON m.content_item_id=p.art_id AND m.tag_id=p.tag_id AND m.type_alias='com_content.article'
  WHERE p.type='service' AND p.action IN ('del','ren') AND p.tag_id IS NOT NULL AND m.tag_id IS NULL;
-
 SELECT '8. adds whose parent cannot be resolved (expect 0)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` WHERE action IN ('add','mov') AND level>1
    AND parent_node_id IS NULL AND sibling_node_id IS NULL AND parent_seq IS NULL;
-
 SELECT '9. adds under existing groups without article id (expect 0)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` WHERE action='add' AND type='service' AND parent_seq IS NULL AND art_id IS NULL;
-
 SELECT '10. node legacy_id differs from parsed id (info; shows how nodes map to Joomla ids)' AS check_name, COUNT(*) AS problems
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id
  WHERE (p.type='service' AND p.tag_id IS NOT NULL AND n.legacy_id<>p.tag_id)
@@ -810,21 +796,17 @@ SELECT p.node_id, p.type, n.legacy_source, n.legacy_id, p.tag_id AS parsed_tag, 
   FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id
  WHERE (p.type='service' AND p.tag_id IS NOT NULL AND n.legacy_id<>p.tag_id)
     OR (p.type='group' AND p.art_id IS NOT NULL AND n.legacy_id<>p.art_id) LIMIT 20;
-
 SELECT '11. templates available (expect 1 each)' AS check_name,
   (SELECT COUNT(*) FROM `joomla_content` WHERE state=1) > 0 AS article_template,
   (SELECT COUNT(*) FROM `joomla_tags` WHERE id>1 AND published=1 AND parent_id=1) > 0 AS tag_template,
   (SELECT COUNT(*) FROM `joomla_categories` WHERE id=38) = 1 AS category_template,
   (SELECT COUNT(*) FROM `joomla_vigling_service_nodes` WHERE path='context/content-tag') = 1 AS context_root,
   (SELECT COUNT(*) FROM `joomla_workflow_associations` WHERE extension='com_content.article') > 0 AS workflow_rows;
-
 SELECT '12. Solarium category already present (info)' AS check_name, id, title, path
   FROM `joomla_categories`
  WHERE extension='com_content' AND level=2 AND (LOWER(title) LIKE '%солярий%' OR LOWER(title) LIKE 'загар%');
-
 SELECT '13. rows that will be deleted: user services / stock services' AS check_name,
   (SELECT COUNT(*) FROM `joomla_vigling_user_services` us JOIN `joomla_mig_plan` p ON p.action='del' AND us.service_node_id=p.node_id) AS user_services_rows,
   (SELECT COUNT(*) FROM `joomla_vigling_user_stock_services` us JOIN `joomla_mig_plan` p ON p.action='del' AND us.service_node_id=p.node_id) AS stock_rows;
-
 SELECT 'plan summary' AS check_name, action, type, level, COUNT(*) AS cnt
   FROM `joomla_mig_plan` GROUP BY action, type, level ORDER BY action, type, level;

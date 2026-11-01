@@ -1,8 +1,4 @@
--- 02_apply.sql : applies the new specialty/service/method structure.
--- Run 01_preflight.sql first. Needs InnoDB tables for the rollback to work; backups are created first.
 SET NAMES utf8mb4;
-
--- ---- backups (kept after the run; drop them yourself when you are happy) -------------
 CREATE TABLE `joomla_bak_svc_nodes`          AS SELECT * FROM `joomla_vigling_service_nodes`;
 CREATE TABLE `joomla_bak_svc_user_services`  AS SELECT * FROM `joomla_vigling_user_services`;
 CREATE TABLE `joomla_bak_svc_user_stock`     AS SELECT * FROM `joomla_vigling_user_stock_services`;
@@ -749,8 +745,6 @@ INSERT INTO `joomla_mig_plan` (`seq`,`action`,`node_id`,`type`,`level`,`title`,`
 (714,'add',NULL,'service',3,'Увлажняющий уход / патчи под глаза','увлажняющий-уход-патчи-под-глаза',NULL,NULL,NULL,NULL,NULL,712),
 (715,'add',NULL,'service',3,'Массаж лица (Асахи / лимфодренажный)','массаж-лица-асахи-лимфодренажный',NULL,NULL,NULL,NULL,NULL,712),
 (716,'add',NULL,'service',3,'Уход для лица / Чёрная маска во время мытья головы','уход-для-лица-черная-маска-во-время-мытья-головы',NULL,NULL,NULL,NULL,NULL,712);
-
--- ---- resolve ids that the file does not carry ---------------------------------------
 UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_id
    SET p.art_id=n.legacy_id
  WHERE p.type='group' AND p.art_id IS NULL AND p.node_id IS NOT NULL AND p.action IN ('del','ren');
@@ -770,7 +764,6 @@ UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.id=p.node_
   JOIN `joomla_tags` t ON t.id=m.tag_id AND LOWER(TRIM(t.title)) COLLATE utf8mb4_unicode_ci=LOWER(TRIM(n.title)) COLLATE utf8mb4_unicode_ci
    SET p.tag_id=t.id
  WHERE p.type='service' AND p.tag_id IS NULL AND p.node_id IS NOT NULL AND p.action IN ('del','ren');
-
 SET NAMES utf8mb4;
 SET @tpl_art :=(SELECT id FROM `joomla_content` WHERE state=1 ORDER BY id LIMIT 1);
 SET @tpl_tag :=(SELECT id FROM `joomla_tags` WHERE id>1 AND published=1 AND parent_id=1 ORDER BY id LIMIT 1);
@@ -778,55 +771,36 @@ SET @ctx_root:=(SELECT id FROM `joomla_vigling_service_nodes` WHERE path='contex
 SET @src1 :=(SELECT legacy_source FROM `joomla_vigling_service_nodes` WHERE id=1808);
 SET @src2 :=(SELECT legacy_source FROM `joomla_vigling_service_nodes` WHERE level=2 AND path LIKE 'context/content-tag/%' AND legacy_source IS NOT NULL ORDER BY id LIMIT 1);
 SET @src3 :=(SELECT legacy_source FROM `joomla_vigling_service_nodes` WHERE level=3 AND path LIKE 'context/content-tag/%' AND legacy_source IS NOT NULL ORDER BY id LIMIT 1);
-
--- ---- temporary copies of template rows (schema independent); done before the transaction
 CREATE TEMPORARY TABLE tmp_cat LIKE `joomla_categories`;
 INSERT INTO tmp_cat SELECT * FROM `joomla_categories` WHERE id=38;
-
 CREATE TEMPORARY TABLE tmp_art LIKE `joomla_content`;
 ALTER TABLE tmp_art MODIFY id INT UNSIGNED NOT NULL, DROP PRIMARY KEY, ADD COLUMN mig_seq INT NOT NULL;
 INSERT INTO tmp_art SELECT c.*, p.seq FROM `joomla_content` c JOIN `joomla_mig_plan` p
    ON c.id=@tpl_art AND p.action='add' AND p.type='group' AND p.level=2;
-
 CREATE TEMPORARY TABLE tmp_need_tags (rn INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, tag_id INT NULL, UNIQUE KEY (title)) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT IGNORE INTO tmp_need_tags (title)
   SELECT DISTINCT TRIM(title) FROM `joomla_mig_plan` WHERE type='service' AND action IN ('add','ren','mov');
-
 CREATE TEMPORARY TABLE tmp_tag LIKE `joomla_tags`;
 ALTER TABLE tmp_tag MODIFY id INT UNSIGNED NOT NULL, DROP PRIMARY KEY, ADD COLUMN mig_rn INT NOT NULL;
-
 START TRANSACTION;
-
--- =======================================================================================
--- 1. DELETIONS  (services of masters are removed together with the structure)
--- =======================================================================================
 DELETE us FROM `joomla_vigling_user_services` us JOIN `joomla_mig_plan` p
    ON p.action='del' AND us.service_node_id=p.node_id;
 DELETE us FROM `joomla_vigling_user_stock_services` us JOIN `joomla_mig_plan` p
    ON p.action='del' AND us.service_node_id=p.node_id;
-
 DELETE m FROM `joomla_contentitem_tag_map` m JOIN `joomla_mig_plan` p
    ON p.action='del' AND p.type='service' AND m.content_item_id=p.art_id AND m.tag_id=p.tag_id
 WHERE m.type_alias='com_content.article';
-
 DELETE m FROM `joomla_contentitem_tag_map` m JOIN `joomla_mig_plan` p
    ON p.action='del' AND p.type='group' AND m.content_item_id=p.art_id
 WHERE m.type_alias='com_content.article';
-
 DELETE w FROM `joomla_workflow_associations` w JOIN `joomla_mig_plan` p
    ON p.action='del' AND p.type='group' AND w.item_id=p.art_id
 WHERE w.extension='com_content.article';
-
 DELETE a FROM `joomla_assets` a JOIN `joomla_content` c ON c.asset_id=a.id JOIN `joomla_mig_plan` p
    ON p.action='del' AND p.type='group' AND c.id=p.art_id;
 DELETE c FROM `joomla_content` c JOIN `joomla_mig_plan` p
    ON p.action='del' AND p.type='group' AND c.id=p.art_id;
-
 DELETE n FROM `joomla_vigling_service_nodes` n JOIN `joomla_mig_plan` p ON p.action='del' AND p.node_id=n.id;
-
--- =======================================================================================
--- 2. NEW SPECIALTY "Солярий": reuse an existing Загар/Солярий category, else create one
--- =======================================================================================
 SET @sol :=(SELECT id FROM `joomla_categories` WHERE extension='com_content' AND level=2 AND published=1
              AND (LOWER(title) LIKE '%солярий%' OR LOWER(title) LIKE 'загар%') ORDER BY id LIMIT 1);
 UPDATE tmp_cat SET id=0, asset_id=0, title='Загар (солярий)', alias='zagar-solyariy',
@@ -834,10 +808,6 @@ UPDATE tmp_cat SET id=0, asset_id=0, title='Загар (солярий)', alias=
 INSERT INTO `joomla_categories` SELECT * FROM tmp_cat WHERE @sol IS NULL;
 SET @sol :=COALESCE(@sol,(SELECT id FROM `joomla_categories` WHERE alias='zagar-solyariy' AND extension='com_content' LIMIT 1));
 UPDATE `joomla_mig_plan` SET cat_id=@sol WHERE cat_id=-1;
-
--- =======================================================================================
--- 3. NEW ARTICLES (new groups)
--- =======================================================================================
 UPDATE tmp_art a JOIN `joomla_mig_plan` p ON p.seq=a.mig_seq
    SET a.id=0, a.title=p.title, a.alias=CONCAT('mig-a-',p.seq), a.catid=p.cat_id, a.asset_id=0, a.hits=0,
        a.state=1, a.introtext='', a.`fulltext`='', a.metakey='', a.metadesc='', a.version=1,
@@ -850,38 +820,26 @@ INSERT INTO `joomla_workflow_associations` (item_id, stage_id, extension)
   SELECT p.new_art_id, w.stage_id, 'com_content.article'
     FROM `joomla_mig_plan` p JOIN `joomla_workflow_associations` w ON w.item_id=@tpl_art AND w.extension='com_content.article'
    WHERE p.new_art_id IS NOT NULL;
-
--- =======================================================================================
--- 4. NODES for the new specialty and new groups
--- =======================================================================================
 INSERT INTO `joomla_vigling_service_nodes` (parent_id, level, path, sort_order, type, title, slug, is_active, legacy_source, legacy_id)
   SELECT r.id, 1, CONCAT(r.path,'/',p.slug), 0, 'group', p.title, p.slug, 1, @src1, @sol
     FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` r ON r.id=@ctx_root
    WHERE p.action='add' AND p.level=1;
 UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.parent_id=@ctx_root AND n.slug=p.slug COLLATE utf8mb4_unicode_ci
    SET p.new_node_id=n.id WHERE p.action='add' AND p.level=1;
-
 UPDATE `joomla_mig_plan` SET par_id=parent_node_id WHERE action IN ('add','mov') AND parent_node_id IS NOT NULL;
 UPDATE `joomla_mig_plan` c JOIN `joomla_mig_plan` pr ON pr.seq=c.parent_seq
    SET c.par_id=pr.new_node_id WHERE c.parent_seq IS NOT NULL AND c.par_id IS NULL AND pr.new_node_id IS NOT NULL;
 UPDATE `joomla_mig_plan` c JOIN `joomla_vigling_service_nodes` s ON s.id=c.sibling_node_id
    SET c.par_id=s.parent_id WHERE c.sibling_node_id IS NOT NULL AND c.par_id IS NULL;
-
 INSERT INTO `joomla_vigling_service_nodes` (parent_id, level, path, sort_order, type, title, slug, is_active, legacy_source, legacy_id)
   SELECT par.id, par.level+1, CONCAT(par.path,'/',p.slug), 0, 'group', p.title, p.slug, 1, @src2, p.new_art_id
     FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` par ON par.id=p.par_id
    WHERE p.action='add' AND p.type='group' AND p.level=2;
 UPDATE `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` n ON n.parent_id=p.par_id AND n.slug=p.slug COLLATE utf8mb4_unicode_ci
    SET p.new_node_id=n.id WHERE p.action='add' AND p.type='group' AND p.level=2;
-
--- children of new groups now know their parent node and article
 UPDATE `joomla_mig_plan` c JOIN `joomla_mig_plan` pr ON pr.seq=c.parent_seq
    SET c.par_id=pr.new_node_id, c.art_id=pr.new_art_id
  WHERE c.type='service' AND c.parent_seq IS NOT NULL AND pr.new_node_id IS NOT NULL;
-
--- =======================================================================================
--- 5. TAGS (methods): reuse a tag with the same title, create the missing ones
--- =======================================================================================
 UPDATE tmp_need_tags nt SET nt.tag_id=(SELECT MIN(t.id) FROM `joomla_tags` t WHERE t.id>1 AND t.published=1 AND TRIM(t.title) COLLATE utf8mb4_unicode_ci=nt.title);
 INSERT INTO tmp_tag SELECT t.*, nt.rn FROM `joomla_tags` t JOIN tmp_need_tags nt ON t.id=@tpl_tag WHERE nt.tag_id IS NULL;
 UPDATE tmp_tag t JOIN tmp_need_tags nt ON nt.rn=t.mig_rn
@@ -892,10 +850,6 @@ INSERT INTO `joomla_tags` SELECT * FROM tmp_tag;
 UPDATE tmp_need_tags nt JOIN `joomla_tags` t ON t.alias=CONCAT('mig-t-',nt.rn) SET nt.tag_id=t.id WHERE nt.tag_id IS NULL;
 UPDATE `joomla_mig_plan` p JOIN tmp_need_tags nt ON nt.title=TRIM(p.title) COLLATE utf8mb4_unicode_ci
    SET p.new_tag_id=nt.tag_id WHERE p.type='service' AND p.action IN ('add','ren','mov');
-
--- =======================================================================================
--- 6. NEW METHODS and MOVED METHODS: tag map + nodes
--- =======================================================================================
 INSERT INTO `joomla_contentitem_tag_map` (type_alias, core_content_id, content_item_id, tag_id, tag_date, type_id)
   SELECT 'com_content.article', 0, p.art_id, p.new_tag_id, NOW(),
          (SELECT type_id FROM `joomla_content_types` WHERE type_alias='com_content.article' LIMIT 1)
@@ -903,13 +857,10 @@ INSERT INTO `joomla_contentitem_tag_map` (type_alias, core_content_id, content_i
    WHERE p.type='service' AND p.action IN ('add','mov') AND p.art_id IS NOT NULL AND p.new_tag_id IS NOT NULL
      AND NOT EXISTS (SELECT 1 FROM `joomla_contentitem_tag_map` m
                       WHERE m.type_alias='com_content.article' AND m.content_item_id=p.art_id AND m.tag_id=p.new_tag_id);
-
 INSERT INTO `joomla_vigling_service_nodes` (parent_id, level, path, sort_order, type, title, slug, is_active, legacy_source, legacy_id)
   SELECT par.id, par.level+1, CONCAT(par.path,'/',p.slug), 0, 'service', p.title, p.slug, 1, @src3, p.new_tag_id
     FROM `joomla_mig_plan` p JOIN `joomla_vigling_service_nodes` par ON par.id=p.par_id
    WHERE p.action='add' AND p.type='service';
-
--- moved methods (985, 991, 992): re-parent, rename, point at the new tag and article
 UPDATE `joomla_vigling_service_nodes` n JOIN `joomla_mig_plan` p ON p.action='mov' AND p.node_id=n.id
   JOIN `joomla_vigling_service_nodes` par ON par.id=p.par_id
    SET n.parent_id=par.id, n.level=par.level+1, n.path=CONCAT(par.path,'/',p.slug), n.slug=p.slug COLLATE utf8mb4_unicode_ci,
@@ -918,15 +869,10 @@ UPDATE `joomla_vigling_user_services` us JOIN `joomla_mig_plan` p ON p.action='m
    SET us.legacy_tag_id=p.new_tag_id, us.legacy_cat_id=p.art_id;
 UPDATE `joomla_vigling_user_stock_services` us JOIN `joomla_mig_plan` p ON p.action='mov' AND us.service_node_id=p.node_id
    SET us.legacy_tag_id=p.new_tag_id, us.legacy_cat_id=p.art_id;
-
--- =======================================================================================
--- 7. RENAMES (also for services already chosen by masters)
--- =======================================================================================
 UPDATE `joomla_content` c JOIN `joomla_mig_plan` p ON p.action='ren' AND p.type='group' AND c.id=p.art_id
    SET c.title=p.title, c.modified=NOW();
 UPDATE `joomla_vigling_service_nodes` n JOIN `joomla_mig_plan` p ON p.action='ren' AND p.node_id=n.id
    SET n.title=p.title;
-
 DELETE m FROM `joomla_contentitem_tag_map` m JOIN `joomla_mig_plan` p
    ON p.action='ren' AND p.type='service' AND m.content_item_id=p.art_id AND m.tag_id=p.tag_id
   JOIN `joomla_contentitem_tag_map` m2 ON m2.content_item_id=p.art_id AND m2.tag_id=p.new_tag_id AND m2.type_alias='com_content.article'
@@ -941,20 +887,11 @@ UPDATE `joomla_vigling_user_stock_services` us JOIN `joomla_mig_plan` p ON p.act
    SET us.legacy_tag_id=p.new_tag_id WHERE p.new_tag_id IS NOT NULL;
 UPDATE `joomla_vigling_service_nodes` n JOIN `joomla_mig_plan` p ON p.action='ren' AND p.type='service' AND p.node_id=n.id
    SET n.legacy_id=p.new_tag_id WHERE p.new_tag_id IS NOT NULL AND n.legacy_id=p.tag_id;
-
--- =======================================================================================
--- 8. CLEAN UP tags that nothing uses any more
--- =======================================================================================
 DELETE t FROM `joomla_tags` t
   JOIN (SELECT DISTINCT tag_id FROM `joomla_mig_plan` WHERE tag_id IS NOT NULL AND action IN ('del','ren','mov')) x ON x.tag_id=t.id
   LEFT JOIN `joomla_contentitem_tag_map` m ON m.tag_id=t.id
  WHERE m.tag_id IS NULL AND t.alias NOT LIKE 'mig-t-%';
-
 COMMIT;
-
--- =======================================================================================
--- RESULT (read-only)
--- =======================================================================================
 SELECT 'nodes now' AS what, COUNT(*) AS cnt FROM `joomla_vigling_service_nodes` WHERE path LIKE 'context/content-tag/%'
 UNION ALL SELECT 'new articles', COUNT(*) FROM `joomla_content` WHERE alias LIKE 'mig-a-%'
 UNION ALL SELECT 'new tags', COUNT(*) FROM `joomla_tags` WHERE alias LIKE 'mig-t-%'
