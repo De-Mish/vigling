@@ -118,18 +118,41 @@ class PoiskHelper
 		}
 
 		$categoryIds = array_map('intval', array_keys($categories));
-		$hierarchy = [];
-		foreach ($categoryIds as $categoryId) {
-			$hierarchy[$categoryId] = [];
-		}
+		$hierarchy = self::loadCatalogServiceHierarchy($categoryIds);
 
 		try {
 			$runtimeHierarchy = JsnDecodeHelper::getFilterServiceHierarchy($categoryIds);
-			foreach ($runtimeHierarchy as $categoryId => $services) {
-				$hierarchy[(int) $categoryId] = (array) $services;
-			}
 		} catch (\Throwable $e) {
-			return self::$serviceHierarchyCache[$cacheKey] = [];
+			$runtimeHierarchy = [];
+		}
+		// Masters may still hold services that are no longer in the catalog; keep them selectable.
+		foreach ((array) $runtimeHierarchy as $categoryId => $services) {
+			$categoryId = (int) $categoryId;
+			if (!isset($hierarchy[$categoryId])) {
+				continue;
+			}
+			foreach ((array) $services as $service) {
+				$serviceId = (int) ($service['id'] ?? 0);
+				if ($serviceId <= 0) {
+					continue;
+				}
+				if (!isset($hierarchy[$categoryId][$serviceId])) {
+					$hierarchy[$categoryId][$serviceId] = [
+						'id' => $serviceId,
+						'title' => (string) ($service['title'] ?? ''),
+						'tags' => [],
+					];
+				}
+				foreach ((array) ($service['tags'] ?? []) as $tag) {
+					$tagId = (int) ($tag['id'] ?? 0);
+					if ($tagId > 0 && !isset($hierarchy[$categoryId][$serviceId]['tags'][$tagId])) {
+						$hierarchy[$categoryId][$serviceId]['tags'][$tagId] = [
+							'id' => $tagId,
+							'title' => (string) ($tag['title'] ?? ''),
+						];
+					}
+				}
+			}
 		}
 
 		foreach ($hierarchy as $categoryId => $services) {
@@ -147,6 +170,75 @@ class PoiskHelper
 		}
 
 		return self::$serviceHierarchyCache[$cacheKey] = $hierarchy;
+	}
+
+	/**
+	 * Specialty → service → method catalog, the same source the registration form uses.
+	 *
+	 * @param array<int> $categoryIds
+	 * @return array<int, array<int, array{id:int,title:string,tags:array<int,array{id:int,title:string}>}>>
+	 */
+	private static function loadCatalogServiceHierarchy(array $categoryIds): array
+	{
+		$hierarchy = [];
+		foreach ($categoryIds as $categoryId) {
+			$hierarchy[(int) $categoryId] = [];
+		}
+		if ($categoryIds === []) {
+			return $hierarchy;
+		}
+
+		try {
+			$db = Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class);
+			$query = $db->getQuery(true)
+				->select([$db->quoteName('id'), $db->quoteName('catid'), $db->quoteName('title')])
+				->from($db->quoteName('#__content'))
+				->where($db->quoteName('state') . ' = 1')
+				->whereIn($db->quoteName('catid'), $categoryIds);
+			$db->setQuery($query);
+			$serviceRows = $db->loadAssocList() ?: [];
+
+			$categoryByService = [];
+			foreach ($serviceRows as $row) {
+				$serviceId = (int) ($row['id'] ?? 0);
+				$categoryId = (int) ($row['catid'] ?? 0);
+				$title = trim((string) ($row['title'] ?? ''));
+				if ($serviceId <= 0 || $title === '' || !isset($hierarchy[$categoryId])) {
+					continue;
+				}
+				$hierarchy[$categoryId][$serviceId] = ['id' => $serviceId, 'title' => $title, 'tags' => []];
+				$categoryByService[$serviceId] = $categoryId;
+			}
+
+			if ($categoryByService !== []) {
+				$query = $db->getQuery(true)
+					->select([
+						$db->quoteName('m.content_item_id', 'content_id'),
+						$db->quoteName('t.id', 'tag_id'),
+						$db->quoteName('t.title', 'tag_title'),
+					])
+					->from($db->quoteName('#__contentitem_tag_map', 'm'))
+					->join('INNER', $db->quoteName('#__tags', 't') . ' ON ' . $db->quoteName('t.id') . ' = ' . $db->quoteName('m.tag_id'))
+					->where($db->quoteName('m.type_alias') . ' = ' . $db->quote('com_content.article'))
+					->whereIn($db->quoteName('m.content_item_id'), array_keys($categoryByService))
+					->where($db->quoteName('t.published') . ' = 1');
+				$db->setQuery($query);
+				foreach ($db->loadAssocList() ?: [] as $row) {
+					$serviceId = (int) ($row['content_id'] ?? 0);
+					$tagId = (int) ($row['tag_id'] ?? 0);
+					$tagTitle = trim((string) ($row['tag_title'] ?? ''));
+					$categoryId = $categoryByService[$serviceId] ?? 0;
+					if ($categoryId <= 0 || $tagId <= 0 || $tagTitle === '') {
+						continue;
+					}
+					$hierarchy[$categoryId][$serviceId]['tags'][$tagId] = ['id' => $tagId, 'title' => $tagTitle];
+				}
+			}
+		} catch (\Throwable $e) {
+			return $hierarchy;
+		}
+
+		return $hierarchy;
 	}
 
 	public static function getCategoryIdsByPathPrefix(?string $pathPrefix = null): array
