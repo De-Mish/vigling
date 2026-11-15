@@ -881,6 +881,13 @@ UPDATE `joomla_contentitem_tag_map` m JOIN `joomla_mig_plan` p
    ON p.action='ren' AND p.type='service' AND m.content_item_id=p.art_id AND m.tag_id=p.tag_id
    SET m.tag_id=p.new_tag_id
  WHERE m.type_alias='com_content.article' AND p.new_tag_id IS NOT NULL AND p.new_tag_id<>p.tag_id;
+INSERT INTO `joomla_contentitem_tag_map` (type_alias, core_content_id, content_item_id, tag_id, tag_date, type_id)
+  SELECT 'com_content.article', 0, p.art_id, p.new_tag_id, NOW(),
+         (SELECT type_id FROM `joomla_content_types` WHERE type_alias='com_content.article' LIMIT 1)
+    FROM `joomla_mig_plan` p
+   WHERE p.action='ren' AND p.type='service' AND p.art_id IS NOT NULL AND p.new_tag_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM `joomla_contentitem_tag_map` m
+                      WHERE m.type_alias='com_content.article' AND m.content_item_id=p.art_id AND m.tag_id=p.new_tag_id);
 UPDATE `joomla_vigling_user_services` us JOIN `joomla_mig_plan` p ON p.action='ren' AND p.type='service' AND us.service_node_id=p.node_id
    SET us.legacy_tag_id=p.new_tag_id WHERE p.new_tag_id IS NOT NULL;
 UPDATE `joomla_vigling_user_stock_services` us JOIN `joomla_mig_plan` p ON p.action='ren' AND p.type='service' AND us.service_node_id=p.node_id
