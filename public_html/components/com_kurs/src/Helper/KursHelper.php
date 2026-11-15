@@ -96,13 +96,7 @@ class KursHelper
 
 	public static function getCategories(): array
 	{
-		$categories = PoiskHelper::getCategories();
-		$categoryIds = self::getCourseCategoryIds();
-		if ($categoryIds === []) {
-			return [];
-		}
-
-		return array_intersect_key($categories, array_flip($categoryIds));
+		return PoiskHelper::getCategories();
 	}
 
 	public static function getFieldsForUserIds(array $userIds, array $fieldNames): array
