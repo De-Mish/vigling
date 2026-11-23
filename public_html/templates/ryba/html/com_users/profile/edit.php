@@ -881,6 +881,26 @@ if ($repeatStockId > 0 && $isMaster) {
 	}
 }
 
+/**
+ * Lessons of a course in the shape the course builder JS expects.
+ *
+ * @param array<int|string, array<string, mixed>> $parts
+ * @return array<int, array<string, mixed>>
+ */
+$courseLessonsForBuilder = static function (array $parts, bool $keepBookings): array {
+	$rows = [];
+	foreach ($parts as $part) {
+		$rows[] = [
+			'duration' => (int) ($part['duration_min'] ?? 0),
+			'capacity' => max(1, (int) ($part['capacity'] ?? 1)),
+			'slotStartUtc' => (string) ($part['slot_start_utc'] ?? ''),
+			'bookingCount' => $keepBookings ? (int) ($part['booking_count'] ?? 0) : 0,
+		];
+	}
+
+	return $rows;
+};
+
 $existingCourseRows = [];
 try {
 		$existingCourseStructured = \Joomla\Plugin\User\Vigling\Service\UserCoursesService::getUserCoursesStructured($userId);
@@ -898,6 +918,8 @@ try {
 				'bookingMode' => (string) ($course['booking_mode'] ?? 'free'),
 				'bookingCount' => (int) ($course['booking_count'] ?? 0),
 				'slotStartUtc' => (string) ($course['slot_start_utc'] ?? ''),
+				'lessonsCount' => max(1, (int) ($course['lessons_count'] ?? 1)),
+				'parts' => $courseLessonsForBuilder((array) ($course['parts'] ?? []), true),
 			];
 		}
 } catch (\Throwable $e) {
@@ -923,6 +945,8 @@ if ($repeatCourseId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling
 			'bookingMode' => (string) ($repeatCourse['booking_mode'] ?? 'free'),
 			'bookingCount' => 0,
 			'slotStartUtc' => (string) ($repeatCourse['slot_start_utc'] ?? ''),
+			'lessonsCount' => max(1, (int) ($repeatCourse['lessons_count'] ?? 1)),
+			'parts' => $courseLessonsForBuilder((array) ($repeatCourse['parts'] ?? []), false),
 		];
 		$openCoursesTab = true;
 	}
@@ -2742,8 +2766,56 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	background: #e8e8e8;
 	border-color: #bbb;
 }
-.profile-edit #jform_courses_servis .service__item .course_mode.is-free .course_slot {
+.profile-edit #jform_courses_servis .service__item .course_mode.is-free .course_slot,
+.profile-edit #jform_courses_servis .service__item.is-free-mode .course_slot {
 	display: none !important;
+}
+/* number of lessons and the per-lesson fields */
+.profile-edit #jform_courses_servis .service__item .course_lessons {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: flex-start !important;
+	gap: 4px;
+	padding: 4px 0 !important;
+	width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_lessons label {
+	display: block !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_lessons select {
+	width: auto !important;
+	min-width: 80px;
+	max-width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_parts {
+	display: grid !important;
+	grid-template-columns: 1fr;
+	gap: 8px;
+	width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_part {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: stretch !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
+	overflow: visible !important;
+}
+.profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part {
+	padding: 8px 10px !important;
+	border: 1px solid #e2e2e2;
+	border-radius: 8px;
+	background: #fafafa;
+}
+.profile-edit #jform_courses_servis .service__item .course_part-title {
+	display: none !important;
+	font-weight: 700;
+}
+.profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part-title {
+	display: block !important;
 }
 .profile-edit #jform_courses_servis .service__item:not(.is-free-mode) .course_concurrent,
 .profile-edit #jform_courses_servis .service__item:not(.has-capacity) .course_concurrent {
@@ -3244,6 +3316,14 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	.profile-edit .fixed-slot-fields {
 		width: 100% !important;
 		max-width: 100% !important;
+	}
+	.profile-edit #jform_courses_servis .service__item .course_lessons,
+	.profile-edit #jform_courses_servis .service__item .course_lessons select {
+		width: 100% !important;
+		box-sizing: border-box !important;
+	}
+	.profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part {
+		padding: 8px !important;
 	}
 	.profile-edit #jform_courses_servis .service__item .course_desc label,
 	.profile-edit #jform_courses_servis .service__item .course_title label,
@@ -4184,12 +4264,31 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			if (!mode || String(mode.value || 'free') !== 'fixed') {
 				return;
 			}
-			var slot = row.querySelector('.course-slot-input');
-			var duration = row.querySelector('.course-duration-select');
-			var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'курс');
-			if (msg) {
-				issue = { message: msg, kind: 'course' };
-			}
+			var partNodes = coursePartNodes(row);
+			var multi = partNodes.length > 1;
+			var prevEnd = null;
+			partNodes.forEach(function(partNode, index){
+				if (issue) {
+					return;
+				}
+				var slot = partNode.querySelector('.course-slot-input');
+				var duration = partNode.querySelector('.course-duration-select');
+				var msg = describeFixedSlotIssue(slot ? slot.value : '', duration ? duration.value : 0, schedule, 'курс');
+				if (msg) {
+					issue = { message: multi ? ('Занятие ' + (index + 1) + ': ' + msg) : msg, kind: 'course' };
+					return;
+				}
+				// Lessons go one after another: each starts after the previous one ends.
+				var start = parseLocalDateTime(snapDatetimeLocalMinutes(slot ? slot.value : ''));
+				if (!start) {
+					return;
+				}
+				if (prevEnd !== null && start.getTime() < prevEnd) {
+					issue = { message: 'Занятие ' + (index + 1) + ' должно начинаться после окончания занятия ' + index + '.', kind: 'course' };
+					return;
+				}
+				prevEnd = start.getTime() + Math.max(15, parseInt(duration ? duration.value : 0, 10) || 0) * 60000;
+			});
 		});
 		if (issue) {
 			return issue;
@@ -4329,24 +4428,100 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		currentNode.textContent = existingPath ? ('Текущий файл: ' + basenameFromPath(existingPath)) : 'Файл не выбран';
 		updateMediaPreview(row, null, existingPath);
 	}
+	var COURSE_MAX_LESSONS = 10;
+	function courseLessonsOptionsHtml() {
+		var html = '';
+		for (var n = 1; n <= COURSE_MAX_LESSONS; n++) {
+			html += '<option value="' + n + '">' + n + '</option>';
+		}
+		return html;
+	}
+	/*
+	 * One lesson of a course: its own date/time (fixed mode only), duration and seat limit.
+	 * Lesson 1 keeps the original class names, so code that reads the first
+	 * .course-duration-select / .course-capacity-input / .course-slot-input keeps working.
+	 */
+	function coursePartHtml(partNo) {
+		return '<span class="course_part" data-part="' + partNo + '">' +
+			'<span class="course_part-title">Занятие ' + partNo + '</span>' +
+			'<span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span>' +
+			'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
+			'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+			'</span>';
+	}
+	function courseLessonsCountOf(row) {
+		var select = row ? row.querySelector('.course-lessons-select') : null;
+		var count = parseInt(select ? String(select.value || '1') : '1', 10) || 1;
+		return Math.max(1, Math.min(COURSE_MAX_LESSONS, count));
+	}
+	function coursePartNodes(row) {
+		return row ? Array.prototype.slice.call(row.querySelectorAll('.course_parts > .course_part')) : [];
+	}
+	function bindCoursePartInputs(row, partNode) {
+		bindFixedSlotInput(partNode.querySelector('.course-slot-input'));
+		var capacityInput = partNode.querySelector('.course-capacity-input');
+		if (capacityInput) {
+			['input', 'change'].forEach(function(eventName){
+				capacityInput.addEventListener(eventName, function(){
+					syncCourseModeState(row);
+					syncCourseEditConstraints(row);
+				});
+			});
+		}
+	}
+	function syncCourseParts(row) {
+		var container = row ? row.querySelector('.course_parts') : null;
+		if (!container) {
+			return;
+		}
+		var count = courseLessonsCountOf(row);
+		var nodes = coursePartNodes(row);
+		var template = nodes[0] || null;
+		for (var partNo = nodes.length + 1; partNo <= count; partNo++) {
+			var holder = document.createElement('span');
+			holder.innerHTML = coursePartHtml(partNo);
+			var partNode = holder.firstChild;
+			container.appendChild(partNode);
+			if (template) {
+				var tplDuration = template.querySelector('.course-duration-select');
+				var tplCapacity = template.querySelector('.course-capacity-input');
+				var newDuration = partNode.querySelector('.course-duration-select');
+				var newCapacity = partNode.querySelector('.course-capacity-input');
+				if (tplDuration && newDuration) newDuration.value = tplDuration.value;
+				if (tplCapacity && newCapacity) newCapacity.value = tplCapacity.value;
+			}
+			bindCoursePartInputs(row, partNode);
+		}
+		coursePartNodes(row).forEach(function(node, index){
+			if (index >= count) {
+				node.parentNode.removeChild(node);
+			}
+		});
+		row.classList.toggle('is-multi-lesson', count > 1);
+	}
 	function syncCourseModeState(row) {
 		if (!row) {
 			return;
 		}
 		var modeSelect = row.querySelector('.course-mode-select');
 		var modeWrap = row.querySelector('.course_mode');
-		var slotInput = row.querySelector('.course-slot-input');
-		var capacityInput = row.querySelector('.course-capacity-input');
 		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var mode = modeSelect ? String(modeSelect.value || 'free') : 'free';
-		var capacity = parseInt(capacityInput ? String(capacityInput.value || '0') : '0', 10) || 0;
+		// The course-wide seat limit is the smallest limit among its lessons.
+		var capacity = 0;
+		row.querySelectorAll('.course-capacity-input').forEach(function(input){
+			var value = parseInt(String(input.value || '0'), 10) || 0;
+			capacity = capacity === 0 ? value : Math.min(capacity, value);
+		});
 		if (modeWrap) {
 			modeWrap.classList.toggle('is-free', mode !== 'fixed');
 		}
 		row.classList.toggle('is-free-mode', mode !== 'fixed');
 		row.classList.toggle('has-capacity', capacity >= 1);
-		if (slotInput && mode !== 'fixed') {
-			fillFixedSlotParts(slotInput, '');
+		if (mode !== 'fixed') {
+			row.querySelectorAll('.course-slot-input').forEach(function(slotInput){
+				fillFixedSlotParts(slotInput, '');
+			});
 		}
 		if (concurrentInput) {
 			var maxConcurrent = Math.max(1, capacity);
@@ -4380,33 +4555,52 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		'<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
 		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="course-media-current">Файл не выбран</span></span></span>' +
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
-		'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
-		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select><span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span></span>' +
-		'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select></span>' +
+		'<span class="course_lessons"><label>Количество занятий:</label><select class="course-lessons-select">' + courseLessonsOptionsHtml() + '</select></span>' +
+		'<span class="course_parts">' + coursePartHtml(1) + '</span>' +
 		'<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
 		'<button type="button" class="btn-remove-service">Удалить</button>';
 	serviceList.appendChild(row);
+	var lessonsSelect = row.querySelector('.course-lessons-select');
 	if (rowData) {
 		var titleInput = row.querySelector('.course-title-input');
 		var descriptionInput = row.querySelector('.course-description-input');
 		var mediaInput = row.querySelector('.course-media-input');
 		var priceInput = row.querySelector('.course-price-input');
-		var durationSelect = row.querySelector('.course-duration-select');
-		var capacityInput = row.querySelector('.course-capacity-input');
 		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var modeSelect = row.querySelector('.course-mode-select');
-		var slotInput = row.querySelector('.course-slot-input');
 		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
 		if (descriptionInput) descriptionInput.value = String(rowData.description || '');
 		if (mediaInput) mediaInput.value = String(rowData.mediaPath || '');
 		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
-		if (durationSelect) durationSelect.value = String(parseInt(rowData.duration || '60', 10) || 60);
-		if (capacityInput) capacityInput.value = String(parseInt(rowData.capacity || '1', 10) || 1);
 		if (concurrentInput) concurrentInput.value = String(Math.max(1, parseInt(rowData.concurrentParticipants || '1', 10) || 1));
 		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
-		if (slotInput) slotInput.value = formatDatetimeLocal(String(rowData.slotStartUtc || ''));
+		var lessons = Array.isArray(rowData.parts) && rowData.parts.length ? rowData.parts : [{
+			duration: rowData.duration,
+			capacity: rowData.capacity,
+			slotStartUtc: rowData.slotStartUtc,
+			slotStartLocal: rowData.slotStartLocal,
+			bookingCount: rowData.bookingCount
+		}];
+		var lessonsCount = Math.max(1, Math.min(COURSE_MAX_LESSONS, parseInt(rowData.lessonsCount || lessons.length, 10) || lessons.length));
+		if (lessonsSelect) lessonsSelect.value = String(lessonsCount);
+		syncCourseParts(row);
+		coursePartNodes(row).forEach(function(partNode, index){
+			var lesson = lessons[index] || {};
+			var durationSelect = partNode.querySelector('.course-duration-select');
+			var capacityInput = partNode.querySelector('.course-capacity-input');
+			var slotInput = partNode.querySelector('.course-slot-input');
+			if (durationSelect && lesson.duration) durationSelect.value = String(parseInt(lesson.duration, 10) || 60);
+			if (capacityInput && lesson.capacity) capacityInput.value = String(parseInt(lesson.capacity, 10) || 1);
+			if (slotInput) {
+				var localValue = lesson.slotStartLocal ? String(lesson.slotStartLocal) : formatDatetimeLocal(String(lesson.slotStartUtc || ''));
+				fillFixedSlotParts(slotInput, localValue);
+			}
+			partNode.setAttribute('data-booking-count', String(parseInt(lesson.bookingCount || '0', 10) || 0));
+		});
 	}
-	bindFixedSlotInput(row.querySelector('.course-slot-input'));
+	bindCoursePartInputs(row, coursePartNodes(row)[0]);
+	syncCourseParts(row);
 	syncCourseModeState(row);
 	syncCourseMediaState(row);
 	syncCourseEditConstraints(row);
@@ -4417,13 +4611,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			syncCourseEditConstraints(row);
 		});
 	}
-	var capacityInputListen = row.querySelector('.course-capacity-input');
-	if (capacityInputListen) {
-		capacityInputListen.addEventListener('input', function(){
-			syncCourseModeState(row);
-			syncCourseEditConstraints(row);
-		});
-		capacityInputListen.addEventListener('change', function(){
+	if (lessonsSelect) {
+		lessonsSelect.addEventListener('change', function(){
+			syncCourseParts(row);
 			syncCourseModeState(row);
 			syncCourseEditConstraints(row);
 		});
@@ -4451,23 +4641,32 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		if (!row) {
 			return;
 		}
-		var bookingCount = parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0;
-		var durationSelect = row.querySelector('.course-duration-select');
-		var capacityInput = row.querySelector('.course-capacity-input');
+		// data-booking-count on the row is the number of participants; on a lesson, the bookings of that lesson.
+		var participants = parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0;
 		var modeSelect = row.querySelector('.course-mode-select');
 		var bookingMode = modeSelect ? String(modeSelect.value || 'free') : 'free';
-		if (durationSelect) {
-			var durationLocked = bookingCount > 0 && bookingMode === 'fixed';
-			durationSelect.disabled = durationLocked;
-			durationSelect.title = durationLocked ? 'Нельзя менять длительность fixed-курса после появления участников' : '';
+		var lessonsSelect = row.querySelector('.course-lessons-select');
+		if (lessonsSelect) {
+			lessonsSelect.disabled = participants > 0;
+			lessonsSelect.title = participants > 0 ? 'Нельзя менять количество занятий после появления участников' : '';
 		}
-		if (capacityInput) {
-			var minCapacity = bookingCount > 0 ? bookingCount : 1;
-			capacityInput.min = String(minCapacity);
-			if ((parseInt(String(capacityInput.value || '0'), 10) || 0) < minCapacity) {
-				capacityInput.value = String(minCapacity);
+		coursePartNodes(row).forEach(function(partNode){
+			var partBookings = parseInt(String(partNode.getAttribute('data-booking-count') || '0'), 10) || 0;
+			var durationSelect = partNode.querySelector('.course-duration-select');
+			var capacityInput = partNode.querySelector('.course-capacity-input');
+			if (durationSelect) {
+				var durationLocked = participants > 0 && bookingMode === 'fixed';
+				durationSelect.disabled = durationLocked;
+				durationSelect.title = durationLocked ? 'Нельзя менять длительность fixed-курса после появления участников' : '';
 			}
-		}
+			if (capacityInput) {
+				var minCapacity = Math.max(1, participants, partBookings);
+				capacityInput.min = String(minCapacity);
+				if ((parseInt(String(capacityInput.value || '0'), 10) || 0) < minCapacity) {
+					capacityInput.value = String(minCapacity);
+				}
+			}
+		});
 		syncCourseModeState(row);
 	}
 	function collectCourseRows() {
@@ -4483,6 +4682,19 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var concurrentInput = row.querySelector('.course-concurrent-input');
 			var modeSelect = row.querySelector('.course-mode-select');
 			var slotInput = row.querySelector('.course-slot-input');
+			var parts = coursePartNodes(row).map(function(partNode){
+				var partDuration = partNode.querySelector('.course-duration-select');
+				var partCapacity = partNode.querySelector('.course-capacity-input');
+				var partSlot = partNode.querySelector('.course-slot-input');
+				var partLocal = partSlot ? String(partSlot.value || '') : '';
+				return {
+					duration: parseInt(partDuration ? String(partDuration.value || '0') : '0', 10) || 0,
+					capacity: parseInt(partCapacity ? String(partCapacity.value || '1') : '1', 10) || 1,
+					slotStartLocal: partLocal,
+					slotStartUtc: normalizeDatetimeFromLocal(partLocal),
+					bookingCount: parseInt(String(partNode.getAttribute('data-booking-count') || '0'), 10) || 0
+				};
+			});
 			rows.push({
 				id: parseInt(String(row.getAttribute('data-course-id') || '0'), 10) || 0,
 				categoryId: parseInt(catId || '0', 10) || 0,
@@ -4494,8 +4706,11 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				capacity: parseInt(capacityInput ? String(capacityInput.value || '1') : '1', 10) || 1,
 				concurrentParticipants: parseInt(concurrentInput ? String(concurrentInput.value || '1') : '1', 10) || 1,
 				bookingMode: modeSelect ? String(modeSelect.value || 'free') : 'free',
+				bookingCount: parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0,
 				slotStartLocal: slotInput ? String(slotInput.value || '') : '',
-				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : '')
+				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : ''),
+				lessonsCount: Math.max(1, parts.length),
+				parts: parts
 			});
 		});
 		return rows;
@@ -4508,15 +4723,29 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var description = String(row.description || '').trim();
 			var mediaPath = String(row.mediaPath || '').trim();
 			var price = parseInt(row.price || 0, 10) || 0;
-			var duration = parseInt(row.duration || 0, 10) || 0;
-			var capacity = Math.max(1, parseInt(row.capacity || 1, 10) || 1);
 			var bookingMode = String(row.bookingMode || 'free') === 'fixed' ? 'fixed' : 'free';
+			var lessons = Array.isArray(row.parts) && row.parts.length ? row.parts : [{
+				duration: row.duration,
+				capacity: row.capacity,
+				slotStartUtc: row.slotStartUtc,
+				slotStartLocal: row.slotStartLocal
+			}];
+			var parts = lessons.map(function(lesson){
+				return {
+					duration_min: parseInt(lesson.duration || 0, 10) || 0,
+					capacity: Math.max(1, parseInt(lesson.capacity || 1, 10) || 1),
+					slot_start_utc: bookingMode === 'fixed' ? String(lesson.slotStartUtc || '').trim() : '',
+					slot_start_local: bookingMode === 'fixed' ? String(lesson.slotStartLocal || '').trim() : ''
+				};
+			});
+			var duration = parts[0].duration_min;
+			var capacity = parts.reduce(function(min, part){ return Math.min(min, part.capacity); }, parts[0].capacity);
 			var concurrent = Math.max(1, parseInt(row.concurrentParticipants || 1, 10) || 1);
 			if (concurrent > capacity) {
 				concurrent = capacity;
 			}
-			var slotStartUtc = String(row.slotStartUtc || '').trim();
-			if (!categoryId || !title || !price || !duration) {
+			var hasEmptyDuration = parts.some(function(part){ return part.duration_min <= 0; });
+			if (!categoryId || !title || !price || !duration || hasEmptyDuration) {
 				return;
 			}
 			items.push({
@@ -4530,8 +4759,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				capacity: capacity,
 				concurrent_participants: concurrent,
 				booking_mode: bookingMode,
-				slot_start_utc: bookingMode === 'fixed' ? slotStartUtc : '',
-				slot_start_local: bookingMode === 'fixed' ? String(row.slotStartLocal || '').trim() : ''
+				slot_start_utc: parts[0].slot_start_utc,
+				slot_start_local: parts[0].slot_start_local,
+				lessons_count: parts.length,
+				parts: parts
 			});
 		});
 		return {version: 1, items: items};
