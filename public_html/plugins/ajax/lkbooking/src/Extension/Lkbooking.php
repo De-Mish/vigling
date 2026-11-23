@@ -69,6 +69,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$stockServiceId = (int) $input->post->get('stock_service_id', 0);
 		$courseId = (int) $input->post->get('course_id', 0);
 		$courseSlotId = (int) $input->post->get('course_slot_id', 0);
+		$coursePart = max(1, (int) $input->post->get('course_part', 1));
 		$searchId = (int) $input->post->get('search_id', 0);
 		$searchSlotId = (int) $input->post->get('search_slot_id', 0);
 		$serviceName = trim((string) $input->post->get('service_name', '', 'string'));
@@ -189,6 +190,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 		$hasCourseBookingColumns = isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id']);
 		$hasSearchBookingColumns = $hasCourseBookingColumns && isset($tableColumns['search_id'], $tableColumns['search_slot_id']);
+		$coursePartsReady = $hasCourseBookingColumns
+			&& isset($tableColumns['course_part'])
+			&& class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserCoursesService')
+			&& \Joomla\Plugin\User\Vigling\Service\UserCoursesService::lessonsSchemaReady($db);
 
 		$bookingKind = in_array($bookingKind, ['service', 'stock', 'course', 'search'], true) ? $bookingKind : 'service';
 		if ($bookingKind === 'course' && !$hasCourseBookingColumns) {
@@ -212,6 +217,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 		$courseContext = null;
 		$searchContext = null;
+		$extraCourseSegments = [];
 		if ($bookingKind === 'course') {
 			if ($courseId <= 0) {
 				$event->updateEventResult(['success' => false, 'message' => 'Не указан курс']);
@@ -230,11 +236,33 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			if ($courseMode !== 'fixed' && $courseSlotId > 0) {
 				$courseSlotId = 0;
 			}
+			$courseParts = (array) ($courseContext['parts'] ?? []);
+			$courseLessons = max(1, count($courseParts));
+			if ($courseMode === 'fixed' || !$coursePartsReady) {
+				$coursePart = 1;
+			}
+			if (!isset($courseParts[$coursePart]) && $courseParts !== []) {
+				$event->updateEventResult(['success' => false, 'message' => 'Занятие курса не найдено']);
+				return;
+			}
 			if ($serviceName === '') {
 				$serviceName = (string) ($courseContext['service_name'] ?? 'Курс');
 			}
-			if (self::hasUserCourseBooking($db, (int) $user->id, $courseId)) {
-				$event->updateEventResult(['success' => false, 'message' => 'Вы уже записаны на этот курс']);
+			if ($courseMode !== 'fixed') {
+				$partDuration = (int) ($courseParts[$coursePart]['duration_min'] ?? ($courseContext['duration_min'] ?? 0));
+				if ($partDuration > 0) {
+					$durationMin = max(15, min(480, $partDuration));
+					$timeTo = clone $time;
+					$timeTo->modify('+' . $durationMin . ' minutes');
+					$timeToDb = $timeTo->format('Y-m-d H:i:s');
+				}
+				if ($courseLessons > 1) {
+					$serviceName = mb_substr($serviceName . ' — занятие ' . $coursePart . ' из ' . $courseLessons, 0, 255);
+				}
+			}
+			$bookedPart = ($courseMode !== 'fixed' && $courseLessons > 1) ? $coursePart : 0;
+			if (self::hasUserCourseBooking($db, (int) $user->id, $courseId, $bookedPart)) {
+				$event->updateEventResult(['success' => false, 'message' => $bookedPart > 0 ? 'Вы уже записаны на это занятие курса' : 'Вы уже записаны на этот курс']);
 				return;
 			}
 			if ($courseSlotId > 0) {
@@ -255,6 +283,31 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				} catch (\Throwable $e) {
 					$event->updateEventResult(['success' => false, 'message' => 'Неверное время слота курса']);
 					return;
+				}
+				if ($courseLessons > 1) {
+					for ($partNo = 2; $partNo <= $courseLessons; $partNo++) {
+						$part = $courseParts[$partNo] ?? [];
+						$partStartRaw = trim((string) ($part['slot_start_utc'] ?? ''));
+						$partEndRaw = trim((string) ($part['slot_end_utc'] ?? ''));
+						if ((int) ($part['slot_id'] ?? 0) <= 0 || $partStartRaw === '' || $partEndRaw === '') {
+							$event->updateEventResult(['success' => false, 'message' => 'У курса не задано время занятия ' . $partNo]);
+							return;
+						}
+						try {
+							$partStart = new \DateTime($partStartRaw, $utc);
+							$partEnd = new \DateTime($partEndRaw, $utc);
+						} catch (\Throwable $e) {
+							$event->updateEventResult(['success' => false, 'message' => 'Неверное время занятия курса']);
+							return;
+						}
+						$extraCourseSegments[] = [
+							'part' => $partNo,
+							'slot_id' => (int) $part['slot_id'],
+							'time' => $partStart,
+							'time_to' => $partEnd,
+							'slot_capacity_total' => (int) ($part['slot_capacity_total'] ?? 0),
+						];
+					}
 				}
 			}
 		}
@@ -359,41 +412,67 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$occupiedTo = clone $time;
 		$occupiedTo->modify('+' . $occupiedMin . ' minutes');
 		$occupiedToDb = $occupiedTo->format('Y-m-d H:i:s');
+
+		$segments = [[
+			'part' => $bookingKind === 'course' ? $coursePart : 1,
+			'slot_id' => $courseSlotId,
+			'time_db' => $timeDb,
+			'time_to_db' => $timeToDb,
+			'occupied_to_db' => $occupiedToDb,
+			'start' => \DateTimeImmutable::createFromMutable($time),
+			'end' => \DateTimeImmutable::createFromMutable($occupiedTo),
+			'slot_capacity_total' => (int) ($courseContext['slot_capacity_total'] ?? 0),
+		]];
+		foreach ($extraCourseSegments as $extra) {
+			$segments[] = [
+				'part' => (int) $extra['part'],
+				'slot_id' => (int) $extra['slot_id'],
+				'time_db' => $extra['time']->format('Y-m-d H:i:s'),
+				'time_to_db' => $extra['time_to']->format('Y-m-d H:i:s'),
+				'occupied_to_db' => $extra['time_to']->format('Y-m-d H:i:s'),
+				'start' => \DateTimeImmutable::createFromMutable($extra['time']),
+				'end' => \DateTimeImmutable::createFromMutable($extra['time_to']),
+				'slot_capacity_total' => (int) $extra['slot_capacity_total'],
+			];
+		}
+
 		$nowUtc = new \DateTimeImmutable('now', $utc);
-		$startUtc = \DateTimeImmutable::createFromMutable($time);
-		$endUtc = \DateTimeImmutable::createFromMutable($occupiedTo);
-		if ($startUtc <= $nowUtc) {
-			$event->updateEventResult(['success' => false, 'message' => 'Нельзя записаться на прошедшее время']);
-			return;
+		foreach ($segments as $segment) {
+			if ($segment['start'] <= $nowUtc) {
+				$event->updateEventResult(['success' => false, 'message' => count($segments) > 1 ? 'Курс уже начался, запись закрыта' : 'Нельзя записаться на прошедшее время']);
+				return;
+			}
+			$scheduleCheck = self::validateMasterSchedule($masterId, $segment['start'], $segment['end'], $masterTimezone);
+			if (!$scheduleCheck['ok']) {
+				$event->updateEventResult(['success' => false, 'message' => (string) ($scheduleCheck['message'] ?? 'Время вне расписания мастера')]);
+				return;
+			}
 		}
 
-		$scheduleCheck = self::validateMasterSchedule($masterId, $startUtc, $endUtc, $masterTimezone);
-		if (!$scheduleCheck['ok']) {
-			$event->updateEventResult(['success' => false, 'message' => (string) ($scheduleCheck['message'] ?? 'Время вне расписания мастера')]);
-			return;
-		}
-
-		$conflict = self::bookingCreateConflictMessage(
-			$db,
-			$table,
-			(int) $user->id,
-			$masterId,
-			$bookingKind,
-			$courseId,
-			$courseSlotId,
-			$searchId,
-			$searchSlotId,
-			$timeDb,
-			$occupiedToDb,
-			$courseContext,
-			$searchContext,
-			$hasCourseBookingColumns,
-			$hasSearchBookingColumns,
-			$timeToDb
-		);
-		if ($conflict !== null) {
-			$event->updateEventResult(['success' => false, 'message' => $conflict]);
-			return;
+		foreach ($segments as $segment) {
+			$conflict = self::bookingCreateConflictMessage(
+				$db,
+				$table,
+				(int) $user->id,
+				$masterId,
+				$bookingKind,
+				$courseId,
+				(int) $segment['slot_id'],
+				$searchId,
+				$searchSlotId,
+				$segment['time_db'],
+				$segment['occupied_to_db'],
+				self::courseContextForSegment($courseContext, $segment),
+				$searchContext,
+				$hasCourseBookingColumns,
+				$hasSearchBookingColumns,
+				$segment['time_to_db'],
+				$coursePartsReady ? (int) $segment['part'] : 0
+			);
+			if ($conflict !== null) {
+				$event->updateEventResult(['success' => false, 'message' => $conflict]);
+				return;
+			}
 		}
 
 		$columns = ['user_id', 'master_id', 'time', 'time_to', 'service_name'];
@@ -441,6 +520,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$columns[] = 'course_slot_id';
 			$values[] = $courseSlotId > 0 ? (string) $courseSlotId : 'NULL';
 		}
+		if ($coursePartsReady) {
+			$columns[] = 'course_part';
+			$values[] = (string) $coursePart;
+		}
 		if ($hasSearchBookingColumns) {
 			$columns[] = 'search_id';
 			$values[] = $searchId > 0 ? (string) $searchId : 'NULL';
@@ -451,10 +534,12 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$columns[] = 'stock_service_id';
 			$values[] = (string) $stockServiceId;
 		}
+		$slotColumnIndex = array_search('course_slot_id', $columns, true);
+		$partColumnIndex = array_search('course_part', $columns, true);
 
 		$lockHeld = false;
 		$transactionStarted = false;
-		$insertedId = 0;
+		$insertedIds = [];
 		try {
 			self::ensureOrderTableLoaded();
 			if (!class_exists(OrderTable::class) || !OrderTable::acquireMasterBookingLock($db, $masterId)) {
@@ -469,40 +554,56 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 
 			$db->transactionStart();
 			$transactionStarted = true;
-			self::lockBookingParents($db, $bookingKind, $masterId, $courseId, $courseSlotId, $searchId, $searchSlotId);
+			foreach ($segments as $segment) {
+				self::lockBookingParents($db, $bookingKind, $masterId, $courseId, (int) $segment['slot_id'], $searchId, $searchSlotId);
+			}
 
-			$conflict = self::bookingCreateConflictMessage(
-				$db,
-				$table,
-				(int) $user->id,
-				$masterId,
-				$bookingKind,
-				$courseId,
-				$courseSlotId,
-				$searchId,
-				$searchSlotId,
-				$timeDb,
-				$timeToDb,
-				$courseContext,
-				$searchContext,
-				$hasCourseBookingColumns,
-				$hasSearchBookingColumns,
-				$timeToDb
-			);
-			if ($conflict !== null) {
-				$db->transactionRollback();
-				$transactionStarted = false;
-				$event->updateEventResult(['success' => false, 'message' => $conflict]);
-				return;
+			foreach ($segments as $segment) {
+				$conflict = self::bookingCreateConflictMessage(
+					$db,
+					$table,
+					(int) $user->id,
+					$masterId,
+					$bookingKind,
+					$courseId,
+					(int) $segment['slot_id'],
+					$searchId,
+					$searchSlotId,
+					$segment['time_db'],
+					$segment['time_to_db'],
+					self::courseContextForSegment($courseContext, $segment),
+					$searchContext,
+					$hasCourseBookingColumns,
+					$hasSearchBookingColumns,
+					$segment['time_to_db'],
+					$coursePartsReady ? (int) $segment['part'] : 0
+				);
+				if ($conflict !== null) {
+					$db->transactionRollback();
+					$transactionStarted = false;
+					$event->updateEventResult(['success' => false, 'message' => $conflict]);
+					return;
+				}
 			}
 
 			if ($bookingKind === 'stock') {
 				self::reserveStockOffer($db, $stockServiceId, $masterId);
 			}
-			$db->setQuery(
-				'INSERT INTO ' . $db->quoteName($table) . ' (' . implode(', ', array_map([$db, 'quoteName'], $columns)) . ') VALUES (' . implode(', ', $values) . ')'
-			)->execute();
-			$insertedId = (int) $db->insertid();
+			foreach ($segments as $segment) {
+				$rowValues = $values;
+				$rowValues[2] = $db->quote($segment['time_db']);
+				$rowValues[3] = $db->quote($segment['time_to_db']);
+				if ($slotColumnIndex !== false) {
+					$rowValues[$slotColumnIndex] = (int) $segment['slot_id'] > 0 ? (string) (int) $segment['slot_id'] : 'NULL';
+				}
+				if ($partColumnIndex !== false) {
+					$rowValues[$partColumnIndex] = (string) (int) $segment['part'];
+				}
+				$db->setQuery(
+					'INSERT INTO ' . $db->quoteName($table) . ' (' . implode(', ', array_map([$db, 'quoteName'], $columns)) . ') VALUES (' . implode(', ', $rowValues) . ')'
+				)->execute();
+				$insertedIds[] = (int) $db->insertid();
+			}
 			$db->transactionCommit();
 			$transactionStarted = false;
 		} catch (\Throwable $e) {
@@ -554,26 +655,47 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 
-		$order = [
-			'id'           => $insertedId,
-			'user_id'      => (int) $user->id,
-			'master_id'    => $masterId,
-			'time'         => $timeDb,
-			'time_to'      => $timeToDb,
-			'service_name' => $serviceName,
-			'booking_kind' => $bookingKind,
-			'course_id'    => $courseId > 0 ? $courseId : null,
-			'course_slot_id' => $courseSlotId > 0 ? $courseSlotId : null,
-			'search_id'    => $searchId > 0 ? $searchId : null,
-			'search_slot_id' => $searchSlotId > 0 ? $searchSlotId : null,
-		];
+		foreach ($segments as $index => $segment) {
+			$order = [
+				'id'           => (int) ($insertedIds[$index] ?? 0),
+				'user_id'      => (int) $user->id,
+				'master_id'    => $masterId,
+				'time'         => $segment['time_db'],
+				'time_to'      => $segment['time_to_db'],
+				'service_name' => $serviceName,
+				'booking_kind' => $bookingKind,
+				'course_id'    => $courseId > 0 ? $courseId : null,
+				'course_slot_id' => (int) $segment['slot_id'] > 0 ? (int) $segment['slot_id'] : null,
+				'search_id'    => $searchId > 0 ? $searchId : null,
+				'search_slot_id' => $searchSlotId > 0 ? $searchSlotId : null,
+			];
 
-		self::guardRecord('created', $order);
-		if (class_exists(BookingNotifyHelper::class)) {
-			BookingNotifyHelper::notifyConfirmedOrRescheduled($order);
+			self::guardRecord('created', $order);
+			if ($index === 0 && class_exists(BookingNotifyHelper::class)) {
+				BookingNotifyHelper::notifyConfirmedOrRescheduled($order);
+			}
 		}
 
-		$event->updateEventResult(['success' => true, 'message' => 'Вы записались!']);
+		$event->updateEventResult(['success' => true, 'message' => count($segments) > 1 ? 'Вы записались на все занятия курса!' : 'Вы записались!']);
+	}
+
+	/**
+	 * Booking-limit context of one lesson: fixed lessons are limited by the seats of their own slot.
+	 *
+	 * @param array<string,mixed>|null $courseContext
+	 * @param array<string,mixed> $segment
+	 * @return array<string,mixed>|null
+	 */
+	private static function courseContextForSegment(?array $courseContext, array $segment): ?array
+	{
+		if ($courseContext === null) {
+			return null;
+		}
+		$courseContext['slot_capacity_total'] = (int) ($segment['slot_capacity_total'] ?? 0);
+		$part = $courseContext['parts'][(int) ($segment['part'] ?? 1)] ?? null;
+		$courseContext['part_capacity'] = is_array($part) ? (int) ($part['capacity'] ?? 0) : 0;
+
+		return $courseContext;
 	}
 
 	private static function guardClass(): ?string
@@ -683,14 +805,17 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		?array $searchContext,
 		bool $hasCourseBookingColumns,
 		bool $hasSearchBookingColumns,
-		string $presenceEndDb = ''
+		string $presenceEndDb = '',
+		int $coursePart = 0
 	): ?string {
 		$groupSlotId = $bookingKind === 'course' ? $courseSlotId : ($bookingKind === 'search' ? $searchSlotId : 0);
 		if ($groupSlotId > 0 && self::groupSlotHasOpenReschedule($db, $bookingKind, $groupSlotId)) {
 			return 'Мастер согласует перенос с участниками, запись временно закрыта. Попробуйте позже.';
 		}
-		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId)) {
-			return 'Вы уже записаны на этот курс';
+		$multiLesson = $bookingKind === 'course' && count((array) ($courseContext['parts'] ?? [])) > 1;
+		$isFreeMultiLesson = $multiLesson && $courseSlotId <= 0 && $coursePart > 0;
+		if ($bookingKind === 'course' && self::hasUserCourseBooking($db, $userId, $courseId, $isFreeMultiLesson ? $coursePart : 0)) {
+			return $isFreeMultiLesson ? 'Вы уже записаны на это занятие курса' : 'Вы уже записаны на этот курс';
 		}
 		if ($bookingKind === 'search' && self::hasUserSearchBooking($db, $userId, $searchId)) {
 			return 'Вы уже записаны на это предложение поиска';
@@ -701,19 +826,28 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, $courseSlotId) >= $capacityTotal) {
 				return 'На курсе больше нет свободных мест';
 			}
+			$courseCapacity = (int) ($courseContext['capacity'] ?? 0);
+			if ($multiLesson && $courseCapacity > 0 && self::countCourseBookings($db, $courseId, 0) >= $courseCapacity) {
+				return 'На курсе больше нет свободных мест';
+			}
 		} elseif ($bookingKind === 'course') {
 			$capacityTotal = (int) ($courseContext['capacity'] ?? 0);
-			if ($capacityTotal > 0 && self::countCourseBookings($db, $courseId, 0) >= $capacityTotal) {
+			$alreadyParticipant = $isFreeMultiLesson && self::hasUserCourseBooking($db, $userId, $courseId, 0);
+			if (!$alreadyParticipant && $capacityTotal > 0 && self::countCourseBookings($db, $courseId, 0) >= $capacityTotal) {
 				return 'На курсе больше нет свободных мест';
+			}
+			$partCapacity = (int) ($courseContext['part_capacity'] ?? 0);
+			if ($isFreeMultiLesson && $partCapacity > 0 && self::countCourseBookings($db, $courseId, 0, $coursePart) >= $partCapacity) {
+				return 'На это занятие больше нет свободных мест';
 			}
 			$concurrent = max(1, (int) ($courseContext['concurrent_participants'] ?? 1));
 			if ($capacityTotal > 0) {
 				$concurrent = min($concurrent, $capacityTotal);
 			}
-			if (self::countCourseBookingsOverlapOtherStart($db, $courseId, $timeDb, $timeToDb) > 0) {
+			if (self::countCourseBookingsOverlapOtherStart($db, $courseId, $timeDb, $timeToDb, $coursePart) > 0) {
 				return 'Это время занято курсом';
 			}
-			if (self::countCourseBookingsAtStart($db, $courseId, $timeDb) >= $concurrent) {
+			if (self::countCourseBookingsAtStart($db, $courseId, $timeDb, $coursePart) >= $concurrent) {
 				return 'На это время больше нет мест в группе';
 			}
 		}
@@ -1026,14 +1160,20 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$db->quoteName('slot.ends_at_utc', 'slot_end_utc'),
 				$db->quoteName('slot.capacity_total', 'slot_capacity_total'),
 			]);
-		if (class_exists('\\Joomla\\Plugin\\User\\Vigling\\Service\\UserCoursesService')
-			&& \Joomla\Plugin\User\Vigling\Service\UserCoursesService::ensureConcurrentParticipantsColumn($db)
-		) {
+		$coursesService = '\\Joomla\\Plugin\\User\\Vigling\\Service\\UserCoursesService';
+		$hasCoursesService = class_exists($coursesService);
+		if ($hasCoursesService && $coursesService::ensureConcurrentParticipantsColumn($db)) {
 			$query->select($db->quoteName('c.concurrent_participants'));
 		}
+		if ($hasCoursesService && $coursesService::lessonsSchemaReady($db)) {
+			$query->select($db->quoteName('c.lessons_count'));
+		}
+		$slotJoinOn = $hasCoursesService
+			? $coursesService::primarySlotJoinOn($db)
+			: $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1';
 		$query
 			->from($db->quoteName('#__vigling_user_courses', 'c'))
-			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
+			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $slotJoinOn)
 			->where($db->quoteName('c.id') . ' = ' . (int) $courseId)
 			->where($db->quoteName('c.user_id') . ' = ' . (int) $masterId)
 			->where($db->quoteName('c.is_active') . ' = 1');
@@ -1053,11 +1193,23 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		if ($row['concurrent_participants'] > $capacity) {
 			$row['concurrent_participants'] = $capacity;
 		}
+		$row['parts'] = [];
+		if ($hasCoursesService) {
+			try {
+				$partsByCourse = $coursesService::loadCourseParts($db, [$row]);
+				$row['parts'] = (array) ($partsByCourse[(int) $row['id']] ?? []);
+			} catch (\Throwable $e) {
+				$row['parts'] = [];
+			}
+		}
 
 		return $row;
 	}
 
-	private static function countCourseBookingsAtStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc): int
+	/**
+	 * Participants already booked into the same "any time" session (same start and, for multi-lesson courses, same lesson).
+	 */
+	private static function countCourseBookingsAtStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc, int $coursePart = 0): int
 	{
 		if ($courseId <= 0 || trim($startUtc) === '') {
 			return 0;
@@ -1069,12 +1221,19 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
 			->where($db->quoteName('course_id') . ' = ' . (int) $courseId)
 			->where($db->quoteName('time') . ' = ' . $db->quote($startUtc));
+		if ($coursePart > 0) {
+			$query->where($db->quoteName('course_part') . ' = ' . (int) $coursePart);
+		}
 		$db->setQuery($query);
 
 		return (int) $db->loadResult();
 	}
 
-	private static function countCourseBookingsOverlapOtherStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc, string $endUtc): int
+	/**
+	 * Bookings of the same course that overlap the requested interval but belong to another session:
+	 * a different start time or, for multi-lesson courses, a different lesson at the same time.
+	 */
+	private static function countCourseBookingsOverlapOtherStart(\Joomla\Database\DatabaseInterface $db, int $courseId, string $startUtc, string $endUtc, int $coursePart = 0): int
 	{
 		if ($courseId <= 0 || trim($startUtc) === '' || trim($endUtc) === '') {
 			return 0;
@@ -1086,26 +1245,40 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
 			->where($db->quoteName('course_id') . ' = ' . (int) $courseId)
 			->where($db->quoteName('time') . ' < ' . $db->quote($endUtc))
-			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc))
-			->where($db->quoteName('time') . ' <> ' . $db->quote($startUtc));
+			->where($db->quoteName('time_to') . ' > ' . $db->quote($startUtc));
+		if ($coursePart > 0) {
+			$query->where(
+				'(' . $db->quoteName('time') . ' <> ' . $db->quote($startUtc)
+				. ' OR ' . $db->quoteName('course_part') . ' <> ' . (int) $coursePart . ')'
+			);
+		} else {
+			$query->where($db->quoteName('time') . ' <> ' . $db->quote($startUtc));
+		}
 		$db->setQuery($query);
 
 		return (int) $db->loadResult();
 	}
 
-	private static function countCourseBookings(\Joomla\Database\DatabaseInterface $db, int $courseId, int $courseSlotId = 0): int
+	/**
+	 * Without a slot or lesson filter this counts distinct participants: one client of a
+	 * multi-lesson course has one booking row per lesson but takes a single seat.
+	 */
+	private static function countCourseBookings(\Joomla\Database\DatabaseInterface $db, int $courseId, int $courseSlotId = 0, int $coursePart = 0): int
 	{
 		if ($courseId <= 0) {
 			return 0;
 		}
 
 		$query = $db->getQuery(true)
-			->select('COUNT(*)')
+			->select(($courseSlotId > 0 || $coursePart > 0) ? 'COUNT(*)' : 'COUNT(DISTINCT ' . $db->quoteName('user_id') . ')')
 			->from($db->quoteName('#__vigling_bookings'))
 			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
 			->where($db->quoteName('course_id') . ' = ' . (int) $courseId);
 		if ($courseSlotId > 0) {
 			$query->where($db->quoteName('course_slot_id') . ' = ' . (int) $courseSlotId);
+		}
+		if ($coursePart > 0) {
+			$query->where($db->quoteName('course_part') . ' = ' . (int) $coursePart);
 		}
 		$db->setQuery($query);
 
@@ -1174,7 +1347,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		return (int) $db->loadResult();
 	}
 
-	private static function hasUserCourseBooking(\Joomla\Database\DatabaseInterface $db, int $userId, int $courseId): bool
+	/**
+	 * @param int $coursePart Lesson number to check; 0 checks any lesson of the course.
+	 */
+	private static function hasUserCourseBooking(\Joomla\Database\DatabaseInterface $db, int $userId, int $courseId, int $coursePart = 0): bool
 	{
 		if ($userId <= 0 || $courseId <= 0) {
 			return false;
@@ -1186,6 +1362,9 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			->where($db->quoteName('user_id') . ' = ' . (int) $userId)
 			->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
 			->where($db->quoteName('course_id') . ' = ' . (int) $courseId);
+		if ($coursePart > 0) {
+			$query->where($db->quoteName('course_part') . ' = ' . (int) $coursePart);
+		}
 		$db->setQuery($query);
 
 		return ((int) $db->loadResult()) > 0;

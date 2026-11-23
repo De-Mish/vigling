@@ -136,7 +136,7 @@ class ListModel extends BaseListModel
 			->select('COUNT(DISTINCT c.id)')
 			->from($db->quoteName('#__vigling_user_courses', 'c'))
 			->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('c.user_id'))
-			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
+			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . \Joomla\Plugin\User\Vigling\Service\UserCoursesService::primarySlotJoinOn($db))
 			->where($db->quoteName('c.is_active') . ' = 1')
 			->where($db->quoteName('u.block') . ' = 0')
 			->where(\Joomla\Plugin\User\Vigling\Service\UserCoursesService::activeListWhereSql($db));
@@ -172,7 +172,7 @@ class ListModel extends BaseListModel
 			->from($db->quoteName('#__vigling_user_courses', 'c'))
 			->join('INNER', $db->quoteName('#__users', 'u') . ' ON ' . $db->quoteName('u.id') . ' = ' . $db->quoteName('c.user_id'))
 			->join('LEFT', $db->quoteName('#__categories', 'cat') . ' ON ' . $db->quoteName('cat.id') . ' = ' . $db->quoteName('c.category_id'))
-			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
+			->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . \Joomla\Plugin\User\Vigling\Service\UserCoursesService::primarySlotJoinOn($db))
 			->where($db->quoteName('c.is_active') . ' = 1')
 			->where($db->quoteName('u.block') . ' = 0')
 			->where(\Joomla\Plugin\User\Vigling\Service\UserCoursesService::activeListWhereSql($db));

@@ -768,6 +768,7 @@ if ($profileOwnerId > 0 && class_exists('\\Joomla\\Plugin\\User\\Vigling\\Servic
 }
 $currentUserCourseBookings = [];
 $currentUserCourseSlotBookings = [];
+$currentUserCoursePartBookings = [];
 if ((int) $currentUser->id > 0 && !empty($coursesStructured)) {
 	$courseIds = array_values(array_filter(array_map(static fn($course): int => (int) ($course['id'] ?? 0), (array) $coursesStructured)));
 	if ($courseIds !== []) {
@@ -775,11 +776,16 @@ if ((int) $currentUser->id > 0 && !empty($coursesStructured)) {
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$tableColumns = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
 			if (isset($tableColumns['booking_kind'], $tableColumns['course_id'], $tableColumns['course_slot_id'])) {
+				$hasCoursePartColumn = isset($tableColumns['course_part']);
+				$bookingSelect = [
+					$db->quoteName('course_id'),
+					$db->quoteName('course_slot_id'),
+				];
+				if ($hasCoursePartColumn) {
+					$bookingSelect[] = $db->quoteName('course_part');
+				}
 				$query = $db->getQuery(true)
-					->select([
-						$db->quoteName('course_id'),
-						$db->quoteName('course_slot_id'),
-					])
+					->select($bookingSelect)
 					->from($db->quoteName('#__vigling_bookings'))
 					->where($db->quoteName('user_id') . ' = ' . (int) $currentUser->id)
 					->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
@@ -790,6 +796,8 @@ if ((int) $currentUser->id > 0 && !empty($coursesStructured)) {
 					$bookedSlotId = (int) ($bookingRow['course_slot_id'] ?? 0);
 					if ($bookedCourseId > 0) {
 						$currentUserCourseBookings[$bookedCourseId] = true;
+						$bookedPart = $hasCoursePartColumn ? max(1, (int) ($bookingRow['course_part'] ?? 1)) : 1;
+						$currentUserCoursePartBookings[$bookedCourseId][$bookedPart] = true;
 					}
 					if ($bookedSlotId > 0) {
 						$currentUserCourseSlotBookings[$bookedSlotId] = true;
@@ -799,6 +807,7 @@ if ((int) $currentUser->id > 0 && !empty($coursesStructured)) {
 		} catch (\Throwable $e) {
 			$currentUserCourseBookings = [];
 			$currentUserCourseSlotBookings = [];
+			$currentUserCoursePartBookings = [];
 		}
 	}
 }
@@ -2030,8 +2039,60 @@ if ($bookingPaused) : ?>
 								if ($courseSlotId > 0 && !empty($currentUserCourseSlotBookings[$courseSlotId])) {
 									$courseAlreadyBooked = true;
 								}
-								$courseButtonDisabled = $courseIsFull || $courseAlreadyBooked;
-								$courseButtonTitle = $courseAlreadyBooked ? 'Вы уже записаны на этот курс' : ($courseIsFull ? 'На курсе больше нет свободных мест' : 'Записаться на курс');
+								$courseParts = array_values((array) ($courseItem['parts'] ?? []));
+								$courseLessons = max(1, count($courseParts));
+								$courseServiceName = $courseTitle !== '' ? ('Курс: ' . $courseTitle) : 'Курс';
+								$courseBookPart = 1;
+								$courseStarted = false;
+								$coursePartFull = false;
+								if ($courseLessons > 1 && $courseBookingMode !== 'fixed') {
+									/*
+									 * "Any time" multi-lesson course: the client books one lesson per visit.
+									 * The button offers the first lesson they have not booked yet; an existing
+									 * participant keeps their seat, so the course-wide limit does not block them.
+									 */
+									$bookedParts = (array) ($currentUserCoursePartBookings[$courseId] ?? []);
+									$courseBookPart = 0;
+									foreach ($courseParts as $partIndex => $coursePartRow) {
+										$partNo = (int) ($coursePartRow['part_no'] ?? ($partIndex + 1));
+										if (empty($bookedParts[$partNo])) {
+											$courseBookPart = $partNo;
+											break;
+										}
+									}
+									$courseAlreadyBooked = $courseBookPart === 0;
+									if ($bookedParts !== []) {
+										$courseIsFull = false;
+									}
+									if ($courseBookPart > 0) {
+										$nextPart = $courseParts[$courseBookPart - 1] ?? [];
+										$courseDurationMin = (int) ($nextPart['duration_min'] ?? $courseDurationMin);
+										$coursePartFull = (int) ($nextPart['booking_count'] ?? 0) >= max(1, (int) ($nextPart['capacity'] ?? 1));
+										$courseServiceName .= ' — занятие ' . $courseBookPart . ' из ' . $courseLessons;
+									}
+								} elseif ($courseLessons > 1 && $courseSlotUtc !== '') {
+									try {
+										$courseStarted = (new \DateTimeImmutable($courseSlotUtc, new \DateTimeZone('UTC'))) <= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+									} catch (\Throwable $e) {
+										$courseStarted = false;
+									}
+								}
+								$courseButtonDisabled = $courseIsFull || $courseAlreadyBooked || $courseStarted || $coursePartFull;
+								if ($courseAlreadyBooked) {
+									$courseButtonTitle = $courseLessons > 1 ? 'Вы уже записаны на все занятия курса' : 'Вы уже записаны на этот курс';
+								} elseif ($courseStarted) {
+									$courseButtonTitle = 'Курс уже начался';
+								} elseif ($courseIsFull) {
+									$courseButtonTitle = 'На курсе больше нет свободных мест';
+								} elseif ($coursePartFull) {
+									$courseButtonTitle = 'На занятие ' . $courseBookPart . ' больше нет свободных мест';
+								} elseif ($courseLessons > 1 && $courseBookingMode !== 'fixed') {
+									$courseButtonTitle = 'Записаться на занятие ' . $courseBookPart . ' из ' . $courseLessons;
+								} elseif ($courseLessons > 1) {
+									$courseButtonTitle = 'Записаться на все занятия курса';
+								} else {
+									$courseButtonTitle = 'Записаться на курс';
+								}
 								$courseSlotIso = '';
 								if ($courseSlotUtc !== '') {
 									try {
@@ -2057,9 +2118,44 @@ if ($bookingPaused) : ?>
 								<div class="stockList__item-coll stock__coll2"><?php echo $this->escape($courseDescription !== '' ? $courseDescription : 'Описание курса не заполнено'); ?></div>
 								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll4"><?php echo number_format($coursePrice, 0, '.', ' '); ?> <i class="akzii_price">₽</i></div>
+								<?php if ($courseLessons > 1) : ?>
+								<div class="stockList__item-coll course__lessons-count">Занятий: <?php echo $courseLessons; ?></div><br>
+								<?php else : ?>
 								<div class="stockList__item-coll stock__coll5"><?php echo $courseDurationMin; ?> мин</div><br>
+								<?php endif; ?>
 								<div class="stockList__item-coll stock__coll6 course__seats<?php echo $courseIsFull ? ' is-full' : ''; ?>">Свободно мест: <?php echo $courseSeatsLeft; ?> из <?php echo $courseCapacityTotal; ?></div>
-								<?php if ($courseBookingMode === 'fixed' && $courseSlotUtc !== '') : ?>
+								<?php if ($courseLessons > 1) : ?>
+								<ol class="stockList__item-coll course__lessons">
+									<?php foreach ($courseParts as $partIndex => $coursePartRow) : ?>
+									<?php
+									$partNo = (int) ($coursePartRow['part_no'] ?? ($partIndex + 1));
+									$partStartUtc = trim((string) ($coursePartRow['slot_start_utc'] ?? ''));
+									$partStartIso = '';
+									if ($courseBookingMode === 'fixed' && $partStartUtc !== '') {
+										try {
+											$partStartIso = (new \DateTimeImmutable($partStartUtc, new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM);
+										} catch (\Throwable $e) {
+											$partStartIso = '';
+										}
+									}
+									$partBooked = !empty($currentUserCoursePartBookings[$courseId][$partNo]);
+									?>
+									<li class="course__lesson<?php echo $partBooked ? ' is-booked' : ''; ?>">
+										<span class="course__lesson-name">Занятие <?php echo $partNo; ?></span>
+										<?php if ($partStartIso !== '') : ?>
+										<span class="course__lesson-time lk-time-utc" data-time-utc="<?php echo $this->escape($partStartIso); ?>"><?php echo $this->escape($partStartUtc); ?></span>
+										<?php endif; ?>
+										<span class="course__lesson-duration"><?php echo (int) ($coursePartRow['duration_min'] ?? 0); ?> мин</span>
+										<?php if ($partBooked && $courseBookingMode !== 'fixed') : ?>
+										<span class="course__lesson-badge">вы записаны</span>
+										<?php endif; ?>
+									</li>
+									<?php endforeach; ?>
+								</ol>
+								<?php if ($courseBookingMode !== 'fixed') : ?>
+								<div class="stockList__item-coll course__coll7">Запись: каждое занятие — в свободное время мастера</div>
+								<?php endif; ?>
+								<?php elseif ($courseBookingMode === 'fixed' && $courseSlotUtc !== '') : ?>
 								<div class="stockList__item-coll course__coll7">Дата и время: <span class="lk-time-utc" data-time-utc="<?php echo $this->escape($courseSlotIso); ?>"><?php echo $this->escape($courseSlotUtc); ?></span></div>
 								<?php else : ?>
 								<div class="stockList__item-coll course__coll7">Запись: по свободному времени мастера</div>
@@ -2081,8 +2177,9 @@ if ($bookingPaused) : ?>
 									data-booking-kind="course"
 									data-course-id="<?php echo $courseId; ?>"
 									data-course-slot-id="<?php echo $courseSlotId; ?>"
+									data-course-part="<?php echo max(1, $courseBookPart); ?>"
 									data-fixed-time-utc="<?php echo $this->escape($courseSlotUtc); ?>"
-									data-service-name="<?php echo $this->escape($courseTitle !== '' ? ('Курс: ' . $courseTitle) : 'Курс'); ?>"
+									data-service-name="<?php echo $this->escape($courseServiceName); ?>"
 									data-srv-time="<?php echo $this->escape((string) $courseDurationMin); ?>"
 								></button>
 								<div class="clearFloat"></div>
@@ -2346,6 +2443,7 @@ if ($bookingPaused) : ?>
 					<input id="zapis__stock-service-id" type="hidden" name="stock_service_id" value="0">
 					<input id="zapis__course-id" type="hidden" name="course_id" value="0">
 					<input id="zapis__course-slot-id" type="hidden" name="course_slot_id" value="0">
+					<input id="zapis__course-part" type="hidden" name="course_part" value="1">
 					<input id="zapis__search-id" type="hidden" name="search_id" value="0">
 					<input id="zapis__search-slot-id" type="hidden" name="search_slot_id" value="0">
 					<input id="zapis__fixed-time-utc" type="hidden" name="fixed_time_utc" value="">
@@ -2611,10 +2709,12 @@ if ($bookingPaused) : ?>
 			var minFutureTs = nowTs + (60 * 1000);
 			var bookingKind = String((bookingForm.querySelector('#zapis__booking-kind') || {}).value || 'service').trim() || 'service';
 			var currentCourseId = parseInteger((bookingForm.querySelector('#zapis__course-id') || {}).value, 0);
+			var currentCoursePart = Math.max(1, parseInteger((bookingForm.querySelector('#zapis__course-part') || {}).value, 1));
 
 			function anytimeMetaOf(radio) {
 				return {
 					courseId: parseInteger(radio && radio.getAttribute ? radio.getAttribute('data-anytime-course-id') : 0, 0),
+					part: Math.max(1, parseInteger(radio && radio.getAttribute ? radio.getAttribute('data-anytime-part') : 1, 1)),
 					used: parseInteger(radio && radio.getAttribute ? radio.getAttribute('data-anytime-used') : 0, 0),
 					max: Math.max(1, parseInteger(radio && radio.getAttribute ? radio.getAttribute('data-anytime-max') : 1, 1)),
 					cover: String(radio && radio.getAttribute ? radio.getAttribute('data-anytime-cover') : '') === '1'
@@ -2625,6 +2725,7 @@ if ($bookingPaused) : ?>
 				return bookingKind === 'course'
 					&& currentCourseId > 0
 					&& meta.courseId === currentCourseId
+					&& meta.part === currentCoursePart
 					&& !meta.cover
 					&& meta.used < meta.max;
 			}
@@ -2971,6 +3072,7 @@ if ($bookingPaused) : ?>
 			var bookingKind = String(button.getAttribute('data-booking-kind') || 'service').trim() || 'service';
 			var courseId = String(button.getAttribute('data-course-id') || '0').trim();
 			var courseSlotId = String(button.getAttribute('data-course-slot-id') || '0').trim();
+			var coursePart = String(Math.max(1, parseInteger(button.getAttribute('data-course-part'), 1)));
 			var searchId = String(button.getAttribute('data-search-id') || '0').trim();
 			var searchSlotId = String(button.getAttribute('data-search-slot-id') || '0').trim();
 			var fixedTimeUtc = String(button.getAttribute('data-fixed-time-utc') || '').trim();
@@ -2999,6 +3101,10 @@ if ($bookingPaused) : ?>
 			bookingForm.querySelector('#zapis__stock-service-id').value = button.getAttribute('data-stock-service-id') || item.getAttribute('data-stock-service-id') || '0';
 			bookingForm.querySelector('#zapis__course-id').value = courseId || '0';
 			bookingForm.querySelector('#zapis__course-slot-id').value = courseSlotId || '0';
+			var coursePartInput = bookingForm.querySelector('#zapis__course-part');
+			if (coursePartInput) {
+				coursePartInput.value = bookingKind === 'course' ? coursePart : '1';
+			}
 			bookingForm.querySelector('#zapis__search-id').value = searchId || '0';
 			bookingForm.querySelector('#zapis__search-slot-id').value = searchSlotId || '0';
 			bookingForm.querySelector('#zapis__fixed-time-utc').value = fixedTimeUtc;
@@ -3661,6 +3767,7 @@ if ($bookingPaused) : ?>
 					}
 					if (anytime && parseInteger(anytime.course_id, 0) > 0) {
 						attrs += ' data-anytime-course-id="' + parseInteger(anytime.course_id, 0) + '"';
+						attrs += ' data-anytime-part="' + Math.max(1, parseInteger(anytime.course_part, 1)) + '"';
 						attrs += ' data-anytime-used="' + parseInteger(anytime.used, 0) + '"';
 						attrs += ' data-anytime-max="' + Math.max(1, parseInteger(anytime.max, 1)) + '"';
 						if (anytime.cover) {
