@@ -14,12 +14,10 @@ SELECT '5. current columns of uniq_user_course_id (info)' AS check_name, INDEX_N
   FROM information_schema.STATISTICS
  WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_bookings' AND INDEX_NAME='uniq_user_course_id'
  ORDER BY SEQ_IN_INDEX;
-SELECT '6. courses with more than one active slot (expect 0)' AS check_name, COUNT(*) AS problems
-  FROM (SELECT course_id FROM `joomla_vigling_course_slots` WHERE is_active=1 GROUP BY course_id HAVING COUNT(*)>1) t;
-SELECT '7. users with several bookings on one course (expect 0)' AS check_name, COUNT(*) AS problems
-  FROM (SELECT user_id, course_id FROM `joomla_vigling_bookings`
-         WHERE booking_kind='course' AND course_id IS NOT NULL
-         GROUP BY user_id, course_id HAVING COUNT(*)>1) t;
+SELECT course_id, COUNT(*) AS active_slots, '6. courses with more than one active slot (expect no rows; only valid before the migration)' AS check_name
+  FROM `joomla_vigling_course_slots` WHERE is_active=1 GROUP BY course_id HAVING COUNT(*)>1;
+SELECT user_id, course_id, COUNT(*) AS bookings, '7. users with several bookings on one course (expect no rows; only valid before the migration)' AS check_name
+  FROM `joomla_vigling_bookings` WHERE booking_kind='course' AND course_id IS NOT NULL GROUP BY user_id, course_id HAVING COUNT(*)>1;
 SELECT '8. active courses / course bookings (info)' AS check_name,
   (SELECT COUNT(*) FROM `joomla_vigling_user_courses` WHERE is_active=1) AS active_courses,
   (SELECT COUNT(*) FROM `joomla_vigling_bookings` WHERE booking_kind='course') AS course_bookings;
