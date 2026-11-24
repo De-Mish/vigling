@@ -1644,6 +1644,50 @@ html body .master__services--fullbleed .stockList__item .btn_add-master.plus {
   background-color: var(--rd-accent) !important;
 }
 
+/* lessons of a multi-lesson course */
+html body .master__services .courseList__item .course__lessons-count {
+  font-weight: 700;
+  color: var(--rd-ink);
+}
+html body .master__services .courseList__item .course__lessons {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+}
+html body .master__services .courseList__item .course__lesson {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--rd-fill);
+  font-size: 14px;
+}
+html body .master__services .courseList__item .course__lesson-name {
+  font-weight: 700;
+}
+html body .master__services .courseList__item .course__lesson-duration {
+  margin-left: auto;
+  opacity: .75;
+}
+html body .master__services .courseList__item .course__lesson-badge {
+  padding: 1px 8px;
+  border-radius: var(--rd-r-pill);
+  background: var(--rd-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (max-width: 575px) {
+  html body .master__services .courseList__item .course__lesson-duration {
+    margin-left: 0;
+  }
+}
+
 /* reviews and about */
 html body .review__master--fullbleed h2,
 html body .master__about h2 {

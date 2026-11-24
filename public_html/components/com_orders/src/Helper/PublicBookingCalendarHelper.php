@@ -205,6 +205,7 @@ class PublicBookingCalendarHelper
 						$originStart = (int) ($anytimeGroup['origin_start'] ?? $anytimeStart);
 						$slotAnytimeByTime[$slotLabel] = [
 							'course_id' => (int) ($anytimeGroup['course_id'] ?? 0),
+							'course_part' => max(1, (int) ($anytimeGroup['course_part'] ?? 1)),
 							'used' => max(0, (int) ($anytimeGroup['used'] ?? 0)),
 							'max' => max(1, (int) ($anytimeGroup['max'] ?? 1)),
 							'cover' => $minute !== $originStart,
@@ -246,6 +247,7 @@ class PublicBookingCalendarHelper
 			$hasBookingKind = isset($tableColumns['booking_kind']);
 			$hasCourseId = isset($tableColumns['course_id']);
 			$hasCourseSlotId = isset($tableColumns['course_slot_id']);
+			$hasCoursePart = isset($tableColumns['course_part']);
 			$hasServiceName = isset($tableColumns['service_name']);
 			$hasTimeSum = isset($tableColumns['time_sum']);
 			$selectCols = [$db->quoteName('time'), $db->quoteName('time_to')];
@@ -263,6 +265,9 @@ class PublicBookingCalendarHelper
 			}
 			if ($hasCourseSlotId) {
 				$selectCols[] = $db->quoteName('course_slot_id');
+			}
+			if ($hasCoursePart) {
+				$selectCols[] = $db->quoteName('course_part');
 			}
 			$query = $db->getQuery(true)
 				->select($selectCols)
@@ -327,10 +332,13 @@ class PublicBookingCalendarHelper
 						continue;
 					}
 					$startRaw = trim((string) ($row['time'] ?? ''));
-					$groupKey = $courseId . '|' . $startRaw;
+					// Each lesson of a multi-lesson course is its own session, even at the same start time.
+					$coursePart = $hasCoursePart ? max(1, (int) ($row['course_part'] ?? 1)) : 1;
+					$groupKey = $courseId . '|' . $coursePart . '|' . $startRaw;
 					if (!isset($anytimeGroupsRaw[$groupKey])) {
 						$anytimeGroupsRaw[$groupKey] = [
 							'course_id' => $courseId,
+							'course_part' => $coursePart,
 							'time' => $startRaw,
 							'time_to' => $occupiedTo,
 							'used' => 0,
@@ -400,7 +408,8 @@ class PublicBookingCalendarHelper
 					$masterTz,
 					$cid,
 					$used,
-					$max
+					$max,
+					max(1, (int) ($group['course_part'] ?? 1))
 				);
 			}
 		} catch (\Throwable $ignore) {
@@ -523,7 +532,8 @@ class PublicBookingCalendarHelper
 		\DateTimeZone $masterTz,
 		int $courseId,
 		int $used,
-		int $max
+		int $max,
+		int $coursePart = 1
 	): void {
 		$fromRaw = trim($fromRaw);
 		$toRaw = trim($toRaw);
@@ -559,6 +569,7 @@ class PublicBookingCalendarHelper
 					'start' => $startMinutes,
 					'end' => $endMinutes,
 					'course_id' => $courseId,
+					'course_part' => $coursePart,
 					'used' => $used,
 					'max' => $max,
 					'origin_start' => $dayKey === $originDayKey ? $originStartMin : -1,

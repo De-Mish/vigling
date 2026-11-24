@@ -12,6 +12,161 @@ use Viglin\Component\Orders\Site\Table\OrderTable;
 
 final class UserCoursesService
 {
+    public const MAX_LESSONS = 10;
+
+    /**
+     * Multi-lesson courses need migrations/course-lessons; without it every course has one lesson.
+     */
+    public static function lessonsSchemaReady(?DatabaseInterface $db = null): bool
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+
+        try {
+            $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
+            $courses = array_change_key_case($db->getTableColumns('#__vigling_user_courses', false), CASE_LOWER);
+            $slots = array_change_key_case($db->getTableColumns('#__vigling_course_slots', false), CASE_LOWER);
+            $bookings = array_change_key_case($db->getTableColumns('#__vigling_bookings', false), CASE_LOWER);
+            $tables = array_map('strtolower', (array) $db->getTableList());
+            $ready = isset($courses['lessons_count'], $slots['part_no'], $bookings['course_part'])
+                && in_array(strtolower($db->getPrefix() . 'vigling_course_parts'), $tables, true);
+        } catch (\Throwable $e) {
+            $ready = false;
+        }
+
+        return $ready;
+    }
+
+    /**
+     * ON clause for joining the slot of the first lesson (the one listings and booking buttons use).
+     */
+    public static function primarySlotJoinOn(DatabaseInterface $db, string $slotAlias = 'slot', string $courseAlias = 'c'): string
+    {
+        $on = $db->quoteName($slotAlias . '.course_id') . ' = ' . $db->quoteName($courseAlias . '.id')
+            . ' AND ' . $db->quoteName($slotAlias . '.is_active') . ' = 1';
+        if (self::lessonsSchemaReady($db)) {
+            $on .= ' AND ' . $db->quoteName($slotAlias . '.part_no') . ' = 1';
+        }
+
+        return $on;
+    }
+
+    /**
+     * Lessons of each course, numbered from 1. Lesson 1 falls back to the course row for
+     * courses saved before the migration.
+     *
+     * @param array<int, array<string, mixed>> $courseRows rows with id, duration_min, capacity and optional lessons_count / slot_* of lesson 1
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public static function loadCourseParts(DatabaseInterface $db, array $courseRows): array
+    {
+        $byId = [];
+        foreach ($courseRows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $byId[$id] = $row;
+            }
+        }
+        if ($byId === []) {
+            return [];
+        }
+
+        $ready = self::lessonsSchemaReady($db);
+        $partRows = [];
+        $slotRows = [];
+        $bookingCounts = [];
+        try {
+            $ids = array_keys($byId);
+            if ($ready) {
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->select([$db->quoteName('course_id'), $db->quoteName('part_no'), $db->quoteName('duration_min'), $db->quoteName('capacity')])
+                        ->from($db->quoteName('#__vigling_course_parts'))
+                        ->whereIn($db->quoteName('course_id'), $ids)
+                );
+                foreach ($db->loadAssocList() ?: [] as $r) {
+                    $partRows[(int) $r['course_id']][(int) $r['part_no']] = $r;
+                }
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->select([
+                            $db->quoteName('id'),
+                            $db->quoteName('course_id'),
+                            $db->quoteName('part_no'),
+                            $db->quoteName('starts_at_utc'),
+                            $db->quoteName('ends_at_utc'),
+                            $db->quoteName('capacity_total'),
+                        ])
+                        ->from($db->quoteName('#__vigling_course_slots'))
+                        ->whereIn($db->quoteName('course_id'), $ids)
+                        ->where($db->quoteName('is_active') . ' = 1')
+                );
+                foreach ($db->loadAssocList() ?: [] as $r) {
+                    $slotRows[(int) $r['course_id']][(int) $r['part_no']] = $r;
+                }
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->select([$db->quoteName('course_id'), $db->quoteName('course_part'), 'COUNT(*) AS ' . $db->quoteName('cnt')])
+                        ->from($db->quoteName('#__vigling_bookings'))
+                        ->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
+                        ->whereIn($db->quoteName('course_id'), $ids)
+                        ->group([$db->quoteName('course_id'), $db->quoteName('course_part')])
+                );
+                foreach ($db->loadAssocList() ?: [] as $r) {
+                    $bookingCounts[(int) $r['course_id']][(int) $r['course_part']] = (int) $r['cnt'];
+                }
+            } else {
+                $db->setQuery(
+                    $db->getQuery(true)
+                        ->select([$db->quoteName('course_id'), 'COUNT(*) AS ' . $db->quoteName('cnt')])
+                        ->from($db->quoteName('#__vigling_bookings'))
+                        ->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
+                        ->whereIn($db->quoteName('course_id'), $ids)
+                        ->group($db->quoteName('course_id'))
+                );
+                foreach ($db->loadAssocList() ?: [] as $r) {
+                    $bookingCounts[(int) $r['course_id']][1] = (int) $r['cnt'];
+                }
+            }
+        } catch (\Throwable $e) {
+            $partRows = [];
+            $slotRows = [];
+        }
+
+        $result = [];
+        foreach ($byId as $id => $row) {
+            $lessons = $ready ? max(1, min(self::MAX_LESSONS, (int) ($row['lessons_count'] ?? 1))) : 1;
+            $parts = [];
+            for ($p = 1; $p <= $lessons; $p++) {
+                $stored = $partRows[$id][$p] ?? null;
+                $slot = $slotRows[$id][$p] ?? null;
+                if ($slot === null && $p === 1 && (int) ($row['slot_id'] ?? 0) > 0) {
+                    $slot = [
+                        'id' => (int) $row['slot_id'],
+                        'starts_at_utc' => (string) ($row['slot_start_utc'] ?? ''),
+                        'ends_at_utc' => (string) ($row['slot_end_utc'] ?? ''),
+                        'capacity_total' => (int) ($row['slot_capacity_total'] ?? 0),
+                    ];
+                }
+                $parts[$p] = [
+                    'part_no' => $p,
+                    'duration_min' => max(0, (int) ($stored['duration_min'] ?? ($p === 1 ? ($row['duration_min'] ?? 0) : 0))),
+                    'capacity' => max(1, (int) ($stored['capacity'] ?? ($row['capacity'] ?? 1))),
+                    'slot_id' => (int) ($slot['id'] ?? 0),
+                    'slot_start_utc' => trim((string) ($slot['starts_at_utc'] ?? '')),
+                    'slot_end_utc' => trim((string) ($slot['ends_at_utc'] ?? '')),
+                    'slot_capacity_total' => max(0, (int) ($slot['capacity_total'] ?? 0)),
+                    'booking_count' => (int) ($bookingCounts[$id][$p] ?? 0),
+                ];
+            }
+            $result[$id] = $parts;
+        }
+
+        return $result;
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -61,7 +216,7 @@ final class UserCoursesService
         if ($mode === 'fixed') {
             $slotCapacity = (int) ($item['slot_capacity_total'] ?? 0);
             if ($slotCapacity > 0) {
-                $capacity = $slotCapacity;
+                $capacity = min($capacity, $slotCapacity);
             }
         }
         if (max(0, (int) ($item['booking_count'] ?? 0)) >= $capacity) {
@@ -71,7 +226,7 @@ final class UserCoursesService
             return false;
         }
 
-        $endRaw = trim((string) ($item['slot_end_utc'] ?? ''));
+        $endRaw = trim((string) ($item['slot_end_last_utc'] ?? $item['slot_end_utc'] ?? ''));
         try {
             if ($endRaw !== '') {
                 $end = new \DateTimeImmutable($endRaw, new \DateTimeZone('UTC'));
@@ -104,6 +259,10 @@ final class UserCoursesService
             }
             $course['id'] = 0;
             $course['booking_count'] = 0;
+            foreach ((array) ($course['parts'] ?? []) as $partNo => $part) {
+                $course['parts'][$partNo]['booking_count'] = 0;
+                $course['parts'][$partNo]['slot_id'] = 0;
+            }
 
             return $course;
         }
@@ -118,12 +277,13 @@ final class UserCoursesService
 
     private static function buildActiveListWhereSql(DatabaseInterface $db, string $alias, string $slotAlias, string $bookingKind, string $idColumn): string
     {
-        $booked = '(SELECT COUNT(*) FROM ' . $db->quoteName('#__vigling_bookings')
+        $booked = '(SELECT COUNT(DISTINCT ' . $db->quoteName('user_id') . ') FROM ' . $db->quoteName('#__vigling_bookings')
             . ' WHERE ' . $db->quoteName('booking_kind') . ' = ' . $db->quote($bookingKind)
             . ' AND ' . $db->quoteName($idColumn) . ' = ' . $db->quoteName($alias) . '.' . $db->quoteName('id') . ')';
         $capacity = 'CASE WHEN ' . $db->quoteName($alias) . '.' . $db->quoteName('booking_mode') . ' = ' . $db->quote('fixed')
-            . ' AND ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total') . ' > 0 THEN '
-            . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total')
+            . ' AND ' . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total') . ' > 0 THEN LEAST('
+            . $db->quoteName($slotAlias) . '.' . $db->quoteName('capacity_total') . ', '
+            . $db->quoteName($alias) . '.' . $db->quoteName('capacity') . ')'
             . ' ELSE ' . $db->quoteName($alias) . '.' . $db->quoteName('capacity') . ' END';
         $endExpr = 'COALESCE(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('ends_at_utc')
             . ', DATE_ADD(' . $db->quoteName($slotAlias) . '.' . $db->quoteName('starts_at_utc')
@@ -147,6 +307,7 @@ final class UserCoursesService
         }
 
         $hasConcurrent = false;
+        $partsByCourse = [];
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
             $hasConcurrent = self::ensureConcurrentParticipantsColumn($db);
@@ -163,7 +324,7 @@ final class UserCoursesService
                     $db->quoteName('c.capacity'),
                     $db->quoteName('c.booking_mode'),
                     $db->quoteName('c.is_active'),
-                    '(SELECT COUNT(*) FROM ' . $db->quoteName('#__vigling_bookings') .
+                    '(SELECT COUNT(DISTINCT ' . $db->quoteName('user_id') . ') FROM ' . $db->quoteName('#__vigling_bookings') .
                         ' WHERE ' . $db->quoteName('booking_kind') . ' = ' . $db->quote('course') .
                         ' AND ' . $db->quoteName('course_id') . ' = ' . $db->quoteName('c.id') . ') AS ' . $db->quoteName('booking_count'),
                     $db->quoteName('slot.id', 'slot_id'),
@@ -174,16 +335,31 @@ final class UserCoursesService
             if ($hasConcurrent) {
                 $select[] = $db->quoteName('c.concurrent_participants');
             }
+            if (self::lessonsSchemaReady($db)) {
+                $select[] = $db->quoteName('c.lessons_count');
+            }
             $query = $db->getQuery(true)
                 ->select($select)
                 ->from($db->quoteName('#__vigling_user_courses', 'c'))
                 ->join('LEFT', $db->quoteName('#__categories', 'cat') . ' ON ' . $db->quoteName('cat.id') . ' = ' . $db->quoteName('c.category_id'))
-                ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
+                ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . self::primarySlotJoinOn($db))
                 ->whereIn($db->quoteName('c.user_id'), $ids)
                 ->where($db->quoteName('c.is_active') . ' = 1')
                 ->order($db->quoteName('c.updated_at') . ' DESC');
             $db->setQuery($query);
             $rows = $db->loadAssocList() ?: [];
+            $partsByCourse = self::loadCourseParts($db, array_map(static function (array $row): array {
+                return [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'lessons_count' => (int) ($row['lessons_count'] ?? 1),
+                    'duration_min' => (int) ($row['duration_min'] ?? 0),
+                    'capacity' => (int) ($row['capacity'] ?? 1),
+                    'slot_id' => (int) ($row['slot_id'] ?? 0),
+                    'slot_start_utc' => (string) ($row['starts_at_utc'] ?? ''),
+                    'slot_end_utc' => (string) ($row['ends_at_utc'] ?? ''),
+                    'slot_capacity_total' => (int) ($row['capacity_total'] ?? 0),
+                ];
+            }, $rows));
         } catch (\Throwable $e) {
             return [];
         }
@@ -193,6 +369,13 @@ final class UserCoursesService
             $userId = (int) ($row['user_id'] ?? 0);
             if ($userId <= 0) {
                 continue;
+            }
+            $parts = $partsByCourse[(int) ($row['id'] ?? 0)] ?? [];
+            $lastEnd = '';
+            foreach ($parts as $part) {
+                if ((string) $part['slot_end_utc'] !== '' && strcmp((string) $part['slot_end_utc'], $lastEnd) > 0) {
+                    $lastEnd = (string) $part['slot_end_utc'];
+                }
             }
 
             $result[$userId][] = [
@@ -216,7 +399,10 @@ final class UserCoursesService
                 'slot_id' => (int) ($row['slot_id'] ?? 0),
                 'slot_start_utc' => trim((string) ($row['starts_at_utc'] ?? '')),
                 'slot_end_utc' => trim((string) ($row['ends_at_utc'] ?? '')),
+                'slot_end_last_utc' => $lastEnd !== '' ? $lastEnd : trim((string) ($row['ends_at_utc'] ?? '')),
                 'slot_capacity_total' => max(0, self::toInt($row['capacity_total'] ?? 0)),
+                'lessons_count' => max(1, count($parts)),
+                'parts' => $parts,
             ];
         }
 
@@ -404,6 +590,35 @@ final class UserCoursesService
         $slotStartUtc = self::normalizeUtcDateTime((string) ($item['slot_start_utc'] ?? ''));
         $slotStartLocal = self::normalizeLocalDateTime((string) ($item['slot_start_local'] ?? ''));
 
+        $lessonsCount = max(1, min(self::MAX_LESSONS, (int) ($item['lessons_count'] ?? 1)));
+        if ($lessonsCount > 1 && !self::lessonsSchemaReady()) {
+            self::warn('Курс "' . $title . '" сохранён с одним занятием: несколько занятий станут доступны после обновления базы данных.');
+            $lessonsCount = 1;
+        }
+        $rawParts = isset($item['parts']) && is_array($item['parts']) ? array_values($item['parts']) : [];
+        $parts = [];
+        for ($i = 0; $i < $lessonsCount; $i++) {
+            $raw = isset($rawParts[$i]) && is_array($rawParts[$i]) ? $rawParts[$i] : ($i === 0 ? $item : []);
+            $partDuration = max(0, (int) ($raw['duration_min'] ?? 0));
+            if ($partDuration <= 0) {
+                return null;
+            }
+            $parts[$i + 1] = [
+                'part_no' => $i + 1,
+                'duration_min' => $partDuration,
+                'capacity' => max(1, (int) ($raw['capacity'] ?? 1)),
+                'slot_start_utc' => $bookingMode === 'fixed' ? self::normalizeUtcDateTime((string) ($raw['slot_start_utc'] ?? '')) : '',
+                'slot_start_local' => $bookingMode === 'fixed' ? self::normalizeLocalDateTime((string) ($raw['slot_start_local'] ?? '')) : '',
+            ];
+        }
+        if ($parts !== []) {
+            $durationMin = (int) $parts[1]['duration_min'];
+            $capacity = (int) min(array_column($parts, 'capacity'));
+            $slotStartUtc = (string) $parts[1]['slot_start_utc'];
+            $slotStartLocal = (string) $parts[1]['slot_start_local'];
+            $concurrent = self::normalizeConcurrentParticipants($concurrent, $capacity, $bookingMode);
+        }
+
         if ($categoryId <= 0 || $title === '' || $durationMin <= 0) {
             return null;
         }
@@ -421,7 +636,64 @@ final class UserCoursesService
             'booking_mode' => $bookingMode,
             'slot_start_utc' => $bookingMode === 'fixed' ? $slotStartUtc : '',
             'slot_start_local' => $bookingMode === 'fixed' ? $slotStartLocal : '',
+            'lessons_count' => $lessonsCount,
+            'parts' => $parts,
         ];
+    }
+
+    /**
+     * @param array<int, array<string,mixed>> $parts
+     */
+    private static function saveCourseParts(DatabaseInterface $db, int $courseId, array $parts): void
+    {
+        if ($courseId <= 0 || !self::lessonsSchemaReady($db)) {
+            return;
+        }
+
+        $db->setQuery(
+            $db->getQuery(true)
+                ->update($db->quoteName('#__vigling_user_courses'))
+                ->set($db->quoteName('lessons_count') . ' = ' . max(1, count($parts)))
+                ->where($db->quoteName('id') . ' = ' . $courseId)
+        )->execute();
+
+        foreach ($parts as $partNo => $part) {
+            $db->setQuery(
+                'INSERT INTO ' . $db->quoteName('#__vigling_course_parts')
+                . ' (' . $db->quoteName('course_id') . ', ' . $db->quoteName('part_no') . ', ' . $db->quoteName('duration_min') . ', ' . $db->quoteName('capacity') . ')'
+                . ' VALUES (' . $courseId . ', ' . (int) $partNo . ', ' . (int) $part['duration_min'] . ', ' . (int) $part['capacity'] . ')'
+                . ' ON DUPLICATE KEY UPDATE ' . $db->quoteName('duration_min') . ' = VALUES(' . $db->quoteName('duration_min') . '), '
+                . $db->quoteName('capacity') . ' = VALUES(' . $db->quoteName('capacity') . ')'
+            )->execute();
+        }
+
+        $db->setQuery(
+            $db->getQuery(true)
+                ->delete($db->quoteName('#__vigling_course_parts'))
+                ->where($db->quoteName('course_id') . ' = ' . $courseId)
+                ->where($db->quoteName('part_no') . ' > ' . max(1, count($parts)))
+        )->execute();
+    }
+
+    /**
+     * Lessons of a fixed course follow each other: lesson N starts after lesson N-1 ends.
+     *
+     * @param array<int, array<string,mixed>> $parts
+     */
+    private static function assertFixedPartsInOrder(array $parts, string $title): void
+    {
+        $prevEnd = null;
+        foreach ($parts as $partNo => $part) {
+            $startRaw = (string) ($part['slot_start_utc'] ?? '');
+            if ($startRaw === '') {
+                throw new \RuntimeException('Курс "' . $title . '": укажите дату и время занятия ' . (int) $partNo . '.');
+            }
+            $start = new \DateTimeImmutable($startRaw, new \DateTimeZone('UTC'));
+            if ($prevEnd !== null && $start < $prevEnd) {
+                throw new \RuntimeException('Курс "' . $title . '": занятие ' . (int) $partNo . ' должно начинаться после окончания занятия ' . ((int) $partNo - 1) . '.');
+            }
+            $prevEnd = $start->modify('+' . max(15, (int) ($part['duration_min'] ?? 0)) . ' minutes');
+        }
     }
 
     /**
@@ -453,13 +725,17 @@ final class UserCoursesService
         if ($hasConcurrent) {
             $select[] = $db->quoteName('c.concurrent_participants');
         }
+        if (self::lessonsSchemaReady($db)) {
+            $select[] = $db->quoteName('c.lessons_count');
+        }
         $query = $db->getQuery(true)
             ->select($select)
             ->from($db->quoteName('#__vigling_user_courses', 'c'))
-            ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . $db->quoteName('slot.course_id') . ' = ' . $db->quoteName('c.id') . ' AND ' . $db->quoteName('slot.is_active') . ' = 1')
+            ->join('LEFT', $db->quoteName('#__vigling_course_slots', 'slot') . ' ON ' . self::primarySlotJoinOn($db))
             ->where($db->quoteName('c.user_id') . ' = ' . (int) $userId);
         $db->setQuery($query);
         $rows = $db->loadAssocList() ?: [];
+        $partsByCourse = self::loadCourseParts($db, $rows);
 
         $result = [];
         foreach ($rows as $row) {
@@ -487,7 +763,16 @@ final class UserCoursesService
                 'slot_end_utc' => trim((string) ($row['slot_end_utc'] ?? '')),
                 'slot_capacity_total' => max(0, (int) ($row['slot_capacity_total'] ?? 0)),
                 'booking_count' => self::countCourseBookings($db, $courseId, $slotId),
+                'lessons_count' => max(1, count($partsByCourse[$courseId] ?? [])),
+                'parts' => $partsByCourse[$courseId] ?? [],
             ];
+            $lastEnd = '';
+            foreach ($result[$courseId]['parts'] as $part) {
+                if ((string) $part['slot_end_utc'] !== '' && strcmp((string) $part['slot_end_utc'], $lastEnd) > 0) {
+                    $lastEnd = (string) $part['slot_end_utc'];
+                }
+            }
+            $result[$courseId]['slot_end_last_utc'] = $lastEnd !== '' ? $lastEnd : $result[$courseId]['slot_end_utc'];
         }
 
         return $result;
@@ -510,9 +795,16 @@ final class UserCoursesService
                 'capacity' => (int) $normalized['capacity'],
                 'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => (string) $normalized['booking_mode'],
+                'lessons_count' => (int) ($normalized['lessons_count'] ?? 1),
+                'parts' => self::partsForPayload((array) ($normalized['parts'] ?? [])),
             ],
             'payload_variant' => 'courses_payload_v2',
         ];
+
+        $parts = (array) ($normalized['parts'] ?? []);
+        if ((string) $normalized['booking_mode'] === 'fixed' && count($parts) > 1) {
+            self::assertFixedPartsInOrder($parts, (string) $normalized['title']);
+        }
 
         $columns = [
             $db->quoteName('user_id'),
@@ -557,9 +849,35 @@ final class UserCoursesService
             return;
         }
 
+        self::saveCourseParts($db, $courseId, $parts);
+
         if ((string) $normalized['booking_mode'] === 'fixed') {
-            self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $normalized['slot_start_utc'], (int) $normalized['duration_min'], (int) $normalized['capacity'], 0, null, (string) $normalized['slot_start_local']);
+            if ($parts === []) {
+                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $normalized['slot_start_utc'], (int) $normalized['duration_min'], (int) $normalized['capacity'], 0, null, (string) $normalized['slot_start_local']);
+                return;
+            }
+            foreach ($parts as $partNo => $part) {
+                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $part['slot_start_utc'], (int) $part['duration_min'], (int) $part['capacity'], 0, null, (string) $part['slot_start_local'], (int) $partNo);
+            }
         }
+    }
+
+    /**
+     * @param array<int, array<string,mixed>> $parts
+     * @return array<int, array<string,int>>
+     */
+    private static function partsForPayload(array $parts): array
+    {
+        $out = [];
+        foreach ($parts as $partNo => $part) {
+            $out[] = [
+                'part_no' => (int) $partNo,
+                'duration_min' => (int) ($part['duration_min'] ?? 0),
+                'capacity' => (int) ($part['capacity'] ?? 1),
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -571,15 +889,63 @@ final class UserCoursesService
         $bookingCount = (int) ($existing['booking_count'] ?? 0);
         $requestedMode = (string) $normalized['booking_mode'];
         $existingMode = (string) ($existing['booking_mode'] ?? 'free');
+        $title = (string) ($existing['title'] ?? '');
+        $parts = (array) ($normalized['parts'] ?? []);
+        $existingParts = (array) ($existing['parts'] ?? []);
 
-        if ($bookingCount > 0 && $existingMode === 'fixed' && (int) $normalized['duration_min'] !== (int) ($existing['duration_min'] ?? 0)) {
-            self::warn('Длительность fixed-курса "' . (string) ($existing['title'] ?? '') . '" не изменена: у курса уже есть участники.');
-            $normalized['duration_min'] = (int) ($existing['duration_min'] ?? $normalized['duration_min']);
+        if ($bookingCount > 0 && $existingParts !== [] && count($parts) !== count($existingParts)) {
+            self::warn('Количество занятий курса "' . $title . '" не изменено: на курс уже записаны участники.');
+            $kept = [];
+            foreach ($existingParts as $partNo => $existingPart) {
+                $kept[$partNo] = $parts[$partNo] ?? [
+                    'part_no' => (int) $partNo,
+                    'duration_min' => (int) $existingPart['duration_min'],
+                    'capacity' => (int) $existingPart['capacity'],
+                    'slot_start_utc' => $existingMode === 'fixed' ? (string) $existingPart['slot_start_utc'] : '',
+                    'slot_start_local' => '',
+                ];
+            }
+            $parts = $kept;
         }
 
-        if ($bookingCount > 0 && (int) $normalized['capacity'] < $bookingCount) {
-            self::warn('Лимит мест курса "' . (string) ($existing['title'] ?? '') . '" не может быть меньше числа записанных участников. Сохранено значение ' . $bookingCount . '.');
-            $normalized['capacity'] = $bookingCount;
+        if ($bookingCount > 0 && $existingMode === 'free' && $requestedMode === 'fixed') {
+            self::warn('Нельзя перевести курс "' . $title . '" в fixed-режим, пока на него уже есть записи.');
+            $requestedMode = 'free';
+            $normalized['booking_mode'] = 'free';
+            $normalized['slot_start_utc'] = '';
+            foreach ($parts as $partNo => $part) {
+                $parts[$partNo]['slot_start_utc'] = '';
+                $parts[$partNo]['slot_start_local'] = '';
+            }
+        }
+
+        $multi = count($parts) > 1;
+        foreach ($parts as $partNo => $part) {
+            $existingPart = $existingParts[$partNo] ?? null;
+            $partBookings = (int) ($existingPart['booking_count'] ?? 0);
+            if ($partBookings > 0 && $existingMode === 'fixed' && $existingPart !== null && (int) $part['duration_min'] !== (int) $existingPart['duration_min']) {
+                self::warn($multi
+                    ? 'Длительность занятия ' . (int) $partNo . ' курса "' . $title . '" не изменена: на занятие уже записаны участники.'
+                    : 'Длительность fixed-курса "' . $title . '" не изменена: у курса уже есть участники.');
+                $parts[$partNo]['duration_min'] = (int) $existingPart['duration_min'];
+            }
+            $minCapacity = max($partBookings, $bookingCount);
+            if ($minCapacity > 0 && (int) $parts[$partNo]['capacity'] < $minCapacity) {
+                self::warn($multi
+                    ? 'Лимит мест занятия ' . (int) $partNo . ' курса "' . $title . '" не может быть меньше числа записанных участников. Сохранено значение ' . $minCapacity . '.'
+                    : 'Лимит мест курса "' . $title . '" не может быть меньше числа записанных участников. Сохранено значение ' . $minCapacity . '.');
+                $parts[$partNo]['capacity'] = $minCapacity;
+            }
+            if ($requestedMode === 'fixed' && (string) $parts[$partNo]['slot_start_utc'] === '' && $existingPart !== null) {
+                $parts[$partNo]['slot_start_utc'] = (string) ($existingPart['slot_start_utc'] ?? '');
+            }
+        }
+
+        if ($parts !== []) {
+            $normalized['duration_min'] = (int) $parts[1]['duration_min'];
+            $normalized['capacity'] = (int) min(array_column($parts, 'capacity'));
+            $normalized['slot_start_utc'] = (string) $parts[1]['slot_start_utc'];
+            $normalized['slot_start_local'] = (string) $parts[1]['slot_start_local'];
         }
 
         $normalized['concurrent_participants'] = self::normalizeConcurrentParticipants(
@@ -587,11 +953,8 @@ final class UserCoursesService
             (int) $normalized['capacity']
         );
 
-        if ($bookingCount > 0 && $existingMode === 'free' && $requestedMode === 'fixed') {
-            self::warn('Нельзя перевести курс "' . (string) ($existing['title'] ?? '') . '" в fixed-режим, пока на него уже есть записи.');
-            $requestedMode = 'free';
-            $normalized['booking_mode'] = 'free';
-            $normalized['slot_start_utc'] = '';
+        if ($requestedMode === 'fixed' && $multi) {
+            self::assertFixedPartsInOrder($parts, (string) $normalized['title']);
         }
 
         $coursePayload = [
@@ -606,6 +969,8 @@ final class UserCoursesService
                 'capacity' => (int) $normalized['capacity'],
                 'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => $requestedMode,
+                'lessons_count' => max(1, count($parts)),
+                'parts' => self::partsForPayload($parts),
             ],
             'payload_variant' => 'courses_payload_v2',
         ];
@@ -630,29 +995,47 @@ final class UserCoursesService
             ->where($db->quoteName('user_id') . ' = ' . $userId);
         $db->setQuery($query)->execute();
 
+        self::saveCourseParts($db, $courseId, $parts);
+
         $oldMedia = trim((string) ($existing['media_path'] ?? ''));
         $newMedia = trim((string) ($normalized['media_path'] ?? ''));
         if ($oldMedia !== '' && $oldMedia !== $newMedia) {
             ImageUploadHelper::deleteStored($oldMedia);
         }
 
-        $existingSlotId = (int) ($existing['slot_id'] ?? 0);
-        if ($requestedMode === 'fixed') {
-            $slotStartUtc = (string) $normalized['slot_start_utc'];
-            if ($slotStartUtc === '' && $existingSlotId > 0) {
-                $slotStartUtc = (string) ($existing['slot_start_utc'] ?? '');
+        $existingSlotIds = [];
+        foreach ($existingParts as $partNo => $existingPart) {
+            if ((int) ($existingPart['slot_id'] ?? 0) > 0) {
+                $existingSlotIds[(int) $partNo] = (int) $existingPart['slot_id'];
             }
-            if ($slotStartUtc !== '') {
-                self::upsertCourseSlot($db, $courseId, $userId, $existingSlotId, $slotStartUtc, (int) $normalized['duration_min'], (int) $normalized['capacity'], $bookingCount, $orderTable, (string) $normalized['slot_start_local']);
+        }
+        if (!isset($existingSlotIds[1]) && (int) ($existing['slot_id'] ?? 0) > 0) {
+            $existingSlotIds[1] = (int) $existing['slot_id'];
+        }
+
+        if ($requestedMode === 'fixed') {
+            foreach ($parts as $partNo => $part) {
+                $slotStartUtc = (string) $part['slot_start_utc'];
+                if ($slotStartUtc === '') {
+                    continue;
+                }
+                $partBookings = (int) ($existingParts[$partNo]['booking_count'] ?? ($partNo === 1 ? $bookingCount : 0));
+                self::upsertCourseSlot($db, $courseId, $userId, $existingSlotIds[$partNo] ?? 0, $slotStartUtc, (int) $part['duration_min'], (int) $part['capacity'], $partBookings, $orderTable, (string) $part['slot_start_local'], (int) $partNo);
+            }
+            foreach ($existingSlotIds as $partNo => $slotId) {
+                if (!isset($parts[$partNo]) && $parts !== []) {
+                    self::detachBookingsFromSlot($db, $slotId);
+                    self::deactivateAndDeleteCourseSlot($db, $slotId);
+                }
             }
             return;
         }
 
-        if ($existingSlotId > 0) {
+        foreach ($existingSlotIds as $slotId) {
             if ($bookingCount > 0) {
-                self::detachBookingsFromSlot($db, $existingSlotId);
+                self::detachBookingsFromSlot($db, $slotId);
             }
-            self::deactivateAndDeleteCourseSlot($db, $existingSlotId);
+            self::deactivateAndDeleteCourseSlot($db, $slotId);
         }
     }
 
@@ -688,6 +1071,14 @@ final class UserCoursesService
             self::deactivateAndDeleteCourseSlot($db, $slotId);
         }
 
+        if (self::lessonsSchemaReady($db)) {
+            $db->setQuery(
+                $db->getQuery(true)
+                    ->delete($db->quoteName('#__vigling_course_parts'))
+                    ->where($db->quoteName('course_id') . ' = ' . $courseId)
+            )->execute();
+        }
+
         $courseDelete = $db->getQuery(true)
             ->delete($db->quoteName('#__vigling_user_courses'))
             ->where($db->quoteName('id') . ' = ' . $courseId)
@@ -708,7 +1099,8 @@ final class UserCoursesService
         int $capacity,
         int $bookingCount = 0,
         ?OrderTable $orderTable = null,
-        string $slotStartLocal = ''
+        string $slotStartLocal = '',
+        int $partNo = 1
     ): void {
         $slotStartUtc = self::normalizeUtcDateTime($slotStartUtc);
         if ($courseId <= 0 || $userId <= 0 || $slotStartUtc === '') {
@@ -779,6 +1171,10 @@ final class UserCoursesService
             (string) $capacity,
             '1',
         ];
+        if (self::lessonsSchemaReady($db)) {
+            $slotColumns[] = $db->quoteName('part_no');
+            $slotValues[] = (string) max(1, $partNo);
+        }
 
         $slotQuery = $db->getQuery(true)
             ->insert($db->quoteName('#__vigling_course_slots'))
@@ -826,7 +1222,7 @@ final class UserCoursesService
         }
 
         $query = $db->getQuery(true)
-            ->select('COUNT(*)')
+            ->select($slotId > 0 ? 'COUNT(*)' : 'COUNT(DISTINCT ' . $db->quoteName('user_id') . ')')
             ->from($db->quoteName('#__vigling_bookings'))
             ->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
             ->where($db->quoteName('course_id') . ' = ' . $courseId);
