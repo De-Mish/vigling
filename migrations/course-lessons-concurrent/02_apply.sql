@@ -1,0 +1,4 @@
+SET @s := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_course_parts' AND COLUMN_NAME='concurrent_participants')=0, 'ALTER TABLE `joomla_vigling_course_parts` ADD COLUMN `concurrent_participants` INT UNSIGNED NOT NULL DEFAULT 1 AFTER `capacity`', 'SELECT ''concurrent_participants already present''');
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+UPDATE `joomla_vigling_course_parts` p JOIN `joomla_vigling_user_courses` c ON c.id = p.course_id SET p.concurrent_participants = GREATEST(1, LEAST(c.concurrent_participants, p.capacity));
+SELECT 'done: course_parts.concurrent_participants' AS check_name, (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_course_parts' AND COLUMN_NAME='concurrent_participants') AS column_present;
