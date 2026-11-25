@@ -54,6 +54,30 @@ final class UserCoursesService
     }
 
     /**
+     * Per-lesson "simultaneous participants" needs migrations/course-lessons-concurrent.
+     */
+    public static function lessonConcurrentReady(?DatabaseInterface $db = null): bool
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+        if (!self::lessonsSchemaReady($db)) {
+            return $ready = false;
+        }
+
+        try {
+            $db = $db ?? Factory::getContainer()->get(DatabaseInterface::class);
+            $columns = array_change_key_case($db->getTableColumns('#__vigling_course_parts', false), CASE_LOWER);
+            $ready = isset($columns['concurrent_participants']);
+        } catch (\Throwable $e) {
+            $ready = false;
+        }
+
+        return $ready;
+    }
+
+    /**
      * Lessons of each course, numbered from 1. Lesson 1 falls back to the course row for
      * courses saved before the migration.
      *
@@ -82,7 +106,10 @@ final class UserCoursesService
             if ($ready) {
                 $db->setQuery(
                     $db->getQuery(true)
-                        ->select([$db->quoteName('course_id'), $db->quoteName('part_no'), $db->quoteName('duration_min'), $db->quoteName('capacity')])
+                        ->select(array_merge(
+                            [$db->quoteName('course_id'), $db->quoteName('part_no'), $db->quoteName('duration_min'), $db->quoteName('capacity')],
+                            self::lessonConcurrentReady($db) ? [$db->quoteName('concurrent_participants')] : []
+                        ))
                         ->from($db->quoteName('#__vigling_course_parts'))
                         ->whereIn($db->quoteName('course_id'), $ids)
                 );
@@ -154,6 +181,10 @@ final class UserCoursesService
                     'part_no' => $p,
                     'duration_min' => max(0, (int) ($stored['duration_min'] ?? ($p === 1 ? ($row['duration_min'] ?? 0) : 0))),
                     'capacity' => max(1, (int) ($stored['capacity'] ?? ($row['capacity'] ?? 1))),
+                    'concurrent_participants' => self::normalizeConcurrentParticipants(
+                        $stored['concurrent_participants'] ?? ($row['concurrent_participants'] ?? 1),
+                        max(1, (int) ($stored['capacity'] ?? ($row['capacity'] ?? 1)))
+                    ),
                     'slot_id' => (int) ($slot['id'] ?? 0),
                     'slot_start_utc' => trim((string) ($slot['starts_at_utc'] ?? '')),
                     'slot_end_utc' => trim((string) ($slot['ends_at_utc'] ?? '')),
@@ -607,6 +638,10 @@ final class UserCoursesService
                 'part_no' => $i + 1,
                 'duration_min' => $partDuration,
                 'capacity' => max(1, (int) ($raw['capacity'] ?? 1)),
+                'concurrent_participants' => self::normalizeConcurrentParticipants(
+                    $raw['concurrent_participants'] ?? $raw['concurrentParticipants'] ?? $concurrent,
+                    max(1, (int) ($raw['capacity'] ?? 1))
+                ),
                 'slot_start_utc' => $bookingMode === 'fixed' ? self::normalizeUtcDateTime((string) ($raw['slot_start_utc'] ?? '')) : '',
                 'slot_start_local' => $bookingMode === 'fixed' ? self::normalizeLocalDateTime((string) ($raw['slot_start_local'] ?? '')) : '',
             ];
@@ -616,7 +651,12 @@ final class UserCoursesService
             $capacity = (int) min(array_column($parts, 'capacity'));
             $slotStartUtc = (string) $parts[1]['slot_start_utc'];
             $slotStartLocal = (string) $parts[1]['slot_start_local'];
-            $concurrent = self::normalizeConcurrentParticipants($concurrent, $capacity, $bookingMode);
+            // The course-level value mirrors lesson 1 when each lesson has its own.
+            $concurrent = self::normalizeConcurrentParticipants(
+                $lessonsCount > 1 && $bookingMode === 'fixed' ? $parts[1]['concurrent_participants'] : $concurrent,
+                $capacity,
+                $bookingMode
+            );
         }
 
         if ($categoryId <= 0 || $title === '' || $durationMin <= 0) {
@@ -657,13 +697,18 @@ final class UserCoursesService
                 ->where($db->quoteName('id') . ' = ' . $courseId)
         )->execute();
 
+        $withConcurrent = self::lessonConcurrentReady($db);
         foreach ($parts as $partNo => $part) {
+            $concurrent = self::normalizeConcurrentParticipants($part['concurrent_participants'] ?? 1, (int) $part['capacity']);
             $db->setQuery(
                 'INSERT INTO ' . $db->quoteName('#__vigling_course_parts')
-                . ' (' . $db->quoteName('course_id') . ', ' . $db->quoteName('part_no') . ', ' . $db->quoteName('duration_min') . ', ' . $db->quoteName('capacity') . ')'
-                . ' VALUES (' . $courseId . ', ' . (int) $partNo . ', ' . (int) $part['duration_min'] . ', ' . (int) $part['capacity'] . ')'
+                . ' (' . $db->quoteName('course_id') . ', ' . $db->quoteName('part_no') . ', ' . $db->quoteName('duration_min') . ', ' . $db->quoteName('capacity')
+                . ($withConcurrent ? ', ' . $db->quoteName('concurrent_participants') : '') . ')'
+                . ' VALUES (' . $courseId . ', ' . (int) $partNo . ', ' . (int) $part['duration_min'] . ', ' . (int) $part['capacity']
+                . ($withConcurrent ? ', ' . $concurrent : '') . ')'
                 . ' ON DUPLICATE KEY UPDATE ' . $db->quoteName('duration_min') . ' = VALUES(' . $db->quoteName('duration_min') . '), '
                 . $db->quoteName('capacity') . ' = VALUES(' . $db->quoteName('capacity') . ')'
+                . ($withConcurrent ? ', ' . $db->quoteName('concurrent_participants') . ' = VALUES(' . $db->quoteName('concurrent_participants') . ')' : '')
             )->execute();
         }
 
@@ -874,6 +919,7 @@ final class UserCoursesService
                 'part_no' => (int) $partNo,
                 'duration_min' => (int) ($part['duration_min'] ?? 0),
                 'capacity' => (int) ($part['capacity'] ?? 1),
+                'concurrent_participants' => (int) ($part['concurrent_participants'] ?? 1),
             ];
         }
 

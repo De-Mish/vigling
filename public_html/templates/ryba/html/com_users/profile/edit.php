@@ -893,6 +893,7 @@ $courseLessonsForBuilder = static function (array $parts, bool $keepBookings): a
 		$rows[] = [
 			'duration' => (int) ($part['duration_min'] ?? 0),
 			'capacity' => max(1, (int) ($part['capacity'] ?? 1)),
+			'concurrentParticipants' => max(1, (int) ($part['concurrent_participants'] ?? 1)),
 			'slotStartUtc' => (string) ($part['slot_start_utc'] ?? ''),
 			'bookingCount' => $keepBookings ? (int) ($part['booking_count'] ?? 0) : 0,
 		];
@@ -2817,9 +2818,34 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part-title {
 	display: block !important;
 }
-/* "Одновременно участников" is shown for every booking mode and any number of lessons */
+/* "Одновременно участников": one field per course, or one per lesson for fixed-date courses with several lessons */
 .profile-edit #jform_courses_servis .service__item .course_concurrent {
 	display: flex !important;
+}
+.profile-edit #jform_courses_servis .service__item.has-part-concurrent .course_concurrent {
+	display: none !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_part-concurrent {
+	display: none !important;
+	flex-direction: column !important;
+	align-items: flex-start !important;
+	gap: 4px;
+	padding: 4px 0 !important;
+	width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item.has-part-concurrent .course_part-concurrent {
+	display: flex !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_part-concurrent label {
+	display: block !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding-right: 0 !important;
+}
+.profile-edit #jform_courses_servis .service__item .course_part-concurrent input {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
 }
 .profile-edit #jform_searches_servis .stock_key {
 	margin: 12px;
@@ -4447,6 +4473,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			'<span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span>' +
 			'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 			'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+			'<span class="course_part-concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-part-concurrent-input" value="1" /></span>' +
 			'</span>';
 	}
 	function courseLessonsCountOf(row) {
@@ -4460,6 +4487,12 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	function bindCoursePartInputs(row, partNode) {
 		bindFixedSlotInput(partNode.querySelector('.course-slot-input'));
 		var capacityInput = partNode.querySelector('.course-capacity-input');
+		var partConcurrent = partNode.querySelector('.course-part-concurrent-input');
+		if (partConcurrent) {
+			partConcurrent.addEventListener('change', function(){
+				syncCourseModeState(row);
+			});
+		}
 		if (capacityInput) {
 			['input', 'change'].forEach(function(eventName){
 				capacityInput.addEventListener(eventName, function(){
@@ -4489,6 +4522,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				var newCapacity = partNode.querySelector('.course-capacity-input');
 				if (tplDuration && newDuration) newDuration.value = tplDuration.value;
 				if (tplCapacity && newCapacity) newCapacity.value = tplCapacity.value;
+				var tplConcurrent = template.querySelector('.course-part-concurrent-input');
+				var newConcurrent = partNode.querySelector('.course-part-concurrent-input');
+				if (tplConcurrent && newConcurrent) newConcurrent.value = tplConcurrent.value;
 			}
 			bindCoursePartInputs(row, partNode);
 		}
@@ -4518,6 +4554,17 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		}
 		row.classList.toggle('is-free-mode', mode !== 'fixed');
 		row.classList.toggle('has-capacity', capacity >= 1);
+		// Fixed-date courses with several lessons set "simultaneous participants" per lesson.
+		row.classList.toggle('has-part-concurrent', mode === 'fixed' && coursePartNodes(row).length > 1);
+		coursePartNodes(row).forEach(function(partNode){
+			var partCapacity = Math.max(1, parseInt(String((partNode.querySelector('.course-capacity-input') || {}).value || '1'), 10) || 1);
+			var partConcurrentInput = partNode.querySelector('.course-part-concurrent-input');
+			if (partConcurrentInput) {
+				partConcurrentInput.max = String(partCapacity);
+				var partValue = parseInt(String(partConcurrentInput.value || '1'), 10) || 1;
+				partConcurrentInput.value = String(Math.max(1, Math.min(partCapacity, partValue)));
+			}
+		});
 		if (mode !== 'fixed') {
 			row.querySelectorAll('.course-slot-input').forEach(function(slotInput){
 				fillFixedSlotParts(slotInput, '');
@@ -4590,6 +4637,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var durationSelect = partNode.querySelector('.course-duration-select');
 			var capacityInput = partNode.querySelector('.course-capacity-input');
 			var slotInput = partNode.querySelector('.course-slot-input');
+			var partConcurrentInput = partNode.querySelector('.course-part-concurrent-input');
+			if (partConcurrentInput) partConcurrentInput.value = String(Math.max(1, parseInt(lesson.concurrentParticipants || rowData.concurrentParticipants || '1', 10) || 1));
 			if (durationSelect && lesson.duration) durationSelect.value = String(parseInt(lesson.duration, 10) || 60);
 			if (capacityInput && lesson.capacity) capacityInput.value = String(parseInt(lesson.capacity, 10) || 1);
 			if (slotInput) {
@@ -4686,10 +4735,12 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				var partDuration = partNode.querySelector('.course-duration-select');
 				var partCapacity = partNode.querySelector('.course-capacity-input');
 				var partSlot = partNode.querySelector('.course-slot-input');
+				var partConcurrent = partNode.querySelector('.course-part-concurrent-input');
 				var partLocal = partSlot ? String(partSlot.value || '') : '';
 				return {
 					duration: parseInt(partDuration ? String(partDuration.value || '0') : '0', 10) || 0,
 					capacity: parseInt(partCapacity ? String(partCapacity.value || '1') : '1', 10) || 1,
+					concurrentParticipants: parseInt(partConcurrent ? String(partConcurrent.value || '1') : '1', 10) || 1,
 					slotStartLocal: partLocal,
 					slotStartUtc: normalizeDatetimeFromLocal(partLocal),
 					bookingCount: parseInt(String(partNode.getAttribute('data-booking-count') || '0'), 10) || 0
@@ -4734,6 +4785,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				return {
 					duration_min: parseInt(lesson.duration || 0, 10) || 0,
 					capacity: Math.max(1, parseInt(lesson.capacity || 1, 10) || 1),
+					concurrent_participants: Math.max(1, parseInt(lesson.concurrentParticipants || row.concurrentParticipants || 1, 10) || 1),
 					slot_start_utc: bookingMode === 'fixed' ? String(lesson.slotStartUtc || '').trim() : '',
 					slot_start_local: bookingMode === 'fixed' ? String(lesson.slotStartLocal || '').trim() : ''
 				};
