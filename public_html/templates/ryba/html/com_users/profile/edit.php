@@ -4686,6 +4686,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		'<button type="button" class="btn-remove-service">Удалить</button>';
 	serviceList.appendChild(row);
 	var lessonsSelect = row.querySelector('.course-lessons-select');
+	var onlineToggle = row.querySelector('.course-online-toggle');
+	var linkToggle = row.querySelector('.course-link-search-toggle');
 	if (rowData) {
 		var titleInput = row.querySelector('.course-title-input');
 		var descriptionInput = row.querySelector('.course-description-input');
@@ -4693,9 +4695,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		var priceInput = row.querySelector('.course-price-input');
 		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var modeSelect = row.querySelector('.course-mode-select');
-		var onlineToggle = row.querySelector('.course-online-toggle');
 		var onlineUrlInput = row.querySelector('.course-online-url-input');
-		var linkToggle = row.querySelector('.course-link-search-toggle');
 		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
 		if (descriptionInput) descriptionInput.value = String(rowData.description || '');
 		if (mediaInput) mediaInput.value = String(rowData.mediaPath || '');
