@@ -60,7 +60,7 @@ final class UserCoursesService
      * @param array<int, array<string, mixed>> $courseRows rows with id, duration_min, capacity and optional lessons_count / slot_* of lesson 1
      * @return array<int, array<int, array<string, mixed>>>
      */
-    public static function loadCourseParts(DatabaseInterface $db, array $courseRows): array
+    public static function loadCourseParts(DatabaseInterface $db, array $courseRows, bool $includeLinks = false): array
     {
         $byId = [];
         foreach ($courseRows as $row) {
@@ -162,6 +162,16 @@ final class UserCoursesService
                 ];
             }
             $result[$id] = $parts;
+        }
+        if ($includeLinks) {
+            $linksByCourse = CourseLinkService::loadLinks($db, array_keys($byId));
+            foreach ($result as $courseId => &$courseParts) {
+                foreach ($courseParts as $partNo => &$part) {
+                    $part['linked_search'] = $linksByCourse[$courseId][$partNo] ?? null;
+                }
+                unset($part);
+            }
+            unset($courseParts);
         }
 
         return $result;
@@ -338,6 +348,9 @@ final class UserCoursesService
             if (self::lessonsSchemaReady($db)) {
                 $select[] = $db->quoteName('c.lessons_count');
             }
+            if (CourseLinkService::schemaReady($db)) {
+                $select[] = $db->quoteName('c.is_online');
+            }
             $query = $db->getQuery(true)
                 ->select($select)
                 ->from($db->quoteName('#__vigling_user_courses', 'c'))
@@ -395,6 +408,7 @@ final class UserCoursesService
                     self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free'))
                 ),
                 'booking_mode' => self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free')),
+                'is_online' => !empty($row['is_online']),
                 'booking_count' => max(0, self::toInt($row['booking_count'] ?? 0)),
                 'slot_id' => (int) ($row['slot_id'] ?? 0),
                 'slot_start_utc' => trim((string) ($row['starts_at_utc'] ?? '')),
@@ -582,6 +596,11 @@ final class UserCoursesService
         $durationMin = max(0, (int) ($item['duration_min'] ?? 0));
         $capacity = max(1, (int) ($item['capacity'] ?? 1));
         $bookingMode = self::normalizeBookingMode((string) ($item['booking_mode'] ?? 'free'));
+        $isOnline = !empty($item['is_online']);
+        $onlineUrl = self::normalizeOnlineUrl((string) ($item['online_url'] ?? ''));
+        if ($isOnline && $onlineUrl === '') {
+            throw new \RuntimeException('Для онлайн-курса укажите корректную ссылку, начинающуюся с http:// или https://.');
+        }
         $concurrent = self::normalizeConcurrentParticipants(
             $item['concurrent_participants'] ?? $item['concurrentParticipants'] ?? 1,
             $capacity,
@@ -609,6 +628,7 @@ final class UserCoursesService
                 'capacity' => max(1, (int) ($raw['capacity'] ?? 1)),
                 'slot_start_utc' => $bookingMode === 'fixed' ? self::normalizeUtcDateTime((string) ($raw['slot_start_utc'] ?? '')) : '',
                 'slot_start_local' => $bookingMode === 'fixed' ? self::normalizeLocalDateTime((string) ($raw['slot_start_local'] ?? '')) : '',
+                'linked_search' => is_array($raw['linked_search'] ?? null) ? $raw['linked_search'] : [],
             ];
         }
         if ($parts !== []) {
@@ -634,6 +654,8 @@ final class UserCoursesService
             'capacity' => $capacity,
             'concurrent_participants' => $concurrent,
             'booking_mode' => $bookingMode,
+            'is_online' => $isOnline,
+            'online_url' => $isOnline ? $onlineUrl : '',
             'slot_start_utc' => $bookingMode === 'fixed' ? $slotStartUtc : '',
             'slot_start_local' => $bookingMode === 'fixed' ? $slotStartLocal : '',
             'lessons_count' => $lessonsCount,
@@ -728,6 +750,10 @@ final class UserCoursesService
         if (self::lessonsSchemaReady($db)) {
             $select[] = $db->quoteName('c.lessons_count');
         }
+        if (CourseLinkService::schemaReady($db)) {
+            $select[] = $db->quoteName('c.is_online');
+            $select[] = $db->quoteName('c.online_url');
+        }
         $query = $db->getQuery(true)
             ->select($select)
             ->from($db->quoteName('#__vigling_user_courses', 'c'))
@@ -735,7 +761,7 @@ final class UserCoursesService
             ->where($db->quoteName('c.user_id') . ' = ' . (int) $userId);
         $db->setQuery($query);
         $rows = $db->loadAssocList() ?: [];
-        $partsByCourse = self::loadCourseParts($db, $rows);
+        $partsByCourse = self::loadCourseParts($db, $rows, true);
 
         $result = [];
         foreach ($rows as $row) {
@@ -758,6 +784,8 @@ final class UserCoursesService
                     max(1, (int) ($row['capacity'] ?? 1))
                 ),
                 'booking_mode' => self::normalizeBookingMode((string) ($row['booking_mode'] ?? 'free')),
+                'is_online' => !empty($row['is_online']),
+                'online_url' => trim((string) ($row['online_url'] ?? '')),
                 'slot_id' => $slotId,
                 'slot_start_utc' => trim((string) ($row['slot_start_utc'] ?? '')),
                 'slot_end_utc' => trim((string) ($row['slot_end_utc'] ?? '')),
@@ -795,6 +823,8 @@ final class UserCoursesService
                 'capacity' => (int) $normalized['capacity'],
                 'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => (string) $normalized['booking_mode'],
+                'is_online' => !empty($normalized['is_online']),
+                'online_url' => (string) ($normalized['online_url'] ?? ''),
                 'lessons_count' => (int) ($normalized['lessons_count'] ?? 1),
                 'parts' => self::partsForPayload((array) ($normalized['parts'] ?? [])),
             ],
@@ -805,6 +835,7 @@ final class UserCoursesService
         if ((string) $normalized['booking_mode'] === 'fixed' && count($parts) > 1) {
             self::assertFixedPartsInOrder($parts, (string) $normalized['title']);
         }
+        $courseLinks = CourseLinkService::normalizeLinks($db, $userId, self::linksFromParts($parts), max(1, count($parts)));
 
         $columns = [
             $db->quoteName('user_id'),
@@ -837,6 +868,12 @@ final class UserCoursesService
             array_splice($columns, 8, 0, [$db->quoteName('concurrent_participants')]);
             array_splice($values, 8, 0, [(string) (int) ($normalized['concurrent_participants'] ?? 1)]);
         }
+        if (CourseLinkService::schemaReady($db)) {
+            $columns[] = $db->quoteName('is_online');
+            $values[] = !empty($normalized['is_online']) ? '1' : '0';
+            $columns[] = $db->quoteName('online_url');
+            $values[] = (string) ($normalized['online_url'] ?? '') !== '' ? $db->quote((string) $normalized['online_url']) : 'NULL';
+        }
 
         $query = $db->getQuery(true)
             ->insert($db->quoteName('#__vigling_user_courses'))
@@ -850,21 +887,48 @@ final class UserCoursesService
         }
 
         self::saveCourseParts($db, $courseId, $parts);
+        CourseLinkService::saveLinks($db, $courseId, $courseLinks);
 
         if ((string) $normalized['booking_mode'] === 'fixed') {
             if ($parts === []) {
-                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $normalized['slot_start_utc'], (int) $normalized['duration_min'], (int) $normalized['capacity'], 0, null, (string) $normalized['slot_start_local']);
+                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $normalized['slot_start_utc'], (int) $normalized['duration_min'], (int) $normalized['capacity'], 0, null, (string) $normalized['slot_start_local'], 1, (int) ($courseLinks[1]['search_slot_id'] ?? 0));
                 return;
             }
             foreach ($parts as $partNo => $part) {
-                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $part['slot_start_utc'], (int) $part['duration_min'], (int) $part['capacity'], 0, null, (string) $part['slot_start_local'], (int) $partNo);
+                self::upsertCourseSlot($db, $courseId, $userId, 0, (string) $part['slot_start_utc'], (int) $part['duration_min'], (int) $part['capacity'], 0, null, (string) $part['slot_start_local'], (int) $partNo, (int) ($courseLinks[$partNo]['search_slot_id'] ?? 0));
             }
         }
     }
 
     /**
      * @param array<int, array<string,mixed>> $parts
-     * @return array<int, array<string,int>>
+     * @return array<int, array<string,mixed>>
+     */
+    private static function linksFromParts(array $parts): array
+    {
+        $links = [];
+        foreach ($parts as $partNo => $part) {
+            $link = $part['linked_search'] ?? null;
+            if (is_array($link) && (int) ($link['search_id'] ?? 0) > 0) {
+                $links[(int) $partNo] = $link + ['part_no' => (int) $partNo];
+            }
+        }
+        return $links;
+    }
+
+    private static function normalizeOnlineUrl(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '' || strlen($value) > 2048 || filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return '';
+        }
+        $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+        return in_array($scheme, ['http', 'https'], true) ? $value : '';
+    }
+
+    /**
+     * @param array<int, array<string,mixed>> $parts
+     * @return array<int, array<string,mixed>>
      */
     private static function partsForPayload(array $parts): array
     {
@@ -874,6 +938,7 @@ final class UserCoursesService
                 'part_no' => (int) $partNo,
                 'duration_min' => (int) ($part['duration_min'] ?? 0),
                 'capacity' => (int) ($part['capacity'] ?? 1),
+                'linked_search' => is_array($part['linked_search'] ?? null) ? $part['linked_search'] : null,
             ];
         }
 
@@ -956,6 +1021,7 @@ final class UserCoursesService
         if ($requestedMode === 'fixed' && $multi) {
             self::assertFixedPartsInOrder($parts, (string) $normalized['title']);
         }
+        $courseLinks = CourseLinkService::normalizeLinks($db, $userId, self::linksFromParts($parts), max(1, count($parts)));
 
         $coursePayload = [
             'item' => [
@@ -969,6 +1035,8 @@ final class UserCoursesService
                 'capacity' => (int) $normalized['capacity'],
                 'concurrent_participants' => (int) ($normalized['concurrent_participants'] ?? 1),
                 'booking_mode' => $requestedMode,
+                'is_online' => !empty($normalized['is_online']),
+                'online_url' => (string) ($normalized['online_url'] ?? ''),
                 'lessons_count' => max(1, count($parts)),
                 'parts' => self::partsForPayload($parts),
             ],
@@ -990,12 +1058,17 @@ final class UserCoursesService
         if (self::ensureConcurrentParticipantsColumn($db)) {
             $query->set($db->quoteName('concurrent_participants') . ' = ' . (int) ($normalized['concurrent_participants'] ?? 1));
         }
+        if (CourseLinkService::schemaReady($db)) {
+            $query->set($db->quoteName('is_online') . ' = ' . (!empty($normalized['is_online']) ? '1' : '0'));
+            $query->set($db->quoteName('online_url') . ' = ' . ((string) ($normalized['online_url'] ?? '') !== '' ? $db->quote((string) $normalized['online_url']) : 'NULL'));
+        }
         $query
             ->where($db->quoteName('id') . ' = ' . $courseId)
             ->where($db->quoteName('user_id') . ' = ' . $userId);
         $db->setQuery($query)->execute();
 
         self::saveCourseParts($db, $courseId, $parts);
+        CourseLinkService::saveLinks($db, $courseId, $courseLinks);
 
         $oldMedia = trim((string) ($existing['media_path'] ?? ''));
         $newMedia = trim((string) ($normalized['media_path'] ?? ''));
@@ -1020,7 +1093,7 @@ final class UserCoursesService
                     continue;
                 }
                 $partBookings = (int) ($existingParts[$partNo]['booking_count'] ?? ($partNo === 1 ? $bookingCount : 0));
-                self::upsertCourseSlot($db, $courseId, $userId, $existingSlotIds[$partNo] ?? 0, $slotStartUtc, (int) $part['duration_min'], (int) $part['capacity'], $partBookings, $orderTable, (string) $part['slot_start_local'], (int) $partNo);
+                self::upsertCourseSlot($db, $courseId, $userId, $existingSlotIds[$partNo] ?? 0, $slotStartUtc, (int) $part['duration_min'], (int) $part['capacity'], $partBookings, $orderTable, (string) $part['slot_start_local'], (int) $partNo, (int) ($courseLinks[$partNo]['search_slot_id'] ?? 0));
             }
             foreach ($existingSlotIds as $partNo => $slotId) {
                 if (!isset($parts[$partNo]) && $parts !== []) {
@@ -1071,6 +1144,7 @@ final class UserCoursesService
             self::deactivateAndDeleteCourseSlot($db, $slotId);
         }
 
+        CourseLinkService::deleteCourseLinks($db, $courseId);
         if (self::lessonsSchemaReady($db)) {
             $db->setQuery(
                 $db->getQuery(true)
@@ -1100,7 +1174,8 @@ final class UserCoursesService
         int $bookingCount = 0,
         ?OrderTable $orderTable = null,
         string $slotStartLocal = '',
-        int $partNo = 1
+        int $partNo = 1,
+        int $linkedSearchSlotId = 0
     ): void {
         $slotStartUtc = self::normalizeUtcDateTime($slotStartUtc);
         if ($courseId <= 0 || $userId <= 0 || $slotStartUtc === '') {
@@ -1123,7 +1198,10 @@ final class UserCoursesService
 
         if ($slotId <= 0 || $timeChanged) {
             $excludeBookingIds = $slotId > 0 ? self::getCourseSlotBookingIds($db, $slotId, $userId) : [];
-            self::assertFixedSlotCanBeSaved($db, $userId, $start, $end, $slotId, $excludeBookingIds, $slotStartLocal, $durationMin);
+            if ($linkedSearchSlotId > 0) {
+                $excludeBookingIds = array_merge($excludeBookingIds, self::getSearchSlotBookingIds($db, $linkedSearchSlotId, $userId));
+            }
+            self::assertFixedSlotCanBeSaved($db, $userId, $start, $end, $slotId, $excludeBookingIds, $slotStartLocal, $durationMin, $linkedSearchSlotId);
         }
 
         if ($slotId > 0) {
@@ -1286,6 +1364,20 @@ final class UserCoursesService
     /**
      * @return int[]
      */
+    /** @return int[] */
+    private static function getSearchSlotBookingIds(DatabaseInterface $db, int $slotId, int $masterId): array
+    {
+        if ($slotId <= 0) return [];
+        $query = $db->getQuery(true)
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__vigling_bookings'))
+            ->where($db->quoteName('booking_kind') . ' = ' . $db->quote('search'))
+            ->where($db->quoteName('search_slot_id') . ' = ' . $slotId)
+            ->where($db->quoteName('master_id') . ' = ' . $masterId);
+        $db->setQuery($query);
+        return array_map('intval', $db->loadColumn() ?: []);
+    }
+
     private static function getCourseSlotBookingIds(DatabaseInterface $db, int $slotId, int $masterId): array
     {
         if ($slotId <= 0 || $masterId <= 0) {
@@ -1338,7 +1430,8 @@ final class UserCoursesService
         int $excludeSlotId = 0,
         array $excludeBookingIds = [],
         string $slotStartLocal = '',
-        int $durationMin = 0
+        int $durationMin = 0,
+        int $linkedSearchSlotId = 0
     ): void {
         $nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         if ($startUtc <= $nowUtc) {
@@ -1358,6 +1451,9 @@ final class UserCoursesService
         $endDb = $endUtc->format('Y-m-d H:i:s');
         if (self::hasCourseSlotsOverlap($db, $masterId, $startDb, $endDb, $excludeSlotId)) {
             throw new \RuntimeException('На это время уже назначен другой курс');
+        }
+        if (self::hasSearchSlotsOverlap($db, $masterId, $startDb, $endDb, $linkedSearchSlotId)) {
+            throw new \RuntimeException('Это время уже занято другим «Поиском моделей»');
         }
 
         $bookingsTable = $db->getPrefix() . 'vigling_bookings';
@@ -1629,6 +1725,22 @@ final class UserCoursesService
         $db->setQuery($query);
 
         return ((int) $db->loadResult()) > 0;
+    }
+
+    private static function hasSearchSlotsOverlap(DatabaseInterface $db, int $masterId, string $startUtc, string $endUtc, int $excludeSlotId = 0): bool
+    {
+        $query = $db->getQuery(true)
+            ->select('COUNT(*)')
+            ->from($db->quoteName('#__vigling_search_slots'))
+            ->where($db->quoteName('master_id') . ' = ' . $masterId)
+            ->where($db->quoteName('is_active') . ' = 1')
+            ->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($endUtc))
+            ->where($db->quoteName('ends_at_utc') . ' > ' . $db->quote($startUtc));
+        if ($excludeSlotId > 0) {
+            $query->where($db->quoteName('id') . ' <> ' . $excludeSlotId);
+        }
+        $db->setQuery($query);
+        return (int) $db->loadResult() > 0;
     }
 
     private static function hasCourseSlotsOverlap(

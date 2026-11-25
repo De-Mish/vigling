@@ -1,0 +1,3 @@
+SELECT '1. user_courses.is_online present (0 before apply, 1 after)' AS check_name, COUNT(*) AS cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_user_courses' AND COLUMN_NAME='is_online';
+SELECT '2. user_courses.online_url present (0 before apply, 1 after)' AS check_name, COUNT(*) AS cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_user_courses' AND COLUMN_NAME='online_url';
+SELECT '3. course_search_links present (0 before apply, 1 after)' AS check_name, COUNT(*) AS cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='joomla_vigling_course_search_links';

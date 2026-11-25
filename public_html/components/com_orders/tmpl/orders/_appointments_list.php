@@ -203,6 +203,9 @@ $grIso = static function (string $utc): string {
 					<div class="appointments-card__label">Услуга</div>
 					<div class="appointments-card__value">
 						<?php echo htmlspecialchars($serviceLabel); ?>
+						<?php if (trim((string) ($item->course_online_url ?? '')) !== '') : ?>
+							<div class="course-online-link"><a href="<?php echo htmlspecialchars((string) $item->course_online_url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">Открыть онлайн-курс</a></div>
+						<?php endif; ?>
 						<?php if ($completed) : ?>
 							<div class="course-meta">Выполнено</div>
 						<?php endif; ?>

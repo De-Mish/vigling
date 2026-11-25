@@ -301,6 +301,8 @@ class OrdersModel extends ListModel
 					$item->course_title = trim((string) ($courseInfo['title'] ?? $courseInfo['description'] ?? ''));
 					$item->course_description = trim((string) ($courseInfo['description'] ?? ''));
 					$item->course_capacity = (int) ($courseInfo['capacity'] ?? 0);
+					$item->course_is_online = !empty($courseInfo['is_online']);
+					$item->course_online_url = $item->course_is_online ? trim((string) ($courseInfo['online_url'] ?? '')) : '';
 					$item->course_slot_capacity_total = (int) ($slotInfo['capacity_total'] ?? 0);
 					$item->course_slot_start_utc = trim((string) ($slotInfo['starts_at_utc'] ?? ''));
 					$item->course_slot_end_utc = trim((string) ($slotInfo['ends_at_utc'] ?? ''));
@@ -374,6 +376,8 @@ class OrdersModel extends ListModel
 					$item->course_title = trim((string) ($courseInfo['title'] ?? $courseInfo['description'] ?? ''));
 					$item->course_description = trim((string) ($courseInfo['description'] ?? ''));
 					$item->course_capacity = (int) ($courseInfo['capacity'] ?? 0);
+					$item->course_is_online = !empty($courseInfo['is_online']);
+					$item->course_online_url = $item->course_is_online ? trim((string) ($courseInfo['online_url'] ?? '')) : '';
 					$item->course_slot_capacity_total = (int) ($slotInfo['capacity_total'] ?? 0);
 					$item->course_slot_start_utc = trim((string) ($slotInfo['starts_at_utc'] ?? ''));
 					$item->course_slot_end_utc = trim((string) ($slotInfo['ends_at_utc'] ?? ''));
@@ -448,14 +452,20 @@ class OrdersModel extends ListModel
 		}
 
 		$db = $this->getDatabase();
-		$query = $db->getQuery(true)
-			->select([
+		$select = [
 				$db->quoteName('c.id'),
 				$db->quoteName('c.title'),
 				$db->quoteName('c.description'),
 				$db->quoteName('c.capacity'),
 				$db->quoteName('cat.title', 'category_title'),
-			])
+		];
+		$courseColumns = array_change_key_case($db->getTableColumns('#__vigling_user_courses', false), CASE_LOWER);
+		if (isset($courseColumns['is_online'], $courseColumns['online_url'])) {
+			$select[] = $db->quoteName('c.is_online');
+			$select[] = $db->quoteName('c.online_url');
+		}
+		$query = $db->getQuery(true)
+			->select($select)
 			->from($db->quoteName('#__vigling_user_courses', 'c'))
 			->join('LEFT', $db->quoteName('#__categories', 'cat') . ' ON ' . $db->quoteName('cat.id') . ' = ' . $db->quoteName('c.category_id'))
 			->whereIn($db->quoteName('c.id'), $ids);
@@ -473,6 +483,8 @@ class OrdersModel extends ListModel
 				'title' => trim((string) ($row['title'] ?? $row['description'] ?? '')),
 				'description' => trim((string) ($row['description'] ?? '')),
 				'capacity' => (int) ($row['capacity'] ?? 0),
+				'is_online' => !empty($row['is_online']),
+				'online_url' => trim((string) ($row['online_url'] ?? '')),
 			];
 		}
 

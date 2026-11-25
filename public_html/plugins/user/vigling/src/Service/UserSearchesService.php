@@ -612,7 +612,7 @@ final class UserSearchesService
 
         if ($slotId <= 0 || $timeChanged) {
             $excludeBookingIds = $slotId > 0 ? self::getSearchSlotBookingIds($db, $slotId, $userId) : [];
-            self::assertFixedSlotCanBeSaved($db, $userId, $start, $end, $slotId, $excludeBookingIds, $slotStartLocal, $durationMin);
+            self::assertFixedSlotCanBeSaved($db, $userId, $start, $end, $slotId, $excludeBookingIds, $slotStartLocal, $durationMin, $searchId);
         }
 
         if ($slotId > 0) {
@@ -823,7 +823,8 @@ final class UserSearchesService
         int $excludeSlotId = 0,
         array $excludeBookingIds = [],
         string $slotStartLocal = '',
-        int $durationMin = 0
+        int $durationMin = 0,
+        int $searchId = 0
     ): void {
         $nowUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         if ($startUtc <= $nowUtc) {
@@ -844,8 +845,12 @@ final class UserSearchesService
         if (self::hasSearchSlotsOverlap($db, $masterId, $startDb, $endDb, $excludeSlotId)) {
             throw new \RuntimeException('На это время уже назначен другой поиск');
         }
-        if (self::hasCourseSlotsOverlap($db, $masterId, $startDb, $endDb)) {
-            throw new \RuntimeException('Это время уже занято курсом');
+        $linkedCourseSlotIds = CourseLinkService::linkedCourseSlotIds($db, $searchId);
+        if (self::hasCourseSlotsOverlap($db, $masterId, $startDb, $endDb, $linkedCourseSlotIds)) {
+            throw new \RuntimeException('Это время уже занято другим курсом');
+        }
+        if ($linkedCourseSlotIds !== []) {
+            $excludeBookingIds = array_merge($excludeBookingIds, self::getCourseSlotBookingIdsForLinks($db, $linkedCourseSlotIds, $masterId));
         }
 
         $bookingsTable = $db->getPrefix() . 'vigling_bookings';
@@ -1141,11 +1146,27 @@ final class UserSearchesService
         return ((int) $db->loadResult()) > 0;
     }
 
+    /** @param int[] $slotIds @return int[] */
+    private static function getCourseSlotBookingIdsForLinks(DatabaseInterface $db, array $slotIds, int $masterId): array
+    {
+        $slotIds = array_values(array_filter(array_map('intval', $slotIds)));
+        if ($slotIds === []) return [];
+        $query = $db->getQuery(true)
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__vigling_bookings'))
+            ->where($db->quoteName('booking_kind') . ' = ' . $db->quote('course'))
+            ->whereIn($db->quoteName('course_slot_id'), $slotIds)
+            ->where($db->quoteName('master_id') . ' = ' . $masterId);
+        $db->setQuery($query);
+        return array_map('intval', $db->loadColumn() ?: []);
+    }
+
     private static function hasCourseSlotsOverlap(
         DatabaseInterface $db,
         int $masterId,
         string $startUtc,
-        string $endUtc
+        string $endUtc,
+        array $excludeSlotIds = []
     ): bool {
         try {
             $query = $db->getQuery(true)
@@ -1155,6 +1176,10 @@ final class UserSearchesService
                 ->where($db->quoteName('is_active') . ' = 1')
                 ->where($db->quoteName('starts_at_utc') . ' < ' . $db->quote($endUtc))
                 ->where($db->quoteName('ends_at_utc') . ' > ' . $db->quote($startUtc));
+            $excludeSlotIds = array_values(array_filter(array_map('intval', $excludeSlotIds)));
+            if ($excludeSlotIds !== []) {
+                $query->where($db->quoteName('id') . ' NOT IN (' . implode(', ', $excludeSlotIds) . ')');
+            }
             $db->setQuery($query);
 
             return ((int) $db->loadResult()) > 0;
