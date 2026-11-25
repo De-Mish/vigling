@@ -123,6 +123,9 @@ $repeatAction = Route::_('index.php?option=com_orders&task=orders.repeat');
 					?></td>
 					<td data-label="Услуга">
 						<?php echo htmlspecialchars((string) ($item->service_display_name ?? $item->service_name)); ?>
+						<?php if (trim((string) ($item->course_online_url ?? '')) !== '') : ?>
+							<div class="course-online-link"><a href="<?php echo htmlspecialchars((string) $item->course_online_url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">Открыть онлайн-курс</a></div>
+						<?php endif; ?>
 						<?php if ($isFixedCourse || $isFixedSearch) : ?>
 							<div style="font-size:13px;color:#666;margin-top:4px;">Время <?php echo $isFixedSearch ? 'поиска' : 'курса'; ?> задаёт мастер для всей группы</div>
 						<?php endif; ?>

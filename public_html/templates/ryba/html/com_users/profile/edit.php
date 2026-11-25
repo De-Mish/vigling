@@ -894,6 +894,7 @@ $courseLessonsForBuilder = static function (array $parts, bool $keepBookings): a
 			'duration' => (int) ($part['duration_min'] ?? 0),
 			'capacity' => max(1, (int) ($part['capacity'] ?? 1)),
 			'slotStartUtc' => (string) ($part['slot_start_utc'] ?? ''),
+			'linkedSearch' => is_array($part['linked_search'] ?? null) ? $part['linked_search'] : null,
 			'bookingCount' => $keepBookings ? (int) ($part['booking_count'] ?? 0) : 0,
 		];
 	}
@@ -916,6 +917,8 @@ try {
 				'capacity' => (int) ($course['capacity'] ?? 1),
 				'concurrentParticipants' => (int) ($course['concurrent_participants'] ?? 1),
 				'bookingMode' => (string) ($course['booking_mode'] ?? 'free'),
+				'isOnline' => !empty($course['is_online']),
+				'onlineUrl' => (string) ($course['online_url'] ?? ''),
 				'bookingCount' => (int) ($course['booking_count'] ?? 0),
 				'slotStartUtc' => (string) ($course['slot_start_utc'] ?? ''),
 				'lessonsCount' => max(1, (int) ($course['lessons_count'] ?? 1)),
@@ -943,6 +946,8 @@ if ($repeatCourseId > 0 && $isMaster && class_exists(\Joomla\Plugin\User\Vigling
 			'capacity' => (int) ($repeatCourse['capacity'] ?? 1),
 			'concurrentParticipants' => (int) ($repeatCourse['concurrent_participants'] ?? 1),
 			'bookingMode' => (string) ($repeatCourse['booking_mode'] ?? 'free'),
+			'isOnline' => !empty($repeatCourse['is_online']),
+			'onlineUrl' => (string) ($repeatCourse['online_url'] ?? ''),
 			'bookingCount' => 0,
 			'slotStartUtc' => (string) ($repeatCourse['slot_start_utc'] ?? ''),
 			'lessonsCount' => max(1, (int) ($repeatCourse['lessons_count'] ?? 1)),
@@ -968,6 +973,7 @@ try {
 				'capacity' => (int) ($search['capacity'] ?? 1),
 				'bookingMode' => (string) ($search['booking_mode'] ?? 'free'),
 				'bookingCount' => (int) ($search['booking_count'] ?? 0),
+				'slotId' => (int) ($search['slot_id'] ?? 0),
 				'slotStartUtc' => (string) ($search['slot_start_utc'] ?? ''),
 			];
 		}
@@ -2817,6 +2823,84 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part-title {
 	display: block !important;
 }
+/* Online mode and model-search linking */
+.profile-edit #jform_courses_servis .course_link-search-toggle-wrap,
+.profile-edit #jform_courses_servis .course_online-toggle-wrap {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px;
+	width: 100% !important;
+	padding: 6px 0 !important;
+	font-weight: 600;
+}
+.profile-edit #jform_courses_servis .course_online-url {
+	display: none !important;
+	flex-direction: column !important;
+	gap: 4px;
+	width: 100% !important;
+}
+.profile-edit #jform_courses_servis .service__item.is-online-course .course_online-url {
+	display: flex !important;
+}
+.profile-edit #jform_courses_servis .course_online-url input {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+}
+.profile-edit #jform_courses_servis .course-search-link {
+	display: none !important;
+	position: relative;
+	flex-direction: column !important;
+	gap: 6px;
+	width: 100% !important;
+	padding-top: 6px;
+}
+.profile-edit #jform_courses_servis .service__item.is-linking-search .course-search-link {
+	display: flex !important;
+}
+.profile-edit #jform_courses_servis .course-search-options {
+	display: grid;
+	gap: 4px;
+	width: 100%;
+	max-height: 240px;
+	padding: 6px;
+	overflow-y: auto;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	background: #fff;
+	box-sizing: border-box;
+}
+.profile-edit #jform_courses_servis .course-search-options[hidden],
+.profile-edit #jform_courses_servis .course-search-selected[hidden],
+.profile-edit #jform_courses_servis .course-search-open[hidden] {
+	display: none !important;
+}
+.profile-edit #jform_courses_servis .course-search-option,
+.profile-edit #jform_courses_servis .course-search-open {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid #ccc;
+	border-radius: 7px;
+	background: #fff;
+	text-align: left;
+	cursor: pointer;
+}
+.profile-edit #jform_courses_servis .course-search-selected {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 7px;
+	background: #f1f1f1;
+}
+.profile-edit #jform_courses_servis .course-search-clear {
+	flex: 0 0 auto;
+	border: 0;
+	background: transparent;
+	font-size: 22px;
+	cursor: pointer;
+}
 /* "Одновременно участников" is shown for every booking mode and any number of lessons */
 .profile-edit #jform_courses_servis .service__item .course_concurrent {
 	display: flex !important;
@@ -4441,12 +4525,31 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	 * Lesson 1 keeps the original class names, so code that reads the first
 	 * .course-duration-select / .course-capacity-input / .course-slot-input keeps working.
 	 */
+	function linkedSearchLabel(search) {
+		if (!search) return '';
+		var mode = String(search.bookingMode || search.search_booking_mode || 'free') === 'fixed' ? 'Фиксированная дата' : 'Любое время';
+		var when = String(search.slotStartUtc || search.search_slot_start_utc || '').trim();
+		return String(search.title || search.search_title || 'Поиск моделей') + ' — ' + mode + (when ? ' — ' + when : '');
+	}
+	function linkedSearchPickerHtml(partNo) {
+		var items = initialSearchRows.filter(function(search){ return parseInt(search.id || 0, 10) > 0; });
+		var buttons = items.map(function(search){
+			return '<button type="button" class="course-search-option" data-search-id="' + parseInt(search.id, 10) + '" data-search-slot-id="' + parseInt(search.slotId || 0, 10) + '">' + escapeHtml(linkedSearchLabel(search)) + '</button>';
+		}).join('');
+		return '<span class="course-search-link" data-part="' + partNo + '">' +
+			'<button type="button" class="course-search-open">Привязать «Поиск моделей»</button>' +
+			'<span class="course-search-options" hidden>' + (buttons || '<span class="course-search-empty">Сначала создайте активный «Поиск моделей».</span>') + '</span>' +
+			'<span class="course-search-selected" hidden><span class="course-search-selected-text"></span><button type="button" class="course-search-clear" title="Отвязать" aria-label="Отвязать">×</button></span>' +
+			'<input type="hidden" class="course-linked-search-id" value="0"><input type="hidden" class="course-linked-search-slot-id" value="0">' +
+			'</span>';
+	}
 	function coursePartHtml(partNo) {
 		return '<span class="course_part" data-part="' + partNo + '">' +
 			'<span class="course_part-title">Занятие ' + partNo + '</span>' +
 			'<span class="course_slot"><label>Дата и время:</label>' + fixedSlotFieldsHtml('course') + '</span>' +
 			'<span class="course_duration"><label>Длительность:</label><select class="course-duration-select">' + durationOptionsHtml() + '</select>&nbsp;мин.</span>' +
 			'<span class="course_capacity"><label>Лимит мест:</label><input type="number" min="1" step="1" class="course-capacity-input" value="1" /></span>' +
+			linkedSearchPickerHtml(partNo) +
 			'</span>';
 	}
 	function courseLessonsCountOf(row) {
@@ -4518,6 +4621,10 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		}
 		row.classList.toggle('is-free-mode', mode !== 'fixed');
 		row.classList.toggle('has-capacity', capacity >= 1);
+		var linkToggle = row.querySelector('.course-link-search-toggle');
+		row.classList.toggle('is-linking-search', !!(linkToggle && linkToggle.checked));
+		var onlineToggle = row.querySelector('.course-online-toggle');
+		row.classList.toggle('is-online-course', !!(onlineToggle && onlineToggle.checked));
 		if (mode !== 'fixed') {
 			row.querySelectorAll('.course-slot-input').forEach(function(slotInput){
 				fillFixedSlotParts(slotInput, '');
@@ -4536,6 +4643,20 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			concurrentInput.value = String(concurrent);
 		}
 	}
+	function setCourseLinkedSearch(partNode, searchId, slotId, label) {
+		if (!partNode) return;
+		var picker = partNode.querySelector('.course-search-link');
+		if (!picker) return;
+		picker.querySelector('.course-linked-search-id').value = String(Math.max(0, searchId || 0));
+		picker.querySelector('.course-linked-search-slot-id').value = String(Math.max(0, slotId || 0));
+		var selected = picker.querySelector('.course-search-selected');
+		var open = picker.querySelector('.course-search-open');
+		var options = picker.querySelector('.course-search-options');
+		selected.hidden = !(searchId > 0);
+		open.hidden = searchId > 0;
+		options.hidden = true;
+		selected.querySelector('.course-search-selected-text').textContent = label || '';
+	}
 	function addCourseRow(categoryLabel, rowData) {
 	var catId = parseInt(categoryLabel.getAttribute('data-id') || '0', 10);
 	if (!catId) {
@@ -4552,10 +4673,13 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 	row.setAttribute('data-booking-count', rowData && rowData.bookingCount ? String(parseInt(rowData.bookingCount, 10) || 0) : '0');
 	row.innerHTML =
 		'<span class="course_title"><label>Название курса:</label><input type="text" maxlength="150" class="course-title-input" value="" /></span>' +
+		'<label class="course_link-search-toggle-wrap"><input type="checkbox" class="course-link-search-toggle"> <span>Привязать «Поиск моделей»</span></label>' +
 		'<span class="course_desc"><label>Описание:</label><textarea maxlength="150" placeholder="До 150 символов" class="course-description-input"></textarea></span>' +
 		'<span class="course_media"><label>Изображение:</label><span class="course-media-field"><input type="hidden" class="course-media-input" value="" /><input type="file" name="jform[upload_course_media][]" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/jpeg,image/png,image/webp,image/gif" class="course-media-file-input" data-vigling-manual="1" /><span class="media-preview-thumb" hidden><img alt=""><button type="button" class="lk-portfolio-remove media-preview-remove" title="Удалить">×</button></span><span class="course-media-current">Файл не выбран</span></span></span>' +
 		'<span class="course_price"><label>Стоимость:</label><input type="number" min="0" step="1" class="course-price-input" value="" /></span>' +
 		'<span class="course_mode"><label>Режим записи:</label><select class="course-mode-select"><option value="free">Любое время</option><option value="fixed">Фиксированная дата</option></select></span>' +
+		'<label class="course_online-toggle-wrap"><input type="checkbox" class="course-online-toggle"> <span>Онлайн</span></label>' +
+		'<span class="course_online-url"><label>Ссылка на онлайн-курс:</label><input type="url" maxlength="2048" class="course-online-url-input" placeholder="Вставьте ссылку на место проведения курса" /></span>' +
 		'<span class="course_lessons"><label>Количество занятий:</label><select class="course-lessons-select">' + courseLessonsOptionsHtml() + '</select></span>' +
 		'<span class="course_parts">' + coursePartHtml(1) + '</span>' +
 		'<span class="course_concurrent"><label>Одновременно участников:</label><input type="number" min="1" step="1" class="course-concurrent-input" value="1" /></span>' +
@@ -4569,12 +4693,18 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 		var priceInput = row.querySelector('.course-price-input');
 		var concurrentInput = row.querySelector('.course-concurrent-input');
 		var modeSelect = row.querySelector('.course-mode-select');
+		var onlineToggle = row.querySelector('.course-online-toggle');
+		var onlineUrlInput = row.querySelector('.course-online-url-input');
+		var linkToggle = row.querySelector('.course-link-search-toggle');
 		if (titleInput) titleInput.value = String(rowData.title || rowData.description || '');
 		if (descriptionInput) descriptionInput.value = String(rowData.description || '');
 		if (mediaInput) mediaInput.value = String(rowData.mediaPath || '');
 		if (priceInput) priceInput.value = String(parseInt(rowData.price || '0', 10) || 0);
 		if (concurrentInput) concurrentInput.value = String(Math.max(1, parseInt(rowData.concurrentParticipants || '1', 10) || 1));
 		if (modeSelect) modeSelect.value = String(rowData.bookingMode || 'free');
+		if (onlineToggle) onlineToggle.checked = !!rowData.isOnline;
+		if (onlineUrlInput) onlineUrlInput.value = String(rowData.onlineUrl || '');
+		if (linkToggle) linkToggle.checked = Array.isArray(rowData.parts) && rowData.parts.some(function(part){ return part && part.linkedSearch && parseInt(part.linkedSearch.search_id || 0, 10) > 0; });
 		var lessons = Array.isArray(rowData.parts) && rowData.parts.length ? rowData.parts : [{
 			duration: rowData.duration,
 			capacity: rowData.capacity,
@@ -4596,6 +4726,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				var localValue = lesson.slotStartLocal ? String(lesson.slotStartLocal) : formatDatetimeLocal(String(lesson.slotStartUtc || ''));
 				fillFixedSlotParts(slotInput, localValue);
 			}
+			var linked = lesson.linkedSearch || null;
+			if (linked && parseInt(linked.search_id || 0, 10) > 0) setCourseLinkedSearch(partNode, parseInt(linked.search_id, 10), parseInt(linked.search_slot_id || 0, 10), linkedSearchLabel(linked));
 			partNode.setAttribute('data-booking-count', String(parseInt(lesson.bookingCount || '0', 10) || 0));
 		});
 	}
@@ -4611,6 +4743,15 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			syncCourseEditConstraints(row);
 		});
 	}
+	[onlineToggle, linkToggle].forEach(function(toggle){ if (toggle) toggle.addEventListener('change', function(){ syncCourseModeState(row); }); });
+	row.addEventListener('click', function(event){
+		var open = event.target.closest('.course-search-open');
+		if (open) { var options = open.closest('.course-search-link').querySelector('.course-search-options'); options.hidden = !options.hidden; return; }
+		var option = event.target.closest('.course-search-option');
+		if (option) { setCourseLinkedSearch(option.closest('.course_part'), parseInt(option.getAttribute('data-search-id') || '0', 10), parseInt(option.getAttribute('data-search-slot-id') || '0', 10), option.textContent.trim()); return; }
+		var clear = event.target.closest('.course-search-clear');
+		if (clear) setCourseLinkedSearch(clear.closest('.course_part'), 0, 0, '');
+	});
 	if (lessonsSelect) {
 		lessonsSelect.addEventListener('change', function(){
 			syncCourseParts(row);
@@ -4682,6 +4823,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 			var concurrentInput = row.querySelector('.course-concurrent-input');
 			var modeSelect = row.querySelector('.course-mode-select');
 			var slotInput = row.querySelector('.course-slot-input');
+			var onlineToggle = row.querySelector('.course-online-toggle');
+			var onlineUrlInput = row.querySelector('.course-online-url-input');
+			var linkToggle = row.querySelector('.course-link-search-toggle');
 			var parts = coursePartNodes(row).map(function(partNode){
 				var partDuration = partNode.querySelector('.course-duration-select');
 				var partCapacity = partNode.querySelector('.course-capacity-input');
@@ -4692,6 +4836,7 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 					capacity: parseInt(partCapacity ? String(partCapacity.value || '1') : '1', 10) || 1,
 					slotStartLocal: partLocal,
 					slotStartUtc: normalizeDatetimeFromLocal(partLocal),
+					linkedSearch: linkToggle && linkToggle.checked ? { part_no: parseInt(partNode.getAttribute('data-part') || '1', 10) || 1, search_id: parseInt(String((partNode.querySelector('.course-linked-search-id') || {}).value || '0'), 10) || 0, search_slot_id: parseInt(String((partNode.querySelector('.course-linked-search-slot-id') || {}).value || '0'), 10) || 0 } : null,
 					bookingCount: parseInt(String(partNode.getAttribute('data-booking-count') || '0'), 10) || 0
 				};
 			});
@@ -4706,6 +4851,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				capacity: parseInt(capacityInput ? String(capacityInput.value || '1') : '1', 10) || 1,
 				concurrentParticipants: parseInt(concurrentInput ? String(concurrentInput.value || '1') : '1', 10) || 1,
 				bookingMode: modeSelect ? String(modeSelect.value || 'free') : 'free',
+				isOnline: !!(onlineToggle && onlineToggle.checked),
+				onlineUrl: onlineUrlInput ? String(onlineUrlInput.value || '').trim() : '',
 				bookingCount: parseInt(String(row.getAttribute('data-booking-count') || '0'), 10) || 0,
 				slotStartLocal: slotInput ? String(slotInput.value || '') : '',
 				slotStartUtc: normalizeDatetimeFromLocal(slotInput ? String(slotInput.value || '') : ''),
@@ -4735,7 +4882,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 					duration_min: parseInt(lesson.duration || 0, 10) || 0,
 					capacity: Math.max(1, parseInt(lesson.capacity || 1, 10) || 1),
 					slot_start_utc: bookingMode === 'fixed' ? String(lesson.slotStartUtc || '').trim() : '',
-					slot_start_local: bookingMode === 'fixed' ? String(lesson.slotStartLocal || '').trim() : ''
+					slot_start_local: bookingMode === 'fixed' ? String(lesson.slotStartLocal || '').trim() : '',
+					linked_search: lesson.linkedSearch && parseInt(lesson.linkedSearch.search_id || 0, 10) > 0 ? lesson.linkedSearch : null
 				};
 			});
 			var duration = parts[0].duration_min;
@@ -4759,6 +4907,8 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 				capacity: capacity,
 				concurrent_participants: concurrent,
 				booking_mode: bookingMode,
+				is_online: !!row.isOnline,
+				online_url: row.isOnline ? String(row.onlineUrl || '').trim() : '',
 				slot_start_utc: parts[0].slot_start_utc,
 				slot_start_local: parts[0].slot_start_local,
 				lessons_count: parts.length,

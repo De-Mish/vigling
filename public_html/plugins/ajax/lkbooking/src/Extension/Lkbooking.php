@@ -218,6 +218,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$courseContext = null;
 		$searchContext = null;
 		$extraCourseSegments = [];
+		$linkedSearchSegments = [];
 		if ($bookingKind === 'course') {
 			if ($courseId <= 0) {
 				$event->updateEventResult(['success' => false, 'message' => 'Не указан курс']);
@@ -422,6 +423,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			'start' => \DateTimeImmutable::createFromMutable($time),
 			'end' => \DateTimeImmutable::createFromMutable($occupiedTo),
 			'slot_capacity_total' => (int) ($courseContext['slot_capacity_total'] ?? 0),
+			'linked_search' => $bookingKind === 'course' ? ($courseContext['parts'][$coursePart]['linked_search'] ?? null) : null,
 		]];
 		foreach ($extraCourseSegments as $extra) {
 			$segments[] = [
@@ -433,7 +435,57 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				'start' => \DateTimeImmutable::createFromMutable($extra['time']),
 				'end' => \DateTimeImmutable::createFromMutable($extra['time_to']),
 				'slot_capacity_total' => (int) $extra['slot_capacity_total'],
+				'linked_search' => $courseContext['parts'][(int) $extra['part']]['linked_search'] ?? null,
 			];
+		}
+
+		if ($bookingKind === 'course') {
+			$seenLinkedSearches = [];
+			foreach ($segments as $segment) {
+				$link = is_array($segment['linked_search'] ?? null) ? $segment['linked_search'] : null;
+				$linkedSearchId = (int) ($link['search_id'] ?? 0);
+				if ($linkedSearchId <= 0) continue;
+				if (isset($seenLinkedSearches[$linkedSearchId])) {
+					$event->updateEventResult(['success' => false, 'message' => 'Один «Поиск моделей» привязан к нескольким занятиям курса']);
+					return;
+				}
+				if (self::hasUserSearchBooking($db, (int) $user->id, $linkedSearchId)) {
+					$event->updateEventResult(['success' => false, 'message' => 'Вы уже записаны в привязанный «Поиск моделей»']);
+					return;
+				}
+				$linkedSlotId = (int) ($link['search_slot_id'] ?? 0);
+				$linkedContext = self::loadSearchContext($db, $linkedSearchId, $masterId, $linkedSlotId);
+				if ($linkedContext === null) {
+					$event->updateEventResult(['success' => false, 'message' => 'Привязанный «Поиск моделей» не найден или больше не активен']);
+					return;
+				}
+				$fixedLinked = trim((string) ($linkedContext['booking_mode'] ?? 'free')) === 'fixed';
+				try {
+					if ($fixedLinked) {
+						$linkedStart = new \DateTimeImmutable((string) $linkedContext['slot_start_utc'], $utc);
+						$linkedEnd = new \DateTimeImmutable((string) $linkedContext['slot_end_utc'], $utc);
+					} else {
+						$linkedStart = new \DateTimeImmutable((string) $segment['time_db'], $utc);
+						$linkedEnd = $linkedStart->modify('+' . max(15, (int) ($linkedContext['duration_min'] ?? 60)) . ' minutes');
+						$linkedSlotId = 0;
+					}
+				} catch (\Throwable $e) {
+					$event->updateEventResult(['success' => false, 'message' => 'У привязанного «Поиска моделей» указано неверное время']);
+					return;
+				}
+				$linkedSearchSegments[] = [
+					'search_id' => $linkedSearchId,
+					'search_slot_id' => $linkedSlotId,
+					'course_slot_id' => (int) $segment['slot_id'],
+					'time_db' => $linkedStart->format('Y-m-d H:i:s'),
+					'time_to_db' => $linkedEnd->format('Y-m-d H:i:s'),
+					'start' => $linkedStart,
+					'end' => $linkedEnd,
+					'context' => $linkedContext,
+					'service_name' => (string) ($linkedContext['service_name'] ?? 'Поиск моделей'),
+				];
+				$seenLinkedSearches[$linkedSearchId] = true;
+			}
 		}
 
 		$nowUtc = new \DateTimeImmutable('now', $utc);
@@ -445,6 +497,18 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			$scheduleCheck = self::validateMasterSchedule($masterId, $segment['start'], $segment['end'], $masterTimezone);
 			if (!$scheduleCheck['ok']) {
 				$event->updateEventResult(['success' => false, 'message' => (string) ($scheduleCheck['message'] ?? 'Время вне расписания мастера')]);
+				return;
+			}
+		}
+
+		foreach ($linkedSearchSegments as $linkedSegment) {
+			if ($linkedSegment['start'] <= $nowUtc) {
+				$event->updateEventResult(['success' => false, 'message' => 'Время привязанного «Поиска моделей» уже прошло']);
+				return;
+			}
+			$scheduleCheck = self::validateMasterSchedule($masterId, $linkedSegment['start'], $linkedSegment['end'], $masterTimezone);
+			if (!$scheduleCheck['ok']) {
+				$event->updateEventResult(['success' => false, 'message' => (string) ($scheduleCheck['message'] ?? 'Время привязанного поиска вне расписания мастера')]);
 				return;
 			}
 		}
@@ -467,7 +531,22 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$hasCourseBookingColumns,
 				$hasSearchBookingColumns,
 				$segment['time_to_db'],
-				$coursePartsReady ? (int) $segment['part'] : 0
+				$coursePartsReady ? (int) $segment['part'] : 0,
+				(int) (($segment['linked_search']['search_slot_id'] ?? 0)),
+				(int) (($segment['linked_search']['search_id'] ?? 0))
+			);
+			if ($conflict !== null) {
+				$event->updateEventResult(['success' => false, 'message' => $conflict]);
+				return;
+			}
+		}
+		foreach ($linkedSearchSegments as $linkedSegment) {
+			$conflict = self::bookingCreateConflictMessage(
+				$db, $table, (int) $user->id, $masterId, 'search', 0,
+				(int) $linkedSegment['course_slot_id'], (int) $linkedSegment['search_id'], (int) $linkedSegment['search_slot_id'],
+				(string) $linkedSegment['time_db'], (string) $linkedSegment['time_to_db'], null,
+				(array) $linkedSegment['context'], $hasCourseBookingColumns, $hasSearchBookingColumns,
+				(string) $linkedSegment['time_to_db'], 0, 0, 0, (int) $linkedSegment['course_slot_id']
 			);
 			if ($conflict !== null) {
 				$event->updateEventResult(['success' => false, 'message' => $conflict]);
@@ -536,6 +615,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		}
 		$slotColumnIndex = array_search('course_slot_id', $columns, true);
 		$partColumnIndex = array_search('course_part', $columns, true);
+		$kindColumnIndex = array_search('booking_kind', $columns, true);
+		$courseColumnIndex = array_search('course_id', $columns, true);
+		$searchColumnIndex = array_search('search_id', $columns, true);
+		$searchSlotColumnIndex = array_search('search_slot_id', $columns, true);
 
 		$lockHeld = false;
 		$transactionStarted = false;
@@ -557,6 +640,9 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			foreach ($segments as $segment) {
 				self::lockBookingParents($db, $bookingKind, $masterId, $courseId, (int) $segment['slot_id'], $searchId, $searchSlotId);
 			}
+			foreach ($linkedSearchSegments as $linkedSegment) {
+				self::lockBookingParents($db, 'search', $masterId, 0, 0, (int) $linkedSegment['search_id'], (int) $linkedSegment['search_slot_id']);
+			}
 
 			foreach ($segments as $segment) {
 				$conflict = self::bookingCreateConflictMessage(
@@ -576,13 +662,28 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 					$hasCourseBookingColumns,
 					$hasSearchBookingColumns,
 					$segment['time_to_db'],
-					$coursePartsReady ? (int) $segment['part'] : 0
+					$coursePartsReady ? (int) $segment['part'] : 0,
+					(int) (($segment['linked_search']['search_slot_id'] ?? 0)),
+					(int) (($segment['linked_search']['search_id'] ?? 0))
 				);
 				if ($conflict !== null) {
 					$db->transactionRollback();
 					$transactionStarted = false;
 					$event->updateEventResult(['success' => false, 'message' => $conflict]);
 					return;
+				}
+			}
+			foreach ($linkedSearchSegments as $linkedSegment) {
+				$conflict = self::bookingCreateConflictMessage(
+					$db, $table, (int) $user->id, $masterId, 'search', 0,
+					(int) $linkedSegment['course_slot_id'], (int) $linkedSegment['search_id'], (int) $linkedSegment['search_slot_id'],
+					(string) $linkedSegment['time_db'], (string) $linkedSegment['time_to_db'], null,
+					(array) $linkedSegment['context'], $hasCourseBookingColumns, $hasSearchBookingColumns,
+					(string) $linkedSegment['time_to_db'], 0, 0, 0, (int) $linkedSegment['course_slot_id']
+				);
+				if ($conflict !== null) {
+					$db->transactionRollback(); $transactionStarted = false;
+					$event->updateEventResult(['success' => false, 'message' => $conflict]); return;
 				}
 			}
 
@@ -602,6 +703,20 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				$db->setQuery(
 					'INSERT INTO ' . $db->quoteName($table) . ' (' . implode(', ', array_map([$db, 'quoteName'], $columns)) . ') VALUES (' . implode(', ', $rowValues) . ')'
 				)->execute();
+				$insertedIds[] = (int) $db->insertid();
+			}
+			foreach ($linkedSearchSegments as $linkedSegment) {
+				$rowValues = $values;
+				$rowValues[2] = $db->quote($linkedSegment['time_db']);
+				$rowValues[3] = $db->quote($linkedSegment['time_to_db']);
+				$rowValues[4] = $db->quote(mb_substr((string) $linkedSegment['service_name'], 0, 255));
+				if ($kindColumnIndex !== false) $rowValues[$kindColumnIndex] = $db->quote('search');
+				if ($courseColumnIndex !== false) $rowValues[$courseColumnIndex] = 'NULL';
+				if ($slotColumnIndex !== false) $rowValues[$slotColumnIndex] = 'NULL';
+				if ($partColumnIndex !== false) $rowValues[$partColumnIndex] = '1';
+				if ($searchColumnIndex !== false) $rowValues[$searchColumnIndex] = (string) (int) $linkedSegment['search_id'];
+				if ($searchSlotColumnIndex !== false) $rowValues[$searchSlotColumnIndex] = (int) $linkedSegment['search_slot_id'] > 0 ? (string) (int) $linkedSegment['search_slot_id'] : 'NULL';
+				$db->setQuery('INSERT INTO ' . $db->quoteName($table) . ' (' . implode(', ', array_map([$db, 'quoteName'], $columns)) . ') VALUES (' . implode(', ', $rowValues) . ')')->execute();
 				$insertedIds[] = (int) $db->insertid();
 			}
 			$db->transactionCommit();
@@ -676,6 +791,15 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			}
 		}
 
+		foreach ($linkedSearchSegments as $index => $linkedSegment) {
+			self::guardRecord('created', [
+				'id' => (int) ($insertedIds[count($segments) + $index] ?? 0), 'user_id' => (int) $user->id,
+				'master_id' => $masterId, 'time' => $linkedSegment['time_db'], 'time_to' => $linkedSegment['time_to_db'],
+				'service_name' => $linkedSegment['service_name'], 'booking_kind' => 'search',
+				'course_id' => null, 'course_slot_id' => null, 'search_id' => $linkedSegment['search_id'],
+				'search_slot_id' => $linkedSegment['search_slot_id'] ?: null,
+			]);
+		}
 		$event->updateEventResult(['success' => true, 'message' => count($segments) > 1 ? 'Вы записались на все занятия курса!' : 'Вы записались!']);
 	}
 
@@ -806,7 +930,10 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		bool $hasCourseBookingColumns,
 		bool $hasSearchBookingColumns,
 		string $presenceEndDb = '',
-		int $coursePart = 0
+		int $coursePart = 0,
+		int $linkedSearchSlotId = 0,
+		int $linkedSearchId = 0,
+		int $linkedCourseSlotId = 0
 	): ?string {
 		$groupSlotId = $bookingKind === 'course' ? $courseSlotId : ($bookingKind === 'search' ? $searchSlotId : 0);
 		if ($groupSlotId > 0 && self::groupSlotHasOpenReschedule($db, $bookingKind, $groupSlotId)) {
@@ -868,13 +995,13 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			return 'У вас уже есть запись на это время к другому специалисту';
 		}
 
-		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : 0)) {
+		if (self::hasCourseSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'course' ? $courseSlotId : $linkedCourseSlotId)) {
 			return $bookingKind === 'course' ? 'На данное время запланирован другой курс' : 'Это время занято курсом';
 		}
-		if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'search' ? $searchSlotId : 0)) {
+		if (self::hasSearchSlotsOverlap($db, $masterId, $timeDb, $timeToDb, $bookingKind === 'search' ? $searchSlotId : $linkedSearchSlotId)) {
 			return $bookingKind === 'search' ? 'На данное время запланирован другой поиск' : 'Это время занято поиском';
 		}
-		if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns, $courseId)) {
+		if (self::hasBookingsOverlap($db, $tableName, $masterId, $timeDb, $timeToDb, $bookingKind, $courseSlotId, $searchSlotId, $hasCourseBookingColumns, $hasSearchBookingColumns, $courseId, $linkedSearchId, $linkedCourseSlotId)) {
 			return ($bookingKind === 'course' || $bookingKind === 'search') ? 'На данное время запланировано другое' : 'Это время уже занято';
 		}
 
@@ -1065,7 +1192,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 			. ' THEN DATE_ADD(' . $time . ', INTERVAL ' . $timeSum . ' MINUTE) ELSE ' . $timeTo . ' END)';
 	}
 
-	private static function hasBookingsOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $masterId, string $startUtc, string $endUtc, string $bookingKind = 'service', int $courseSlotId = 0, int $searchSlotId = 0, bool $hasCourseBookingColumns = false, bool $hasSearchBookingColumns = false, int $courseId = 0): bool
+	private static function hasBookingsOverlap(\Joomla\Database\DatabaseInterface $db, string $tableName, int $masterId, string $startUtc, string $endUtc, string $bookingKind = 'service', int $courseSlotId = 0, int $searchSlotId = 0, bool $hasCourseBookingColumns = false, bool $hasSearchBookingColumns = false, int $courseId = 0, int $linkedSearchId = 0, int $linkedCourseSlotId = 0): bool
 	{
 		$query = $db->getQuery(true)
 			->select('COUNT(*)')
@@ -1087,6 +1214,12 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 				' AND ' . $db->quoteName('course_slot_id') . ' = ' . (int) $courseSlotId .
 				')'
 			);
+		}
+		if ($hasSearchBookingColumns && $linkedSearchId > 0) {
+			$query->where('NOT (' . $db->quoteName('booking_kind') . ' = ' . $db->quote('search') . ' AND ' . $db->quoteName('search_id') . ' = ' . $linkedSearchId . ')');
+		}
+		if ($hasCourseBookingColumns && $linkedCourseSlotId > 0) {
+			$query->where('NOT (' . $db->quoteName('booking_kind') . ' = ' . $db->quote('course') . ' AND ' . $db->quoteName('course_slot_id') . ' = ' . $linkedCourseSlotId . ')');
 		}
 		if ($hasSearchBookingColumns && $bookingKind === 'search' && $searchSlotId > 0) {
 			$query->where(
@@ -1196,7 +1329,7 @@ final class Lkbooking extends CMSPlugin implements SubscriberInterface
 		$row['parts'] = [];
 		if ($hasCoursesService) {
 			try {
-				$partsByCourse = $coursesService::loadCourseParts($db, [$row]);
+				$partsByCourse = $coursesService::loadCourseParts($db, [$row], true);
 				$row['parts'] = (array) ($partsByCourse[(int) $row['id']] ?? []);
 			} catch (\Throwable $e) {
 				$row['parts'] = [];
