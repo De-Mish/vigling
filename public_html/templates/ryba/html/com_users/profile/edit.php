@@ -2817,9 +2817,9 @@ $existingSearchRowsJson = json_encode($existingSearchRows, $jsJsonFlags) ?: '[]'
 .profile-edit #jform_courses_servis .service__item.is-multi-lesson .course_part-title {
 	display: block !important;
 }
-.profile-edit #jform_courses_servis .service__item:not(.is-free-mode) .course_concurrent,
-.profile-edit #jform_courses_servis .service__item:not(.has-capacity) .course_concurrent {
-	display: none !important;
+/* "Одновременно участников" is shown for every booking mode and any number of lessons */
+.profile-edit #jform_courses_servis .service__item .course_concurrent {
+	display: flex !important;
 }
 .profile-edit #jform_searches_servis .stock_key {
 	margin: 12px;
