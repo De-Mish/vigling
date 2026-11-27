@@ -197,10 +197,9 @@ final class Profileuserid extends CMSPlugin implements SubscriberInterface
 			return;
 		}
 		$userId = (int) $input->get('user_id', 0);
-		$activeMenu = $app->getMenu()->getActive();
-		$menuAlias = (string) ($activeMenu->alias ?? '');
-		$menuPath = (string) ($activeMenu->path ?? '');
-		$isLkContext = ($menuAlias === 'lk' || $menuPath === 'lk' || str_starts_with($menuPath, 'lk/'));
+		// Joomla associates public numeric profile routes with the private profile menu
+		// item. Use the requested path so only /lk itself requires authentication.
+		$isLkContext = $this->isLkPath($this->currentSitePath());
 
 		// Hard guard: /lk is private. Do not allow opening foreign profiles through user_id.
 		if ($isLkContext) {
